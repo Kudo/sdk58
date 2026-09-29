@@ -27,7 +27,8 @@ export function isKeptChild(child) {
 /**
  * Flattens the tree in pre-order. Each entry:
  * `{node, ref, tag, type, testID, box, virtual, parent, children}` where
- * `box` is absolute (sum of parent frames), `parent` is the parent entry
+ * `box` is the on-screen position (sum of parent frames minus ancestor
+ * scroll offsets), `parent` is the parent entry
  * (or null) and `children` are child entries.
  */
 export function indexTree(root) {
@@ -56,7 +57,12 @@ export function indexTree(root) {
       children: [],
     };
     entries.push(entry);
-    const childOrigin = virtual ? origin : {x: box.x, y: box.y};
+    // Children of a scroll view move by its scroll offset (frames in the
+    // ShadowTree do not). Must match src/tree.ts.
+    const scroll = node.contentOffset ?? {x: 0, y: 0};
+    const childOrigin = virtual
+      ? origin
+      : {x: box.x - (scroll.x ?? 0), y: box.y - (scroll.y ?? 0)};
     for (const child of node.children ?? []) {
       if (isKeptChild(child)) {
         entry.children.push(visit(child, childOrigin, box, entry));

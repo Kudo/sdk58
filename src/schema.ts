@@ -48,7 +48,10 @@ export type TreeNode = {
   /** Accessible name: label, else aria-label, else own text, else descendant text if accessible. */
   name: string | null;
   a11y: A11yInfo;
-  /** Absolute frame in dp (sum of parent frames). */
+  /**
+   * On-screen frame in dp: sum of parent frames, minus the `contentOffset`
+   * of ancestor ScrollViews (`shadowTree` source).
+   */
   box: Box;
   /**
    * Other props reported by the host: visual style, flattened Yoga style,
@@ -214,6 +217,8 @@ export type HostRunPayload = {
   steps: Step[];
   snapshots: Record<string, ShadowNodeJSON>;
   final: ShadowNodeJSON;
+  /** JS fallbacks the runner used, e.g. `hitTest: js`, `scrollOffset: dom`. */
+  fallbacks?: string[];
 };
 
 /** Payload the JS entry prints inside `{"type":"rn-a11y-tree-result","rnA11yTree":...}`. */

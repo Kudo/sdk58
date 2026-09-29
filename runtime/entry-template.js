@@ -47,6 +47,8 @@ registerRender(() => {
     });
 
     const rootTag = root.getRootTag();
+    // Deliver onLayout and other queued events until the UI is stable.
+    require('__RUNTIME_DIR__/settle').settle(rootTag);
     const viewport = {width: viewportWidth, height: viewportHeight};
 
     if (script != null) {
@@ -56,7 +58,11 @@ registerRender(() => {
         );
       }
       const {runActions} = require('__RUNTIME_DIR__/actions');
-      const {steps, snapshots, final} = runActions({root, script, tapMode});
+      const {steps, snapshots, final, fallbacks} = runActions({
+        root,
+        script,
+        tapMode,
+      });
       root.destroy();
       return JSON.stringify({
         viewport,
@@ -64,6 +70,7 @@ registerRender(() => {
         steps,
         snapshots,
         final,
+        fallbacks,
       });
     }
 

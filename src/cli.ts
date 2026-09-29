@@ -4,7 +4,7 @@ import {Command, InvalidArgumentError} from 'commander';
 
 import {bundle, type TapMode} from './bundle.ts';
 import {getHostBin, HostError, runHost} from './host.ts';
-import type {HostPayload, HostRunPayload} from './schema.ts';
+import type {HostPayload, HostRunPayload, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
 
@@ -149,8 +149,29 @@ async function run(file: string, options: RunOptions) {
     tapMode: options.tapMode as TapMode,
   });
   if (payload) {
+    const fallbacks = [
+      ...new Set([...(payload.fallbacks ?? []), ...describeFallbacks(payload.steps)]),
+    ].sort();
+    if (fallbacks.length > 0) {
+      process.stderr.write(
+        `rn-a11y-tree: warning: JS fallbacks used because the host lacks native methods: ${fallbacks.join(', ')}\n`,
+      );
+    }
     write(JSON.stringify(toRunResult(payload), null, 2) + '\n', options.out);
   }
+}
+
+/** Which JS fallbacks a run used (see runtime/actions.js). */
+function describeFallbacks(steps: Step[]): string[] {
+  const used = new Set<string>();
+  for (const step of steps) {
+    if (step.via?.hitTest === 'js') used.add('hitTest: js');
+    if (step.via?.events === 'js') used.add('events: js');
+    if (step.warnings?.some(w => w.includes('setTextInputTextByTag'))) {
+      used.add('text: not reflected');
+    }
+  }
+  return [...used];
 }
 
 const program = new Command()

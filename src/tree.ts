@@ -345,12 +345,15 @@ function convertShadowNode(
 
   const childNodes = (node.children ?? []).filter(isKeptChild);
   const indexFor = siblingIndexer(childNodes.map(c => c.type));
+  // ShadowTree frames do not move when a ScrollView scrolls; its children
+  // are shifted by its `contentOffset` so `box` is the on-screen position.
+  const scroll = node.contentOffset ?? {x: 0, y: 0};
   const children = childNodes.map(child =>
     convertShadowNode(
       child,
       // Virtual nodes have no frame, so children stay relative to the
       // nearest ancestor with one.
-      isVirtual ? origin : {x: box.x, y: box.y},
+      isVirtual ? origin : {x: box.x - scroll.x, y: box.y - scroll.y},
       pathSel,
       nextRef,
       indexFor(child.type),

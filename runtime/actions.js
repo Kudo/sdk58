@@ -15,6 +15,7 @@
  * `root.document`. Each step reports which path it used (`via`).
  */
 
+import {settle} from './settle';
 import {
   center,
   findEntry,
@@ -39,7 +40,42 @@ export function runActions({root, script, tapMode}) {
   const timers = Fantom.installTimerMock();
   let timestamp = 1;
 
-  const readTree = () => NativeFantom.getA11yTree(surfaceId, false);
+  const fallbacks = new Set();
+
+  /**
+   * Reads the typed tree. ScrollView scroll positions live in the
+   * ScrollView's state, not in its props; if the host reports no (or a
+   * different) `contentOffset`, take it from the state through the DOM API
+   * (`element.scrollLeft/scrollTop`, which reads the ShadowTree state).
+   */
+  function readTree() {
+    const tree = JSON.parse(NativeFantom.getA11yTree(surfaceId, false));
+    const visit = node => {
+      if (/ScrollView$/.test(node.type) && node.tag != null) {
+        const element = findElementByTagOrNull(node.tag);
+        if (element != null) {
+          const x = element.scrollLeft;
+          const y = element.scrollTop;
+          const reported = node.contentOffset ?? {x: 0, y: 0};
+          if (reported.x !== x || reported.y !== y) {
+            node.contentOffset = {x, y};
+            fallbacks.add('scrollOffset: dom');
+          }
+        }
+      }
+      for (const child of node.children ?? []) visit(child);
+    };
+    visit(tree);
+    return tree;
+  }
+
+  function findElementByTagOrNull(tag) {
+    try {
+      return findElementByTag(tag);
+    } catch {
+      return null;
+    }
+  }
 
   // --- tag -> element (JS fallback for event dispatch) ---------------------
 
@@ -67,6 +103,7 @@ export function runActions({root, script, tapMode}) {
       NativeFantom.enqueueNativeEventByTag(surfaceId, tag, type, payload, category);
     } else {
       via.events = 'js';
+      fallbacks.add('events: js');
       Fantom.enqueueNativeEvent(findElementByTag(tag), type, payload, {category});
     }
   }
@@ -95,6 +132,7 @@ export function runActions({root, script, tapMode}) {
       };
     }
     via.hitTest = 'js';
+    fallbacks.add('hitTest: js');
     return hitTestEntries(entries, x, y);
   }
 
@@ -137,7 +175,7 @@ export function runActions({root, script, tapMode}) {
 
   /** Resolves the target and the hit node for tap-like actions. */
   function locate(spec) {
-    const entries = indexTree(JSON.parse(readTree()));
+    const entries = indexTree(readTree());
     let target = null;
     let point;
     if (spec.x != null && spec.y != null) {
@@ -208,7 +246,7 @@ export function runActions({root, script, tapMode}) {
   }
 
   function type(spec, step) {
-    const entries = indexTree(JSON.parse(readTree()));
+    const entries = indexTree(readTree());
     const target = findEntry(entries, spec);
     if (target == null) {
       throw new Error(`Target not found: ${JSON.stringify(spec)}`);
@@ -235,6 +273,7 @@ export function runActions({root, script, tapMode}) {
       if (has('setTextInputTextByTag')) {
         NativeFantom.setTextInputTextByTag(surfaceId, tag, text);
       } else if (warnings.length === 0) {
+        fallbacks.add('text: not reflected');
         warnings.push('Host has no setTextInputTextByTag: the ShadowTree text of the input is not updated');
       }
     }
@@ -253,19 +292,23 @@ export function runActions({root, script, tapMode}) {
   }
 
   function scroll(spec, step) {
-    const entries = indexTree(JSON.parse(readTree()));
+    const entries = indexTree(readTree());
     const target = findEntry(entries, spec);
     if (target == null) {
       throw new Error(`Target not found: ${JSON.stringify(spec)}`);
     }
     step.target = describe(target);
     step.hit = describe(target);
-    const options = {x: spec.x ?? 0, y: spec.y ?? 0};
+    // zoomScale must be set: Fantom's ScrollEvent defaults it to 0, and
+    // VirtualizedList multiplies item offsets by it (0 makes FlatList think
+    // the whole list is above the viewport).
+    const options = {x: spec.x ?? 0, y: spec.y ?? 0, zoomScale: 1};
     if (has('enqueueScrollEventByTag')) {
       via.events = 'native';
       NativeFantom.enqueueScrollEventByTag(surfaceId, target.tag, options);
     } else {
       via.events = 'js';
+      fallbacks.add('events: js');
       Fantom.enqueueScrollEvent(findElementByTag(target.tag), options);
     }
     step.events.push('scroll');
@@ -303,7 +346,7 @@ export function runActions({root, script, tapMode}) {
             step.events.push(`wait ${spec}ms`);
             break;
           case 'snapshot':
-            snapshots[spec] = JSON.parse(readTree());
+            snapshots[spec] = readTree();
             break;
           default:
             throw new Error(`Unknown action: ${name}`);
@@ -311,12 +354,19 @@ export function runActions({root, script, tapMode}) {
       } catch (error) {
         step.error = error instanceof Error ? error.message : String(error);
       }
+      // Deliver onLayout etc. caused by the action before the next step.
+      try {
+        settle(surfaceId);
+      } catch (error) {
+        step.error ??= error instanceof Error ? error.message : String(error);
+      }
       if (via.hitTest != null || via.events != null) {
         step.via = {...via};
       }
       steps.push(step);
     });
-    return {steps, snapshots, final: JSON.parse(readTree())};
+    const final = readTree();
+    return {steps, snapshots, final, fallbacks: [...fallbacks].sort()};
   } finally {
     timers.uninstall();
   }
