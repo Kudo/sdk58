@@ -57,3 +57,34 @@ test('JS hit test: deepest node, later siblings on top, pointerEvents', () => {
   withOverlay.children![0].children!.at(-1)!.pointerEvents = 'auto';
   assert.equal(hitTestEntries(indexTree(withOverlay), 30, 160).testID, null);
 });
+
+test('JS hit test uses scroll offsets', () => {
+  const scrolled: ShadowNodeJSON = {
+    type: 'RootView',
+    tag: 1,
+    frame: {x: 0, y: 0, width: 390, height: 844},
+    children: [
+      {
+        type: 'ScrollView',
+        tag: 2,
+        frame: {x: 0, y: 100, width: 390, height: 400},
+        contentOffset: {x: 0, y: 600},
+        children: [
+          {
+            type: 'View',
+            tag: 3,
+            frame: {x: 0, y: 0, width: 390, height: 1800},
+            children: [
+              {type: 'View', tag: 4, testID: 'row-1', frame: {x: 0, y: 60, width: 390, height: 60}, children: []},
+              {type: 'View', tag: 5, testID: 'row-12', frame: {x: 0, y: 720, width: 390, height: 60}, children: []},
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  const entries = indexTree(scrolled) as Entry[];
+  assert.equal(hitTestEntries(entries, 195, 250).testID, 'row-12');
+  // row-1 is scrolled out of view (y = 160 - 600); the ScrollView box clips it.
+  assert.notEqual(hitTestEntries(entries, 195, 60 + 100 + 30)?.testID, 'row-1');
+});

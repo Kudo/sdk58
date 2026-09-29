@@ -163,7 +163,7 @@ step index.
 | `tap` | `{"x":..,"y":..}`, `{"testID":".."}` or `{"ref":"n5"}` | `touchStart`, `touchEnd` to the hit node (`--tap-mode touch`, default); `click` (`click`); both (`both`). On a Switch: `change {value: !value}` instead. |
 | `longPress` | same as `tap` | `touchStart`, 600 ms of mocked timers, `touchEnd` |
 | `type` | `{"testID":"..","text":"..","submit":false}` | `focus`; per character `keyPress {key}` and `change {text, eventCount}`; `submitEditing` if `submit`; `endEditing`, `blur` |
-| `scroll` | `{"testID":"..","x":0,"y":300}` | scroll event on a `ScrollView` |
+| `scroll` | `{"testID":"..","x":0,"y":300}` | one scroll event on a `ScrollView` (`zoomScale: 1`), which also updates the ScrollView's state |
 | `wait` | milliseconds | advances mocked timers and runs the work loop |
 | `snapshot` | name | stores the tree at this point |
 
@@ -187,7 +187,27 @@ Rules:
   tag in `root.document`. Without `setTextInputTextByTag`, the input's own
   `text` in the tree does not change (the app's state does); the step gets a
   warning.
+- When any JS fallback is used, the CLI prints one warning line on stderr,
+  for example `warning: JS fallbacks used because the host lacks native
+  methods: events: js, hitTest: js, scrollOffset: dom`. The payload also
+  lists them in `fallbacks`. Host methods are always used when present.
+- After the initial render and after every step, queued native events are
+  delivered (`flushEventQueue` + work loop) until the tree stops changing.
+  Fabric emits `onLayout` into the event queue from a commit hook; without
+  this, `onLayout` never reaches JS and FlatList cannot compute its window.
+  This also applies to `render`.
+- Scrolling: ShadowTree frames do not move when a ScrollView scrolls (the
+  offset is in the ScrollView's state). `box` values are on-screen positions:
+  children of a ScrollView are shifted by its `contentOffset`, and the JS hit
+  test uses the same positions. The host's `getA11yTree` reports
+  `contentOffset` from props today, so the runner reads the state offset
+  through the DOM API (`element.scrollTop` / `scrollLeft`) and writes it into
+  the ScrollView's `contentOffset` (fallback `scrollOffset: dom`).
 - `run` needs a host with `getA11yTree`.
+
+Examples: `examples/basic/actions.json` (typing, Switch, Pressable) and
+`examples/scrolling/actions.json` (ScrollView offset, tap after scroll,
+FlatList windowing).
 
 ## Architecture
 

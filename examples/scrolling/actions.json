@@ -1,0 +1,10 @@
+[
+  {"snapshot": "before"},
+  {"scroll": {"testID": "list", "x": 0, "y": 600}},
+  {"snapshot": "after"},
+  {"tap": {"testID": "row-12"}},
+  {"snapshot": "after-tap"},
+  {"scroll": {"testID": "flat", "x": 0, "y": 3000}},
+  {"wait": 500},
+  {"snapshot": "flat-after"}
+]

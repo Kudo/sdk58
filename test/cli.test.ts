@@ -135,6 +135,11 @@ test('run: reports steps, snapshots and the final tree (fake host)', {timeout: 1
   assert.equal(result.steps[0].target?.box?.y, 154); // rounded
   assert.equal(result.steps[0].hit?.type, 'Paragraph');
   assert.match(result.steps[1].error ?? '', /Target not found/);
+  assert.match(
+    proc.stderr,
+    /warning: JS fallbacks used because the host lacks native methods: events: js, hitTest: js/,
+  );
+  assert.equal(proc.stderr.match(/warning: JS fallbacks/g)?.length, 1);
   // Snapshots and final are converted with the same converter as `render`.
   assert.equal(result.snapshots.after.ref, 'n0');
   assert.equal(result.final.children[0].children[0].name, 'Sign in now');

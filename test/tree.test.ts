@@ -154,3 +154,33 @@ test('converts the typed getA11yTree JSON (shadowTree) to the output schema', ()
   assert.equal(decoration.a11y.hidden, true);
   assert.equal(decoration.sel, 'RootView>View>View:2');
 });
+
+test('children of a scrolled ScrollView are shifted by its contentOffset', () => {
+  const scrolled: ShadowNodeJSON = {
+    type: 'RootView',
+    frame: {x: 0, y: 0, width: 390, height: 844},
+    children: [
+      {
+        type: 'ScrollView',
+        frame: {x: 0, y: 100, width: 390, height: 400},
+        contentOffset: {x: 0, y: 600},
+        children: [
+          {
+            type: 'View',
+            frame: {x: 0, y: 0, width: 390, height: 1800},
+            children: [
+              {type: 'View', testID: 'row-12', frame: {x: 0, y: 720, width: 390, height: 60}, children: []},
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  const {root} = toRenderResult({viewport: {width: 390, height: 844}, source: 'shadowTree', tree: scrolled});
+  const list = root.children[0];
+  assert.deepEqual(list.box, {x: 0, y: 100, width: 390, height: 400});
+  assert.deepEqual(list.style.contentOffset, {x: 0, y: 600});
+  const content = list.children[0];
+  assert.equal(content.box.y, -500);
+  assert.equal(find(root, n => n.testID === 'row-12')!.box.y, 220);
+});

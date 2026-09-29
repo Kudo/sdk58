@@ -1642,6 +1642,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@react-native-a11y-tree/example-scrolling@workspace:examples/scrolling":
+  version: 0.0.0-use.local
+  resolution: "@react-native-a11y-tree/example-scrolling@workspace:examples/scrolling"
+  dependencies:
+    react: "npm:19.3.0"
+    react-native: "npm:0.88.0-rc.2"
+  languageName: unknown
+  linkType: soft
+
 "@react-native/asset-utils@npm:0.88.0-rc.2":
   version: 0.88.0-rc.2
   resolution: "@react-native/asset-utils@npm:0.88.0-rc.2"
