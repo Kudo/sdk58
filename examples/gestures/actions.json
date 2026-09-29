@@ -6,5 +6,10 @@
   {"longPress": {"testID": "drag"}},
   {"snapshot": "after-long-press"},
   {"tap": {"testID": "rect"}},
-  {"snapshot": "after-rect"}
+  {"snapshot": "after-rect"},
+  {"pan": {"testID": "drag-ui", "dx": 80, "dy": 0}},
+  {"wait": 100},
+  {"snapshot": "after-ui-pan"},
+  {"tap": {"testID": "drag-ui"}},
+  {"snapshot": "after-ui-tap"}
 ]

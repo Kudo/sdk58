@@ -29,7 +29,7 @@ macOS arm64 only (the host is built by `yarn build:host`).
 | Session mode | Host `--interactive` mode, one bundle | `e2e/session.test.ts` | No recovery after a host crash |
 | react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No transitions; `--platform ios` fails in the navigation example (see Platform) |
 | react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
-| react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner | `e2e/gestures.test.ts` | No worklet callbacks, virtual detectors or transforms |
+| react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner; worklet callbacks through Reanimated | `e2e/gestures.test.ts` | No v3 Reanimated detector events, virtual detectors, or transforms in `absoluteToLocal` |
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms) | `e2e/reanimated.test.ts` | `entering`/`exiting` opacity needs the host's mounted-view overrides (`getA11yTree.mounted`) |
 | Expo modules, `@expo/ui` | Not started | none | |
 
@@ -303,8 +303,19 @@ and native v3 detector are replaced in the bundle (`src/bundle.ts`
   like on Android.
 - `tap`, `longPress`, `pan` and `pinch` feed RNGH as well as the responder
   system; `step.gestureHandlers` counts the handlers that got the pointer.
-- Not supported yet: Reanimated worklet callbacks (use `.runOnJS(true)`),
-  Animated events, virtual detectors, transforms in `absoluteToLocal`.
+- v2 gestures with worklet callbacks (no `.runOnJS(true)`; action type
+  `REANIMATED_WORKLET`) and `NATIVE_ANIMATED_EVENT`: Fabric events
+  `gestureHandlerEvent` / `gestureHandlerStateChange` on the attached view
+  (enqueued by tag), with the flat payload, like Android's Reanimated path.
+  Fabric names them `topGestureHandler*`; Reanimated maps `top*` to `on*` and
+  runs the `useEvent(..., ['onGestureHandlerStateChange',
+  'onGestureHandlerEvent'])` worklet on the UI runtime. The runner then runs
+  one UI tick (`produceFramesForDuration(0.001)`) so the animated style is
+  applied.
+- Taps aim at the center of the target's drawn position (`visualBox`), so a
+  view moved by a transform is hit where it is drawn.
+- Not supported yet: v3 `dispatchesReanimatedEvents` (Reanimated detector),
+  virtual detectors, transforms in `absoluteToLocal`.
 - RNGH resets the pan start point on activation, so `translationX` after a
   `pan` of `dx: 100` is `100` minus the distance moved before activation.
 

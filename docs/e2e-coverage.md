@@ -64,8 +64,9 @@ React Navigation native stack on react-native-screens. Actions: snapshot
 ## `e2e/gestures.test.ts` — `examples/gestures/actions.json`, `run`
 
 react-native-gesture-handler: `Gesture.Race(pan, longPress, tap)` (v2,
-`runOnJS(true)`) on `drag`, and a `RectButton` (v3 NativeDetector).
-Actions: tap `drag`, pan `drag` by dx 100, long press `drag`, tap `rect`.
+`runOnJS(true)`) on `drag`, a `RectButton` (v3 NativeDetector), and worklet
+gestures on `drag-ui`. Actions: tap `drag`, pan `drag` by dx 100, long press
+`drag`, tap `rect`, pan `drag-ui` by dx 80, wait 100, tap `drag-ui`.
 
 - Skips when `RNGestureHandlerRootView` has no size.
 - No step has an error; every gesture step reached at least one handler (`gestureHandlers > 0`).
@@ -73,6 +74,7 @@ Actions: tap `drag`, pan `drag` by dx 100, long press `drag`, tap `rect`.
 - `drag` moved right by exactly the reported `pos-out` translation, and 70 < dx ≤ 100 (RNGH resets the pan start at activation, after the 15 dp slop).
 - `long-out` = "long-pressed".
 - `rect-out` = "rect-pressed".
+- Worklet callbacks (`drag-ui`: `Gesture.Race(Pan, Tap)` without `runOnJS(true)`, Reanimated `useAnimatedStyle`): after a pan of dx 80 and wait 100, the layout `box` is unchanged and `visualBox.x - box.x` is in (50, 80] (64 today: pan slop); after a tap on the moved view, `ui-tap-out` = "ui-tapped" (`runOnJS` from the tap worklet).
 
 ## `e2e/reanimated.test.ts` — `examples/reanimated/actions.json`, `run`
 

@@ -88,3 +88,38 @@ test('JS hit test uses scroll offsets', () => {
   // row-1 is scrolled out of view (y = 160 - 600); the ScrollView box clips it.
   assert.notEqual(hitTestEntries(entries, 195, 60 + 100 + 30)?.testID, 'row-1');
 });
+
+test('runtime/tree-index.js visualBox matches src/tree.ts (transforms)', () => {
+  const T = (x: number, y: number) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1];
+  const S = (k: number) => [k, 0, 0, 0, 0, k, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const tree: ShadowNodeJSON = {
+    type: 'RootView',
+    tag: 1,
+    frame: {x: 0, y: 0, width: 390, height: 844},
+    children: [
+      {type: 'View', tag: 2, frame: {x: 24, y: 100, width: 50, height: 40}, transform: T(120, 0), children: []},
+      {
+        type: 'View',
+        tag: 3,
+        frame: {x: 100, y: 200, width: 100, height: 100},
+        transform: S(2),
+        children: [
+          {type: 'View', tag: 4, frame: {x: 0, y: 0, width: 10, height: 10}, mounted: {transform: T(5, 0)}, children: []},
+        ],
+      },
+    ],
+  };
+  const entries = indexTree(tree) as Array<Entry & {visualBox: TreeNode['box']}>;
+  const nodes = flatten(convertShadowTree(tree));
+  const round = (n: number) => Math.round(n * 1000) / 1000;
+  assert.deepEqual(
+    entries.map(e => [e.visualBox.x, e.visualBox.y, e.visualBox.width, e.visualBox.height].map(round)),
+    nodes.map(n => {
+      const b = n.visualBox ?? n.box;
+      return [b.x, b.y, b.width, b.height];
+    }),
+  );
+  // The JS hit test uses the drawn position: the translated view is hit at x=150.
+  assert.equal(hitTestEntries(entries, 150, 120).tag, 2);
+  assert.equal(hitTestEntries(entries, 40, 120).tag, 1);
+});

@@ -78,5 +78,16 @@ test(
 
     assert.equal(get(s['after-long-press'], 'long-out').text, 'long-pressed');
     assert.equal(get(s['after-rect'], 'rect-out').text, 'rect-pressed');
+
+    // Worklet callbacks (Reanimated): the pan drives a shared value ->
+    // useAnimatedStyle translateX; the layout box stays, visualBox moves.
+    const uiPanStep = result.steps[8];
+    assert.ok((uiPanStep.gestureHandlers ?? 0) > 0, 'ui pan reached no gesture handler');
+    const dragUi = get(s['after-ui-pan'], 'drag-ui');
+    assert.ok(dragUi.visualBox, 'drag-ui has no visualBox after the pan');
+    const uiDx = dragUi.visualBox.x - dragUi.box.x;
+    assert.ok(uiDx > 80 - 2 * TOUCH_SLOP && uiDx <= 80, `drag-ui moved by ${uiDx}`);
+    // runOnJS from the tap worklet.
+    assert.equal(get(s['after-ui-tap'], 'ui-tap-out').text, 'ui-tapped');
   },
 );
