@@ -254,6 +254,11 @@ fantom_add_native_library(rnscreens react-native-screens rnscreens
 fantom_add_native_library(safeareacontext react-native-safe-area-context safeareacontext
   SOURCE_GLOBS "common/cpp/react/renderer/components/safeareacontext/*.cpp"
   INCLUDE_DIRS "common/cpp")
+# shared/shadowNodes has the RNGestureHandlerDetector shadow node and a
+# ComponentDescriptors.h that must shadow the codegen one (include order).
+fantom_add_native_library(rngesturehandler react-native-gesture-handler rngesturehandler_codegen
+  SOURCE_GLOBS "shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/*.cpp"
+  INCLUDE_DIRS "shared/shadowNodes")
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp

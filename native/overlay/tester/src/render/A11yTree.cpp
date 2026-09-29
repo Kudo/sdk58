@@ -29,6 +29,9 @@
 #ifdef FANTOM_WITH_SAFEAREACONTEXT
 #include <react/renderer/components/safeareacontext/RNCSafeAreaViewShadowNode.h>
 #endif
+#ifdef FANTOM_WITH_RNGESTUREHANDLER
+#include <react/renderer/components/rngesturehandler_codegen/Props.h>
+#endif
 #include "components/FantomTextInput.h"
 
 #include <cmath>
@@ -666,6 +669,51 @@ folly::dynamic renderNode(
   if (const auto* safeAreaView =
           dynamic_cast<const RNCSafeAreaViewShadowNode*>(&node)) {
     result["insets"] = edgeInsetsToDynamic(safeAreaView->getStateData().insets);
+  }
+#endif
+
+#ifdef FANTOM_WITH_RNGESTUREHANDLER
+  if (const auto* detectorProps =
+          dynamic_cast<const RNGestureHandlerDetectorProps*>(props.get())) {
+    folly::dynamic handlerTags = folly::dynamic::array();
+    for (auto handlerTag : detectorProps->handlerTags) {
+      handlerTags.push_back(handlerTag);
+    }
+    result["handlerTags"] = handlerTags;
+    result["moduleId"] = detectorProps->moduleId;
+    if (!detectorProps->virtualChildren.empty()) {
+      folly::dynamic virtualChildren = folly::dynamic::array();
+      for (const auto& child : detectorProps->virtualChildren) {
+        folly::dynamic handlers = folly::dynamic::array();
+        for (auto handlerTag : child.handlerTags) {
+          handlers.push_back(handlerTag);
+        }
+        virtualChildren.push_back(folly::dynamic::object(
+            "viewTag", child.viewTag)("handlerTags", handlers));
+      }
+      result["virtualChildren"] = virtualChildren;
+    }
+  } else if (
+      const auto* rootViewProps =
+          dynamic_cast<const RNGestureHandlerRootViewProps*>(props.get())) {
+    result["moduleId"] = rootViewProps->moduleId;
+  } else if (
+      const auto* buttonProps =
+          dynamic_cast<const RNGestureHandlerButtonProps*>(props.get())) {
+    result["handlerTag"] = buttonProps->handlerTag;
+    result["moduleId"] = buttonProps->moduleId;
+    result["enabled"] = buttonProps->enabled;
+    result["exclusive"] = buttonProps->exclusive;
+    if (buttonProps->hasLongPressHandler) {
+      result["hasLongPressHandler"] = true;
+    }
+    if (!buttonProps->gestureTestID.empty()) {
+      result["gestureTestID"] = buttonProps->gestureTestID;
+    }
+    if (buttonProps->rippleColor) {
+      result["rippleColor"] = colorToString(buttonProps->rippleColor);
+    }
+    result["activeOpacity"] = number(buttonProps->activeOpacity);
   }
 #endif
 

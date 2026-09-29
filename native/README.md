@@ -17,11 +17,13 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | File | Change |
 |---|---|
 | `tester/third-party/nlohmann_json/CMakeLists.txt` | `SYSTEM` include directory. Apple clang 21 with `-Werror` fails on `-Wdeprecated-literal-operator` in the bundled `json.hpp`. |
-| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context) when they are found (see Native libraries). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
+| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context, react-native-gesture-handler) when they are found (see Native libraries). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
 | `tester/src/platform/macos/TextLayoutManager.mm` (new) | Text measurement with AppKit/TextKit 1 (`NSLayoutManager`). Port of the iOS `RCTTextLayoutManager.mm`, `RCTAttributedTextUtils.mm` and `RCTFontUtils.mm`. The upstream stub returns the minimum size (height 0) for all text. |
 | `tester/src/render/A11yTree.h`, `A11yTree.cpp` (new) | Serializes the shadow tree (not the mounted tree, so views are not flattened) to typed JSON. |
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
 | `tester/src/components/FantomScreens.h`, `FantomScreens.cpp`, `FantomScreensSplitScreen.cpp` (new) | react-native-screens: descriptor registration, context entry, emulated native state updates (see Screens). |
+| `tester/src/components/FantomGestureHandler.h`, `FantomGestureHandler.cpp` (new) | react-native-gesture-handler: descriptor registration and the no-op `RNGestureHandlerModule` TurboModule (see Gesture handler). |
+| `tester/src/platform/oss/TesterTurboModuleProvider.cpp` | Provides `RNGestureHandlerModule`. |
 | `tester/src/components/FantomSafeArea.h`, `FantomSafeArea.cpp` (new) | react-native-safe-area-context: descriptor registration, `onInsetsChange` events and `RNCSafeAreaView` state (see Safe area). |
 | `tester/scripts/codegen-lib.sh` (new) | Runs React Native codegen for a native library (used by CMake for the native libraries). |
 | `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the TextInput/Switch descriptors above and the native library descriptors. |
@@ -134,6 +136,7 @@ packages is patched.
 |---|---|---|
 | `react-native-screens` `~4.28.0` | `rnscreens` | `common/cpp/react/renderer/components/rnscreens/*.cpp` |
 | `react-native-safe-area-context` `~5.9.1` | `safeareacontext` | `common/cpp/react/renderer/components/safeareacontext/*.cpp` |
+| `react-native-gesture-handler` `~3.2.1` | `rngesturehandler` | `shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/*.cpp` (its `ComponentDescriptors.h` shadows the codegen one: `shared/shadowNodes` is first on the include path) |
 
 ## Screens (react-native-screens)
 
@@ -226,6 +229,47 @@ screen still present, and one screen after tapping "go-back".
   `initialWindowMetrics`) is not provided; the JS asks for it with
   `TurboModuleRegistry.get`, so `initialWindowMetrics` is null.
 
+## Gesture handler (react-native-gesture-handler)
+
+- Descriptors: `RNGestureHandlerDetector` (custom shadow node from
+  `shared/shadowNodes`: it keeps its children unflattened and sets its frame
+  to the bounding box of its children, so a detector with
+  `display: 'contents'` still has a real frame), `RNGestureHandlerRootView`
+  and `RNGestureHandlerButton` (codegen).
+- `RNGestureHandlerModule` TurboModule: a safety net for
+  `TurboModuleRegistry.getEnforcing('RNGestureHandlerModule')`. All methods
+  (`createGestureHandler`, `attachGestureHandler`, `setGestureHandlerConfig`,
+  `updateGestureHandlerConfig`, `configureRelations`, `dropGestureHandler`,
+  `flushOperations`) are no-ops; `installUIRuntimeBindings` returns `true`.
+  Gesture recognition is done in JS (the host repo's runtime replaces the
+  module on the JS side). The runtime decorator (`shared/runtime`) is not
+  built.
+- `getA11yTree`: the detector has `handlerTags`, `moduleId` and
+  `virtualChildren` (if any); the root view has `moduleId`; the button has
+  `handlerTag`, `moduleId`, `enabled`, `exclusive`, `activeOpacity`, and
+  `hasLongPressHandler`, `gestureTestID`, `rippleColor` when set.
+- The v3 detector events are direct events of the codegen event emitter.
+  `enqueueNativeEventByTag(surfaceId, detectorTag, type, payload)` with
+  `type` `gestureHandlerStateChange`, `gestureHandlerEvent` or
+  `gestureHandlerTouchEvent` reaches the `onGestureHandlerStateChange`,
+  `onGestureHandlerEvent` and `onGestureHandlerTouchEvent` props. The
+  payload arrives unchanged in `nativeEvent` (plus `target` and
+  `timeStamp`):
+  - state change: `{handlerTag, state, oldState, handlerData: {numberOfPointers, pointerType, x, y, absoluteX, absoluteY, ...}}`
+  - update: `{handlerTag, state, handlerData}`
+  - touch: `{handlerTag, state, eventType, numberOfTouches, pointerType, changedTouches: [{id, x, y, absoluteX, absoluteY}], allTouches}`
+  With `useTapGesture`, the state changes BEGAN → ACTIVE → END to the
+  detector call `onBegin`, `onActivate` (with the flattened handler data),
+  `onDeactivate` and `onFinalize`.
+- The legacy API (`Gesture.Tap()` with `GestureDetector`) renders no
+  detector node: it attaches handlers to the child view through the module
+  (`attachGestureHandler`), which is a no-op here.
+
+`tests/FantomGestureHandler-itest.js` (needs `react-native-gesture-handler`
+in the React Native checkout) checks the v3 detector frame (100x100 at
+20,20 around a 100x100 view), the event delivery and payloads, and the
+legacy tree.
+
 ## TextInput and Switch
 
 The JS bundle uses the Android implementations, which render the native
@@ -299,6 +343,7 @@ yarn fantom FantomA11yTree    # NativeFantom.getA11yTree
 yarn fantom FantomInputs      # TextInput measurement and Switch size
 yarn fantom FantomInteraction # hitTest, by-tag events, typing, scrolling
 yarn fantom FantomScreens     # react-native-screens native stack (see Screens)
+yarn fantom FantomGestureHandler # gesture-handler detector (see Gesture handler)
 FANTOM_PRINT_OUTPUT=1 yarn fantom FantomA11yTree   # also print the raw binary stdout
 ```
 

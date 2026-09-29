@@ -17,6 +17,7 @@
 #include <react/renderer/components/text/TextComponentDescriptor.h>
 #include <react/renderer/components/view/ViewComponentDescriptor.h>
 
+#include "components/FantomGestureHandler.h"
 #include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
 #include "components/FantomSwitch.h"
@@ -41,6 +42,7 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<FantomAndroidSwitchComponentDescriptor>());
       registerScreensComponentDescriptors(providerRegistry);
       registerSafeAreaComponentDescriptors(providerRegistry);
+      registerGestureHandlerComponentDescriptors(providerRegistry);
       return providerRegistry;
     }();
     return providerRegistry->createComponentDescriptorRegistry({eventDispatcher, contextContainer, nullptr});
