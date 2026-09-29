@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import {Command, InvalidArgumentError} from 'commander';
 
-import {bundle, DEFAULT_PLATFORM} from './bundle.ts';
+import {bundle} from './bundle.ts';
 import {getHostBin, HostError, runHost} from './host.ts';
 import {toRenderResult} from './tree.ts';
 
@@ -23,7 +23,7 @@ function positiveNumber(value: string): number {
 type RenderOptions = {
   width: number;
   height: number;
-  platform: string;
+  platform?: string;
   out?: string;
   keepBundle: boolean;
   bundleOnly: boolean;
@@ -40,7 +40,14 @@ function write(text: string, out: string | undefined) {
   }
 }
 
+const PLATFORM_REQUIRED_MESSAGE = `--platform <name> is required. Known values: android, ios, a11ytree. Any Metro platform name is accepted.
+Note: React Native core components branch on Platform.OS (e.g. TextInput, Switch), so use android or ios for them to render.`;
+
 async function render(file: string, options: RenderOptions) {
+  const platform = options.platform;
+  if (platform == null || platform === '') {
+    throw new Error(PLATFORM_REQUIRED_MESSAGE);
+  }
   if (!options.bundleOnly) {
     // Fail before spending time on Metro.
     getHostBin();
@@ -49,7 +56,7 @@ async function render(file: string, options: RenderOptions) {
     appPath: file,
     viewportWidth: options.width,
     viewportHeight: options.height,
-    platform: options.platform,
+    platform,
     dev: options.dev,
     includeDebugProps: options.debugProps,
     verbose: options.verbose,
@@ -93,7 +100,10 @@ program
   .argument('<file>', 'component file (default export or `App` named export)')
   .option('--width <dp>', 'viewport width', positiveNumber, 390)
   .option('--height <dp>', 'viewport height', positiveNumber, 844)
-  .option('--platform <name>', 'Metro platform', DEFAULT_PLATFORM)
+  .option(
+    '--platform <name>',
+    'Metro platform (required): android, ios, a11ytree, or any Metro platform name',
+  )
   .option('--out <file>', 'write JSON to a file instead of stdout')
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
   .option('--bundle-only', 'only build the bundle, do not run the host', false)

@@ -21,15 +21,31 @@ function run(args: string[], env: Record<string, string | undefined>) {
   });
 }
 
+test('requires --platform and lists the known values', {timeout: 120_000}, () => {
+  for (const extra of [[], ['--bundle-only']]) {
+    const proc = spawnSync(process.execPath, [CLI, 'render', APP, ...extra], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST},
+    });
+    assert.equal(proc.status, 1);
+    assert.equal(proc.stdout, '');
+    assert.match(proc.stderr, /--platform <name> is required/);
+    assert.match(proc.stderr, /android, ios, a11ytree/);
+    assert.match(proc.stderr, /Any Metro platform name is accepted/);
+    assert.match(proc.stderr, /Platform\.OS/);
+  }
+});
+
 test('fails with a clear message when the host binary is missing', {timeout: 120_000}, () => {
-  const proc = run(['render', APP], {RN_A11Y_HOST_BIN: '/nonexistent/rn-a11y-host'});
+  const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: '/nonexistent/rn-a11y-host'});
   assert.equal(proc.status, 1);
   assert.match(proc.stderr, /RN_A11Y_HOST_BIN points to a missing file/);
   assert.equal(proc.stdout, '');
 });
 
 test('bundles with Metro and parses host stdout (fake host)', {timeout: 120_000}, () => {
-  const proc = run(['render', APP], {RN_A11Y_HOST_BIN: FAKE_HOST});
+  const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST});
   assert.equal(proc.status, 0, proc.stderr);
   const result = JSON.parse(proc.stdout) as RenderResult;
   assert.equal(result.root.box.width, 390);
@@ -38,7 +54,7 @@ test('bundles with Metro and parses host stdout (fake host)', {timeout: 120_000}
 });
 
 test('parses a shadowTree payload (fake host)', {timeout: 120_000}, () => {
-  const proc = run(['render', APP, '--debug-props'], {
+  const proc = run(['render', APP, '--platform', 'android', '--debug-props'], {
     RN_A11Y_HOST_BIN: FAKE_HOST,
     FAKE_HOST_MODE: 'shadow-tree',
   });
@@ -50,7 +66,7 @@ test('parses a shadowTree payload (fake host)', {timeout: 120_000}, () => {
 
 test('--debug-props is passed to the entry', {timeout: 120_000}, () => {
   for (const [flag, expected] of [[[], 'false'], [['--debug-props'], 'true']] as const) {
-    const proc = run(['render', APP, '--bundle-only', ...flag], {});
+    const proc = run(['render', APP, '--platform', 'android', '--bundle-only', ...flag], {});
     assert.equal(proc.status, 0, proc.stderr);
     const bundlePath = /Bundle: (.+) \(\d+ bytes\)/.exec(proc.stderr)![1];
     const code = fs.readFileSync(bundlePath, 'utf8');
@@ -61,7 +77,7 @@ test('--debug-props is passed to the entry', {timeout: 120_000}, () => {
 });
 
 test('reports JS errors from the host', {timeout: 120_000}, () => {
-  const proc = run(['render', APP], {
+  const proc = run(['render', APP, '--platform', 'android'], {
     RN_A11Y_HOST_BIN: FAKE_HOST,
     FAKE_HOST_MODE: 'js-error',
   });

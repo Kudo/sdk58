@@ -16,22 +16,12 @@ export const PACKAGE_ROOT = fs.realpathSync(
 export const RUNTIME_DIR = path.join(PACKAGE_ROOT, 'runtime');
 
 /**
- * Default Metro platform. Metro inlines `Platform.OS` from the bundle
- * platform in every module, including react-native's own code, and
- * components such as TextInput and Switch pick their native component with
- * `Platform.OS === 'android' / 'ios'` checks. Under a custom platform
- * (`a11ytree`) neither branch matches: TextInput renders nothing and Switch
- * uses the iOS `Switch` component, which the host does not implement. So the
- * default is `android`, the platform Fantom itself bundles for.
- */
-export const DEFAULT_PLATFORM = 'android';
-
-/**
- * With a custom `--platform` (e.g. `a11ytree`): platform used to resolve
- * `.<platform>.js` files that have no variant for the custom platform. react-native ships some modules only as `.ios.js`/`.android.js`
- * (e.g. `Libraries/Utilities/Platform.js` just re-imports `./Platform`, which
- * would resolve to itself). Fantom bundles its tests for `android`, so we do
- * the same for anything without an explicit `.<platform>.*` file.
+ * Out-of-tree platform mode (e.g. `--platform a11ytree`): a platform that
+ * react-native itself does not ship files for. react-native has modules that
+ * exist only as `.ios.js`/`.android.js` (and `Libraries/Utilities/Platform.js`
+ * re-imports `./Platform`, which would resolve to itself), so any file
+ * without an explicit `.<platform>.*` variant resolves as this platform
+ * instead. Fantom bundles its tests for `android`.
  */
 const FALLBACK_PLATFORM = 'android';
 
@@ -42,7 +32,8 @@ export type BundleOptions = {
   viewportHeight: number;
   /** Ask the host for raw debug props on each node (`getA11yTree` only). */
   includeDebugProps?: boolean;
-  platform?: string;
+  /** Metro platform (required): `android`, `ios`, or an out-of-tree name such as `a11ytree`. */
+  platform: string;
   /** Output bundle path. Defaults to a file in a new temp dir. */
   out?: string;
   dev?: boolean;
@@ -125,6 +116,9 @@ export function createMetroConfig(options: {
 
   const base = getDefaultConfig(projectRoot);
   const upstreamResolveRequest = base.resolver.resolveRequest;
+  // Platforms react-native and Expo know (ios, android, tvos, macos) resolve
+  // normally; only an out-of-tree platform gets the android fallback.
+  const isOutOfTreePlatform = !base.resolver.platforms.includes(platform);
 
   const resolveForPlatform = (
     context: CustomResolutionContext,
@@ -132,7 +126,7 @@ export function createMetroConfig(options: {
     requestPlatform: string | null,
   ): Resolution => {
     const resolve = upstreamResolveRequest ?? context.resolveRequest;
-    if (requestPlatform !== platform || platform === FALLBACK_PLATFORM) {
+    if (requestPlatform !== platform || !isOutOfTreePlatform) {
       return resolve(context, moduleName, requestPlatform);
     }
     try {
@@ -222,7 +216,7 @@ export function createMetroConfig(options: {
 }
 
 export async function bundle(options: BundleOptions): Promise<BundleResult> {
-  const platform = options.platform ?? DEFAULT_PLATFORM;
+  const {platform} = options;
   if (!fs.existsSync(options.appPath)) {
     throw new Error(`File not found: ${path.resolve(options.appPath)}`);
   }

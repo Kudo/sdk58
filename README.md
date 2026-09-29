@@ -4,7 +4,7 @@ Render a React Native component file headlessly and print its accessibility
 and layout tree as JSON.
 
 ```sh
-rn-a11y-tree render App.tsx > tree.json
+rn-a11y-tree render App.tsx --platform android > tree.json
 ```
 
 The component is bundled with real Metro (Expo's `@expo/metro-config`) and
@@ -22,7 +22,7 @@ committed ShadowTree (`source: "shadowTree"`).
 git clone --recurse-submodules --shallow-submodules <this repo>
 yarn install
 yarn build:host        # builds native/dist/<arch>/rn-a11y-host (macOS only for now)
-yarn rn-a11y-tree render examples/basic/App.tsx
+yarn rn-a11y-tree render examples/basic/App.tsx --platform android
 ```
 
 The CLI uses `native/dist/<arch>/rn-a11y-host`. Set `RN_A11Y_HOST_BIN` to use
@@ -39,7 +39,7 @@ Options for `render <file>`:
 | --- | --- | --- |
 | `--width <dp>` | `390` | Viewport width |
 | `--height <dp>` | `844` | Viewport height |
-| `--platform <name>` | `android` | Metro platform (see "Platform" below) |
+| `--platform <name>` | required | Metro platform: `android`, `ios`, `a11ytree`, or any Metro platform name (see "Platform" below) |
 | `--out <file>` | stdout | Write the JSON to a file |
 | `--keep-bundle` | off | Keep the bundle and print its path to stderr |
 | `--bundle-only` | off | Build the bundle and stop (no host needed) |
@@ -129,11 +129,11 @@ the host implements it, else `NativeFantom.getRenderedOutput`.
 ## Architecture
 
 ```
-rn-a11y-tree render App.tsx
+rn-a11y-tree render App.tsx --platform android
   │
   ├─ src/bundle.ts   write runtime/entry-template.js (placeholders filled) to a temp dir
   │                  Metro.runBuild with expo/metro-config getDefaultConfig + overrides
-  │                  -> single-file bundle (platform "android", dev=false, minify=false)
+  │                  -> single-file bundle (--platform, dev=false, minify=false)
   │
   ├─ src/host.ts     spawn $RN_A11Y_HOST_BIN --bundlePath <bundle> --featureFlags {} --minLogLevel error
   │                  read newline-delimited JSON on stdout
@@ -160,16 +160,16 @@ Base: `getDefaultConfig(projectRoot)` from `expo/metro-config`. Overrides:
   off), like Fantom.
 - `resolver.blockList` adds `RendererProxy.fb.js`.
 - `transformer.hermesParser: true`.
-- `resolver.platforms` starts with the platform (default `android`) and `native`.
+- `resolver.platforms` starts with the `--platform` value and `native`.
 - `watchFolders` adds the project root, this package, and the temp entry dir
   (Metro does not find files in the project root without it when the project
   is outside this repo).
 - `resolver.resolveRequest`:
   - Bare imports from `runtime/` and the generated entry resolve from the
     user's project first, so there is one copy of `react` and `react-native`.
-  - Platform fallback (only with a custom `--platform`, for example
-    `a11ytree`): a file is taken for the custom platform only if it is a
-    `.a11ytree.*` file. Otherwise the request resolves as `android`. This is
+  - Platform fallback (only for an out-of-tree platform, that is a name
+    that is not `ios`, `android`, `tvos` or `macos`, for example `a11ytree`):
+    a file is taken for that platform only if it is a `.a11ytree.*` file. Otherwise the request resolves as `android`. This is
     needed because react-native has modules that exist only as `.ios.js` /
     `.android.js`, and some `.js` files re-import themselves by platform
     (`Libraries/Utilities/Platform.js` imports `./Platform`).
@@ -177,19 +177,23 @@ Base: `getDefaultConfig(projectRoot)` from `expo/metro-config`. Overrides:
 
 ### Platform
 
-The default Metro platform is `android`, the same as Fantom. Metro inlines
-`Platform.OS` from the bundle platform in all modules, including
-react-native's own code. react-native picks native components with
-`Platform.OS === 'android'` / `'ios'` checks (for example TextInput and
-Switch), and the host implements the Android ones (`AndroidTextInput`,
-`AndroidSwitch`). So app code sees `Platform.OS === 'android'`.
+`--platform` is required; the CLI does not pick one. Known values:
 
-`--platform <custom>` (for example `a11ytree`) is still supported: files
-named `.<custom>.*` are used when they exist, and all other platform files
-resolve as `android`. But `Platform.OS` is then `'<custom>'` everywhere, so
-components with `Platform.OS` checks break: with `a11ytree`, TextInput
-renders nothing and Switch renders the iOS `Switch` component, which the
-host does not implement (0x0 box).
+- `android`: the platform Fantom bundles for. The host implements the
+  Android native components (`AndroidTextInput`, `AndroidSwitch`), so this
+  is the value to use for TextInput and Switch.
+- `ios`: resolves `.ios.*` files. react-native then uses the iOS native
+  components (for example `Switch`, `RCTSinglelineTextInputView`), which the
+  host does not implement yet.
+- `a11ytree`: out-of-tree platform mode. Files named `.a11ytree.*` are used
+  when they exist; all other platform files resolve as `android`.
+
+Any other Metro platform name is accepted too. Metro inlines `Platform.OS`
+from the bundle platform in all modules, including react-native's own code,
+and react-native core components branch on `Platform.OS === 'android'` /
+`'ios'`. With an out-of-tree name such as `a11ytree`, neither branch matches:
+TextInput renders nothing, and Switch renders the iOS `Switch` component
+(0x0 box in this host). Use `android` or `ios` for those components.
 
 ### Host stdout protocol
 
@@ -247,7 +251,7 @@ Known limitation: the binary links Homebrew OpenSSL by absolute path
 yarn typecheck        # tsc --noEmit
 yarn test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.js)
 yarn test:e2e         # real host; skipped if there is no native/dist binary and no RN_A11Y_HOST_BIN
-yarn rn-a11y-tree render examples/basic/App.tsx --bundle-only
+yarn rn-a11y-tree render examples/basic/App.tsx --platform android --bundle-only
 ```
 
 Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,

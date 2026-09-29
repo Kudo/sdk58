@@ -29,7 +29,7 @@ test(
     timeout: 180_000,
   },
   () => {
-    const proc = spawnSync(process.execPath, [CLI, 'render', APP], {
+    const proc = spawnSync(process.execPath, [CLI, 'render', APP, '--platform', 'android'], {
       cwd: ROOT,
       env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
       encoding: 'utf8',
