@@ -137,8 +137,17 @@ export function createMetroConfig(options: {
 
   const overrides: InputConfigT = {
     projectRoot,
+    // Not the whole PACKAGE_ROOT: it contains third_party/react-native.
     watchFolders: [
-      ...new Set([...(base.watchFolders ?? []), projectRoot, PACKAGE_ROOT, workDir]),
+      ...new Set(
+        [
+          ...(base.watchFolders ?? []),
+          projectRoot,
+          RUNTIME_DIR,
+          path.join(PACKAGE_ROOT, 'node_modules'),
+          workDir,
+        ].filter(dir => fs.existsSync(dir)),
+      ),
     ],
     reporter: {update: () => {}},
     resolver: {

@@ -1,6 +1,9 @@
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import readline from 'node:readline';
+import {fileURLToPath} from 'node:url';
 
 import type {HostPayload} from './schema.ts';
 
@@ -31,17 +34,30 @@ export class HostError extends Error {
   }
 }
 
+/** `native/dist/<arch>/rn-a11y-host`, produced by `yarn build:host`. */
+export const DEFAULT_HOST_BIN = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'native',
+  'dist',
+  os.arch() === 'x64' ? 'x86_64' : os.arch(),
+  'rn-a11y-host',
+);
+
 export function getHostBin(): string {
-  const bin = process.env[HOST_BIN_ENV];
-  if (bin == null || bin === '') {
+  const fromEnv = process.env[HOST_BIN_ENV];
+  if (fromEnv != null && fromEnv !== '') {
+    if (!fs.existsSync(fromEnv)) {
+      throw new HostError(`${HOST_BIN_ENV} points to a missing file: ${fromEnv}`);
+    }
+    return fromEnv;
+  }
+  if (!fs.existsSync(DEFAULT_HOST_BIN)) {
     throw new HostError(
-      `${HOST_BIN_ENV} is not set. Set it to the path of the Fantom host binary (fantom_tester).`,
+      `Host binary not found at ${DEFAULT_HOST_BIN}. Run \`yarn build:host\`, or set ${HOST_BIN_ENV} to the path of a host binary.`,
     );
   }
-  if (!fs.existsSync(bin)) {
-    throw new HostError(`${HOST_BIN_ENV} points to a missing file: ${bin}`);
-  }
-  return bin;
+  return DEFAULT_HOST_BIN;
 }
 
 /**
