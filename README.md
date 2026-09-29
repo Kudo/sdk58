@@ -215,6 +215,10 @@ From Fantom's `tester/src` (`main.cpp`, `AppSettings.cpp`,
    there. Put patches in `native/overlay/` instead.
 4. Runs `./gradlew :private:react-native-fantom:buildFantomTester`. Logs:
    `third_party/react-native/private/react-native-fantom/build/reports/`.
+   Then always runs `cmake --build .../build/tester --target fantom_tester`,
+   because Gradle tracks only CMake files as inputs and can skip the build
+   after `.cpp`/`.mm` edits. It warns if the binary is older than a file in
+   `native/overlay/`.
 5. Copies `fantom_tester` to `native/dist/<arch>/rn-a11y-host`, and the
    `@rpath` dylibs (`libhermesvm.dylib`, `libjsi.dylib`) to
    `native/dist/<arch>/lib/`. Absolute rpaths are replaced with

@@ -77,8 +77,24 @@ rsync -a "$OVERLAY_DIR/" "$FANTOM_DIR/"
 log "gradle :private:react-native-fantom:buildFantomTester (logs: $FANTOM_DIR/build/reports/)"
 (cd "$RN_DIR" && ./gradlew :private:react-native-fantom:buildFantomTester --no-daemon --console=plain)
 
-BIN="$FANTOM_DIR/build/tester/fantom_tester"
+# Gradle's buildFantomTester only tracks CMake files as inputs, so it can
+# report "up to date" after .cpp/.mm edits. Always run the CMake build too
+# (a no-op when nothing changed).
+TESTER_BUILD_DIR="$FANTOM_DIR/build/tester"
+log "cmake --build (catches source edits Gradle does not track)"
+"$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake" --build "$TESTER_BUILD_DIR" \
+  --target fantom_tester -j "$(sysctl -n hw.ncpu)"
+
+BIN="$TESTER_BUILD_DIR/fantom_tester"
 [[ -x "$BIN" ]] || die "build did not produce $BIN"
+
+# Warn if the binary is older than an overlay file. This can be harmless
+# (an edit that does not change the link output) but usually means a stale build.
+NEWER_OVERLAY="$(find "$OVERLAY_DIR" -type f -newer "$BIN" | head -n 5)"
+if [[ -n "$NEWER_OVERLAY" ]]; then
+  log "warning: $BIN is older than these overlay files:"
+  printf '  %s\n' $NEWER_OVERLAY
+fi
 
 # --- (e) relocatable dist ---------------------------------------------------
 
