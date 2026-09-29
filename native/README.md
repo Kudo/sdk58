@@ -23,7 +23,8 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
 | `tester/src/components/FantomScreens.h`, `FantomScreens.cpp`, `FantomScreensSplitScreen.cpp` (new) | react-native-screens: descriptor registration, context entry, emulated native state updates (see Screens). |
 | `tester/src/components/FantomGestureHandler.h`, `FantomGestureHandler.cpp` (new) | react-native-gesture-handler: descriptor registration and the no-op `RNGestureHandlerModule` TurboModule (see Gesture handler). |
-| `tester/src/platform/oss/TesterTurboModuleProvider.cpp` | Provides `RNGestureHandlerModule` and `RNCSafeAreaContext`. |
+| `tester/src/platform/oss/TesterTurboModuleProvider.cpp` | Provides `RNGestureHandlerModule`, `RNCSafeAreaContext` and `StatusBarManager`. |
+| `tester/src/components/FantomStatusBarManager.h`, `FantomStatusBarManager.cpp` (new) | `StatusBarManager` TurboModule (union of the Android and iOS specs): `getConstants()` returns `{HEIGHT, DEFAULT_BACKGROUND_COLOR: 0}` with `HEIGHT` = the safe area top inset (`setSafeAreaInsets`, default 0); `getHeight(callback)` calls `callback({height})`; `setStyle`, `setHidden`, `setColor`, `setTranslucent`, `setNetworkActivityIndicatorVisible`, `addListener`, `removeListeners` are no-ops. `StatusBar` caches the constants when it is first evaluated. |
 | `tester/src/components/FantomSafeArea.h`, `FantomSafeArea.cpp` (new) | react-native-safe-area-context: descriptor registration, `onInsetsChange` events and `RNCSafeAreaView` state (see Safe area). |
 | `tester/scripts/codegen-lib.sh` (new) | Runs React Native codegen for a native library (used by CMake for the native libraries). |
 | `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the TextInput/Switch descriptors above and the native library descriptors. |

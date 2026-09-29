@@ -9,6 +9,7 @@
 
 #include "../../components/FantomGestureHandler.h"
 #include "../../components/FantomSafeArea.h"
+#include "../../components/FantomStatusBarManager.h"
 
 namespace facebook::react {
 /* static */ TurboModuleProvider
@@ -21,6 +22,9 @@ TesterTurboModuleProvider::getTurboModuleProvider() {
         }
         if (name == "RNCSafeAreaContext") {
           return createSafeAreaContextModule(jsInvoker);
+        }
+        if (name == "StatusBarManager") {
+          return createStatusBarManagerModule(jsInvoker);
         }
         return nullptr;
       }};

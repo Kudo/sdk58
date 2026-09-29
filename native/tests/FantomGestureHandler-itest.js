@@ -176,4 +176,29 @@ describe('react-native-gesture-handler', () => {
     console.log('LEGACY_TREE ' + JSON.stringify(strip(rootView)));
     expect(rootView).toBeTruthy();
   });
+
+  it('provides StatusBarManager (DrawerLayout imports StatusBar)', () => {
+    // $FlowFixMe[cannot-resolve-module]
+    const {DrawerLayoutAndroid} = require('react-native-gesture-handler');
+    const {StatusBar} = require('react-native');
+    Native.setSafeAreaInsets({top: 24, left: 0, right: 0, bottom: 0});
+    // StatusBar caches the constants at module evaluation; call the module.
+    const {TurboModuleRegistry} = require('react-native');
+    const module = TurboModuleRegistry.getEnforcing('StatusBarManager');
+    const heights: Array<number> = [];
+    module.getHeight(({height}: {height: number}) => heights.push(height));
+    console.log(
+      'STATUS_BAR ' +
+        JSON.stringify({
+          currentHeight: StatusBar.currentHeight,
+          constants: module.getConstants(),
+          getHeight: heights,
+          drawer: typeof DrawerLayoutAndroid,
+        }),
+    );
+    expect(module.getConstants().HEIGHT).toBe(24);
+    StatusBar.setBarStyle('dark-content');
+    StatusBar.setHidden(true);
+    Native.setSafeAreaInsets({top: 0, left: 0, right: 0, bottom: 0});
+  });
 });
