@@ -1,4 +1,12 @@
-import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 export default function App() {
   return (
@@ -10,6 +18,17 @@ export default function App() {
         style={styles.logo}
         source={{uri: 'https://example.com/logo.png', width: 64, height: 64}}
         accessibilityLabel="Company logo"
+      />
+      <TextInput
+        placeholder="Email"
+        testID="email"
+        style={{fontSize: 16, borderWidth: 1, padding: 8, marginBottom: 16}}
+      />
+      <Switch
+        value
+        testID="remember"
+        accessibilityLabel="Remember me"
+        style={styles.switch}
       />
       <Pressable
         style={styles.button}
@@ -36,6 +55,11 @@ const styles = StyleSheet.create({
   logo: {
     width: 64,
     height: 64,
+    marginBottom: 16,
+  },
+  switch: {
+    // Without this, the column layout stretches the Switch to full width.
+    alignSelf: 'flex-start',
     marginBottom: 16,
   },
   button: {

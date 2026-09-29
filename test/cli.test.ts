@@ -45,7 +45,7 @@ test('parses a shadowTree payload (fake host)', {timeout: 120_000}, () => {
   assert.equal(proc.status, 0, proc.stderr);
   const result = JSON.parse(proc.stdout) as RenderResult;
   assert.equal(result.source, 'shadowTree');
-  assert.equal(result.root.children[0].children.length, 5);
+  assert.equal(result.root.children[0].children.length, 6);
 });
 
 test('--debug-props is passed to the entry', {timeout: 120_000}, () => {

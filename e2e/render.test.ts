@@ -66,6 +66,20 @@ test(
       for (const t of texts) {
         assert.ok(t.box.height > 10, `Paragraph "${t.text}" has height ${t.box.height}`);
       }
+
+      const [email] = findAll(result.root, n => n.testID === 'email');
+      assert.ok(email, 'node with testID "email" not found');
+      assert.equal(email.role, 'textbox');
+      assert.ok(email.box.height > 18, `email has height ${email.box.height}`);
+      assert.equal(email.style.placeholder, 'Email');
+
+      const [remember] = findAll(result.root, n => n.testID === 'remember');
+      assert.ok(remember, 'node with testID "remember" not found');
+      assert.equal(remember.role, 'switch');
+      assert.equal(remember.name, 'Remember me');
+      assert.equal(remember.a11y.state?.checked, true);
+      assert.equal(remember.box.width, 51);
+      assert.equal(remember.box.height, 31);
     } else {
       // Mounted tree (getRenderedOutput): the `role` prop is not in the
       // host's debug props, so only `accessibilityRole` would show a role.

@@ -77,7 +77,7 @@ test('converts the typed getA11yTree JSON (shadowTree) to the output schema', ()
   assert.equal(container.type, 'View');
   assert.deepEqual(
     container.children.map(c => c.type),
-    ['Paragraph', 'Image', 'View', 'Switch', 'View'],
+    ['Paragraph', 'Image', 'AndroidTextInput', 'View', 'AndroidSwitch', 'View'],
   );
   // Yoga edge/gutter objects are flattened to React Native style names.
   assert.deepEqual(container.style, {
@@ -90,7 +90,7 @@ test('converts the typed getA11yTree JSON (shadowTree) to the output schema', ()
   // Pre-order refs (n3 is the kept link span inside the title).
   assert.deepEqual(
     [root, container, ...container.children].map(n => n.ref),
-    ['n0', 'n1', 'n2', 'n4', 'n5', 'n7', 'n8'],
+    ['n0', 'n1', 'n2', 'n4', 'n5', 'n6', 'n8', 'n9'],
   );
 
   const title = container.children[0];
@@ -133,12 +133,23 @@ test('converts the typed getA11yTree JSON (shadowTree) to the output schema', ()
   assert.equal(label.sel, 'RootView>View>View:1>Paragraph');
   assert.equal(label.debugProps, undefined);
 
-  const toggle = container.children[3];
+  const email = container.children[2];
+  assert.equal(email.role, 'textbox');
+  assert.equal(email.sel, '#email');
+  assert.equal(email.text, null); // "" from the host
+  assert.equal(email.name, null);
+  assert.equal(email.style.placeholder, 'Email');
+  assert.equal(email.style.editable, true);
+  assert.equal(email.style.padding, 8);
+  assert.equal(email.style.borderWidth, 1);
+
+  const toggle = container.children[4];
   assert.equal(toggle.role, 'switch');
-  assert.deepEqual(toggle.a11y.state, {checked: true});
+  assert.equal(toggle.name, 'Remember me');
+  assert.deepEqual(toggle.a11y.state, {checked: true, disabled: true});
   assert.equal(toggle.style.value, true);
 
-  const decoration = container.children[4];
+  const decoration = container.children[5];
   assert.equal(decoration.role, null); // role="presentation" wins, means no role
   assert.equal(decoration.a11y.hidden, true);
   assert.equal(decoration.sel, 'RootView>View>View:2');

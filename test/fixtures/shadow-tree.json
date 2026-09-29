@@ -117,6 +117,31 @@
           "children": []
         },
         {
+          "type": "AndroidTextInput",
+          "tag": 9,
+          "frame": {
+            "x": 24,
+            "y": 90,
+            "width": 342,
+            "height": 37
+          },
+          "testID": "email",
+          "text": "",
+          "placeholder": "Email",
+          "editable": true,
+          "secureTextEntry": false,
+          "multiline": false,
+          "yogaStyle": {
+            "padding": {
+              "all": 8
+            },
+            "border": {
+              "all": 1
+            }
+          },
+          "children": []
+        },
+        {
           "type": "View",
           "tag": 5,
           "frame": {
@@ -167,7 +192,7 @@
           ]
         },
         {
-          "type": "Switch",
+          "type": "AndroidSwitch",
           "tag": 7,
           "frame": {
             "x": 24,
@@ -176,7 +201,10 @@
             "height": 31
           },
           "value": true,
-          "children": []
+          "children": [],
+          "accessibilityLabel": "Remember me",
+          "testID": "remember",
+          "disabled": true
         },
         {
           "type": "View",
