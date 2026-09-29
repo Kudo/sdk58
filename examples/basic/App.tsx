@@ -13,7 +13,7 @@ export default function App() {
       />
       <Pressable
         style={styles.button}
-        accessibilityRole="button"
+        role="button"
         testID="submit"
         onPress={() => {}}>
         <Text style={styles.buttonLabel}>Submit</Text>

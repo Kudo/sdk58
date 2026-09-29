@@ -44,6 +44,7 @@ Options for `render <file>`:
 | `--out <file>` | stdout | Write the JSON to a file |
 | `--keep-bundle` | off | Keep the bundle and print its path to stderr |
 | `--bundle-only` | off | Build the bundle and stop (no host needed) |
+| `--debug-props` | off | Add raw host debug props to each node (`debugProps`; `shadowTree` source only) |
 | `--dev` | off | Development bundle (`__DEV__ = true`) |
 | `-v, --verbose` | off | Metro progress, host glog and console output on stderr |
 
@@ -56,12 +57,14 @@ TypeScript types: [`src/schema.ts`](src/schema.ts).
 ```jsonc
 {
   "viewport": {"width": 390, "height": 844},
+  "source": "shadowTree",      // or "mounted", see "Tree sources"
   "root": {
     "ref": "n0",               // pre-order id within this render
     "type": "RootView",        // host component name from the shadow tree
     "sel": "RootView",         // "#testID" or a type path, e.g. "RootView>View>Paragraph:2"
-    "role": null,              // accessibilityRole / role, or implicit (Paragraph/Text: "text", Image: "image")
-    "name": null,              // accessibilityLabel, else aria-label, else text, else descendant text if accessible
+    "role": null,              // role, else accessibilityRole, else implicit (Paragraph/Text: "text", Image: "image",
+                               // Switch: "switch", TextInput: "textbox"); "none"/"presentation" -> null
+    "name": null,              // accessibilityLabel, else own text, else descendant text if accessible
     "a11y": {
       "accessible": true,      // only when reported
       "label": "...",
@@ -71,36 +74,44 @@ TypeScript types: [`src/schema.ts`](src/schema.ts).
       "raw": {"accessibilityRole": "button"}  // accessibility props as reported (strings)
     },
     "box": {"x": 0, "y": 0, "width": 390, "height": 844},  // absolute, dp
-    "style": {"backgroundColor": "rgba(255, 255, 255, 1)"}, // other reported props (strings)
-    "text": null,              // text content of Paragraph / Text fragment nodes
+    "style": {"backgroundColor": "rgba(255, 255, 255, 1)"}, // other props: visual, Yoga style, font, component props
+    "text": null,              // text content of Paragraph / Text fragment / TextInput nodes
     "testID": null,
+    "debugProps": {},          // only with --debug-props (shadowTree source)
     "children": []
   }
 }
 ```
 
-Notes:
+### Tree sources
 
-- The host reports props through React Native's debug-string props
-  (`getDebugProps`). Only props that differ from their defaults are present,
-  and all values are strings. This needs a host built with
-  `RN_DEBUG_STRING_CONVERTIBLE=1`; without it, `props` is empty and there are
-  no boxes.
-- The tree is the mounted host view tree after Fabric view flattening, the
-  same as on iOS/Android:
-  - A `<View>` with only layout styles is removed from the tree. Use
-    `collapsable={false}` to keep it.
-  - A `<View>` that draws something (for example `backgroundColor`) but does
-    not form a stacking context is kept, but its children are moved up to the
-    nearest ancestor that forms a stacking context. They appear as siblings
-    that come after the `View`, not as its children. Their frames are relative
-    to their new parent, so `box` is still correct.
-- `<Text>` renders as a `Paragraph` host node. Nested `<Text>` spans appear
-  as `Text` child nodes without their own layout; they get the `Paragraph`'s
-  box.
-- The `role` prop is not in the host's debug props today (only
-  `accessibilityRole` is), so `role="..."` without `accessibilityRole` is not
-  visible yet.
+The entry uses `NativeFantom.getA11yTree(surfaceId, includeDebugProps)` when
+the host implements it, else `NativeFantom.getRenderedOutput`.
+
+- `shadowTree` (`getA11yTree`, being added to the host): the committed
+  ShadowTree. The hierarchy is complete (no view flattening), values are
+  typed (numbers, booleans), and `role`, `accessibilityValue` and text
+  fragments are available. Mapping tables are at the top of the
+  `shadowTree` section in `src/tree.ts`.
+- `mounted` (`getRenderedOutput`, upstream Fantom): the mounted view tree.
+  Notes:
+  - Props are React Native debug-string props (`getDebugProps`): only
+    non-default props, all values are strings. The host must be built with
+    `RN_DEBUG_STRING_CONVERTIBLE=1`; without it there are no props and no
+    boxes.
+  - Fabric view flattening applies, the same as on iOS/Android:
+    - A `<View>` with only layout styles is removed from the tree. Use
+      `collapsable={false}` to keep it.
+    - A `<View>` that draws something (for example `backgroundColor`) but
+      does not form a stacking context is kept, but its children are moved
+      up to the nearest ancestor that forms a stacking context. They appear
+      as siblings that come after the `View`. Their frames are relative to
+      their new parent, so `box` is still correct.
+  - `<Text>` renders as a `Paragraph` host node. Nested `<Text>` spans
+    appear as `Text` child nodes without their own layout; they get the
+    `Paragraph`'s box.
+  - The `role` prop is not in the debug props (only `accessibilityRole`
+    is), so `role="..."` without `accessibilityRole` gives `role: null`.
 
 ## Architecture
 
@@ -117,10 +128,11 @@ rn-a11y-tree render App.tsx
   │    host: load bundle -> call global.$$RunTests$$()
   │    JS:   Fantom.createRoot({viewportWidth, viewportHeight})
   │          Fantom.runTask(() => root.render(<App />))
-  │          NativeFantom.getRenderedOutput(rootTag, {includeRoot, includeLayoutMetrics})
+  │          NativeFantom.getA11yTree(rootTag, includeDebugProps)   (if the host has it)
+  │            else NativeFantom.getRenderedOutput(rootTag, {includeRoot, includeLayoutMetrics})
   │          NativeFantom.reportTestSuiteResultsJSON('{"type":"rn-a11y-tree-result","rnA11yTree":{...}}')
   │
-  └─ src/tree.ts     Fantom JSON (type/props/children, layoutMetrics-* props) -> output schema
+  └─ src/tree.ts     shadowTree or mounted JSON -> output schema
 ```
 
 `runtime/fantom/` is the Fantom JS runtime vendored from React Native (not on
@@ -169,7 +181,7 @@ From Fantom's `tester/src` (`main.cpp`, `AppSettings.cpp`,
 - stdout is newline-delimited JSON:
   - `console.*` from JS: `{"type":"console-log","level":"info|warn|error","message":"..."}`
   - `NativeFantom.reportTestSuiteResultsJSON(s)` prints `s` and a newline.
-    We send `{"type":"rn-a11y-tree-result","rnA11yTree":{"viewport":{...},"tree":{...}}}`
+    We send `{"type":"rn-a11y-tree-result","rnA11yTree":{"viewport":{...},"source":"shadowTree|mounted","tree":{...}}}`
     or `{"type":"rn-a11y-tree-error","error":{"message":"...","stack":"..."}}`.
 - glog goes to stderr.
 

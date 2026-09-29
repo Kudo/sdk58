@@ -43,7 +43,6 @@ test(
 
     const [submit] = findAll(result.root, n => n.testID === 'submit');
     assert.ok(submit, 'node with testID "submit" not found');
-    assert.equal(submit.role, 'button');
     assert.ok(submit.box.width > 0 && submit.box.height > 0, 'submit has an empty box');
 
     const texts = findAll(result.root, n => n.type === 'Paragraph');
@@ -52,5 +51,25 @@ test(
       texts.some(n => n.text === 'Sign in'),
       `title text not found in ${JSON.stringify(texts.map(n => n.text))}`,
     );
+
+    if (result.source === 'shadowTree') {
+      // Full hierarchy: the container View holds the screen content.
+      const container = result.root.children[0];
+      assert.equal(container?.type, 'View');
+      assert.ok(container.children.length > 0, 'container View has no children');
+      // `role="button"` (ARIA prop) is visible in the shadow tree.
+      assert.equal(submit.role, 'button');
+      assert.ok(
+        submit.children.some(c => c.type === 'Paragraph'),
+        'submit has no Paragraph child',
+      );
+      for (const t of texts) {
+        assert.ok(t.box.height > 10, `Paragraph "${t.text}" has height ${t.box.height}`);
+      }
+    } else {
+      // Mounted tree (getRenderedOutput): the `role` prop is not in the
+      // host's debug props, so only `accessibilityRole` would show a role.
+      assert.equal(result.source, 'mounted');
+    }
   },
 );
