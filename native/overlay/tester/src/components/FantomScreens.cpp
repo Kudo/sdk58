@@ -6,6 +6,7 @@
  */
 
 #include "FantomScreens.h"
+#include "FantomSafeArea.h"
 
 #include <atomic>
 
@@ -26,6 +27,7 @@
 #include <react/renderer/components/rnscreens/RNSTabsHostComponentDescriptor.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 
+#include <algorithm>
 #include <cstring>
 #endif
 
@@ -129,6 +131,7 @@ bool headerOffsetsContent(const ShadowNode& headerConfig) {
 int updateScreen(
     const ShadowNode& screen,
     const ShadowNode& parent,
+    Float screenTopInset,
     Float headerHeight) {
   const auto* screenShadowNode =
       dynamic_cast<const RNSScreenShadowNode*>(&screen);
@@ -143,9 +146,14 @@ int updateScreen(
 
   const auto* headerConfig = findHeaderConfig(screen);
   bool inStack = isComponent(parent, "RNSScreenStack");
+  bool hasVisibleHeader =
+      inStack && headerConfig != nullptr && isHeaderVisible(*headerConfig);
+  // The native bar is below the status bar (the safe area top inset that
+  // overlaps the screen). The content starts below the bar unless the header
+  // is translucent or a large title.
   Float contentOffsetY =
-      inStack && headerConfig != nullptr && headerOffsetsContent(*headerConfig)
-      ? headerHeight
+      hasVisibleHeader && headerOffsetsContent(*headerConfig)
+      ? screenTopInset + headerHeight
       : 0;
 
   int updates = 0;
@@ -160,15 +168,16 @@ int updateScreen(
     updates++;
   }
 
-  if (headerConfig != nullptr && inStack && isHeaderVisible(*headerConfig)) {
+  if (hasVisibleHeader) {
     const auto* headerShadowNode =
         dynamic_cast<const RNSScreenStackHeaderConfigShadowNode*>(
             headerConfig);
     if (headerShadowNode != nullptr) {
+      // frameOrigin is relative to the screen's content origin.
       auto newData = RNSScreenStackHeaderConfigState(
           Size{parentSize.width, headerHeight},
           EdgeInsets{0, 0, 0, 0},
-          Point{0, -contentOffsetY});
+          Point{0, screenTopInset - contentOffsetY});
       auto oldData = headerShadowNode->getStateData();
       if (oldData != newData) {
         auto state = std::static_pointer_cast<
@@ -183,13 +192,29 @@ int updateScreen(
   return updates;
 }
 
-int updateSubtree(const ShadowNode& node, Float headerHeight) {
+// `contentOrigin`: origin of `node`'s children in root coordinates.
+int updateSubtree(
+    const ShadowNode& node,
+    Point contentOrigin,
+    Float windowTopInset,
+    Float headerHeight) {
   int updates = 0;
   for (const auto& child : node.getChildren()) {
-    if (isComponent(*child, "RNSScreen")) {
-      updates += updateScreen(*child, node, headerHeight);
+    const auto* layoutable =
+        dynamic_cast<const LayoutableShadowNode*>(child.get());
+    if (layoutable == nullptr) {
+      continue;
     }
-    updates += updateSubtree(*child, headerHeight);
+    auto origin = contentOrigin + layoutable->getLayoutMetrics().frame.origin;
+    if (isComponent(*child, "RNSScreen")) {
+      auto screenTopInset = std::max<Float>(0, windowTopInset - origin.y);
+      updates += updateScreen(*child, node, screenTopInset, headerHeight);
+    }
+    updates += updateSubtree(
+        *child,
+        origin + layoutable->getContentOriginOffset(false),
+        windowTopInset,
+        headerHeight);
   }
   return updates;
 }
@@ -197,7 +222,11 @@ int updateSubtree(const ShadowNode& node, Float headerHeight) {
 } // namespace
 
 int updateScreenStates(const ShadowNode& rootShadowNode) {
-  return updateSubtree(rootShadowNode, getScreensHeaderHeight());
+  return updateSubtree(
+      rootShadowNode,
+      Point{0, 0},
+      getSafeAreaInsets().top,
+      getScreensHeaderHeight());
 }
 
 #else

@@ -17,16 +17,17 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | File | Change |
 |---|---|
 | `tester/third-party/nlohmann_json/CMakeLists.txt` | `SYSTEM` include directory. Apple clang 21 with `-Werror` fails on `-Wdeprecated-literal-operator` in the bundled `json.hpp`. |
-| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds react-native-screens as the `rnscreens` library when it is found (see Screens). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
+| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context) when they are found (see Native libraries). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
 | `tester/src/platform/macos/TextLayoutManager.mm` (new) | Text measurement with AppKit/TextKit 1 (`NSLayoutManager`). Port of the iOS `RCTTextLayoutManager.mm`, `RCTAttributedTextUtils.mm` and `RCTFontUtils.mm`. The upstream stub returns the minimum size (height 0) for all text. |
 | `tester/src/render/A11yTree.h`, `A11yTree.cpp` (new) | Serializes the shadow tree (not the mounted tree, so views are not flattened) to typed JSON. |
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
 | `tester/src/components/FantomScreens.h`, `FantomScreens.cpp`, `FantomScreensSplitScreen.cpp` (new) | react-native-screens: descriptor registration, context entry, emulated native state updates (see Screens). |
-| `tester/scripts/codegen-lib.sh` (new) | Runs React Native codegen for a native library (used by CMake for react-native-screens). |
-| `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the TextInput/Switch descriptors above and the react-native-screens descriptors. |
-| `tester/src/TesterAppDelegate.cpp` | Adds the react-native-screens context entry and runs `updateScreenStates` after every mount. `loadScript` flushes the message queue until the JS runtime pointer is set (at most 30 s, then a fatal error). Upstream flushes once; when the runtime task was queued after that flush, `loadScriptAndRunTests` crashed with SIGSEGV (null `runtime_`, `TesterAppDelegate.cpp:187`). |
+| `tester/src/components/FantomSafeArea.h`, `FantomSafeArea.cpp` (new) | react-native-safe-area-context: descriptor registration, `onInsetsChange` events and `RNCSafeAreaView` state (see Safe area). |
+| `tester/scripts/codegen-lib.sh` (new) | Runs React Native codegen for a native library (used by CMake for the native libraries). |
+| `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the TextInput/Switch descriptors above and the native library descriptors. |
+| `tester/src/TesterAppDelegate.cpp` | Adds the react-native-screens context entry and runs the screens and safe-area updates after every mount. `loadScript` flushes the message queue until the JS runtime pointer is set (at most 30 s, then a fatal error). Upstream flushes once; when the runtime task was queued after that flush, `loadScriptAndRunTests` crashed with SIGSEGV (null `runtime_`, `TesterAppDelegate.cpp:187`). |
 | `tester/src/render/HitTest.h`, `HitTest.cpp` (new) | Hit testing with `hitSlop`, and tag lookup in the shadow tree. |
-| `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`, `hitTest`, `enqueueNativeEventByTag`, `enqueueScrollEventByTag`, `setTextInputTextByTag`, `updateScreenStates` and `setScreensHeaderHeight`. They are registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
+| `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`, `hitTest`, `enqueueNativeEventByTag`, `enqueueScrollEventByTag`, `setTextInputTextByTag`, `updateScreenStates` (also registered as `updateNativeStates`), `setScreensHeaderHeight` and `setSafeAreaInsets`. They are registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
 
 Signatures of the added `NativeFantom` methods (Flow):
 
@@ -48,9 +49,14 @@ enqueueScrollEventByTag: (
   options: {x: number, y: number, zoomScale?: ?number},
 ) => void;
 setTextInputTextByTag: (surfaceId: RootTag, tag: number, text: string) => void;
-// Returns the number of dispatched state updates (see Screens).
+// Dispatches the screens state updates and safe-area events/state updates
+// (they also run after every mount); returns their number.
 updateScreenStates: (surfaceId: RootTag) => number;
+updateNativeStates: (surfaceId: RootTag) => number; // same function
 setScreensHeaderHeight: (height: number) => void;
+// Window safe area insets, default 0. Applied at the next mount or
+// updateNativeStates call.
+setSafeAreaInsets: (insets: {top?: number, left?: number, right?: number, bottom?: number}) => void;
 ```
 
 The by-tag methods throw a `JSError` if the tag is not in the surface's
@@ -107,19 +113,29 @@ Events that worked in `tests/FantomInteraction-itest.js` (Pressable with
   `ScrollEvent` default, also through `enqueueScrollEvent`). Sizes are Yoga
   floats, so they can be off by about 1e-4 (for example 1000.00006).
 
-## Screens (react-native-screens)
+## Native libraries
 
-Build: CMake looks for the package in `$FANTOM_RNSCREENS_DIR`, else in the
-`node_modules/react-native-screens` next to the React Native checkout (for this
-repo: the root `node_modules`, `react-native-screens@~4.28.0` as pinned by
-Expo SDK 58). If it is not found, the host is built without screens. At
+CMake builds native libraries from npm when it finds them in
+`$RN_NATIVE_LIBS_DIR` (a `node_modules` directory; not `FANTOM_*`, because the
+Fantom runner rejects unknown `FANTOM_*` variables), else in the
+`node_modules` next to the React Native checkout (for this repo: the root
+`node_modules`). A library that is not found is skipped. For each library, at
 configure time, `tester/scripts/codegen-lib.sh` runs React Native codegen
 (`combine-js-to-schema-cli.js` + `generate-specs-cli.js -p android`, spec
 directory and Java package from the package's `codegenConfig`) into
-`build/tester/codegen-libs/rnscreens/`. CMake compiles that output and
-`common/cpp/react/renderer/components/rnscreens/*.cpp` into the `rnscreens`
-library (warnings are not errors there). `native/scripts/codegen-lib.sh` runs
-the same codegen by hand. No file of the package is patched.
+`build/tester/codegen-libs/<name>/`, and CMake compiles that output plus the
+library's C++ into an OBJECT library (warnings are not errors there) linked
+into the tester, which gets `FANTOM_WITH_<LIBRARY>=1`
+(`fantom_add_native_library` in `tester/CMakeLists.txt`).
+`native/scripts/codegen-lib.sh` runs the same codegen by hand. No file of the
+packages is patched.
+
+| Library (Expo SDK 58 pin) | CMake target | C++ |
+|---|---|---|
+| `react-native-screens` `~4.28.0` | `rnscreens` | `common/cpp/react/renderer/components/rnscreens/*.cpp` |
+| `react-native-safe-area-context` `~5.9.1` | `safeareacontext` | `common/cpp/react/renderer/components/safeareacontext/*.cpp` |
+
+## Screens (react-native-screens)
 
 Branch: the non-Android branch of `common/cpp` (no `ANDROID` define). The
 Android branch needs JNI (`JFabricUIManager`, `ScreenDummyLayoutHelper`). The
@@ -140,29 +156,36 @@ Native state: on a device, the native views send state updates after layout.
 The host emulates them after every mount (and on `updateScreenStates`):
 
 - `RNSScreen`: `frameSize` = frame size of the parent (stack or container),
-  `contentOffset` = (0, header height) if the parent is an `RNSScreenStack`
-  and the screen has a visible `RNSScreenStackHeaderConfig` that is not
-  translucent and not a large title (the rule of `RNSScreen.mm`), else (0, 0).
+  `contentOffset` = (0, top inset + header height) if the parent is an
+  `RNSScreenStack` and the screen has a visible `RNSScreenStackHeaderConfig`
+  that is not translucent and not a large title (the rule of `RNSScreen.mm`),
+  else (0, 0). The top inset is the part of the safe area top inset
+  (`setSafeAreaInsets`) that overlaps the screen: the status bar above the
+  native bar.
   The library's descriptor applies `frameSize` as the Yoga size; the offset is
   the screen's content origin offset (like iOS, the screen covers the whole
   stack and its content starts below the header, so the content wrapper
   extends one header height below the screen).
 - `RNSScreenStackHeaderConfig` (visible, in a stack): `frameSize` = (screen
-  width, header height), no edge insets, `frameOrigin` = (0, -contentOffset),
-  so the header is at the top of the screen, where the native bar is drawn.
+  width, header height), no edge insets, `frameOrigin` = (0, top inset -
+  contentOffset), so the header is below the status bar at the top of the
+  screen, where the native bar is drawn.
 
 Constants: the header height is 56 (Android toolbar) by default;
 `setScreensHeaderHeight(44)` gives the iOS navigation bar height. There is no
 status bar or safe area inset, no large-title height, no back-button inset,
-and no header subview layout. The updates are asynchronous
+and no header subview layout. The status bar height comes from the safe
+area top inset (default 0). The updates are asynchronous
 (`ConcreteState::updateState`, as on the platform): they are committed when
 the event queue is flushed (`NativeFantom.flushEventQueue()`), so settle after
 a render.
 
 `getA11yTree` for screens: `RNSScreen` has `activityState` (0 inactive, 1
-transitioning, 2 active), `stackPresentation` and `screenId`;
-`RNSScreenStackHeaderConfig` has `title`, and `hidden`, `translucent`,
-`largeTitle`, `backTitle`, `hideBackButton` when set. Every node with a
+transitioning, 2 active), `stackPresentation`, `stackAnimation`,
+`gestureEnabled`, `screenId`, and the emulated state (`stateFrameSize`,
+`stateContentOffset`); `RNSScreenStackHeaderConfig` has `title`, and
+`hidden`, `translucent`, `largeTitle`, `backTitle`, `backgroundColor`,
+`hideBackButton` when set. Every node with a
 non-zero content origin offset has `contentOriginOffset` (ScrollView:
 -contentOffset; RNSScreen: the header offset). Absolute position of a child =
 parent position + parent `contentOriginOffset` + child `frame` origin.
@@ -171,19 +194,37 @@ parent position + parent `contentOriginOffset` + child `frame` origin.
 TurboModules: the JS asks for `RNSModule` with `TurboModuleRegistry.get`
 (not enforcing; empty spec), and it is not provided. Nothing else is needed
 for the native stack. `global.RNScreensTurboModule` is only used by the
-gesture-handler screen transitions and is not installed. Navigation with
-`@react-navigation/native-stack` also asks for `RNCSafeAreaContext` (not
-provided, so `initialWindowMetrics` is null and `SafeAreaProviderCompat`
-uses the window size with zero insets); `RNCSafeAreaProvider` is a legacy
-interop view.
+gesture-handler screen transitions and is not installed.
 
 `tests/FantomScreens-itest.js` (needs `react-native-screens`,
 `@react-navigation/native`, `@react-navigation/native-stack` and
-`react-native-safe-area-context` in the React Native checkout) renders a
-native stack with Home and Details, taps the Home button with a touch pair,
-settles, and checks the tree: two `RNSScreen` under `RNSScreenStack`, both
-390x844 like the stack, the Details header config with `title` "Details",
-and the Home screen still present.
+`react-native-safe-area-context` in the React Native checkout, and
+`FantomNavigationStackApp.tsx`, a copy of `examples/navigation-stack/App.tsx`,
+next to it) sets the safe area insets to top 47 / bottom 34, renders the app,
+taps "go-details" with a touch pair, settles, and checks the tree: the
+provider `insets`, two `RNSScreen` under `RNSScreenStack` with the second one
+filling the stack, the Details header config with `title` "Details", the Home
+screen still present, and one screen after tapping "go-back".
+
+## Safe area (react-native-safe-area-context)
+
+- `RNCSafeAreaProvider` (codegen descriptor): after every mount (and on
+  `updateNativeStates`) the host emits `onInsetsChange` with
+  `{insets: {top, right, bottom, left}, frame: {x, y, width, height}}` when it
+  changed. `frame` is the provider's frame in root coordinates; `insets` are
+  the window insets (`setSafeAreaInsets`, default 0) that overlap the provider,
+  like `UIView.safeAreaInsets`. `SafeAreaProvider` renders its children only
+  after the first event (unless it has `initialMetrics`), so settle (flush the
+  event queue) after a render.
+- `RNCSafeAreaView` (custom descriptor from `common/cpp`): the host sets
+  `RNCSafeAreaViewState.insets` to the insets of the nearest provider (or the
+  overlapping window insets without a provider); the library applies them as
+  padding or margin according to `mode` and `edges`.
+- `getA11yTree`: the provider has `insets` (the last emitted ones) and
+  `RNCSafeAreaView` has `insets` (its state).
+- The `RNCSafeAreaContext` TurboModule (`getConstants` with
+  `initialWindowMetrics`) is not provided; the JS asks for it with
+  `TurboModuleRegistry.get`, so `initialWindowMetrics` is null.
 
 ## TextInput and Switch
 

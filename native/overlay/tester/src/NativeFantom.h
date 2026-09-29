@@ -128,8 +128,11 @@ class NativeFantom : public NativeFantomCxxSpec<NativeFantom> {
 
   void setTextInputTextByTag(jsi::Runtime &runtime, SurfaceId surfaceId, Tag tag, const std::string &text);
 
-  // Dispatches the react-native-screens state updates (see FantomScreens.h);
-  // they are also dispatched after every mount. Returns the number of updates.
+  // Dispatches the react-native-screens state updates and the
+  // safe-area-context events/state updates (see FantomScreens.h and
+  // FantomSafeArea.h); they are also dispatched after every mount. Returns the
+  // number of updates. Registered as `updateScreenStates` and
+  // `updateNativeStates`.
   int updateScreenStates(jsi::Runtime &runtime, SurfaceId surfaceId);
 
   void reportTestSuiteResultsJSON(jsi::Runtime &runtime, const std::string &testSuiteResultsJSON);

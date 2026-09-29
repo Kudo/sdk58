@@ -20,13 +20,19 @@
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <yoga/style/Style.h>
 
+#include "components/FantomSafeArea.h"
 #include "components/FantomSwitch.h"
 #ifdef FANTOM_WITH_RNSCREENS
 #include <react/renderer/components/rnscreens/Props.h>
+#include <react/renderer/components/rnscreens/RNSScreenShadowNode.h>
+#endif
+#ifdef FANTOM_WITH_SAFEAREACONTEXT
+#include <react/renderer/components/safeareacontext/RNCSafeAreaViewShadowNode.h>
 #endif
 #include "components/FantomTextInput.h"
 
 #include <cmath>
+#include <cstring>
 #include <iomanip>
 #include <sstream>
 
@@ -89,6 +95,12 @@ const char* checkedToString(AccessibilityState::CheckedState checked) {
       return "none";
   }
   return "none";
+}
+
+folly::dynamic edgeInsetsToDynamic(const EdgeInsets& insets) {
+  return folly::dynamic::object("top", number(insets.top))(
+      "left", number(insets.left))("right", number(insets.right))(
+      "bottom", number(insets.bottom));
 }
 
 folly::dynamic rectToDynamic(const Rect& rect) {
@@ -614,6 +626,9 @@ folly::dynamic renderNode(
     if (!headerProps->backTitle.empty()) {
       result["backTitle"] = headerProps->backTitle;
     }
+    if (headerProps->backgroundColor) {
+      result["backgroundColor"] = colorToString(headerProps->backgroundColor);
+    }
     if (headerProps->hideBackButton) {
       result["hideBackButton"] = true;
     }
@@ -623,9 +638,34 @@ folly::dynamic renderNode(
     // 0: inactive, 1: transitioning, 2: active (-1: not set).
     result["activityState"] = number(screenProps->activityState);
     result["stackPresentation"] = toString(screenProps->stackPresentation);
+    result["stackAnimation"] = toString(screenProps->stackAnimation);
+    result["gestureEnabled"] = screenProps->gestureEnabled;
+    if (const auto* screenShadowNode =
+            dynamic_cast<const RNSScreenShadowNode*>(&node)) {
+      // The emulated native state (see FantomScreens.h).
+      const auto& state = screenShadowNode->getStateData();
+      result["stateFrameSize"] = folly::dynamic::object(
+          "width", number(state.frameSize.width))(
+          "height", number(state.frameSize.height));
+      result["stateContentOffset"] = folly::dynamic::object(
+          "x", number(state.contentOffset.x))(
+          "y", number(state.contentOffset.y));
+    }
     if (!screenProps->screenId.empty()) {
       result["screenId"] = screenProps->screenId;
     }
+  }
+#endif
+
+  if (std::strcmp(node.getComponentName(), "RNCSafeAreaProvider") == 0) {
+    if (auto insets = getEmittedSafeAreaProviderInsets(node.getTag())) {
+      result["insets"] = edgeInsetsToDynamic(*insets);
+    }
+  }
+#ifdef FANTOM_WITH_SAFEAREACONTEXT
+  if (const auto* safeAreaView =
+          dynamic_cast<const RNCSafeAreaViewShadowNode*>(&node)) {
+    result["insets"] = edgeInsetsToDynamic(safeAreaView->getStateData().insets);
   }
 #endif
 

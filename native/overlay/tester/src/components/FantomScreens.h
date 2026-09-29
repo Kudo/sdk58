@@ -43,12 +43,15 @@ Float getScreensHeaderHeight();
  * RNSScreen.mm updateBounds, RNSScreenStackHeaderConfig.mm
  * updateShadowStateWithSize):
  *  - RNSScreen: frameSize = frame size of its parent (the stack or container);
- *    contentOffset = (0, header height) when the screen is in an
+ *    contentOffset = (0, top inset + header height) when the screen is in an
  *    RNSScreenStack and has a visible, non-translucent, non-large-title
- *    RNSScreenStackHeaderConfig child, otherwise (0, 0).
+ *    RNSScreenStackHeaderConfig child, otherwise (0, 0). The top inset is the
+ *    part of the safe area top inset (setSafeAreaInsets) that overlaps the
+ *    screen (the status bar above the native bar).
  *  - RNSScreenStackHeaderConfig (visible): frameSize = (screen width, header
- *    height), no insets, frameOrigin = (0, -contentOffset.y), so the header
- *    is placed at the top of the screen, where the native bar is drawn.
+ *    height), no insets, frameOrigin = (0, top inset - contentOffset.y), so
+ *    the header is placed below the status bar at the top of the screen,
+ *    where the native bar is drawn.
  * Updates are dispatched with ConcreteState::updateState (asynchronous, like
  * the platform); they are committed when the event queue is flushed. Only
  * changed states are dispatched. Returns the number of dispatched updates.

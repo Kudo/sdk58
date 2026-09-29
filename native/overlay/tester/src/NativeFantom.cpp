@@ -20,6 +20,7 @@
 #include "TesterAppDelegate.h"
 
 #include <jsi/instrumentation.h>
+#include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
 #include "components/FantomTextInput.h"
 #include "render/A11yTree.h"
@@ -186,6 +187,29 @@ jsi::Value updateScreenStatesHostFunction(
                         .updateScreenStates(runtime, surfaceId));
 }
 
+// setSafeAreaInsets({top, left, right, bottom}): void
+jsi::Value setSafeAreaInsetsHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& /*turboModule*/,
+    const jsi::Value* args,
+    size_t count) {
+  if (count < 1 || !args[0].isObject()) {
+    throw jsi::JSError(
+        runtime, "setSafeAreaInsets: expected {top, left, right, bottom}");
+  }
+  auto object = args[0].asObject(runtime);
+  auto edge = [&](const char* name) -> Float {
+    auto value = object.getProperty(runtime, name);
+    return value.isNumber() ? static_cast<Float>(value.asNumber()) : 0;
+  };
+  setSafeAreaInsets(EdgeInsets{
+      .left = edge("left"),
+      .top = edge("top"),
+      .right = edge("right"),
+      .bottom = edge("bottom")});
+  return jsi::Value::undefined();
+}
+
 // setScreensHeaderHeight(height): void
 jsi::Value setScreensHeaderHeightHostFunction(
     jsi::Runtime& runtime,
@@ -219,6 +243,10 @@ NativeFantom::NativeFantom(
       .argCount = 1, .invoker = updateScreenStatesHostFunction};
   methodMap_["setScreensHeaderHeight"] = MethodMetadata{
       .argCount = 1, .invoker = setScreensHeaderHeightHostFunction};
+  methodMap_["updateNativeStates"] = MethodMetadata{
+      .argCount = 1, .invoker = updateScreenStatesHostFunction};
+  methodMap_["setSafeAreaInsets"] = MethodMetadata{
+      .argCount = 1, .invoker = setSafeAreaInsetsHostFunction};
 }
 
 SurfaceId NativeFantom::startSurface(
@@ -434,8 +462,9 @@ void NativeFantom::setTextInputTextByTag(
 int NativeFantom::updateScreenStates(
     jsi::Runtime& runtime,
     SurfaceId surfaceId) {
-  return facebook::react::updateScreenStates(
-      *getRootShadowNode(runtime, surfaceId));
+  auto rootShadowNode = getRootShadowNode(runtime, surfaceId);
+  return facebook::react::updateScreenStates(*rootShadowNode) +
+      updateSafeAreas(*rootShadowNode);
 }
 
 void NativeFantom::reportTestSuiteResultsJSON(

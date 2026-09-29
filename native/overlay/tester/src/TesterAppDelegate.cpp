@@ -9,6 +9,7 @@
 
 #include "FantomTimerRegistry.h"
 #include "NativeFantom.h"
+#include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
 #include "platform/TesterTurboModuleProvider.h"
 #include "stubs/StubClock.h"
@@ -85,11 +86,15 @@ TesterAppDelegate::TesterAppDelegate(
       std::make_shared<TesterMountingManager>([this](SurfaceId surfaceId) {
         reactHost_->runOnScheduler([&surfaceId](Scheduler& scheduler) {
           scheduler.reportMount(surfaceId);
-          // Emulate the state updates native screens send after layout.
+          // Emulate the state updates and events that native views of
+          // libraries (react-native-screens, safe-area-context) send after
+          // layout.
           scheduler.getUIManager()->getShadowTreeRegistry().visit(
               surfaceId, [](const ShadowTree& shadowTree) {
-                updateScreenStates(
-                    *shadowTree.getCurrentRevision().rootShadowNode);
+                const auto& root =
+                    *shadowTree.getCurrentRevision().rootShadowNode;
+                updateScreenStates(root);
+                updateSafeAreas(root);
               });
         });
       });

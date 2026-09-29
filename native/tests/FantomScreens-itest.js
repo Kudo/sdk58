@@ -69,93 +69,82 @@ function summarize(node: $FlowFixMe): $FlowFixMe {
   };
 }
 
-const Stack = createNativeStackNavigator();
-
-function Home({navigation}: $FlowFixMe) {
-  return (
-    <View>
-      <Text>Home screen</Text>
-      <Pressable
-        testID="go"
-        style={{padding: 12}}
-        onPress={() => navigation.navigate('Details')}>
-        <Text>Go to details</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function Details() {
-  return (
-    <View testID="details-content">
-      <Text>Details screen</Text>
-    </View>
-  );
+function tap(surfaceId: number, root: Fantom.Root, testID: string) {
+  const t = tree(root);
+  const node = findAll(t, n => n.testID === testID)[0];
+  const frame = absoluteFrame(t, node.tag);
+  const x = frame.x + frame.width / 2;
+  const y = frame.y + frame.height / 2;
+  const hit = JSON.parse(Native.hitTest(surfaceId, x, y));
+  const touch = {
+    pageX: x,
+    pageY: y,
+    locationX: x - frame.x,
+    locationY: y - frame.y,
+    screenX: x,
+    screenY: y,
+    identifier: 0,
+    target: hit.tag,
+    timestamp: 1000,
+    force: 1,
+  };
+  Native.enqueueNativeEventByTag(surfaceId, hit.tag, 'touchStart', {
+    touches: [touch],
+    changedTouches: [touch],
+    targetTouches: [touch],
+  });
+  settle();
+  Native.enqueueNativeEventByTag(surfaceId, hit.tag, 'touchEnd', {
+    touches: [],
+    changedTouches: [{...touch, timestamp: 1050}],
+    targetTouches: [],
+  });
+  settle();
+  return hit;
 }
 
 describe('react-native-screens native stack', () => {
-  it('navigates', () => {
+  afterEach(() => {
+    Native.setSafeAreaInsets({top: 0, left: 0, right: 0, bottom: 0});
+  });
+
+  it('navigates (examples/navigation-stack/App.tsx)', () => {
+    // $FlowFixMe[cannot-resolve-module]
+    const App = require('./FantomNavigationStackApp').default;
+    Native.setSafeAreaInsets({top: 47, left: 0, right: 0, bottom: 34});
     const root = Fantom.createRoot({viewportWidth: 390, viewportHeight: 844});
     const surfaceId = root.getRootTag();
     Fantom.runTask(() => {
-      root.render(
-        <NavigationContainer>
-          <Stack.Navigator>
-            <Stack.Screen name="Home" component={Home} />
-            <Stack.Screen name="Details" component={Details} options={{title: 'Details'}} />
-          </Stack.Navigator>
-        </NavigationContainer>,
-      );
+      root.render(<App />);
     });
     settle();
 
     let t = tree(root);
-    const stacks = findAll(t, n => n.type === 'RNSScreenStack');
-    console.log('BEFORE ' + JSON.stringify(stacks.map(summarize)));
+    const provider = findAll(t, n => n.type === 'RNCSafeAreaProvider')[0];
+    console.log('PROVIDER ' + JSON.stringify({frame: provider.frame, insets: provider.insets}));
+    expect(provider.insets).toEqual({top: 47, left: 0, right: 0, bottom: 34});
+    console.log('BEFORE ' + JSON.stringify(findAll(t, n => n.type === 'RNSScreenStack').map(summarize)));
+    expect(findAll(t, n => n.type === 'RNSScreen').length).toBe(1);
 
-    const button = findAll(t, n => n.testID === 'go')[0];
-    const frame = absoluteFrame(t, button.tag);
-    console.log('BUTTON ' + JSON.stringify(frame));
-    const hit = JSON.parse(Native.hitTest(surfaceId, frame.x + 5, frame.y + 5));
+    const hit = tap(surfaceId, root, 'go-details');
     console.log('HIT ' + JSON.stringify(hit));
-    const touch = {
-      pageX: frame.x + 5,
-      pageY: frame.y + 5,
-      locationX: 5,
-      locationY: 5,
-      screenX: frame.x + 5,
-      screenY: frame.y + 5,
-      identifier: 0,
-      target: hit.tag,
-      timestamp: 1000,
-      force: 1,
-    };
-    Native.enqueueNativeEventByTag(surfaceId, hit.tag, 'touchStart', {
-      touches: [touch],
-      changedTouches: [touch],
-      targetTouches: [touch],
-    });
-    settle();
-    Native.enqueueNativeEventByTag(surfaceId, hit.tag, 'touchEnd', {
-      touches: [],
-      changedTouches: [{...touch, timestamp: 1050}],
-      targetTouches: [],
-    });
-    settle();
 
     t = tree(root);
     const stack = findAll(t, n => n.type === 'RNSScreenStack')[0];
     console.log('AFTER ' + JSON.stringify(summarize(stack)));
     const screens = stack.children.filter(n => n.type === 'RNSScreen');
-    const detailsContent = findAll(t, n => n.testID === 'details-content')[0];
-    console.log(
-      'DETAILS_CONTENT ' + JSON.stringify(absoluteFrame(t, detailsContent.tag)),
-    );
     expect(screens.length).toBe(2);
-    expect(screens[1].frame.width).toBe(stack.frame.width);
-    expect(screens[1].frame.height).toBe(stack.frame.height);
+    expect(absoluteFrame(t, screens[1].tag)).toEqual(absoluteFrame(t, stack.tag));
     const headers = findAll(screens[1], n => n.type === 'RNSScreenStackHeaderConfig');
     expect(headers[0].title).toBe('Details');
-    expect(findAll(screens[0], n => n.testID === 'go').length).toBe(1);
+    expect(findAll(screens[0], n => n.testID === 'go-details').length).toBe(1);
+    const detailsText = findAll(t, n => n.testID === 'details-text')[0];
+    console.log('DETAILS_TEXT ' + JSON.stringify({text: detailsText.text, frame: absoluteFrame(t, detailsText.tag)}));
+
+    tap(surfaceId, root, 'go-back');
+    t = tree(root);
+    const screensAfterBack = findAll(t, n => n.type === 'RNSScreen');
+    console.log('AFTER_BACK ' + JSON.stringify(screensAfterBack.map(s => ({tag: s.tag, screenId: s.screenId, activityState: s.activityState}))));
+    expect(screensAfterBack.length).toBe(1);
   });
 });

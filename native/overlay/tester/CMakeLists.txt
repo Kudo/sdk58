@@ -162,43 +162,65 @@ add_react_cxx_platform_subdir(react/runtime)
 add_react_cxx_platform_subdir(react/threading)
 add_react_cxx_platform_subdir(react/utils)
 
-# react-native-screens (optional). The package comes from FANTOM_RNSCREENS_DIR
-# or from node_modules next to the React Native checkout (the host repo keeps
-# React Native in third_party/react-native). Its codegen output is generated
-# at configure time into the build directory. The non-Android branch of its
-# common C++ is used (the Android branch needs JNI); it registers the iOS names
-# of the tabs/gamma components (RNSTabsHostIOS, RNSStackHeaderConfigIOS, ...).
-if(DEFINED ENV{FANTOM_RNSCREENS_DIR})
-  set(RNSCREENS_DIR "$ENV{FANTOM_RNSCREENS_DIR}")
+# Native libraries from npm (optional): react-native-screens,
+# react-native-safe-area-context, ... They are looked up in the directory in
+# the RN_NATIVE_LIBS_DIR environment variable (not FANTOM_*: the Fantom runner
+# rejects unknown FANTOM_* variables), or in the node_modules directory next to the React
+# Native checkout (the host repo keeps React Native in third_party/react-native).
+# For each library found, its codegen output is generated at configure time
+# into the build directory (scripts/codegen-lib.sh), and its C++ plus the
+# codegen C++ are built as an OBJECT library linked into fantom_tester, which
+# gets FANTOM_WITH_<TARGET>=1. The non-Android branches of the libraries' C++
+# are used (the Android branches need JNI).
+if(DEFINED ENV{RN_NATIVE_LIBS_DIR})
+  set(FANTOM_NODE_MODULES_DIR "$ENV{RN_NATIVE_LIBS_DIR}")
 else()
-  get_filename_component(RNSCREENS_DIR
-    "${REACT_COMMON_DIR}/../../../../../node_modules/react-native-screens" ABSOLUTE)
+  get_filename_component(FANTOM_NODE_MODULES_DIR
+    "${REACT_COMMON_DIR}/../../../../../node_modules" ABSOLUTE)
 endif()
-if(EXISTS "${RNSCREENS_DIR}/common/cpp/react/renderer/components/rnscreens")
-  set(FANTOM_WITH_RNSCREENS ON)
-  set(RNSCREENS_CODEGEN_DIR "${CMAKE_BINARY_DIR}/codegen-libs/rnscreens")
-  message(STATUS "react-native-screens: ${RNSCREENS_DIR}")
+set(FANTOM_NATIVE_LIBRARIES)
+
+# fantom_add_native_library(<target> <package> <codegen name>
+#   SOURCE_GLOBS <globs relative to the package>...
+#   INCLUDE_DIRS <dirs relative to the package>...   (before the codegen output)
+#   DEFINITIONS <compile definitions>...)
+function(fantom_add_native_library target package codegen_name)
+  cmake_parse_arguments(ARG "" "" "SOURCE_GLOBS;INCLUDE_DIRS;DEFINITIONS" ${ARGN})
+  set(package_dir "${FANTOM_NODE_MODULES_DIR}/${package}")
+  if(NOT EXISTS "${package_dir}/package.json")
+    message(STATUS "${package}: not found in ${FANTOM_NODE_MODULES_DIR}, skipped")
+    return()
+  endif()
+  message(STATUS "${package}: ${package_dir}")
+
+  set(codegen_dir "${CMAKE_BINARY_DIR}/codegen-libs/${codegen_name}")
   execute_process(
     COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/codegen-lib.sh"
-      "${RNSCREENS_DIR}" rnscreens "${RNSCREENS_CODEGEN_DIR}"
-    RESULT_VARIABLE RNSCREENS_CODEGEN_RESULT)
-  if(NOT RNSCREENS_CODEGEN_RESULT EQUAL 0)
-    message(FATAL_ERROR "codegen for react-native-screens failed")
+      "${package_dir}" "${codegen_name}" "${codegen_dir}"
+    RESULT_VARIABLE codegen_result)
+  if(NOT codegen_result EQUAL 0)
+    message(FATAL_ERROR "codegen for ${package} failed")
   endif()
-  # Re-run codegen when the library's specs or package.json change.
-  file(GLOB_RECURSE RNSCREENS_SPECS CONFIGURE_DEPENDS
-    "${RNSCREENS_DIR}/src/fabric/*.ts" "${RNSCREENS_DIR}/src/fabric/*.tsx")
+  # Re-run codegen when the package or its specs change.
+  file(GLOB_RECURSE specs CONFIGURE_DEPENDS
+    "${package_dir}/src/*NativeComponent.ts" "${package_dir}/src/specs/*.ts"
+    "${package_dir}/src/fabric/*.ts")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${RNSCREENS_DIR}/package.json" ${RNSCREENS_SPECS})
+    "${package_dir}/package.json" ${specs})
 
-  file(GLOB RNSCREENS_SOURCES CONFIGURE_DEPENDS
-    "${RNSCREENS_DIR}/common/cpp/react/renderer/components/rnscreens/*.cpp"
-    "${RNSCREENS_CODEGEN_DIR}/jni/react/renderer/components/rnscreens/*.cpp")
-  add_library(rnscreens OBJECT ${RNSCREENS_SOURCES})
-  target_include_directories(rnscreens PUBLIC
-    "${RNSCREENS_DIR}/common/cpp"
-    "${RNSCREENS_CODEGEN_DIR}/jni")
-  target_link_libraries(rnscreens
+  set(source_globs "${codegen_dir}/jni/react/renderer/components/${codegen_name}/*.cpp")
+  foreach(glob ${ARG_SOURCE_GLOBS})
+    list(APPEND source_globs "${package_dir}/${glob}")
+  endforeach()
+  file(GLOB sources CONFIGURE_DEPENDS ${source_globs})
+  add_library(${target} OBJECT ${sources})
+
+  set(include_dirs)
+  foreach(dir ${ARG_INCLUDE_DIRS})
+    list(APPEND include_dirs "${package_dir}/${dir}")
+  endforeach()
+  target_include_directories(${target} PUBLIC ${include_dirs} "${codegen_dir}/jni")
+  target_link_libraries(${target}
     folly_runtime
     glog
     jsi
@@ -214,12 +236,24 @@ if(EXISTS "${RNSCREENS_DIR}/common/cpp/react/renderer/components/rnscreens")
     rrc_root
     rrc_view
     yoga)
-  target_compile_reactnative_options(rnscreens PRIVATE)
+  target_compile_reactnative_options(${target} PRIVATE)
+  if(ARG_DEFINITIONS)
+    target_compile_definitions(${target} PRIVATE ${ARG_DEFINITIONS})
+  endif()
   # Third-party code: keep warnings, do not fail on them.
-  target_compile_options(rnscreens PRIVATE -Wno-error)
-else()
-  message(STATUS "react-native-screens: not found at ${RNSCREENS_DIR}, skipped")
-endif()
+  target_compile_options(${target} PRIVATE -Wno-error)
+
+  set(FANTOM_NATIVE_LIBRARIES ${FANTOM_NATIVE_LIBRARIES} ${target} PARENT_SCOPE)
+endfunction()
+
+# The react-native-screens common C++ registers the iOS names of the tabs and
+# "gamma" stack components (RNSTabsHostIOS, RNSStackHeaderConfigIOS, ...).
+fantom_add_native_library(rnscreens react-native-screens rnscreens
+  SOURCE_GLOBS "common/cpp/react/renderer/components/rnscreens/*.cpp"
+  INCLUDE_DIRS "common/cpp")
+fantom_add_native_library(safeareacontext react-native-safe-area-context safeareacontext
+  SOURCE_GLOBS "common/cpp/react/renderer/components/safeareacontext/*.cpp"
+  INCLUDE_DIRS "common/cpp")
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
@@ -232,10 +266,11 @@ add_executable(fantom_tester ${SOURCES})
 
 target_include_directories(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-if(FANTOM_WITH_RNSCREENS)
-  target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_RNSCREENS=1)
-  target_link_libraries(fantom_tester PRIVATE rnscreens)
-endif()
+foreach(library ${FANTOM_NATIVE_LIBRARIES})
+  string(TOUPPER "${library}" library_upper)
+  target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_${library_upper}=1)
+  target_link_libraries(fantom_tester PRIVATE ${library})
+endforeach()
 
 target_link_libraries(fantom_tester
   PRIVATE
