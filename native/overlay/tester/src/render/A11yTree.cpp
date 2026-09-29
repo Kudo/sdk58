@@ -21,6 +21,9 @@
 #include <yoga/style/Style.h>
 
 #include "components/FantomSwitch.h"
+#ifdef FANTOM_WITH_RNSCREENS
+#include <react/renderer/components/rnscreens/Props.h>
+#endif
 #include "components/FantomTextInput.h"
 
 #include <cmath>
@@ -527,6 +530,14 @@ folly::dynamic renderNode(
     if (isRoot) {
       result["pointScaleFactor"] = number(layoutMetrics->pointScaleFactor);
     }
+    // Offset of the children's coordinate space (ScrollView: -contentOffset;
+    // RNSScreen: the header height). Absolute position of a child =
+    // parent position + parent contentOriginOffset + child frame origin.
+    auto contentOriginOffset = layoutable->getContentOriginOffset(false);
+    if (contentOriginOffset.x != 0 || contentOriginOffset.y != 0) {
+      result["contentOriginOffset"] = folly::dynamic::object(
+          "x", number(contentOriginOffset.x))("y", number(contentOriginOffset.y));
+    }
   }
 
   const auto& props = node.getProps();
@@ -586,6 +597,37 @@ folly::dynamic renderNode(
   } else if (const auto* interopProps = dynamic_cast<const LegacyViewManagerInteropViewProps*>(props.get())) {
     addLegacyInteropProps(result, interopProps->otherProps);
   }
+
+#ifdef FANTOM_WITH_RNSCREENS
+  if (const auto* headerProps =
+          dynamic_cast<const RNSScreenStackHeaderConfigProps*>(props.get())) {
+    result["title"] = headerProps->title;
+    if (headerProps->hidden) {
+      result["hidden"] = true;
+    }
+    if (headerProps->translucent) {
+      result["translucent"] = true;
+    }
+    if (headerProps->largeTitle) {
+      result["largeTitle"] = true;
+    }
+    if (!headerProps->backTitle.empty()) {
+      result["backTitle"] = headerProps->backTitle;
+    }
+    if (headerProps->hideBackButton) {
+      result["hideBackButton"] = true;
+    }
+  } else if (
+      const auto* screenProps =
+          dynamic_cast<const RNSScreenProps*>(props.get())) {
+    // 0: inactive, 1: transitioning, 2: active (-1: not set).
+    result["activityState"] = number(screenProps->activityState);
+    result["stackPresentation"] = toString(screenProps->stackPresentation);
+    if (!screenProps->screenId.empty()) {
+      result["screenId"] = screenProps->screenId;
+    }
+  }
+#endif
 
 #if RN_DEBUG_STRING_CONVERTIBLE
   if (options.includeDebugProps) {

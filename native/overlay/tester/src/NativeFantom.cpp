@@ -20,6 +20,7 @@
 #include "TesterAppDelegate.h"
 
 #include <jsi/instrumentation.h>
+#include "components/FantomScreens.h"
 #include "components/FantomTextInput.h"
 #include "render/A11yTree.h"
 #include "render/HitTest.h"
@@ -174,6 +175,29 @@ jsi::Value setTextInputTextByTagHostFunction(
   return jsi::Value::undefined();
 }
 
+// updateScreenStates(surfaceId): number
+jsi::Value updateScreenStatesHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& turboModule,
+    const jsi::Value* args,
+    size_t count) {
+  auto surfaceId = surfaceIdArg(runtime, args, count, "updateScreenStates");
+  return jsi::Value(static_cast<NativeFantom&>(turboModule)
+                        .updateScreenStates(runtime, surfaceId));
+}
+
+// setScreensHeaderHeight(height): void
+jsi::Value setScreensHeaderHeightHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& /*turboModule*/,
+    const jsi::Value* args,
+    size_t count) {
+  auto height = numberArg(
+      runtime, args, count, 0, "setScreensHeaderHeight", "height");
+  setScreensHeaderHeight(static_cast<Float>(height));
+  return jsi::Value::undefined();
+}
+
 } // namespace
 
 NativeFantom::NativeFantom(
@@ -191,6 +215,10 @@ NativeFantom::NativeFantom(
       .argCount = 3, .invoker = enqueueScrollEventByTagHostFunction};
   methodMap_["setTextInputTextByTag"] = MethodMetadata{
       .argCount = 3, .invoker = setTextInputTextByTagHostFunction};
+  methodMap_["updateScreenStates"] = MethodMetadata{
+      .argCount = 1, .invoker = updateScreenStatesHostFunction};
+  methodMap_["setScreensHeaderHeight"] = MethodMetadata{
+      .argCount = 1, .invoker = setScreensHeaderHeightHostFunction};
 }
 
 SurfaceId NativeFantom::startSurface(
@@ -401,6 +429,13 @@ void NativeFantom::setTextInputTextByTag(
         "setTextInputTextByTag: node " + std::to_string(tag) +
             " is not a TextInput");
   }
+}
+
+int NativeFantom::updateScreenStates(
+    jsi::Runtime& runtime,
+    SurfaceId surfaceId) {
+  return facebook::react::updateScreenStates(
+      *getRootShadowNode(runtime, surfaceId));
 }
 
 void NativeFantom::reportTestSuiteResultsJSON(

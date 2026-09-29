@@ -9,6 +9,7 @@
 
 #include "FantomTimerRegistry.h"
 #include "NativeFantom.h"
+#include "components/FantomScreens.h"
 #include "platform/TesterTurboModuleProvider.h"
 #include "stubs/StubClock.h"
 #include "stubs/StubHttpClient.h"
@@ -29,6 +30,8 @@
 #include <react/renderer/core/LayoutConstraints.h>
 #include <react/renderer/mounting/stubs/stubs.h>
 #include <react/renderer/runtimescheduler/RuntimeSchedulerBinding.h>
+#include <react/renderer/scheduler/Scheduler.h>
+#include <react/renderer/uimanager/UIManager.h>
 #include <react/runtime/ReactHost.h>
 #include <react/threading/MessageQueueThreadImpl.h>
 #include <react/utils/ContextContainer.h>
@@ -82,6 +85,12 @@ TesterAppDelegate::TesterAppDelegate(
       std::make_shared<TesterMountingManager>([this](SurfaceId surfaceId) {
         reactHost_->runOnScheduler([&surfaceId](Scheduler& scheduler) {
           scheduler.reportMount(surfaceId);
+          // Emulate the state updates native screens send after layout.
+          scheduler.getUIManager()->getShadowTreeRegistry().visit(
+              surfaceId, [](const ShadowTree& shadowTree) {
+                updateScreenStates(
+                    *shadowTree.getCurrentRevision().rootShadowNode);
+              });
         });
       });
 
@@ -93,6 +102,7 @@ TesterAppDelegate::TesterAppDelegate(
         return queue;
       }));
   contextContainer->insert(HttpClientFactoryKey, getStubHttpClientFactory());
+  insertScreensContextEntries(*contextContainer);
   contextContainer->insert(
       WebSocketClientFactoryKey, getStubWebSocketClientFactory());
   contextContainer->insert(

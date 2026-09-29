@@ -162,6 +162,65 @@ add_react_cxx_platform_subdir(react/runtime)
 add_react_cxx_platform_subdir(react/threading)
 add_react_cxx_platform_subdir(react/utils)
 
+# react-native-screens (optional). The package comes from FANTOM_RNSCREENS_DIR
+# or from node_modules next to the React Native checkout (the host repo keeps
+# React Native in third_party/react-native). Its codegen output is generated
+# at configure time into the build directory. The non-Android branch of its
+# common C++ is used (the Android branch needs JNI); it registers the iOS names
+# of the tabs/gamma components (RNSTabsHostIOS, RNSStackHeaderConfigIOS, ...).
+if(DEFINED ENV{FANTOM_RNSCREENS_DIR})
+  set(RNSCREENS_DIR "$ENV{FANTOM_RNSCREENS_DIR}")
+else()
+  get_filename_component(RNSCREENS_DIR
+    "${REACT_COMMON_DIR}/../../../../../node_modules/react-native-screens" ABSOLUTE)
+endif()
+if(EXISTS "${RNSCREENS_DIR}/common/cpp/react/renderer/components/rnscreens")
+  set(FANTOM_WITH_RNSCREENS ON)
+  set(RNSCREENS_CODEGEN_DIR "${CMAKE_BINARY_DIR}/codegen-libs/rnscreens")
+  message(STATUS "react-native-screens: ${RNSCREENS_DIR}")
+  execute_process(
+    COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/codegen-lib.sh"
+      "${RNSCREENS_DIR}" rnscreens "${RNSCREENS_CODEGEN_DIR}"
+    RESULT_VARIABLE RNSCREENS_CODEGEN_RESULT)
+  if(NOT RNSCREENS_CODEGEN_RESULT EQUAL 0)
+    message(FATAL_ERROR "codegen for react-native-screens failed")
+  endif()
+  # Re-run codegen when the library's specs or package.json change.
+  file(GLOB_RECURSE RNSCREENS_SPECS CONFIGURE_DEPENDS
+    "${RNSCREENS_DIR}/src/fabric/*.ts" "${RNSCREENS_DIR}/src/fabric/*.tsx")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${RNSCREENS_DIR}/package.json" ${RNSCREENS_SPECS})
+
+  file(GLOB RNSCREENS_SOURCES CONFIGURE_DEPENDS
+    "${RNSCREENS_DIR}/common/cpp/react/renderer/components/rnscreens/*.cpp"
+    "${RNSCREENS_CODEGEN_DIR}/jni/react/renderer/components/rnscreens/*.cpp")
+  add_library(rnscreens OBJECT ${RNSCREENS_SOURCES})
+  target_include_directories(rnscreens PUBLIC
+    "${RNSCREENS_DIR}/common/cpp"
+    "${RNSCREENS_CODEGEN_DIR}/jni")
+  target_link_libraries(rnscreens
+    folly_runtime
+    glog
+    jsi
+    react_debug
+    react_renderer_componentregistry
+    react_renderer_core
+    react_renderer_debug
+    react_renderer_graphics
+    react_renderer_imagemanager
+    react_renderer_uimanager
+    react_utils
+    rrc_image
+    rrc_root
+    rrc_view
+    yoga)
+  target_compile_reactnative_options(rnscreens PRIVATE)
+  # Third-party code: keep warnings, do not fail on them.
+  target_compile_options(rnscreens PRIVATE -Wno-error)
+else()
+  message(STATUS "react-native-screens: not found at ${RNSCREENS_DIR}, skipped")
+endif()
+
 file(GLOB SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/components/*.cpp
@@ -172,6 +231,11 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
 add_executable(fantom_tester ${SOURCES})
 
 target_include_directories(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+if(FANTOM_WITH_RNSCREENS)
+  target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_RNSCREENS=1)
+  target_link_libraries(fantom_tester PRIVATE rnscreens)
+endif()
 
 target_link_libraries(fantom_tester
   PRIVATE

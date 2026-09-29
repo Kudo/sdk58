@@ -17,6 +17,7 @@
 #include <react/renderer/components/text/TextComponentDescriptor.h>
 #include <react/renderer/components/view/ViewComponentDescriptor.h>
 
+#include "components/FantomScreens.h"
 #include "components/FantomSwitch.h"
 #include "components/FantomTextInput.h"
 
@@ -37,6 +38,7 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<FantomAndroidTextInputComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<FantomAndroidSwitchComponentDescriptor>());
+      registerScreensComponentDescriptors(providerRegistry);
       return providerRegistry;
     }();
     return providerRegistry->createComponentDescriptorRegistry({eventDispatcher, contextContainer, nullptr});
