@@ -196,8 +196,14 @@ export type Step = {
   target: StepNode | null;
   /** The node the host (or JS fallback) hit test found at the tap point. */
   hit: StepNode | null;
-  /** Native events sent, in order (plus `wait <n>ms` markers). */
+  /**
+   * Native events sent, in order (plus `wait <n>ms` markers; `gh:down` /
+   * `gh:move xN` / `gh:up` for pointer samples fed to
+   * react-native-gesture-handler).
+   */
   events: string[];
+  /** Number of react-native-gesture-handler handlers that received the pointer. */
+  gestureHandlers?: number;
   /** Which implementation was used: host methods (`native`) or the JS fallback (`js`). */
   via?: {hitTest: 'native' | 'js' | null; events: 'native' | 'js' | null};
   warnings?: string[];

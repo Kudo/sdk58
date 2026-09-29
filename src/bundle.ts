@@ -116,6 +116,33 @@ function isBareSpecifier(moduleName: string): boolean {
   );
 }
 
+/**
+ * Files of third-party packages replaced by runtime implementations for the
+ * headless host, matched on the resolved path (so any import specifier
+ * works). react-native-gesture-handler: its native module and native v3
+ * detector (see runtime/gh/).
+ */
+const RESOLVED_ALIASES: Array<[RegExp, string]> = [
+  [
+    /[\\/]react-native-gesture-handler[\\/]src[\\/]specs[\\/]NativeRNGestureHandlerModule\.ts$/,
+    path.join(RUNTIME_DIR, 'gh', 'NativeRNGestureHandlerModule.js'),
+  ],
+  [
+    /[\\/]react-native-gesture-handler[\\/]src[\\/]v3[\\/]detectors[\\/]HostGestureDetector\.tsx$/,
+    path.join(RUNTIME_DIR, 'gh', 'HostGestureDetector.js'),
+  ],
+];
+
+function applyAliases(resolution: Resolution): Resolution {
+  if (resolution.type !== 'sourceFile') return resolution;
+  for (const [pattern, replacement] of RESOLVED_ALIASES) {
+    if (pattern.test(resolution.filePath)) {
+      return {type: 'sourceFile', filePath: replacement};
+    }
+  }
+  return resolution;
+}
+
 export function createMetroConfig(options: {
   projectRoot: string;
   workDir: string;
@@ -203,16 +230,18 @@ export function createMetroConfig(options: {
           (isInside(origin, RUNTIME_DIR) || isInside(origin, workDir))
         ) {
           try {
-            return resolveForPlatform(
-              {...context, originModulePath: projectOrigin},
-              moduleName,
-              requestPlatform,
+            return applyAliases(
+              resolveForPlatform(
+                {...context, originModulePath: projectOrigin},
+                moduleName,
+                requestPlatform,
+              ),
             );
           } catch {
             // Fall back to resolving from this package.
           }
         }
-        return resolveForPlatform(context, moduleName, requestPlatform);
+        return applyAliases(resolveForPlatform(context, moduleName, requestPlatform));
       },
     },
     transformer: {

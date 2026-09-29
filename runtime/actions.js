@@ -140,7 +140,7 @@ export function createRunner({root, tapMode}) {
         box: null,
         parent: null,
       };
-      return {...entry, viaHitSlop: result.viaHitSlop === true};
+      return {...entry, viaHitSlop: result.viaHitSlop === true, path: result.path};
     }
     via.hitTest = 'js';
     fallbacks.add('hitTest: js');
@@ -165,6 +165,11 @@ export function createRunner({root, tapMode}) {
   }
 
   function touchStartPayload(tag, point, box) {
+    const t = touchPoint(tag, point, box);
+    return {touches: [t], changedTouches: [t], targetTouches: [t]};
+  }
+
+  function touchMovePayload(tag, point, box) {
     const t = touchPoint(tag, point, box);
     return {touches: [t], changedTouches: [t], targetTouches: [t]};
   }
@@ -226,6 +231,41 @@ export function createRunner({root, tapMode}) {
 
   // --- actions -------------------------------------------------------------
 
+  // --- pointer input for react-native-gesture-handler ----------------------
+  //
+  // When the app uses react-native-gesture-handler, runtime/gh/ installs
+  // globalThis.__rnA11yGestureHandler. Every pointer sample of a gesture is
+  // also fed to it (DOWN / MOVE / UP with `time` from the mocked clock), for
+  // the handlers attached to the hit view and its ancestors.
+
+  let clock = 1000;
+
+  function tagPath(hit) {
+    if (Array.isArray(hit.path)) return hit.path;
+    const tags = [];
+    for (let e = hit; e != null; e = e.parent) {
+      if (e.tag != null) tags.unshift(e.tag);
+    }
+    return tags;
+  }
+
+  function ghFeed(kind, pointerId, point, path, step) {
+    const gh = globalThis.__rnA11yGestureHandler;
+    if (gh == null) return;
+    let result = null;
+    Fantom.runTask(() => {
+      result = gh.feed(kind, {x: point.x, y: point.y, pointerId, time: clock}, path);
+    });
+    // v3 handlers report through Fabric events on the detector.
+    NativeFantom.flushEventQueue();
+    Fantom.runWorkLoop();
+    if (result != null && result.handlers > 0) {
+      step.gestureHandlers = Math.max(step.gestureHandlers ?? 0, result.handlers);
+      const name = `gh:${kind}`;
+      if (step.events[step.events.length - 1] !== name) step.events.push(name);
+    }
+  }
+
   function tap(spec, step, {longPress = false} = {}) {
     const {target, hit, point, warnings} = locate(spec);
     step.target = describe(target);
@@ -244,14 +284,17 @@ export function createRunner({root, tapMode}) {
     }
 
     if (tapMode === 'touch' || tapMode === 'both') {
+      const path = tagPath(hit);
       const start = touchStartPayload(hit.tag, point, hit.box);
       dispatch(hit.tag, [['touchStart', start, NativeEventCategory.ContinuousStart]], step.events);
+      ghFeed('down', 0, point, path, step);
       if (longPress) {
         advance(LONG_PRESS_MS);
         step.events.push(`wait ${LONG_PRESS_MS}ms`);
       }
       const end = touchEndPayload(hit.tag, point, hit.box);
       dispatch(hit.tag, [['touchEnd', end, NativeEventCategory.ContinuousEnd]], step.events);
+      ghFeed('up', 0, point, path, step);
     }
     if (!longPress && (tapMode === 'click' || tapMode === 'both')) {
       // `click` does not bubble from a child (e.g. the label Paragraph) to
@@ -259,6 +302,77 @@ export function createRunner({root, tapMode}) {
       // inside it. Coordinate taps have no target; they use the hit node.
       const clickTag = target != null && isWithin(hit, target) ? target.tag : hit.tag;
       dispatch(clickTag, [['click', {}]], step.events);
+    }
+  }
+
+  /** One finger from the start point by (dx, dy) in `steps` moves over `durationMs`. */
+  function pan(spec, step) {
+    const {target, hit, point, warnings} = locate(spec);
+    step.target = describe(target);
+    step.hit = describe(hit);
+    if (warnings.length > 0) step.warnings = warnings;
+    if (hit == null) throw new Error(warnings[0]);
+    const steps = spec.steps ?? 10;
+    const durationMs = spec.durationMs ?? 200;
+    const dx = spec.dx ?? 0;
+    const dy = spec.dy ?? 0;
+    const path = tagPath(hit);
+
+    dispatch(hit.tag, [['touchStart', touchStartPayload(hit.tag, point, hit.box), NativeEventCategory.ContinuousStart]], step.events);
+    ghFeed('down', 0, point, path, step);
+    let current = point;
+    // Moves are summarized as "touchMove xN" / "gh:move xN".
+    const moveStep = {events: []};
+    for (let i = 1; i <= steps; i++) {
+      advance(durationMs / steps);
+      current = {x: point.x + (dx * i) / steps, y: point.y + (dy * i) / steps};
+      dispatch(hit.tag, [['touchMove', touchMovePayload(hit.tag, current, hit.box), NativeEventCategory.Continuous]], moveStep.events);
+      ghFeed('move', 0, current, path, moveStep);
+    }
+    step.events.push(`touchMove x${steps}`);
+    if (moveStep.gestureHandlers != null) {
+      step.events.push(`gh:move x${steps}`);
+      step.gestureHandlers = Math.max(step.gestureHandlers ?? 0, moveStep.gestureHandlers);
+    }
+    dispatch(hit.tag, [['touchEnd', touchEndPayload(hit.tag, current, hit.box), NativeEventCategory.ContinuousEnd]], step.events);
+    ghFeed('up', 0, current, path, step);
+  }
+
+  /**
+   * Two fingers placed horizontally around the target's center, moved apart
+   * (scale > 1) or together (scale < 1). Only react-native-gesture-handler
+   * gets these pointers (no multi-touch responder events yet).
+   */
+  function pinch(spec, step) {
+    const {target, hit, point, warnings} = locate(spec);
+    step.target = describe(target);
+    step.hit = describe(hit);
+    if (warnings.length > 0) step.warnings = warnings;
+    if (hit == null) throw new Error(warnings[0]);
+    const steps = spec.steps ?? 10;
+    const durationMs = spec.durationMs ?? 300;
+    const box = target?.box ?? hit.box ?? {width: 100, height: 100};
+    const d0 = Math.max(10, Math.min(box.width, box.height) / 4);
+    const d1 = d0 * spec.scale;
+    const path = tagPath(hit);
+    const at = d => [
+      {x: point.x - d, y: point.y},
+      {x: point.x + d, y: point.y},
+    ];
+
+    let [a, b] = at(d0);
+    ghFeed('down', 0, a, path, step);
+    ghFeed('down', 1, b, path, step);
+    for (let i = 1; i <= steps; i++) {
+      advance(durationMs / steps);
+      [a, b] = at(d0 + ((d1 - d0) * i) / steps);
+      ghFeed('move', 0, a, path, step);
+      ghFeed('move', 1, b, path, step);
+    }
+    ghFeed('up', 1, b, path, step);
+    ghFeed('up', 0, a, path, step);
+    if (globalThis.__rnA11yGestureHandler == null) {
+      (step.warnings ??= []).push('pinch needs react-native-gesture-handler in the app; no events were sent');
     }
   }
 
@@ -340,6 +454,7 @@ export function createRunner({root, tapMode}) {
     let remaining = ms;
     while (remaining > 0) {
       const slice = Math.min(FRAME_MS, remaining);
+      clock += slice;
       NativeFantom.produceFramesForDuration(slice);
       timers.advanceTimersByTime(slice);
       Fantom.flushAllNativeEvents();
@@ -363,6 +478,12 @@ export function createRunner({root, tapMode}) {
           break;
         case 'longPress':
           tap(spec, step, {longPress: true});
+          break;
+        case 'pan':
+          pan(spec, step);
+          break;
+        case 'pinch':
+          pinch(spec, step);
           break;
         case 'type':
           type(spec, step);

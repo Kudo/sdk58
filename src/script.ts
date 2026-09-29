@@ -12,6 +12,8 @@ export type Action =
   | {longPress: Target | Point}
   | {type: Target & {text: string; submit?: boolean}}
   | {scroll: Target & {x?: number; y?: number}}
+  | {pan: (Target | Point) & {dx?: number; dy?: number; steps?: number; durationMs?: number}}
+  | {pinch: Target & {scale: number; steps?: number; durationMs?: number}}
   | {wait: number}
   | {snapshot: string};
 
@@ -20,6 +22,8 @@ export const ACTION_NAMES = [
   'longPress',
   'type',
   'scroll',
+  'pan',
+  'pinch',
   'wait',
   'snapshot',
 ] as const;
@@ -125,6 +129,43 @@ export function validateScript(value: unknown): Action[] {
         checkTarget(s, failIn);
         for (const key of ['x', 'y']) {
           if (key in s && !isFiniteNumber(s[key])) failIn(`"${key}" must be a number`);
+        }
+        break;
+      }
+      case 'pan': {
+        if (!isObject(spec)) failIn('must be an object');
+        const s = spec as Record<string, unknown>;
+        const extras = ['dx', 'dy', 'steps', 'durationMs'];
+        if ('x' in s || 'y' in s) {
+          checkKeys(s, ['x', 'y', ...extras], failIn);
+          if (!isFiniteNumber(s.x) || !isFiniteNumber(s.y)) {
+            failIn('"x" and "y" must both be numbers');
+          }
+        } else {
+          checkKeys(s, ['testID', 'ref', ...extras], failIn);
+          checkTarget(s, failIn);
+        }
+        for (const key of ['dx', 'dy', 'durationMs']) {
+          if (key in s && !isFiniteNumber(s[key])) failIn(`"${key}" must be a number`);
+        }
+        if ('durationMs' in s && (s.durationMs as number) <= 0) failIn('"durationMs" must be > 0');
+        if ('steps' in s && !(Number.isInteger(s.steps) && (s.steps as number) >= 1)) {
+          failIn('"steps" must be an integer >= 1');
+        }
+        if (!('dx' in s) && !('dy' in s)) failIn('needs "dx" and/or "dy"');
+        break;
+      }
+      case 'pinch': {
+        if (!isObject(spec)) failIn('must be an object');
+        const s = spec as Record<string, unknown>;
+        checkKeys(s, ['testID', 'ref', 'scale', 'steps', 'durationMs'], failIn);
+        checkTarget(s, failIn);
+        if (!isFiniteNumber(s.scale) || s.scale <= 0) failIn('"scale" must be a number > 0');
+        if ('durationMs' in s && !(isFiniteNumber(s.durationMs) && s.durationMs > 0)) {
+          failIn('"durationMs" must be a number > 0');
+        }
+        if ('steps' in s && !(Number.isInteger(s.steps) && (s.steps as number) >= 1)) {
+          failIn('"steps" must be an integer >= 1');
         }
         break;
       }

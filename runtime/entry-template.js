@@ -18,6 +18,8 @@
 import {registerRender} from '__RUNTIME_DIR__/fantom/setup';
 
 registerRender(() => {
+  // Before anything loads TurboModuleRegistry (see runtime/turboModuleStubs.js).
+  require('__RUNTIME_DIR__/turboModuleStubs').installTurboModuleStubs();
   // Environment setup must run before anything else from react-native.
   require('__RUNTIME_DIR__/fantom/setUpDefaultReactNativeEnvironment');
 
@@ -57,6 +59,7 @@ registerRender(() => {
 
   return () => {
     const root = Fantom.createRoot({viewportWidth, viewportHeight});
+    require('__RUNTIME_DIR__/gh/hostContext').setRootTag(root.getRootTag());
     Fantom.runTask(() => {
       root.render(React.createElement(App));
     });

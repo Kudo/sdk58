@@ -18,6 +18,7 @@
  */
 
 import {createRunner} from './actions';
+import {setRootTag} from './gh/hostContext';
 import {settle} from './settle';
 
 const Fantom = require('./fantom/index');
@@ -54,6 +55,7 @@ export function installSession({React, App, viewport, tapMode}) {
         viewportWidth: viewport.width,
         viewportHeight: viewport.height,
       });
+      setRootTag(root.getRootTag());
       Fantom.runTask(() => {
         root.render(React.createElement(App));
       });
