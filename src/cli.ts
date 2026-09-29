@@ -6,7 +6,7 @@ import {bundle, type TapMode} from './bundle.ts';
 import {getHostBin, HostError, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
-import {runSession} from './session.ts';
+import {DEFAULT_TIMEOUT_MS, runSession} from './session.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
 
 // stdout is reserved for the JSON result. Metro and @expo/metro-config log
@@ -46,7 +46,7 @@ function write(text: string, out: string | undefined) {
 const PLATFORM_REQUIRED_MESSAGE = `--platform <name> is required. Known values: android, ios, a11ytree. Any Metro platform name is accepted.
 Note: React Native core components branch on Platform.OS (e.g. TextInput, Switch), so use android or ios for them to render.`;
 
-type RunOptions = RenderOptions & {script?: string; tapMode: string};
+type RunOptions = RenderOptions & {script?: string; tapMode: string; timeout?: number};
 
 const TAP_MODES: TapMode[] = ['touch', 'click', 'both'];
 
@@ -187,6 +187,7 @@ async function session(file: string, options: RunOptions) {
       windowWidth: options.width,
       windowHeight: options.height,
       verbose: options.verbose,
+      timeoutMs: options.timeout,
       io: {
         input: process.stdin,
         output: process.stdout,
@@ -263,6 +264,12 @@ program
     'Metro platform (required): android, ios, a11ytree, or any Metro platform name',
   )
   .option('--tap-mode <mode>', 'events for taps: touch, click or both', 'touch')
+  .option(
+    '--timeout <ms>',
+    'per-request timeout; on timeout the host is killed and the exit code is 1',
+    positiveNumber,
+    DEFAULT_TIMEOUT_MS,
+  )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
   .option('-v, --verbose', 'print Metro progress and host logs to stderr', false)

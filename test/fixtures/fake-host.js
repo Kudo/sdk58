@@ -34,6 +34,9 @@ if (args.includes('--interactive')) {
       respond({id, ok: true, tree: shadow});
     } else if (request.quit) {
       respond({id, ok: true, quit: true});
+    } else if (request.action?.tap?.testID === 'SLOW') {
+      // Never answers (simulates a hung runtime).
+      return;
     } else if (request.action?.tap?.testID === 'boom') {
       console.log(JSON.stringify({type: 'repl-error', message: 'boom from JS', stack: ''}));
     } else if (request.action) {

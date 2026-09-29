@@ -89,3 +89,17 @@ test('session: requires --platform', {timeout: 120_000}, () => {
   assert.equal(proc.status, 1);
   assert.match(proc.stderr, /--platform <name> is required/);
 });
+
+test('session: per-request timeout kills the host and exits 1', {timeout: 120_000}, () => {
+  const started = Date.now();
+  const proc = runSession(
+    [{id: 1, tree: true}, {id: 2, action: {tap: {testID: 'SLOW'}}}, {id: 3, tree: true}],
+    ['--timeout', '1500'],
+  );
+  assert.equal(proc.status, 1, proc.stderr);
+  const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
+  assert.equal(out.length, 3); // ready, id 1, id 2 (timeout); id 3 is not handled
+  assert.deepEqual(out[2], {id: 2, ok: false, error: 'timeout'});
+  assert.match(proc.stderr, /request timed out after 1500 ms; host killed/);
+  assert.ok(Date.now() - started < 60_000);
+});

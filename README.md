@@ -248,6 +248,9 @@ order, one at a time.
 - `quit`, or the end of stdin, unmounts the app and stops the host; the exit
   code is the host's (0).
 - App console output goes to stderr as `[app] ...` lines.
+- `--timeout <ms>` (default 30000) limits each request. On timeout the
+  response is `{"id", "ok": false, "error": "timeout"}`, the host is killed,
+  and the exit code is 1.
 
 How it works: the host runs in Fantom's `--interactive` mode. It evaluates the
 bundle, then reads frames from stdin (a line with the byte length, then that

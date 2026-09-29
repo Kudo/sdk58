@@ -22,6 +22,7 @@ import {validateScript} from './script.ts';
 import {convertShadowTree, convertStep} from './tree.ts';
 
 const RESPONSE_TYPE = 'rn-a11y-tree-response';
+export const DEFAULT_TIMEOUT_MS = 30_000;
 
 type HostResponse = {
   id: unknown;
@@ -52,8 +53,12 @@ export async function runSession(options: {
   windowWidth: number;
   windowHeight: number;
   verbose?: boolean;
+  /** Per-request timeout in ms; on timeout the host is killed and the session ends with code 1. */
+  timeoutMs?: number;
   io: SessionIO;
 }): Promise<number> {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  let timedOut = false;
   const {io} = options;
   const child: ChildProcess = spawn(
     getHostBin(),
@@ -130,10 +135,22 @@ export async function runSession(options: {
       return Promise.resolve({id: request.id, ok: false, error: 'host has exited'});
     }
     return new Promise(resolve => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        timedOut = true;
+        current = null;
+        child.kill('SIGKILL');
+        resolve({id: request.id, ok: false, error: 'timeout'});
+      }, timeoutMs);
       const frame: Frame = {
         response: null,
         replError: null,
         resolve: () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
           if (frame.response) {
             resolve(frame.response);
           } else if (frame.replError) {
@@ -176,6 +193,10 @@ export async function runSession(options: {
   const finish = async (): Promise<number> => {
     child.stdin!.end();
     const code = await exitPromise;
+    if (timedOut) {
+      io.log(`request timed out after ${timeoutMs} ms; host killed`);
+      return 1;
+    }
     if (code !== 0) {
       io.log(`host exited with code ${code}`);
       const stderr = Buffer.concat(stderrChunks).toString('utf8');
@@ -186,6 +207,10 @@ export async function runSession(options: {
 
   // Initial render.
   const start = await send({id: null, start: true});
+  if (timedOut) {
+    writeLine({ready: false, error: 'timeout'});
+    return finish();
+  }
   if (!start.ok) {
     writeLine({ready: false, error: start.error});
     await finish();
@@ -213,6 +238,7 @@ export async function runSession(options: {
     }
     const response = await send(request);
     writeLine(convert(response));
+    if (timedOut) break;
     if (request.quit === true) {
       quitSent = true;
       break;
@@ -220,7 +246,7 @@ export async function runSession(options: {
     if (exited) break;
   }
   lines.close();
-  if (!exited && !quitSent) {
+  if (!exited && !quitSent && !timedOut) {
     // End of input without `quit` behaves like `quit`.
     await send({id: null, quit: true});
   }
