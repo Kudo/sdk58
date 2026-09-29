@@ -161,10 +161,10 @@ step index.
 | Action | Form | Events |
 | --- | --- | --- |
 | `tap` | `{"x":..,"y":..}`, `{"testID":".."}` or `{"ref":"n5"}` | `touchStart`, `touchEnd` to the hit node (`--tap-mode touch`, default); `click` (`click`); both (`both`). On a Switch: `change {value: !value}` instead. |
-| `longPress` | same as `tap` | `touchStart`, 600 ms of mocked timers, `touchEnd` |
+| `longPress` | same as `tap` | `touchStart`, `wait 600`, `touchEnd` |
 | `type` | `{"testID":"..","text":"..","submit":false}` | `focus`; per character `keyPress {key}` and `change {text, eventCount}`; `submitEditing` if `submit`; `endEditing`, `blur` |
 | `scroll` | `{"testID":"..","x":0,"y":300}` | one scroll event on a `ScrollView` (`zoomScale: 1`), which also updates the ScrollView's state |
-| `wait` | milliseconds | advances mocked timers and runs the work loop |
+| `wait` | milliseconds | in 16.333 ms slices (the host's frame length): `produceFramesForDuration` (stub clock + one UI tick, which drives C++ animation backends), mocked JS timers, work loop, queued native events |
 | `snapshot` | name | stores the tree at this point |
 
 Rules:

@@ -29,6 +29,10 @@ const NativeFantom = require('./fantom/specs/NativeFantom').default;
 const {NativeEventCategory} = require('./fantom/specs/NativeFantom');
 
 const LONG_PRESS_MS = 600;
+// The host's UI tick length (TesterAppDelegate::produceFramesForDuration
+// steps its clock by 16.333 ms). Using the same length gives exactly one UI
+// tick per slice.
+const FRAME_MS = 16.333;
 const SWITCH_TYPES = new Set(['AndroidSwitch', 'Switch']);
 
 function has(name) {
@@ -243,7 +247,7 @@ export function createRunner({root, tapMode}) {
       const start = touchStartPayload(hit.tag, point, hit.box);
       dispatch(hit.tag, [['touchStart', start, NativeEventCategory.ContinuousStart]], step.events);
       if (longPress) {
-        timers.advanceTimersByTime(LONG_PRESS_MS);
+        advance(LONG_PRESS_MS);
         step.events.push(`wait ${LONG_PRESS_MS}ms`);
       }
       const end = touchEndPayload(hit.tag, point, hit.box);
@@ -325,6 +329,24 @@ export function createRunner({root, tapMode}) {
     Fantom.runWorkLoop();
   }
 
+  /**
+   * Advances time by `ms` in frame-sized slices. Each slice produces a UI
+   * frame (NativeFantom.produceFramesForDuration: advances the host's stub
+   * clock and runs one UI tick, which drives C++ animation backends such as
+   * Animated and Reanimated), then advances the mocked JS timers by the same
+   * amount and runs the work loop, then delivers queued native events.
+   */
+  function advance(ms) {
+    let remaining = ms;
+    while (remaining > 0) {
+      const slice = Math.min(FRAME_MS, remaining);
+      NativeFantom.produceFramesForDuration(slice);
+      timers.advanceTimersByTime(slice);
+      Fantom.flushAllNativeEvents();
+      remaining -= slice;
+    }
+  }
+
   // --- steps ---------------------------------------------------------------
 
   function runStep(action, index) {
@@ -349,7 +371,7 @@ export function createRunner({root, tapMode}) {
           scroll(spec, step);
           break;
         case 'wait':
-          timers.advanceTimersByTime(spec);
+          advance(spec);
           step.events.push(`wait ${spec}ms`);
           break;
         case 'snapshot':
