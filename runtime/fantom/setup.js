@@ -83,5 +83,8 @@ export function registerRender(setUp: () => () => string): void {
     renderFn = setUp();
   } catch (error) {
     setupError = error instanceof Error ? error : new Error(String(error));
+    // Session mode never calls $$RunTests$$; the CLI's request snippet
+    // rethrows this so the error reaches the user.
+    global.__rnA11ySetupError = setupError;
   }
 }

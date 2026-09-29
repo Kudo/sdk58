@@ -39,6 +39,21 @@ registerRender(() => {
   // `run --script`: array of actions (see runtime/actions.js), else null.
   const script = __SCRIPT__;
   const tapMode = __TAP_MODE__;
+  // `session`: install globalThis.__rnA11y for the host's --interactive mode
+  // (see runtime/session.js). The host never calls $$RunTests$$ then.
+  const session = __SESSION__;
+
+  if (session) {
+    require('__RUNTIME_DIR__/session').installSession({
+      React,
+      App,
+      viewport: {width: viewportWidth, height: viewportHeight},
+      tapMode,
+    });
+    return () => {
+      throw new Error('rn-a11y-tree: session bundles are driven by globalThis.__rnA11y');
+    };
+  }
 
   return () => {
     const root = Fantom.createRoot({viewportWidth, viewportHeight});

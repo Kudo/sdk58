@@ -37,6 +37,8 @@ export type BundleOptions = {
   /** Actions for `run --script` (already validated), or undefined for `render`. */
   script?: unknown[];
   tapMode?: TapMode;
+  /** Build a bundle for `session` (host --interactive mode). */
+  session?: boolean;
   /** Metro platform (required): `android`, `ios`, or an out-of-tree name such as `a11ytree`. */
   platform: string;
   /** Output bundle path. Defaults to a file in a new temp dir. */
@@ -77,6 +79,7 @@ export function renderEntry(options: {
   includeDebugProps?: boolean;
   script?: unknown[];
   tapMode?: TapMode;
+  session?: boolean;
 }): string {
   const template = fs.readFileSync(
     path.join(RUNTIME_DIR, 'entry-template.js'),
@@ -96,7 +99,8 @@ export function renderEntry(options: {
       String(options.includeDebugProps === true),
     )
     .replaceAll('__SCRIPT__', () => JSON.stringify(options.script ?? null))
-    .replaceAll('__TAP_MODE__', () => JSON.stringify(options.tapMode ?? 'touch'));
+    .replaceAll('__TAP_MODE__', () => JSON.stringify(options.tapMode ?? 'touch'))
+    .replaceAll('__SESSION__', String(options.session === true));
 }
 
 function isInside(file: string, dir: string): boolean {
@@ -246,6 +250,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
       includeDebugProps: options.includeDebugProps,
       script: options.script,
       tapMode: options.tapMode,
+      session: options.session,
     }),
   );
   const bundlePath = path.resolve(

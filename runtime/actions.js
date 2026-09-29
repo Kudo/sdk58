@@ -35,7 +35,12 @@ function has(name) {
   return typeof NativeFantom[name] === 'function';
 }
 
-export function runActions({root, script, tapMode}) {
+/**
+ * Creates a runner bound to a rendered root. `runStep(action, index)` runs
+ * one action and returns `{step, snapshot}` (`snapshot` is the raw tree for
+ * `snapshot` actions). Installs the Fantom timer mock until `dispose()`.
+ */
+export function createRunner({root, tapMode}) {
   const surfaceId = root.getRootTag();
   const timers = Fantom.installTimerMock();
   let timestamp = 1;
@@ -320,58 +325,76 @@ export function runActions({root, script, tapMode}) {
     Fantom.runWorkLoop();
   }
 
-  // --- run -----------------------------------------------------------------
+  // --- steps ---------------------------------------------------------------
 
-  const steps = [];
-  const snapshots = {};
+  function runStep(action, index) {
+    const name = Object.keys(action)[0];
+    const spec = action[name];
+    const step = {index, action: name, target: null, hit: null, events: []};
+    let snapshot;
+    via.hitTest = null;
+    via.events = null;
+    try {
+      switch (name) {
+        case 'tap':
+          tap(spec, step);
+          break;
+        case 'longPress':
+          tap(spec, step, {longPress: true});
+          break;
+        case 'type':
+          type(spec, step);
+          break;
+        case 'scroll':
+          scroll(spec, step);
+          break;
+        case 'wait':
+          timers.advanceTimersByTime(spec);
+          step.events.push(`wait ${spec}ms`);
+          break;
+        case 'snapshot':
+          snapshot = readTree();
+          break;
+        default:
+          throw new Error(`Unknown action: ${name}`);
+      }
+    } catch (error) {
+      step.error = error instanceof Error ? error.message : String(error);
+    }
+    // Deliver onLayout etc. caused by the action before the next step.
+    try {
+      settle(surfaceId);
+    } catch (error) {
+      step.error ??= error instanceof Error ? error.message : String(error);
+    }
+    if (via.hitTest != null || via.events != null) {
+      step.via = {...via};
+    }
+    return {step, snapshot};
+  }
+
+  return {
+    runStep,
+    readTree,
+    getFallbacks: () => [...fallbacks].sort(),
+    dispose: () => timers.uninstall(),
+  };
+}
+
+/** Runs a whole `--script` (the `run` command). */
+export function runActions({root, script, tapMode}) {
+  const runner = createRunner({root, tapMode});
   try {
+    const steps = [];
+    const snapshots = {};
     script.forEach((action, index) => {
-      const name = Object.keys(action)[0];
-      const spec = action[name];
-      const step = {index, action: name, target: null, hit: null, events: []};
-      via.hitTest = null;
-      via.events = null;
-      try {
-        switch (name) {
-          case 'tap':
-            tap(spec, step);
-            break;
-          case 'longPress':
-            tap(spec, step, {longPress: true});
-            break;
-          case 'type':
-            type(spec, step);
-            break;
-          case 'scroll':
-            scroll(spec, step);
-            break;
-          case 'wait':
-            timers.advanceTimersByTime(spec);
-            step.events.push(`wait ${spec}ms`);
-            break;
-          case 'snapshot':
-            snapshots[spec] = readTree();
-            break;
-          default:
-            throw new Error(`Unknown action: ${name}`);
-        }
-      } catch (error) {
-        step.error = error instanceof Error ? error.message : String(error);
-      }
-      // Deliver onLayout etc. caused by the action before the next step.
-      try {
-        settle(surfaceId);
-      } catch (error) {
-        step.error ??= error instanceof Error ? error.message : String(error);
-      }
-      if (via.hitTest != null || via.events != null) {
-        step.via = {...via};
-      }
+      const {step, snapshot} = runner.runStep(action, index);
+      if (snapshot !== undefined) snapshots[action.snapshot] = snapshot;
       steps.push(step);
     });
-    const final = readTree();
-    return {steps, snapshots, final, fallbacks: [...fallbacks].sort()};
+    const final = runner.readTree();
+    return {steps, snapshots, final, fallbacks: runner.getFallbacks()};
   } finally {
-    timers.uninstall();
+    runner.dispose();
   }
 }

@@ -8,6 +8,7 @@ import type {
   RenderResult,
   RunResult,
   ShadowNodeJSON,
+  Step,
   StepNode,
   TreeNode,
 } from './schema.ts';
@@ -41,14 +42,19 @@ export function toRunResult(payload: HostRunPayload): RunResult {
   return {
     viewport: payload.viewport,
     source: 'shadowTree',
-    steps: payload.steps.map(step => ({
-      ...step,
-      target: roundStepNode(step.target),
-      hit: roundStepNode(step.hit),
-    })),
+    steps: payload.steps.map(convertStep),
     snapshots,
     final: convertShadowTree(payload.final),
     fallbacks: payload.fallbacks ?? [],
+  };
+}
+
+/** Rounds the boxes in a step reported by the runtime. */
+export function convertStep(step: Step): Step {
+  return {
+    ...step,
+    target: roundStepNode(step.target),
+    hit: roundStepNode(step.hit),
   };
 }
 

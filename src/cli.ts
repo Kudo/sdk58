@@ -6,6 +6,7 @@ import {bundle, type TapMode} from './bundle.ts';
 import {getHostBin, HostError, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
+import {runSession} from './session.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
 
 // stdout is reserved for the JSON result. Metro and @expo/metro-config log
@@ -161,6 +162,44 @@ async function run(file: string, options: RunOptions) {
   }
 }
 
+async function session(file: string, options: RunOptions) {
+  const platform = requirePlatform(options.platform);
+  if (!TAP_MODES.includes(options.tapMode as TapMode)) {
+    throw new Error(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
+  }
+  getHostBin();
+  const result = await bundle({
+    appPath: file,
+    viewportWidth: options.width,
+    viewportHeight: options.height,
+    platform,
+    dev: options.dev,
+    verbose: options.verbose,
+    tapMode: options.tapMode as TapMode,
+    session: true,
+  });
+  if (options.keepBundle || options.verbose) {
+    process.stderr.write(`Bundle: ${result.bundlePath} (${result.sizeBytes} bytes)\n`);
+  }
+  try {
+    process.exitCode = await runSession({
+      bundlePath: result.bundlePath,
+      windowWidth: options.width,
+      windowHeight: options.height,
+      verbose: options.verbose,
+      io: {
+        input: process.stdin,
+        output: process.stdout,
+        log: line => process.stderr.write(line + '\n'),
+      },
+    });
+  } finally {
+    if (!options.keepBundle) {
+      fs.rmSync(result.workDir, {recursive: true, force: true});
+    }
+  }
+}
+
 /** Which JS fallbacks a run used (see runtime/actions.js). */
 function describeFallbacks(steps: Step[]): string[] {
   const used = new Set<string>();
@@ -210,6 +249,24 @@ addCommonOptions(program.command('run'))
   .option('--script <json>', 'JSON file with an array of actions (required)')
   .option('--tap-mode <mode>', 'events for taps: touch, click or both', 'touch')
   .action(run);
+
+program
+  .command('session')
+  .description(
+    'render the component and serve JSON-line requests on stdin (actions, tree, quit)',
+  )
+  .argument('<file>', 'component file (default export or `App` named export)')
+  .option('--width <dp>', 'viewport width', positiveNumber, 390)
+  .option('--height <dp>', 'viewport height', positiveNumber, 844)
+  .option(
+    '--platform <name>',
+    'Metro platform (required): android, ios, a11ytree, or any Metro platform name',
+  )
+  .option('--tap-mode <mode>', 'events for taps: touch, click or both', 'touch')
+  .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
+  .option('--dev', 'build a development bundle (__DEV__ = true)', false)
+  .option('-v, --verbose', 'print Metro progress and host logs to stderr', false)
+  .action(session);
 
 try {
   await program.parseAsync(process.argv);
