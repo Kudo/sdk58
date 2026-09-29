@@ -1,7 +1,7 @@
 # react-native-a11y-tree
 
 Render a React Native component file headlessly and print its accessibility
-and layout tree as JSON.
+and layout tree as JSON; drive it with taps, typing, scrolling and gestures.
 
 ```sh
 rn-a11y-tree render App.tsx --platform android > tree.json
@@ -9,47 +9,73 @@ rn-a11y-tree render App.tsx --platform android > tree.json
 
 The component is bundled with real Metro (Expo's `@expo/metro-config`) and
 runs in a headless React Native Fabric host (React Native's "Fantom" tester:
-C++ + Hermes, no simulator). The output is the mounted shadow tree with
-absolute layout boxes.
+C++ + Hermes, no simulator). The output is the committed ShadowTree with
+on-screen layout boxes. The native side is documented in
+[`native/README.md`](native/README.md); the e2e coverage in
+[`docs/e2e-coverage.md`](docs/e2e-coverage.md).
 
-Status: works end to end on macOS arm64 with the host built by
-`yarn build:host`. Text is measured with CoreText, and the tree comes from the
-committed ShadowTree (`source: "shadowTree"`).
+## Status
 
-## Usage
+macOS arm64 only (the host is built by `yarn build:host`).
+
+| Feature | How it is real | E2E | Known gaps |
+| --- | --- | --- | --- |
+| Rendering and layout | Real Fabric (React, ShadowTree, Yoga) in the Fantom host | `e2e/render.test.ts` | macOS only; one surface per run |
+| Text measurement | CoreText `TextLayoutManager` in the host | `e2e/render.test.ts` (heights > 10) | macOS fonts, not Android/iOS fonts |
+| Accessibility tree | Host `NativeFantom.getA11yTree` (typed ShadowTree dump) → `src/tree.ts` | `e2e/render.test.ts` | Role/name derivation is simpler than real screen readers |
+| TextInput, Switch | Host `AndroidTextInput` (CoreText measured) and `AndroidSwitch` shadow nodes | `e2e/render.test.ts`, `e2e/run.test.ts` | Android components only (`--platform android`) |
+| Tap, long press, typing | Host `hitTest` + by-tag native events, Pressable responder events, `setTextInputTextByTag` | `e2e/run.test.ts` | No multi-touch responder events; `click` does not bubble |
+| Scrolling, FlatList | Host scroll events and ScrollView state; `onLayout` delivered by settling the event queue | `e2e/scrolling.test.ts` | One scroll event per `scroll` action (no fling) |
+| Session mode | Host `--interactive` mode, one bundle | `e2e/session.test.ts` | No recovery after a host crash |
+| react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No transitions; `--platform ios` fails in the navigation example (see Platform) |
+| react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
+| react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner | `e2e/gestures.test.ts` | No worklet callbacks, virtual detectors or transforms |
+| react-native-reanimated | In progress (host port) | `e2e/reanimated.test.ts` (skips) | Import fails in the host today |
+| Expo modules, `@expo/ui` | Not started | none | |
+
+## Quick start
 
 ```sh
 git clone --recurse-submodules --shallow-submodules <this repo>
 yarn install
-yarn build:host        # builds native/dist/<arch>/rn-a11y-host (macOS only for now)
+yarn build:host        # builds native/dist/<arch>/rn-a11y-host
 yarn rn-a11y-tree render examples/basic/App.tsx --platform android
+yarn check             # tsc --noEmit && yarn test && yarn test:e2e
 ```
 
 The CLI uses `native/dist/<arch>/rn-a11y-host`. Set `RN_A11Y_HOST_BIN` to use
 another host binary.
 
+## CLI reference
+
 The file must have a default export or an `App` named export that is a React
 component. Metro's project root is the directory of the nearest
 `package.json` above the file, so the project's own dependencies resolve.
-`react` and `react-native` resolve from that project first.
+`react` and `react-native` resolve from that project first. Exit code is 1 on
+failure, with the message on stderr; stdout has only the JSON.
 
-Options for `render <file>`:
-
-| Option | Default | Description |
+| Command | What it does | Output |
 | --- | --- | --- |
-| `--width <dp>` | `390` | Viewport width |
-| `--height <dp>` | `844` | Viewport height |
-| `--platform <name>` | required | Metro platform: `android`, `ios`, `a11ytree`, or any Metro platform name (see "Platform" below) |
-| `--out <file>` | stdout | Write the JSON to a file |
-| `--keep-bundle` | off | Keep the bundle and print its path to stderr |
-| `--bundle-only` | off | Build the bundle and stop (no host needed) |
-| `--header-height <dp>` | 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
-| `--safe-area-insets <t,l,r,b>` | `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
-| `--debug-props` | off | Add raw host debug props to each node (`debugProps`; `shadowTree` source only) |
-| `--dev` | off | Development bundle (`__DEV__ = true`) |
-| `-v, --verbose` | off | Metro progress, host glog and console output on stderr |
+| `render <file>` | Render once and print the tree | `{viewport, source, root}` ([schema](#output-schema)) |
+| `run <file> --script <json>` | Render, run the actions, print steps and trees | `{viewport, source, steps, snapshots, final, fallbacks}` ([Interactions](#interactions)) |
+| `session <file>` | Render, then serve JSON-line requests on stdin | one JSON object per line ([Session mode](#session-mode)) |
 
-Exit code is 1 on failure, with the message on stderr.
+| Option | Commands | Default | Description |
+| --- | --- | --- | --- |
+| `--platform <name>` | all | required | Metro platform: `android`, `ios`, `a11ytree`, or any Metro platform name (see [Platform](#platform)) |
+| `--width <dp>` | all | `390` | Viewport width |
+| `--height <dp>` | all | `844` | Viewport height |
+| `--header-height <dp>` | all | 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
+| `--safe-area-insets <t,l,r,b>` | all | `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
+| `--dev` | all | off | Development bundle (`__DEV__ = true`) |
+| `--keep-bundle` | all | off | Keep the bundle and print its path to stderr |
+| `-v, --verbose` | all | off | Metro progress, host glog and console output on stderr |
+| `--out <file>` | `render`, `run` | stdout | Write the JSON to a file |
+| `--bundle-only` | `render`, `run` | off | Build the bundle and stop (no host needed) |
+| `--debug-props` | `render` | off | Add raw host debug props to each node (`debugProps`) |
+| `--script <json>` | `run` | required | JSON file with an array of actions |
+| `--tap-mode <mode>` | `run`, `session` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
+| `--timeout <ms>` | `session` | `30000` | Per-request timeout; on timeout the host is killed and the exit code is 1 |
 
 ## Output schema
 
@@ -319,7 +345,24 @@ calls it; it prints one `{"type":"rn-a11y-tree-response",...}` line through
 `NativeFantom.reportTestSuiteResultsJSON`. The host exits when its stdin is
 closed.
 
-## Architecture
+## How it works
+
+1. **Metro**: `src/bundle.ts` writes an entry (`runtime/entry-template.js`
+   with the app path, viewport, script and host settings filled in) and
+   bundles it with Metro and Expo's config into one file for the chosen
+   platform. Some native-only library files are replaced by runtime files
+   (react-native-gesture-handler, see above).
+2. **Bundle**: sets up the React Native environment (no `InitializeCore`),
+   loads the vendored Fantom runtime and the app.
+3. **Host**: `src/host.ts` (or `src/session.ts`) starts the host binary with
+   the bundle. The host is React Native's C++ Fabric runtime with Hermes,
+   Yoga, CoreText text layout and the native libraries compiled in; it calls
+   the bundle, which renders the app into a Fantom root and settles events.
+4. **ShadowTree**: the bundle reads the committed ShadowTree with
+   `NativeFantom.getA11yTree` (typed JSON: frames, a11y props, text, style)
+   and prints it on stdout.
+5. **JSON**: `src/tree.ts` converts it to the output schema (on-screen boxes,
+   roles, names, selectors).
 
 ```
 rn-a11y-tree render App.tsx --platform android
@@ -382,7 +425,8 @@ Base: `getDefaultConfig(projectRoot)` from `expo/metro-config`. Overrides:
   is the value to use for TextInput and Switch.
 - `ios`: resolves `.ios.*` files. react-native then uses the iOS native
   components (for example `Switch`, `RCTSinglelineTextInputView`), which the
-  host does not implement yet.
+  host does not implement yet, and iOS-only core native modules: the
+  navigation example fails with `Got unexpected null` in `LinkingImpl`.
 - `a11ytree`: out-of-tree platform mode. Files named `.a11ytree.*` are used
   when they exist; all other platform files resolve as `android`.
 
@@ -446,6 +490,7 @@ Known limitation: the binary links Homebrew OpenSSL by absolute path
 ## Development
 
 ```sh
+yarn check            # all of the below: typecheck, unit tests, e2e
 yarn typecheck        # tsc --noEmit
 yarn test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.js)
 yarn test:e2e         # real host; skipped if there is no native/dist binary and no RN_A11Y_HOST_BIN
@@ -459,24 +504,28 @@ Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,
 
 `.github/workflows/ci.yml` runs on `macos-15` (arm64) with Xcode 26.3,
 JDK 17 (temurin), Node 24 and Android SDK CMake 3.30.5. `native/dist` is
-cached; the key is the Xcode version, the submodule commit and the hash of
-`native/overlay/**` and `scripts/build-host.sh`. On a cache miss it runs
-`yarn build:host`. Then: `yarn tsc --noEmit`, `yarn test`, `yarn test:e2e`,
-and the Fantom itests from `native/tests` (copied into the submodule and run
-with `yarn fantom`, with `GITHUB_ACTIONS` unset because Fantom treats it as
-Meta CI).
+cached. The key has the Xcode version, the submodule commit, the versions of
+the npm libraries compiled into the host (`react-native-screens`,
+`react-native-safe-area-context`, `react-native-gesture-handler`,
+`react-native-reanimated`, `react-native-worklets`) and the hash of
+`native/overlay/**`, `native/scripts/**` and `scripts/build-host.sh`. On a
+cache miss it runs `yarn build:host`. Then: `yarn tsc --noEmit`,
+`yarn test`, `yarn test:e2e` (every `e2e/*.test.ts`), and every
+`native/tests/*-itest.js` Fantom test (copied with its helper files into the
+submodule, with the npm libraries installed there too, and run with
+`yarn fantom`, with `GITHUB_ACTIONS` unset because Fantom treats it as Meta
+CI).
 
 ## Milestones
 
-1. JS/CLI: Metro bundle, vendored Fantom runtime, host protocol, tree
-   conversion. (done)
-2. Host build from this repo: `yarn build:host`, relocatable
-   `native/dist/<arch>/`. (done, macOS arm64)
-3. Text measurement with CoreText in the host. (done)
-4. Typed ShadowTree dump (`NativeFantom.getA11yTree`): full hierarchy,
-   `role`, typed a11y state, text fragments. (done)
-5. CI (workflow added, not yet run on GitHub) and release: publish prebuilt
-   host binaries (macOS arm64/x86_64, Linux), remove the Homebrew OpenSSL
-   dependency. (in progress)
-6. Expo modules and other libraries with native code: stubs or host
-   implementations. (pending)
+Done: JS/CLI and Metro bundling; host build from this repo
+(`yarn build:host`); CoreText text measurement; typed ShadowTree dump;
+interactions (`run`, `session`); react-native-screens and
+react-native-safe-area-context in the host; react-native-gesture-handler
+(JS module on its web handlers + host descriptors); CI workflow (not yet run
+on GitHub).
+
+Pending: react-native-reanimated/worklets (host port in progress); release
+(prebuilt host binaries for macOS arm64/x86_64 and Linux, no Homebrew
+OpenSSL dependency); Expo modules and `@expo/ui`; a `check` command
+(design tokens, contrast).
