@@ -9,8 +9,9 @@
  *   1. At bundle load: set up the RN environment, load the Fantom runtime and
  *      the user's component module, and register the render function.
  *   2. The host binary calls `global.$$RunTests$$()`, which renders the
- *      component into a Fantom root, reads the mounted tree with layout
- *      metrics, and prints `{"type":"rn-a11y-tree-result","rnA11yTree":...}`
+ *      component into a Fantom root, reads the tree with layout metrics
+ *      (`getA11yTree` if the host has it, else `getRenderedOutput`), and
+ *      prints `{"type":"rn-a11y-tree-result","rnA11yTree":...}`
  *      as one line on stdout.
  */
 
@@ -34,6 +35,7 @@ registerRender(() => {
 
   const viewportWidth = __VIEWPORT_WIDTH__;
   const viewportHeight = __VIEWPORT_HEIGHT__;
+  const includeDebugProps = __INCLUDE_DEBUG_PROPS__;
 
   return () => {
     const root = Fantom.createRoot({viewportWidth, viewportHeight});
@@ -41,17 +43,30 @@ registerRender(() => {
       root.render(React.createElement(App));
     });
 
-    // Raw JSON string from the native RenderOutput (type/props/children, with
-    // `layoutMetrics-*` props). Passed through as-is.
-    const tree = NativeFantom.getRenderedOutput(root.getRootTag(), {
-      includeRoot: true,
-      includeLayoutMetrics: true,
-    });
+    const rootTag = root.getRootTag();
+    let source;
+    let tree;
+    if (typeof NativeFantom.getA11yTree === 'function') {
+      // Typed JSON dump of the committed ShadowTree (hierarchy before view
+      // flattening, numbers/booleans instead of debug strings).
+      source = 'shadowTree';
+      tree = NativeFantom.getA11yTree(rootTag, includeDebugProps);
+    } else {
+      // Fallback for hosts without getA11yTree: the mounted view tree from
+      // Fantom's RenderOutput (type/props/children, debug-string props with
+      // `layoutMetrics-*` keys).
+      source = 'mounted';
+      tree = NativeFantom.getRenderedOutput(rootTag, {
+        includeRoot: true,
+        includeLayoutMetrics: true,
+      });
+    }
     root.destroy();
 
+    // `tree` is already a JSON string; splice it in as-is.
     return `{"viewport":${JSON.stringify({
       width: viewportWidth,
       height: viewportHeight,
-    })},"tree":${tree}}`;
+    })},"source":${JSON.stringify(source)},"tree":${tree}}`;
   };
 });

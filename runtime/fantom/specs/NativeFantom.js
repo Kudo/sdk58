@@ -116,6 +116,10 @@ interface Spec extends TurboModule {
     config: RenderFormatOptions,
   ) => string;
   reportTestSuiteResultsJSON: (results: string) => void;
+  // Added by react-native-a11y-tree (not in upstream Fantom): typed JSON dump
+  // of the committed ShadowTree for a surface. Optional: older hosts do not
+  // implement it, so check `typeof NativeFantom.getA11yTree === 'function'`.
+  getA11yTree?: (surfaceId: RootTag, includeDebugProps: boolean) => string;
   createShadowNodeReferenceCounter(
     shadowNode: unknown /* ShadowNode */,
   ): () => number;

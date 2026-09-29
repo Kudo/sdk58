@@ -31,6 +31,8 @@ export type BundleOptions = {
   appPath: string;
   viewportWidth: number;
   viewportHeight: number;
+  /** Ask the host for raw debug props on each node (`getA11yTree` only). */
+  includeDebugProps?: boolean;
   platform?: string;
   /** Output bundle path. Defaults to a file in a new temp dir. */
   out?: string;
@@ -67,6 +69,7 @@ export function renderEntry(options: {
   appPath: string;
   viewportWidth: number;
   viewportHeight: number;
+  includeDebugProps?: boolean;
 }): string {
   const template = fs.readFileSync(
     path.join(RUNTIME_DIR, 'entry-template.js'),
@@ -80,7 +83,11 @@ export function renderEntry(options: {
     .replaceAll('__RUNTIME_DIR__', quote(RUNTIME_DIR))
     .replaceAll('__APP_PATH__', quote(path.resolve(options.appPath)))
     .replaceAll('__VIEWPORT_WIDTH__', String(options.viewportWidth))
-    .replaceAll('__VIEWPORT_HEIGHT__', String(options.viewportHeight));
+    .replaceAll('__VIEWPORT_HEIGHT__', String(options.viewportHeight))
+    .replaceAll(
+      '__INCLUDE_DEBUG_PROPS__',
+      String(options.includeDebugProps === true),
+    );
 }
 
 function isInside(file: string, dir: string): boolean {
@@ -224,6 +231,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
       appPath,
       viewportWidth: options.viewportWidth,
       viewportHeight: options.viewportHeight,
+      includeDebugProps: options.includeDebugProps,
     }),
   );
   const bundlePath = path.resolve(

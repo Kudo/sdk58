@@ -28,6 +28,7 @@ type RenderOptions = {
   keepBundle: boolean;
   bundleOnly: boolean;
   dev: boolean;
+  debugProps: boolean;
   verbose: boolean;
 };
 
@@ -50,6 +51,7 @@ async function render(file: string, options: RenderOptions) {
     viewportHeight: options.height,
     platform: options.platform,
     dev: options.dev,
+    includeDebugProps: options.debugProps,
     verbose: options.verbose,
   });
   const cleanUp = () => {
@@ -95,6 +97,11 @@ program
   .option('--out <file>', 'write JSON to a file instead of stdout')
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
   .option('--bundle-only', 'only build the bundle, do not run the host', false)
+  .option(
+    '--debug-props',
+    'include raw host debug props on each node (hosts with getA11yTree only)',
+    false,
+  )
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
   .option('-v, --verbose', 'print Metro progress and host logs to stderr', false)
   .action(render);
