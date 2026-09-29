@@ -14,6 +14,28 @@ if (process.env.FAKE_HOST_MODE === 'js-error') {
   console.log(JSON.stringify({type: 'rn-a11y-tree-error', error: {message: 'boom', stack: 'Error: boom\n    at App'}}));
   process.exit(0);
 }
+if (process.env.FAKE_HOST_MODE === 'run') {
+  const shadow = JSON.parse(
+    fs.readFileSync(
+      path.join(path.dirname(fileURLToPath(import.meta.url)), 'shadow-tree.json'),
+      'utf8',
+    ),
+  );
+  const submit = {tag: 5, ref: 'n6', testID: 'submit', type: 'View', box: {x: 24, y: 154.00000123, width: 342, height: 48}};
+  const payload = {
+    viewport: {width: 390, height: 844},
+    source: 'shadowTree',
+    steps: [
+      {index: 0, action: 'tap', target: submit, hit: {tag: 6, ref: 'n7', testID: null, type: 'Paragraph', box: {x: 164, y: 168, width: 62, height: 20}}, events: ['touchStart', 'touchEnd'], via: {hitTest: 'js', events: 'js'}},
+      {index: 1, action: 'tap', target: null, hit: null, events: [], error: 'Target not found: {"testID":"missing"}'},
+      {index: 2, action: 'snapshot', target: null, hit: null, events: []},
+    ],
+    snapshots: {after: shadow},
+    final: shadow,
+  };
+  console.log(JSON.stringify({type: 'rn-a11y-tree-result', rnA11yTree: payload}));
+  process.exit(0);
+}
 if (process.env.FAKE_HOST_MODE === 'shadow-tree') {
   const shadow = fs.readFileSync(
     path.join(path.dirname(fileURLToPath(import.meta.url)), 'shadow-tree.json'),

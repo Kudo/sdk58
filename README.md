@@ -126,6 +126,69 @@ the host implements it, else `NativeFantom.getRenderedOutput`.
   - The `role` prop is not in the debug props (only `accessibilityRole`
     is), so `role="..."` without `accessibilityRole` gives `role: null`.
 
+## Interactions
+
+```sh
+yarn rn-a11y-tree run examples/basic/App.tsx --platform android --script examples/basic/actions.json
+```
+
+`run <file> --platform <p> --script <json> [--tap-mode touch|click|both]`
+renders the component, runs the actions in order, and prints:
+
+```jsonc
+{
+  "viewport": {"width": 390, "height": 844},
+  "source": "shadowTree",
+  "steps": [
+    {
+      "index": 2, "action": "tap",
+      "target": {"tag": 16, "ref": "n7", "testID": "submit", "type": "View", "box": {...}},
+      "hit": {"tag": 14, "ref": "n8", "testID": null, "type": "Paragraph", "box": {...}},
+      "events": ["touchStart", "touchEnd"],
+      "via": {"hitTest": "js", "events": "js"},   // host methods ("native") or the JS fallback
+      "warnings": ["..."],                        // optional, e.g. the target is covered
+      "error": "..."                              // optional; later steps still run
+    }
+  ],
+  "snapshots": {"after-submit": { /* tree, same schema as render's root */ }},
+  "final": { /* tree after the last step */ }
+}
+```
+
+The script is a JSON array. It is validated before bundling; errors name the
+step index.
+
+| Action | Form | Events |
+| --- | --- | --- |
+| `tap` | `{"x":..,"y":..}`, `{"testID":".."}` or `{"ref":"n5"}` | `touchStart`, `touchEnd` to the hit node (`--tap-mode touch`, default); `click` (`click`); both (`both`). On a Switch: `change {value: !value}` instead. |
+| `longPress` | same as `tap` | `touchStart`, 600 ms of mocked timers, `touchEnd` |
+| `type` | `{"testID":"..","text":"..","submit":false}` | `focus`; per character `keyPress {key}` and `change {text, eventCount}`; `submitEditing` if `submit`; `endEditing`, `blur` |
+| `scroll` | `{"testID":"..","x":0,"y":300}` | scroll event on a `ScrollView` |
+| `wait` | milliseconds | advances mocked timers and runs the work loop |
+| `snapshot` | name | stores the tree at this point |
+
+Rules:
+
+- Targets: `testID` or `ref`. A `ref` is resolved against the tree at the
+  time of the step (refs can change after the UI changes).
+- Target taps hit-test at the center of the target's box. If the hit node is
+  not the target or inside it, the step gets a "Target is covered" warning.
+  Touch events go to the hit node (the responder system bubbles them).
+  `click` goes to the target, because it does not bubble from a child to a
+  Pressable in this host.
+- Timers are mocked during the script (`Fantom.installTimerMock`), so
+  `wait` and `longPress` are deterministic.
+- Host methods: `hitTest`, `enqueueNativeEventByTag`,
+  `enqueueScrollEventByTag` and `setTextInputTextByTag` are used when the
+  host has them. Without them, the runner hit-tests in JS over the
+  `getA11yTree` boxes (deepest node, later siblings on top, `pointerEvents`
+  honored; zIndex, transforms and clipping ignored) and sends events with
+  Fantom's `enqueueNativeEvent` / `enqueueScrollEvent` to the element found by
+  tag in `root.document`. Without `setTextInputTextByTag`, the input's own
+  `text` in the tree does not change (the app's state does); the step gets a
+  warning.
+- `run` needs a host with `getA11yTree`.
+
 ## Architecture
 
 ```
@@ -146,6 +209,11 @@ rn-a11y-tree render App.tsx --platform android
   │          NativeFantom.reportTestSuiteResultsJSON('{"type":"rn-a11y-tree-result","rnA11yTree":{...}}')
   │
   └─ src/tree.ts     shadowTree or mounted JSON -> output schema
+
+rn-a11y-tree run App.tsx --script actions.json
+  same, plus: src/script.ts validates the script; the entry embeds it and
+  runtime/actions.js runs it after the render; snapshots and the final tree
+  are converted by src/tree.ts
 ```
 
 `runtime/fantom/` is the Fantom JS runtime vendored from React Native (not on

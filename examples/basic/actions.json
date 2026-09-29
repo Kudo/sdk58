@@ -1,0 +1,6 @@
+[
+  {"type": {"testID": "email", "text": "a@b.c"}},
+  {"tap": {"testID": "remember"}},
+  {"tap": {"testID": "submit"}},
+  {"snapshot": "after-submit"}
+]

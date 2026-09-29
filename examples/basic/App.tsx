@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import {
   Image,
   Pressable,
@@ -9,6 +10,10 @@ import {
 } from 'react-native';
 
 export default function App() {
+  const [remember, setRemember] = useState(true);
+  const [email, setEmail] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title} accessibilityRole="header">
@@ -23,9 +28,12 @@ export default function App() {
         placeholder="Email"
         testID="email"
         style={{fontSize: 16, borderWidth: 1, padding: 8, marginBottom: 16}}
+        onChangeText={setEmail}
       />
+      {email !== '' ? <Text testID="echo">{email}</Text> : null}
       <Switch
-        value
+        value={remember}
+        onValueChange={setRemember}
         testID="remember"
         accessibilityLabel="Remember me"
         style={styles.switch}
@@ -34,9 +42,10 @@ export default function App() {
         style={styles.button}
         role="button"
         testID="submit"
-        onPress={() => {}}>
+        onPress={() => setSubmitted(true)}>
         <Text style={styles.buttonLabel}>Submit</Text>
       </Pressable>
+      {submitted ? <Text testID="status">Submitted</Text> : null}
     </View>
   );
 }

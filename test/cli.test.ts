@@ -5,7 +5,9 @@ import path from 'node:path';
 import {test} from 'node:test';
 import {fileURLToPath} from 'node:url';
 
-import type {RenderResult} from '../src/schema.ts';
+import os from 'node:os';
+
+import type {RenderResult, RunResult} from '../src/schema.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
@@ -83,4 +85,72 @@ test('reports JS errors from the host', {timeout: 120_000}, () => {
   });
   assert.equal(proc.status, 1);
   assert.match(proc.stderr, /Render failed in JS: boom/);
+});
+
+function writeScript(script: unknown): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-test-'));
+  const file = path.join(dir, 'actions.json');
+  fs.writeFileSync(file, typeof script === 'string' ? script : JSON.stringify(script));
+  return file;
+}
+
+test('run: validates the script before bundling', {timeout: 120_000}, () => {
+  const cases: Array<[unknown, RegExp]> = [
+    [[{tap: {testID: 'submit'}}, {wait: 'soon'}], /step 1: wait: must be a number/],
+    ['[not json', /is not valid JSON/],
+  ];
+  for (const [script, pattern] of cases) {
+    const file = writeScript(script);
+    const proc = run(['run', APP, '--platform', 'android', '--script', file], {
+      RN_A11Y_HOST_BIN: FAKE_HOST,
+    });
+    fs.rmSync(path.dirname(file), {recursive: true, force: true});
+    assert.equal(proc.status, 1);
+    assert.match(proc.stderr, pattern);
+    assert.doesNotMatch(proc.stderr, /Bundle:/);
+    assert.equal(proc.stdout, '');
+  }
+  const missing = run(['run', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST});
+  assert.equal(missing.status, 1);
+  assert.match(missing.stderr, /--script <json> is required/);
+  const badMode = run(
+    ['run', APP, '--platform', 'android', '--script', 'x.json', '--tap-mode', 'swipe'],
+    {RN_A11Y_HOST_BIN: FAKE_HOST},
+  );
+  assert.equal(badMode.status, 1);
+  assert.match(badMode.stderr, /--tap-mode must be one of: touch, click, both/);
+});
+
+test('run: reports steps, snapshots and the final tree (fake host)', {timeout: 120_000}, () => {
+  const file = writeScript([{tap: {testID: 'submit'}}, {tap: {testID: 'missing'}}, {snapshot: 'after'}]);
+  const proc = run(['run', APP, '--platform', 'android', '--script', file], {
+    RN_A11Y_HOST_BIN: FAKE_HOST,
+    FAKE_HOST_MODE: 'run',
+  });
+  fs.rmSync(path.dirname(file), {recursive: true, force: true});
+  assert.equal(proc.status, 0, proc.stderr);
+  const result = JSON.parse(proc.stdout) as RunResult;
+  assert.equal(result.source, 'shadowTree');
+  assert.equal(result.steps.length, 3);
+  assert.equal(result.steps[0].target?.box?.y, 154); // rounded
+  assert.equal(result.steps[0].hit?.type, 'Paragraph');
+  assert.match(result.steps[1].error ?? '', /Target not found/);
+  // Snapshots and final are converted with the same converter as `render`.
+  assert.equal(result.snapshots.after.ref, 'n0');
+  assert.equal(result.final.children[0].children[0].name, 'Sign in now');
+});
+
+test('run: the script and tap mode are embedded in the bundle', {timeout: 120_000}, () => {
+  const file = writeScript([{wait: 5}]);
+  const proc = run(
+    ['run', APP, '--platform', 'android', '--script', file, '--tap-mode', 'both', '--bundle-only'],
+    {},
+  );
+  fs.rmSync(path.dirname(file), {recursive: true, force: true});
+  assert.equal(proc.status, 0, proc.stderr);
+  const bundlePath = /Bundle: (.+) \(\d+ bytes\)/.exec(proc.stderr)![1];
+  const code = fs.readFileSync(bundlePath, 'utf8');
+  fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
+  assert.match(code, /script = \[\{\s*"wait": 5\s*\}\]/);
+  assert.match(code, /tapMode = "both"/);
 });
