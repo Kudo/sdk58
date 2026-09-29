@@ -12,18 +12,22 @@ runs in a headless React Native Fabric host (React Native's "Fantom" tester:
 C++ + Hermes, no simulator). The output is the mounted shadow tree with
 absolute layout boxes.
 
-Status: works end to end with a locally built Fantom host
-(`fantom_tester`); point `RN_A11Y_HOST_BIN` at it. Text measurement in the
+Status: works end to end on macOS arm64 with the host built by
+`yarn build:host`. Text measurement in the
 host is not done yet, so `Paragraph` boxes have height 0 (and width 0 when
 they are not stretched).
 
 ## Usage
 
 ```sh
+git clone --recurse-submodules --shallow-submodules <this repo>
 yarn install
-export RN_A11Y_HOST_BIN=/path/to/fantom_tester
+yarn build:host        # builds native/dist/<arch>/rn-a11y-host (macOS only for now)
 yarn rn-a11y-tree render examples/basic/App.tsx
 ```
+
+The CLI uses `native/dist/<arch>/rn-a11y-host`. Set `RN_A11Y_HOST_BIN` to use
+another host binary.
 
 The file must have a default export or an `App` named export that is a React
 component. Metro's project root is the directory of the nearest
@@ -169,12 +173,42 @@ From Fantom's `tester/src` (`main.cpp`, `AppSettings.cpp`,
     or `{"type":"rn-a11y-tree-error","error":{"message":"...","stack":"..."}}`.
 - glog goes to stderr.
 
+## Building the host
+
+`yarn build:host` runs [`scripts/build-host.sh`](scripts/build-host.sh):
+
+1. Checks `JAVA_HOME` (default `/opt/homebrew/opt/openjdk@17`, JDK 17) and
+   `ANDROID_HOME` (default `~/Library/Android/sdk`). Installs
+   `cmake;3.30.5` with `sdkmanager` if it is missing. The Android SDK is only
+   used for its CMake; nothing is built for Android.
+2. Runs `yarn install` (Yarn 1.22.22 through corepack) in
+   `third_party/react-native`. A `yarn` shim that runs Yarn 1 is put first on
+   `PATH`, because React Native's codegen calls `yarn` and does not work with
+   Yarn 4.
+3. Copies `native/overlay/` over `third_party/react-native/private/react-native-fantom/`.
+   This changes files in the submodule's working tree; do not commit them
+   there. Put patches in `native/overlay/` instead.
+4. Runs `./gradlew :private:react-native-fantom:buildFantomTester`. Logs:
+   `third_party/react-native/private/react-native-fantom/build/reports/`.
+5. Copies `fantom_tester` to `native/dist/<arch>/rn-a11y-host`, and the
+   `@rpath` dylibs (`libhermesvm.dylib`, `libjsi.dylib`) to
+   `native/dist/<arch>/lib/`. Absolute rpaths are replaced with
+   `@executable_path/lib` (binary) and `@loader_path` (dylibs), and the files
+   are ad-hoc signed again. The folder can be moved.
+
+Known limitation: the binary links Homebrew OpenSSL by absolute path
+(`/opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib`), so the machine needs
+`brew install openssl@3`.
+
+`third_party/react-native` is React Native `0.88-stable` at `6007151`
+(a shallow submodule).
+
 ## Development
 
 ```sh
 yarn typecheck        # tsc --noEmit
 yarn test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.js)
-yarn test:e2e         # real host; skipped unless RN_A11Y_HOST_BIN is set
+yarn test:e2e         # real host; skipped if there is no native/dist binary and no RN_A11Y_HOST_BIN
 yarn rn-a11y-tree render examples/basic/App.tsx --bundle-only
 ```
 

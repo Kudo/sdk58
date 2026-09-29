@@ -20,10 +20,10 @@ function run(args: string[], env: Record<string, string | undefined>) {
   });
 }
 
-test('fails with a clear message when RN_A11Y_HOST_BIN is unset', {timeout: 120_000}, () => {
-  const proc = run(['render', APP], {RN_A11Y_HOST_BIN: ''});
+test('fails with a clear message when the host binary is missing', {timeout: 120_000}, () => {
+  const proc = run(['render', APP], {RN_A11Y_HOST_BIN: '/nonexistent/rn-a11y-host'});
   assert.equal(proc.status, 1);
-  assert.match(proc.stderr, /RN_A11Y_HOST_BIN is not set/);
+  assert.match(proc.stderr, /RN_A11Y_HOST_BIN points to a missing file/);
   assert.equal(proc.stdout, '');
 });
 

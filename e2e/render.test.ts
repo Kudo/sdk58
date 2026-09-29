@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import {test} from 'node:test';
 import {fileURLToPath} from 'node:url';
@@ -10,7 +11,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 
-const hostBin = process.env.RN_A11Y_HOST_BIN;
+const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
+const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
 
 function findAll(node: TreeNode, pred: (n: TreeNode) => boolean): TreeNode[] {
   const out = pred(node) ? [node] : [];
@@ -23,12 +25,13 @@ test(
   {
     skip: hostBin
       ? false
-      : 'RN_A11Y_HOST_BIN is not set (path to the Fantom host binary)',
+      : `no host binary: run \`yarn build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
     timeout: 180_000,
   },
   () => {
     const proc = spawnSync(process.execPath, [CLI, 'render', APP], {
       cwd: ROOT,
+      env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
     });
