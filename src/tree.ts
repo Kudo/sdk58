@@ -48,6 +48,7 @@ export function toRunResult(payload: HostRunPayload): RunResult {
     })),
     snapshots,
     final: convertShadowTree(payload.final),
+    fallbacks: payload.fallbacks ?? [],
   };
 }
 

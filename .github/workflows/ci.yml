@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # macOS 15 arm64. Image facts (actions/runner-images macos-15-arm64
+    # readme, image 20260907): ANDROID_HOME=/Users/runner/Library/Android/sdk
+    # with Command Line Tools 16.0 and SDK CMake 3.31.5 / 4.1.2 (not 3.30.5,
+    # which build-host.sh installs), Xcode 16.4 default and 26.0.1-26.3
+    # installed, Java 17 available, Node.js 22 default.
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      # The native patches are developed with Xcode 26 (Apple clang 21).
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Node 24 still bundles corepack (needed for Yarn 4 here and Yarn 1 in
+      # the submodule).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Android SDK
+        run: |
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            brew install --cask android-commandlinetools
+            echo "ANDROID_HOME=$(brew --prefix)/share/android-commandlinetools" >> "$GITHUB_ENV"
+          fi
+
+      - name: Android SDK CMake 3.30.5
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' | head -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "cmake;3.30.5"
+
+      - name: Homebrew packages
+        # openssl@3: the host links Homebrew libcrypto by absolute path.
+        run: brew install cmake ninja openssl@3
+
+      - name: Install JS dependencies
+        run: |
+          corepack enable
+          yarn install --immutable
+
+      - name: Host cache key
+        id: host-key
+        run: |
+          echo "submodule=$(git -C third_party/react-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "xcode=$(xcodebuild -version | head -n 1 | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
+      - name: Restore host binary
+        id: host-cache
+        uses: actions/cache@v6
+        with:
+          path: native/dist
+          key: host-${{ runner.os }}-${{ runner.arch }}-${{ steps.host-key.outputs.xcode }}-${{ steps.host-key.outputs.submodule }}-${{ hashFiles('native/overlay/**', 'scripts/build-host.sh') }}
+
+      - name: Build host
+        if: steps.host-cache.outputs.cache-hit != 'true'
+        # JAVA_HOME points to JDK 17 (setup-java).
+        run: yarn build:host
+
+      - name: Typecheck
+        run: yarn tsc --noEmit
+
+      - name: Unit tests
+        run: yarn test
+
+      - name: E2E tests
+        run: yarn test:e2e
+
+      - name: Fantom itests (native/tests)
+        run: |
+          set -euo pipefail
+          RN=third_party/react-native
+          FANTOM=$RN/private/react-native-fantom
+          # Same overlay as build-host.sh.
+          rsync -a native/overlay/ "$FANTOM/"
+          # On a cache hit the submodule has no build tree: use the dist host
+          # (it is relocatable; its dylibs are in lib/ next to it). Never
+          # replace a binary that build-host.sh just built.
+          if [ ! -x "$FANTOM/build/tester/fantom_tester" ]; then
+            mkdir -p "$FANTOM/build/tester"
+            cp native/dist/"$(uname -m)"/rn-a11y-host "$FANTOM/build/tester/fantom_tester"
+            cp -R native/dist/"$(uname -m)"/lib "$FANTOM/build/tester/lib"
+          fi
+          # JS deps of the submodule (skipped by build-host.sh on a cache hit).
+          if [ ! -d "$RN/node_modules" ]; then
+            (cd "$RN" && corepack yarn@1.22.22 install --frozen-lockfile --non-interactive)
+          fi
+          TESTS_DIR=$RN/packages/react-native/Libraries/Components/View/__tests__
+          cp native/tests/*-itest.js "$TESTS_DIR/"
+          names=$(for f in native/tests/*-itest.js; do basename "$f" -itest.js; done)
+          # `yarn fantom` shells out to `yarn`; it must be Yarn 1.
+          SHIM_DIR=$(mktemp -d)
+          printf '#!/usr/bin/env bash\nexec corepack yarn@1.22.22 "$@"\n' > "$SHIM_DIR/yarn"
+          chmod +x "$SHIM_DIR/yarn"
+          # Fantom treats GITHUB_ACTIONS as Meta CI and tries Buck builds.
+          # shellcheck disable=SC2086
+          (cd "$RN" && env -u GITHUB_ACTIONS PATH="$SHIM_DIR:$PATH" yarn fantom $names)

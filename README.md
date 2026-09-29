@@ -345,6 +345,17 @@ yarn rn-a11y-tree render examples/basic/App.tsx --platform android --bundle-only
 Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,
 `react@19.3.0`, Metro 0.87.1. Yarn 4 with `nodeLinker: node-modules`.
 
+## CI
+
+`.github/workflows/ci.yml` runs on `macos-15` (arm64) with Xcode 26.3,
+JDK 17 (temurin), Node 24 and Android SDK CMake 3.30.5. `native/dist` is
+cached; the key is the Xcode version, the submodule commit and the hash of
+`native/overlay/**` and `scripts/build-host.sh`. On a cache miss it runs
+`yarn build:host`. Then: `yarn tsc --noEmit`, `yarn test`, `yarn test:e2e`,
+and the Fantom itests from `native/tests` (copied into the submodule and run
+with `yarn fantom`, with `GITHUB_ACTIONS` unset because Fantom treats it as
+Meta CI).
+
 ## Milestones
 
 1. JS/CLI: Metro bundle, vendored Fantom runtime, host protocol, tree
@@ -354,7 +365,8 @@ Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,
 3. Text measurement with CoreText in the host. (done)
 4. Typed ShadowTree dump (`NativeFantom.getA11yTree`): full hierarchy,
    `role`, typed a11y state, text fragments. (done)
-5. CI and release: build and publish prebuilt host binaries (macOS
-   arm64/x86_64, Linux), remove the Homebrew OpenSSL dependency. (pending)
+5. CI (workflow added, not yet run on GitHub) and release: publish prebuilt
+   host binaries (macOS arm64/x86_64, Linux), remove the Homebrew OpenSSL
+   dependency. (in progress)
 6. Expo modules and other libraries with native code: stubs or host
    implementations. (pending)

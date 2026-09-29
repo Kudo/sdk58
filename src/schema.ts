@@ -208,6 +208,8 @@ export type RunResult = {
   steps: Step[];
   snapshots: Record<string, TreeNode>;
   final: TreeNode;
+  /** JS fallbacks used because the host lacks native methods (empty when none). */
+  fallbacks: string[];
 };
 
 /** Payload printed by the entry for `run --script`. */
