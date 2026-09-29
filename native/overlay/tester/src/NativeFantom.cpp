@@ -20,7 +20,9 @@
 #include "TesterAppDelegate.h"
 
 #include <jsi/instrumentation.h>
+#include "components/FantomTextInput.h"
 #include "render/A11yTree.h"
+#include "render/HitTest.h"
 #include "render/RenderFormatOptions.h"
 #include "render/RenderOutput.h"
 
@@ -46,6 +48,132 @@ jsi::Value getA11yTreeHostFunction(
           .getA11yTree(runtime, surfaceId, includeDebugProps));
 }
 
+SurfaceId surfaceIdArg(jsi::Runtime& runtime, const jsi::Value* args, size_t count, const char* method) {
+  if (count < 1 || !args[0].isNumber()) {
+    throw jsi::JSError(
+        runtime,
+        std::string(method) + ": expected a surface ID as the first argument");
+  }
+  return static_cast<SurfaceId>(args[0].asNumber());
+}
+
+double numberArg(
+    jsi::Runtime& runtime,
+    const jsi::Value* args,
+    size_t count,
+    size_t index,
+    const char* method,
+    const char* name) {
+  if (count <= index || !args[index].isNumber()) {
+    throw jsi::JSError(
+        runtime,
+        std::string(method) + ": expected a number for `" + name + "`");
+  }
+  return args[index].asNumber();
+}
+
+std::string stringArg(
+    jsi::Runtime& runtime,
+    const jsi::Value* args,
+    size_t count,
+    size_t index,
+    const char* method,
+    const char* name) {
+  if (count <= index || !args[index].isString()) {
+    throw jsi::JSError(
+        runtime,
+        std::string(method) + ": expected a string for `" + name + "`");
+  }
+  return args[index].asString(runtime).utf8(runtime);
+}
+
+bool isPresent(const jsi::Value* args, size_t count, size_t index) {
+  return count > index && !args[index].isUndefined() && !args[index].isNull();
+}
+
+// hitTest(surfaceId: number, x: number, y: number): string
+jsi::Value hitTestHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& turboModule,
+    const jsi::Value* args,
+    size_t count) {
+  auto surfaceId = surfaceIdArg(runtime, args, count, "hitTest");
+  auto x = numberArg(runtime, args, count, 1, "hitTest", "x");
+  auto y = numberArg(runtime, args, count, 2, "hitTest", "y");
+  return jsi::String::createFromUtf8(
+      runtime,
+      static_cast<NativeFantom&>(turboModule)
+          .hitTest(
+              runtime,
+              surfaceId,
+              static_cast<Float>(x),
+              static_cast<Float>(y)));
+}
+
+// enqueueNativeEventByTag(surfaceId, tag, type, payload?, category?, isUnique?)
+jsi::Value enqueueNativeEventByTagHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& turboModule,
+    const jsi::Value* args,
+    size_t count) {
+  constexpr auto kMethod = "enqueueNativeEventByTag";
+  auto surfaceId = surfaceIdArg(runtime, args, count, kMethod);
+  auto tag = static_cast<Tag>(numberArg(runtime, args, count, 1, kMethod, "tag"));
+  auto type = stringArg(runtime, args, count, 2, kMethod, "type");
+  std::optional<folly::dynamic> payload;
+  if (isPresent(args, count, 3)) {
+    payload = jsi::dynamicFromValue(runtime, args[3]);
+  }
+  std::optional<RawEvent::Category> category;
+  if (isPresent(args, count, 4)) {
+    category = Bridging<RawEvent::Category>::fromJs(
+        runtime, jsi::Value(runtime, args[4]));
+  }
+  std::optional<bool> isUnique;
+  if (isPresent(args, count, 5)) {
+    isUnique = args[5].asBool();
+  }
+  static_cast<NativeFantom&>(turboModule)
+      .enqueueNativeEventByTag(
+          runtime, surfaceId, tag, type, payload, category, isUnique);
+  return jsi::Value::undefined();
+}
+
+// enqueueScrollEventByTag(surfaceId, tag, {x, y, zoomScale?})
+jsi::Value enqueueScrollEventByTagHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& turboModule,
+    const jsi::Value* args,
+    size_t count) {
+  constexpr auto kMethod = "enqueueScrollEventByTag";
+  auto surfaceId = surfaceIdArg(runtime, args, count, kMethod);
+  auto tag = static_cast<Tag>(numberArg(runtime, args, count, 1, kMethod, "tag"));
+  if (count < 3 || !args[2].isObject()) {
+    throw jsi::JSError(
+        runtime, std::string(kMethod) + ": expected {x, y, zoomScale?}");
+  }
+  auto options = Bridging<ScrollOptions>::fromJs(
+      runtime, args[2].asObject(runtime), nullptr);
+  static_cast<NativeFantom&>(turboModule)
+      .enqueueScrollEventByTag(runtime, surfaceId, tag, options);
+  return jsi::Value::undefined();
+}
+
+// setTextInputTextByTag(surfaceId, tag, text)
+jsi::Value setTextInputTextByTagHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& turboModule,
+    const jsi::Value* args,
+    size_t count) {
+  constexpr auto kMethod = "setTextInputTextByTag";
+  auto surfaceId = surfaceIdArg(runtime, args, count, kMethod);
+  auto tag = static_cast<Tag>(numberArg(runtime, args, count, 1, kMethod, "tag"));
+  auto text = stringArg(runtime, args, count, 2, kMethod, "text");
+  static_cast<NativeFantom&>(turboModule)
+      .setTextInputTextByTag(runtime, surfaceId, tag, text);
+  return jsi::Value::undefined();
+}
+
 } // namespace
 
 NativeFantom::NativeFantom(
@@ -55,6 +183,14 @@ NativeFantom::NativeFantom(
       appDelegate_(appDelegate) {
   methodMap_["getA11yTree"] =
       MethodMetadata{.argCount = 2, .invoker = getA11yTreeHostFunction};
+  methodMap_["hitTest"] =
+      MethodMetadata{.argCount = 3, .invoker = hitTestHostFunction};
+  methodMap_["enqueueNativeEventByTag"] = MethodMetadata{
+      .argCount = 6, .invoker = enqueueNativeEventByTagHostFunction};
+  methodMap_["enqueueScrollEventByTag"] = MethodMetadata{
+      .argCount = 3, .invoker = enqueueScrollEventByTagHostFunction};
+  methodMap_["setTextInputTextByTag"] = MethodMetadata{
+      .argCount = 3, .invoker = setTextInputTextByTagHostFunction};
 }
 
 SurfaceId NativeFantom::startSurface(
@@ -165,6 +301,106 @@ std::string NativeFantom::getA11yTree(
             std::to_string(surfaceId));
   }
   return result;
+}
+
+std::shared_ptr<const ShadowNode> NativeFantom::getRootShadowNode(
+    jsi::Runtime& runtime,
+    SurfaceId surfaceId) {
+  auto uiManagerBinding = UIManagerBinding::getBinding(runtime);
+  if (uiManagerBinding == nullptr) {
+    throw jsi::JSError(runtime, "UIManagerBinding is not available");
+  }
+  std::shared_ptr<const ShadowNode> rootShadowNode;
+  uiManagerBinding->getUIManager().getShadowTreeRegistry().visit(
+      surfaceId, [&](const ShadowTree& shadowTree) {
+        rootShadowNode = shadowTree.getCurrentRevision().rootShadowNode;
+      });
+  if (rootShadowNode == nullptr) {
+    throw jsi::JSError(
+        runtime, "No shadow tree for surface " + std::to_string(surfaceId));
+  }
+  return rootShadowNode;
+}
+
+std::shared_ptr<const ShadowNode> NativeFantom::getShadowNodeByTag(
+    jsi::Runtime& runtime,
+    SurfaceId surfaceId,
+    Tag tag) {
+  auto shadowNode =
+      findShadowNodeByTag(getRootShadowNode(runtime, surfaceId), tag);
+  if (shadowNode == nullptr) {
+    throw jsi::JSError(
+        runtime,
+        "No shadow node with tag " + std::to_string(tag) + " in surface " +
+            std::to_string(surfaceId));
+  }
+  return shadowNode;
+}
+
+std::string NativeFantom::hitTest(
+    jsi::Runtime& runtime,
+    SurfaceId surfaceId,
+    Float x,
+    Float y) {
+  auto result =
+      facebook::react::hitTest(getRootShadowNode(runtime, surfaceId), {x, y});
+  if (!result.has_value()) {
+    return "null";
+  }
+  folly::dynamic path = folly::dynamic::array();
+  for (auto tag : result->path) {
+    path.push_back(tag);
+  }
+  return folly::toJson(
+      folly::dynamic::object("tag", result->node->getTag())(
+          "type", result->node->getComponentName())("path", path)(
+          "viaHitSlop", result->viaHitSlop));
+}
+
+void NativeFantom::enqueueNativeEventByTag(
+    jsi::Runtime& runtime,
+    SurfaceId surfaceId,
+    Tag tag,
+    const std::string& type,
+    const std::optional<folly::dynamic>& payload,
+    std::optional<RawEvent::Category> category,
+    std::optional<bool> isUnique) {
+  enqueueNativeEvent(
+      runtime,
+      getShadowNodeByTag(runtime, surfaceId, tag),
+      type,
+      payload,
+      category,
+      isUnique);
+}
+
+void NativeFantom::enqueueScrollEventByTag(
+    jsi::Runtime& runtime,
+    SurfaceId surfaceId,
+    Tag tag,
+    ScrollOptions options) {
+  auto shadowNode = getShadowNodeByTag(runtime, surfaceId, tag);
+  if (dynamic_cast<const ScrollViewShadowNode*>(shadowNode.get()) == nullptr) {
+    throw jsi::JSError(
+        runtime,
+        "enqueueScrollEventByTag: node " + std::to_string(tag) +
+            " is not a ScrollView");
+  }
+  enqueueScrollEvent(runtime, shadowNode, options);
+}
+
+void NativeFantom::setTextInputTextByTag(
+    jsi::Runtime& runtime,
+    SurfaceId surfaceId,
+    Tag tag,
+    const std::string& text) {
+  auto shadowNode = getShadowNodeByTag(runtime, surfaceId, tag);
+  if (!setFantomTextInputText(*shadowNode, text)) {
+    throw jsi::JSError(
+        runtime,
+        "setTextInputTextByTag: node " + std::to_string(tag) +
+            " is not a TextInput");
+  }
 }
 
 void NativeFantom::reportTestSuiteResultsJSON(

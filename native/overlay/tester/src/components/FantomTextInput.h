@@ -14,6 +14,9 @@
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/textlayoutmanager/TextLayoutManager.h>
 
+#include <optional>
+#include <string>
+
 namespace facebook::react {
 
 extern const char FantomAndroidTextInputComponentName[];
@@ -81,5 +84,25 @@ class FantomAndroidTextInputComponentDescriptor final
  private:
   const std::shared_ptr<TextLayoutManager> textLayoutManager_;
 };
+
+/*
+ * Sets the text of an uncontrolled <AndroidTextInput>, like typing on a
+ * device. It updates `TextInputState` (the attributed string used for
+ * measuring) through `ConcreteState::updateState`, the same path the platform
+ * uses for native text changes; the state update is committed by the UIManager
+ * when the event queue is flushed, and the new state revision dirties the Yoga
+ * measurement, so the node is measured again. `reactTreeAttributedString` is
+ * kept, so the next layout does not replace the text with the `text` prop
+ * (for a controlled input, a new `text` prop from JS replaces it).
+ * Returns false if `shadowNode` is not a Fantom AndroidTextInput node.
+ */
+bool setFantomTextInputText(const ShadowNode &shadowNode, const std::string &text);
+
+/*
+ * Returns the current text of a Fantom AndroidTextInput node: the text of its
+ * state if the state was updated (typed text), otherwise the `text` prop.
+ * Returns std::nullopt for other nodes.
+ */
+std::optional<std::string> getFantomTextInputText(const ShadowNode &shadowNode);
 
 } // namespace facebook::react

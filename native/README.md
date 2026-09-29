@@ -22,13 +22,79 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | `tester/src/render/A11yTree.h`, `A11yTree.cpp` (new) | Serializes the shadow tree (not the mounted tree, so views are not flattened) to typed JSON. |
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
 | `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the two component descriptors above. |
-| `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`. It is registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
+| `tester/src/render/HitTest.h`, `HitTest.cpp` (new) | Hit testing with `hitSlop`, and tag lookup in the shadow tree. |
+| `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`, `hitTest`, `enqueueNativeEventByTag`, `enqueueScrollEventByTag` and `setTextInputTextByTag`. They are registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
 
-`NativeFantom.getA11yTree` signature (Flow):
+Signatures of the added `NativeFantom` methods (Flow):
 
 ```js
 getA11yTree: (surfaceId: RootTag, includeDebugProps?: ?boolean) => string;
+// JSON: {"tag", "type", "path": [root tag, ..., tag], "viaHitSlop"} or "null".
+hitTest: (surfaceId: RootTag, x: number, y: number) => string;
+enqueueNativeEventByTag: (
+  surfaceId: RootTag,
+  tag: number,
+  type: string,
+  payload?: ?{[string]: unknown},
+  category?: ?NativeEventCategory,
+  isUnique?: ?boolean,
+) => void;
+enqueueScrollEventByTag: (
+  surfaceId: RootTag,
+  tag: number,
+  options: {x: number, y: number, zoomScale?: ?number},
+) => void;
+setTextInputTextByTag: (surfaceId: RootTag, tag: number, text: string) => void;
 ```
+
+The by-tag methods throw a `JSError` if the tag is not in the surface's
+current shadow tree (or, for the scroll and text methods, if the node is not a
+ScrollView / AndroidTextInput). Like the node-based Fantom methods, they only
+enqueue: call `NativeFantom.flushEventQueue()` and then `Fantom.runWorkLoop()`
+(this is what `Fantom.runOnUIThread` + `runWorkLoop` do).
+
+## Interactions
+
+`hitTest` points are in root coordinates (dp). It uses the algorithm of
+`LayoutableShadowNode::findNodeAtPoint`, which already handles:
+
+- `pointerEvents` (`canBeTouchTarget` / `canChildrenBeTouchTarget` of
+  `ConcreteViewShadowNode`): `none` skips the node and its subtree, `box-none`
+  lets only children be targets, `box-only` lets only the node be the target.
+- Transforms (the frame is transformed; inverted lists are handled).
+- Clipping: children outside the frame are hit only through `overflowInset`,
+  which is empty for `overflow: hidden`/`scroll`.
+- ScrollView content offset (`getContentOriginOffset`).
+- Order: children are tested last to first, sorted by `zIndex` (only for
+  non-static positions).
+
+`findNodeAtPoint` does not handle `hitSlop` and `display: none`. `hitTest`
+adds both: a node's own bounds are extended by its `hitSlop` (as on Android
+`TouchTargetHelper` and iOS `pointInside`), and `display: none` nodes are
+skipped. It also returns a node only if the point is inside its own (hitSlop)
+bounds; `findNodeAtPoint` can return a parent for a point that is only inside
+its children's overflow area. `viaHitSlop` is true when `findNodeAtPoint`
+gives a different result. Non-layoutable nodes (`Text`, `RawText`) are never
+hit; the `Paragraph` is.
+
+Events that worked in `tests/FantomInteraction-itest.js` (Pressable with
+`onPress`):
+
+- `click` (payload `{}`) dispatched to the Pressable's View calls `onPress`.
+  Dispatched to a child (for example the `Paragraph` inside it), it does not.
+- `touchStart` then `touchEnd` call `onPress`, also when dispatched to a child
+  (the JS responder system bubbles). Payload:
+  `{touches, changedTouches, targetTouches}` with touches
+  `{pageX, pageY, locationX, locationY, screenX, screenY, identifier, target, timestamp, force}`;
+  for `touchEnd`, `touches` and `targetTouches` are empty.
+- TextInput: `setTextInputTextByTag(surfaceId, tag, text)`, then
+  `change` with `{text, eventCount, target}` calls `onChangeText`.
+  `setTextInputTextByTag` updates `TextInputState` with
+  `ConcreteState::updateState` (the platform path for native text changes);
+  the UIManager commits the new state, and the node is measured again.
+  `getA11yTree` then shows the new `text` and width.
+- `enqueueScrollEventByTag` calls `onScroll` and updates the ScrollView state;
+  `getA11yTree` reads `contentOffset` (and `contentSize`) from the state.
 
 ## TextInput and Switch
 
@@ -100,6 +166,7 @@ yarn fantom FantomProbe       # View layout and getRenderedOutput with layout me
 yarn fantom FantomTextProbe   # Text measurement (needs the macOS TextLayoutManager)
 yarn fantom FantomA11yTree    # NativeFantom.getA11yTree
 yarn fantom FantomInputs      # TextInput measurement and Switch size
+yarn fantom FantomInteraction # hitTest, by-tag events, typing, scrolling
 FANTOM_PRINT_OUTPUT=1 yarn fantom FantomA11yTree   # also print the raw binary stdout
 ```
 

@@ -108,6 +108,26 @@ class NativeFantom : public NativeFantomCxxSpec<NativeFantom> {
    */
   std::string getA11yTree(jsi::Runtime &runtime, SurfaceId surfaceId, bool includeDebugProps);
 
+  /*
+   * Methods below are not part of the codegen spec either (see getA11yTree).
+   */
+
+  // JSON `{"tag", "type", "path", "viaHitSlop"}` or `null`.
+  std::string hitTest(jsi::Runtime &runtime, SurfaceId surfaceId, Float x, Float y);
+
+  void enqueueNativeEventByTag(
+      jsi::Runtime &runtime,
+      SurfaceId surfaceId,
+      Tag tag,
+      const std::string &type,
+      const std::optional<folly::dynamic> &payload,
+      std::optional<RawEvent::Category> category,
+      std::optional<bool> isUnique);
+
+  void enqueueScrollEventByTag(jsi::Runtime &runtime, SurfaceId surfaceId, Tag tag, ScrollOptions options);
+
+  void setTextInputTextByTag(jsi::Runtime &runtime, SurfaceId surfaceId, Tag tag, const std::string &text);
+
   void reportTestSuiteResultsJSON(jsi::Runtime &runtime, const std::string &testSuiteResultsJSON);
 
   void enqueueNativeEvent(
@@ -155,6 +175,9 @@ class NativeFantom : public NativeFantomCxxSpec<NativeFantom> {
   void clearAllImages(jsi::Runtime &rt);
 
  private:
+  std::shared_ptr<const ShadowNode> getRootShadowNode(jsi::Runtime &runtime, SurfaceId surfaceId);
+  std::shared_ptr<const ShadowNode> getShadowNodeByTag(jsi::Runtime &runtime, SurfaceId surfaceId, Tag tag);
+
   TesterAppDelegate &appDelegate_;
   SurfaceId nextSurfaceId_ = 1;
 };

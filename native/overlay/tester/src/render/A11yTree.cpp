@@ -11,6 +11,7 @@
 #include <react/renderer/components/image/ImageProps.h>
 #include <react/renderer/components/legacyviewmanagerinterop/LegacyViewManagerInteropViewProps.h>
 #include <react/renderer/components/scrollview/ScrollViewProps.h>
+#include <react/renderer/components/scrollview/ScrollViewShadowNode.h>
 #include <react/renderer/components/text/BaseTextShadowNode.h>
 #include <react/renderer/components/text/ParagraphProps.h>
 #include <react/renderer/components/text/RawTextProps.h>
@@ -552,11 +553,21 @@ folly::dynamic renderNode(
     if (scrollViewProps->horizontal) {
       result["horizontal"] = true;
     }
+    // The state has the current offset (initial `contentOffset` prop, then
+    // scroll events); the prop only has the initial value.
+    auto contentOffset = scrollViewProps->contentOffset;
+    if (const auto* scrollViewShadowNode =
+            dynamic_cast<const ScrollViewShadowNode*>(&node)) {
+      contentOffset = scrollViewShadowNode->getStateData().contentOffset;
+      auto contentSize = scrollViewShadowNode->getStateData().getContentSize();
+      result["contentSize"] = folly::dynamic::object(
+          "width", number(contentSize.width))(
+          "height", number(contentSize.height));
+    }
     result["contentOffset"] = folly::dynamic::object(
-        "x", number(scrollViewProps->contentOffset.x))(
-        "y", number(scrollViewProps->contentOffset.y));
+        "x", number(contentOffset.x))("y", number(contentOffset.y));
   } else if (const auto* textInputProps = dynamic_cast<const FantomAndroidTextInputProps*>(props.get())) {
-    result["text"] = textInputProps->text;
+    result["text"] = getFantomTextInputText(node).value_or(textInputProps->text);
     if (!textInputProps->defaultValue.empty()) {
       result["defaultValue"] = textInputProps->defaultValue;
     }
