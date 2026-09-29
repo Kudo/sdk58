@@ -16,6 +16,9 @@
 #include "stubs/StubHttpClient.h"
 #include "stubs/StubQueue.h"
 #include "stubs/StubWebSocketClient.h"
+#ifdef FANTOM_WITH_REANIMATED // rn-a11y: reanimated
+#include "reanimated/FantomReanimated.h"
+#endif
 
 #include <folly/dynamic.h>
 #include <folly/json.h>
@@ -46,6 +49,13 @@
 namespace facebook::react {
 
 namespace {
+#ifdef FANTOM_WITH_REANIMATED // rn-a11y: reanimated
+double stubClockNowMs() {
+  return std::chrono::duration<double, std::milli>(
+             StubClock::now().time_since_epoch())
+      .count();
+}
+#endif
 const char* logLevelToString(unsigned int logLevel) {
   switch (logLevel) {
     case ReactNativeLogLevelFatal:
@@ -135,6 +145,11 @@ TesterAppDelegate::TesterAppDelegate(
         }
       },
       TesterTurboModuleProvider::getTurboModuleProvider()};
+
+#ifdef FANTOM_WITH_REANIMATED // rn-a11y: reanimated
+  turboModuleProviders.push_back(fantom_reanimated::getTurboModule);
+  fantom_reanimated::setClock(stubClockNowMs);
+#endif
 
   g_setNativeAnimatedNowTimestampFunction(StubClock::now);
 
@@ -379,6 +394,10 @@ void TesterAppDelegate::produceFramesForDuration(double milliseconds) {
     // Call UI tick for each time step
     runUITick();
 
+#ifdef FANTOM_WITH_REANIMATED // rn-a11y: reanimated
+    fantom_reanimated::produceFrame();
+#endif
+
     remainingTimeMicrosecs -= timeStep;
   }
 }
@@ -420,6 +439,21 @@ void TesterAppDelegate::flushMessageQueue() {
     queue->flush();
   }
   runUITick();
+
+#ifdef FANTOM_WITH_REANIMATED // rn-a11y: reanimated
+  // End every work loop with a reanimated frame at the current time (no time
+  // passes), so updates from JS (shared values, layout animation starts)
+  // reach the shadow tree. Frames can queue JS work (runOnJS); run it too.
+  for (int i = 0; i < 8 && fantom_reanimated::isActive(); ++i) {
+    fantom_reanimated::produceFrame();
+    auto queue = queue_.lock();
+    if (queue == nullptr || !queue->hasPendingCallbacks()) {
+      break;
+    }
+    queue->flush();
+    runUITick();
+  }
+#endif
 }
 
 bool TesterAppDelegate::hasPendingTasksInMessageQueue() {

@@ -254,6 +254,87 @@ fantom_add_native_library(rnscreens react-native-screens rnscreens
 fantom_add_native_library(safeareacontext react-native-safe-area-context safeareacontext
   SOURCE_GLOBS "common/cpp/react/renderer/components/safeareacontext/*.cpp"
   INCLUDE_DIRS "common/cpp")
+
+# ---- rn-a11y: reanimated (begin) --------------------------------------------
+# react-native-worklets + react-native-reanimated (Common C++) and the host glue
+# in src/reanimated/ (compiled into the `reanimated` library). Both packages
+# are needed; fantom_tester then gets FANTOM_WITH_REANIMATED=1.
+# "[NAME:value]..." from a package's staticFlags.json defaults (the podspecs
+# build the same string with get_static_feature_flags()).
+function(fantom_static_feature_flags json_path out_var)
+  file(READ "${json_path}" flags_json)
+  string(JSON flags_count LENGTH "${flags_json}")
+  math(EXPR flags_last "${flags_count} - 1")
+  set(flags "")
+  foreach(i RANGE ${flags_last})
+    string(JSON name MEMBER "${flags_json}" ${i})
+    string(JSON value GET "${flags_json}" "${name}")
+    if(value)
+      string(APPEND flags "[${name}:true]")
+    else()
+      string(APPEND flags "[${name}:false]")
+    endif()
+  endforeach()
+  set(${out_var} "${flags}" PARENT_SCOPE)
+endfunction()
+
+set(FANTOM_WORKLETS_DIR "${FANTOM_NODE_MODULES_DIR}/react-native-worklets")
+set(FANTOM_REANIMATED_DIR "${FANTOM_NODE_MODULES_DIR}/react-native-reanimated")
+if(NOT EXISTS "${FANTOM_WORKLETS_DIR}/package.json" OR
+   NOT EXISTS "${FANTOM_REANIMATED_DIR}/package.json")
+  message(STATUS "react-native-reanimated/react-native-worklets: not both found in ${FANTOM_NODE_MODULES_DIR}, skipped")
+else()
+  file(READ "${FANTOM_WORKLETS_DIR}/package.json" package_json)
+  string(JSON FANTOM_WORKLETS_VERSION GET "${package_json}" version)
+  file(READ "${FANTOM_REANIMATED_DIR}/package.json" package_json)
+  string(JSON FANTOM_REANIMATED_VERSION GET "${package_json}" version)
+  fantom_static_feature_flags(
+    "${FANTOM_WORKLETS_DIR}/src/featureFlags/staticFlags.json" FANTOM_WORKLETS_FEATURE_FLAGS)
+  fantom_static_feature_flags(
+    "${FANTOM_REANIMATED_DIR}/src/featureFlags/staticFlags.json" FANTOM_REANIMATED_FEATURE_FLAGS)
+
+  # worklets (codegen `rnworklets` is modules only: no component sources).
+  fantom_add_native_library(worklets react-native-worklets rnworklets
+    INCLUDE_DIRS "Common/cpp")
+  file(GLOB_RECURSE worklets_sources CONFIGURE_DEPENDS
+    "${FANTOM_WORKLETS_DIR}/Common/cpp/worklets/*.cpp")
+  target_sources(worklets PRIVATE ${worklets_sources})
+  # Public: the flags are read in headers (constexpr getFlag).
+  target_compile_definitions(worklets PUBLIC
+    WORKLETS_VERSION=${FANTOM_WORKLETS_VERSION}
+    WORKLETS_FEATURE_FLAGS=${FANTOM_WORKLETS_FEATURE_FLAGS})
+  target_compile_options(worklets PRIVATE -Wno-everything)
+  target_link_libraries(worklets
+    hermes-engine::hermesvm
+    jsireact
+    react_cxxreact
+    react_nativemodule_core
+    "-lobjc") # objc_autoreleasePoolPush/Pop in RunLoop/AsyncQueueImpl.cpp
+
+  # reanimated. Common/NativeView before the codegen output: its
+  # rnreanimated/ComponentDescriptors.h replaces the generated (empty) one.
+  fantom_add_native_library(reanimated react-native-reanimated rnreanimated
+    SOURCE_GLOBS "Common/NativeView/react/renderer/components/rnreanimated/*.cpp"
+    INCLUDE_DIRS "Common/cpp" "Common/NativeView")
+  file(GLOB_RECURSE reanimated_sources CONFIGURE_DEPENDS
+    "${FANTOM_REANIMATED_DIR}/Common/cpp/reanimated/*.cpp")
+  file(GLOB reanimated_host_sources CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/reanimated/*.cpp")
+  target_sources(reanimated PRIVATE ${reanimated_sources} ${reanimated_host_sources})
+  target_compile_definitions(reanimated PUBLIC
+    REANIMATED_VERSION=${FANTOM_REANIMATED_VERSION}
+    REANIMATED_FEATURE_FLAGS=${FANTOM_REANIMATED_FEATURE_FLAGS})
+  target_compile_options(reanimated PRIVATE -Wno-everything)
+  target_link_libraries(reanimated
+    worklets
+    react_featureflags
+    react_renderer_animationbackend
+    react_renderer_dom
+    react_renderer_mounting
+    react_renderer_scheduler
+    rrc_scrollview)
+endif()
+# ---- rn-a11y: reanimated (end) ----------------------------------------------
 # shared/shadowNodes has the RNGestureHandlerDetector shadow node and a
 # ComponentDescriptors.h that must shadow the codegen one (include order).
 fantom_add_native_library(rngesturehandler react-native-gesture-handler rngesturehandler_codegen

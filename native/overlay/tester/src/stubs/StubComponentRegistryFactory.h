@@ -22,6 +22,9 @@
 #include "components/FantomScreens.h"
 #include "components/FantomSwitch.h"
 #include "components/FantomTextInput.h"
+#ifdef FANTOM_WITH_REANIMATED // rn-a11y: reanimated
+#include "reanimated/FantomReanimated.h"
+#endif
 
 namespace facebook::react {
 
@@ -42,6 +45,9 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<FantomAndroidSwitchComponentDescriptor>());
       registerScreensComponentDescriptors(providerRegistry);
       registerSafeAreaComponentDescriptors(providerRegistry);
+#ifdef FANTOM_WITH_REANIMATED // rn-a11y: reanimated
+      fantom_reanimated::registerComponentDescriptors(*providerRegistry);
+#endif
       registerGestureHandlerComponentDescriptors(providerRegistry);
       return providerRegistry;
     }();

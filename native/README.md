@@ -26,9 +26,11 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | `tester/src/platform/oss/TesterTurboModuleProvider.cpp` | Provides `RNGestureHandlerModule`, `RNCSafeAreaContext` and `StatusBarManager`. |
 | `tester/src/components/FantomStatusBarManager.h`, `FantomStatusBarManager.cpp` (new) | `StatusBarManager` TurboModule (union of the Android and iOS specs): `getConstants()` returns `{HEIGHT, DEFAULT_BACKGROUND_COLOR: 0}` with `HEIGHT` = the safe area top inset (`setSafeAreaInsets`, default 0); `getHeight(callback)` calls `callback({height})`; `setStyle`, `setHidden`, `setColor`, `setTranslucent`, `setNetworkActivityIndicatorVisible`, `addListener`, `removeListeners` are no-ops. `StatusBar` caches the constants when it is first evaluated. |
 | `tester/src/components/FantomSafeArea.h`, `FantomSafeArea.cpp` (new) | react-native-safe-area-context: descriptor registration, `onInsetsChange` events and `RNCSafeAreaView` state (see Safe area). |
+| `tester/src/reanimated/` (new) | react-native-reanimated + react-native-worklets host: `WorkletsModule` and `ReanimatedModule` C++ TurboModules, UI scheduler, frame loop, platform functions (see Reanimated). Built into the `reanimated` library, not into `fantom_tester`. |
+| `config/metro-babel-transformer.flow.js` | Adds `react-native-worklets/plugin` (last plugin) to Fantom test bundles when it resolves (see Reanimated). |
 | `tester/scripts/codegen-lib.sh` (new) | Runs React Native codegen for a native library (used by CMake for the native libraries). |
 | `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the TextInput/Switch descriptors above and the native library descriptors. |
-| `tester/src/TesterAppDelegate.cpp` | Adds the react-native-screens context entry and runs the screens and safe-area updates after every mount. `loadScript` flushes the message queue until the JS runtime pointer is set (at most 30 s, then a fatal error). Upstream flushes once; when the runtime task was queued after that flush, `loadScriptAndRunTests` crashed with SIGSEGV (null `runtime_`, `TesterAppDelegate.cpp:187`). |
+| `tester/src/TesterAppDelegate.cpp` | Adds the react-native-screens context entry and runs the screens and safe-area updates after every mount. With reanimated: provides its TurboModules, sets its clock and produces its frames (see Reanimated). `loadScript` flushes the message queue until the JS runtime pointer is set (at most 30 s, then a fatal error). Upstream flushes once; when the runtime task was queued after that flush, `loadScriptAndRunTests` crashed with SIGSEGV (null `runtime_`, `TesterAppDelegate.cpp:187`). |
 | `tester/src/render/HitTest.h`, `HitTest.cpp` (new) | Hit testing with `hitSlop`, and tag lookup in the shadow tree. |
 | `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`, `hitTest`, `enqueueNativeEventByTag`, `enqueueScrollEventByTag`, `setTextInputTextByTag`, `updateScreenStates` (also registered as `updateNativeStates`), `setScreensHeaderHeight` and `setSafeAreaInsets`. They are registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
 
@@ -137,6 +139,7 @@ packages is patched.
 |---|---|---|
 | `react-native-screens` `~4.28.0` | `rnscreens` | `common/cpp/react/renderer/components/rnscreens/*.cpp` |
 | `react-native-safe-area-context` `~5.9.1` | `safeareacontext` | `common/cpp/react/renderer/components/safeareacontext/*.cpp` |
+| `react-native-worklets` `0.13.0` + `react-native-reanimated` `4.7.0` | `worklets`, `reanimated` (both packages or neither) | worklets `Common/cpp/worklets/**/*.cpp`; reanimated `Common/cpp/reanimated/**/*.cpp`, `Common/NativeView/.../rnreanimated/*.cpp` (its `ComponentDescriptors.h` shadows the codegen one) and `tester/src/reanimated/*.cpp` |
 | `react-native-gesture-handler` `~3.2.1` | `rngesturehandler` | `shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/*.cpp` (its `ComponentDescriptors.h` shadows the codegen one: `shared/shadowNodes` is first on the include path) |
 
 ## Screens (react-native-screens)
@@ -286,6 +289,82 @@ in the React Native checkout) checks the v3 detector frame (100x100 at
 20,20 around a 100x100 view), the event delivery and payloads, and the
 legacy tree.
 
+## Reanimated (react-native-reanimated, react-native-worklets)
+
+The Common C++ of both packages runs with host code in
+`tester/src/reanimated/` (C++ versions of the iOS `WorkletsModule.mm`,
+`ReanimatedModule.mm`, `IOSUIScheduler.mm` and `PlatformDepMethodsHolderImpl.mm`).
+Guard: `FANTOM_WITH_REANIMATED`.
+
+- TurboModules: `WorkletsModule.installTurboModule(false)` creates the
+  `WorkletsModuleProxyInitializer`, runs `prepareProxy()` synchronously (it
+  creates the UI worklet runtime, a second Hermes runtime) and `finalize()`;
+  `start()` starts the UI runtime. `ReanimatedModule.installTurboModule()`
+  gets the UI runtime and UI scheduler from `__UI_WORKLET_RUNTIME_HOLDER` /
+  `__UI_SCHEDULER_HOLDER`, creates `ReanimatedModuleProxy` + `init`, calls
+  `RNRuntimeDecorator::decorate`, `initializeFabric(scheduler->getUIManager())`,
+  adds a Scheduler `EventListener` (`handleRawEvent`), and registers
+  `performOperations` with the frame loop. `REASharedTransitionBoundary` is
+  registered.
+- Threads: the Fantom main thread is the JS thread and the UI thread.
+  `scheduleOnUI` runs the job immediately (like iOS on the main thread); a
+  job from another thread is queued until the next frame.
+- Frames (`FrameLoop`): a frame drains queued UI jobs, runs the worklets
+  `requestAnimationFrame` callbacks, then the reanimated `requestRender`
+  callbacks (both with the frame time in ms), then
+  `ReanimatedModuleProxy::performOperations()`, which commits the animated
+  props to the shadow tree (`mountSynchronously`). Frames are produced:
+  - once per 16.333 ms step of `NativeFantom.produceFramesForDuration` (after
+    the UI tick), so the CLI `wait` action advances animations;
+  - once at the end of every `flushMessageQueue` (every `Fantom.runWorkLoop`),
+    at the current time, so a shared value set from JS is in the tree after
+    the work loop. If the frame queues JS work (`runOnJS`), the queue is
+    flushed again (at most 8 times).
+  `_maybeFlushUIUpdatesQueue` calls `performOperations` at once when no frame
+  runs and no `requestRender` callback waits (iOS: display link paused).
+- Clock: `_getAnimationTimestamp` and frame times are `StubClock` in ms (the
+  clock of C++ Animated). Only `produceFramesForDuration` moves it; the mocked
+  JS timers are separate (the CLI advances both by the same slice).
+- Defines, from the packages: `WORKLETS_VERSION` and `REANIMATED_VERSION`
+  (`package.json`; the JS checks them), `WORKLETS_FEATURE_FLAGS` and
+  `REANIMATED_FEATURE_FLAGS` (`"[NAME:value]..."` from
+  `src/featureFlags/staticFlags.json` defaults, as the podspecs build them).
+  So `IOS_SYNCHRONOUSLY_UPDATE_UI_PROPS` and `USE_ANIMATION_BACKEND` are false:
+  all updates are shadow tree commits. Debug build (no `NDEBUG`). Library
+  warnings are off (`-Wno-everything`).
+- No-ops: sensors, keyboard events, gesture handler state, pseudo selectors
+  (`:hover` etc.), `forceScreenSnapshot`, `synchronouslyUpdateUIProps` (logs a
+  warning; not called with the flags above), slow animations. Worklet
+  `fetch` fails with a network error. Bundle Mode is not supported
+  (`installTurboModule(true)` throws). Worklets logging (`PlatformLogger`,
+  `nativeLoggingHook`) goes to glog (stderr).
+- Layout animations (`entering`, `exiting`, `layout`) change the mounting
+  transaction, not the shadow tree: `getA11yTree` shows the final props
+  during the animation; `getRenderedOutput` (the mounted views) shows the
+  animated ones (`FadeIn`: opacity 0, 0.5 at half time, then no `opacity`).
+- Transforms are in `getA11yTree` as `transform` (4x4 matrix, translateX at
+  index 12); `frame` is the untransformed layout.
+
+Fantom tests (`tests/FantomReanimated-itest.js`):
+
+- Fantom defines `global.jest = {fn}`. Reanimated then thinks it runs in
+  Jest (`IS_JEST`) and uses its JS implementation. Import
+  `tests/fantomReanimatedPrelude.js` (it deletes `global.jest`) before
+  reanimated.
+- The modules serialize worklets when they load, which creates WeakRefs;
+  Fantom allows that only inside the event loop. Load them with `require`
+  inside `Fantom.runTask` (the test does it in `beforeAll`).
+- The Babel plugin runs before Flow types are removed and parses the worklet
+  source again: a `'worklet'` function with Flow annotations fails with
+  `[Worklets] Babel plugin exception: ... Unexpected token, expected ","`.
+  TypeScript is not affected.
+
+The test checks: `withTiming(200, {duration: 300})` on `width` is 100 after
+150 ms of frames and 200 after 350 ms; a shared value set from JS gives
+`transform[12] === 42`; `entering={FadeIn}` gives mounted opacity 0, 0.5,
+then 1; `runOnUI` + `runOnJS` returns from the UI runtime; frames and mocked
+timers advanced together (as the CLI) agree.
+
 ## TextInput and Switch
 
 The JS bundle uses the Android implementations, which render the native
@@ -351,7 +430,7 @@ covers) and run `yarn fantom <name>` from the React Native root. In a checkout
 without a `BUCK` file, `yarn fantom` uses `private/react-native-fantom/build/tester/fantom_tester`.
 
 ```sh
-cp native/tests/*-itest.js third_party/react-native/packages/react-native/Libraries/Components/View/__tests__/
+cp native/tests/* third_party/react-native/packages/react-native/Libraries/Components/View/__tests__/
 cd third_party/react-native
 yarn fantom FantomProbe       # View layout and getRenderedOutput with layout metrics
 yarn fantom FantomTextProbe   # Text measurement (needs the macOS TextLayoutManager)
@@ -360,6 +439,7 @@ yarn fantom FantomInputs      # TextInput measurement and Switch size
 yarn fantom FantomInteraction # hitTest, by-tag events, typing, scrolling
 yarn fantom FantomScreens     # react-native-screens native stack (see Screens)
 yarn fantom FantomGestureHandler # gesture-handler detector (see Gesture handler)
+yarn fantom FantomReanimated  # reanimated/worklets (see Reanimated; needs both packages in the checkout)
 FANTOM_PRINT_OUTPUT=1 yarn fantom FantomA11yTree   # also print the raw binary stdout
 ```
 
