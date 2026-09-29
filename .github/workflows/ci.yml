@@ -66,13 +66,24 @@ jobs:
         run: |
           echo "submodule=$(git -C third_party/react-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "xcode=$(xcodebuild -version | head -n 1 | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+          # build:host compiles these npm libraries from node_modules
+          # (native/overlay/tester/CMakeLists.txt, RN_NATIVE_LIBS_DIR).
+          libs=$(node -e '
+            const libs = ["react-native-screens", "react-native-safe-area-context",
+              "react-native-gesture-handler", "react-native-reanimated", "react-native-worklets"];
+            console.log(libs.map(l => {
+              try { return l + "@" + require(l + "/package.json").version; }
+              catch { return l + "@none"; }
+            }).join(","));')
+          echo "native libs: $libs"
+          echo "libs=$(echo "$libs" | shasum | cut -c1-12)" >> "$GITHUB_OUTPUT"
 
       - name: Restore host binary
         id: host-cache
         uses: actions/cache@v6
         with:
           path: native/dist
-          key: host-${{ runner.os }}-${{ runner.arch }}-${{ steps.host-key.outputs.xcode }}-${{ steps.host-key.outputs.submodule }}-${{ hashFiles('native/overlay/**', 'scripts/build-host.sh') }}
+          key: host-${{ runner.os }}-${{ runner.arch }}-${{ steps.host-key.outputs.xcode }}-${{ steps.host-key.outputs.submodule }}-${{ steps.host-key.outputs.libs }}-${{ hashFiles('native/overlay/**', 'native/scripts/**', 'scripts/build-host.sh') }}
 
       - name: Build host
         if: steps.host-cache.outputs.cache-hit != 'true'
@@ -85,7 +96,7 @@ jobs:
       - name: Unit tests
         run: yarn test
 
-      - name: E2E tests
+      - name: E2E tests (e2e/*.test.ts)
         run: yarn test:e2e
 
       - name: Fantom itests (native/tests)
@@ -107,9 +118,28 @@ jobs:
           if [ ! -d "$RN/node_modules" ]; then
             (cd "$RN" && corepack yarn@1.22.22 install --frozen-lockfile --non-interactive)
           fi
+          # Some itests import npm libraries (screens, navigation, gesture
+          # handler). The submodule's Metro only sees its own node_modules,
+          # so install the same versions as this repo there (CI checkout
+          # only; this changes the submodule's package.json).
+          libs=$(node -e '
+            const libs = ["react-native-screens", "react-native-safe-area-context",
+              "react-native-gesture-handler", "react-native-reanimated", "react-native-worklets",
+              "@react-navigation/native", "@react-navigation/native-stack"];
+            const out = [];
+            for (const l of libs) {
+              try { out.push(l + "@" + require(l + "/package.json").version); } catch {}
+            }
+            console.log(out.join(" "));')
+          echo "Installing into the submodule: $libs"
+          # shellcheck disable=SC2086
+          (cd "$RN" && corepack yarn@1.22.22 add -W --ignore-scripts --no-lockfile --non-interactive $libs)
+          # Every native/tests/*-itest.js, plus the files they import
+          # (e.g. FantomNavigationStackApp.tsx).
           TESTS_DIR=$RN/packages/react-native/Libraries/Components/View/__tests__
-          cp native/tests/*-itest.js "$TESTS_DIR/"
+          cp native/tests/* "$TESTS_DIR/"
           names=$(for f in native/tests/*-itest.js; do basename "$f" -itest.js; done)
+          echo "Fantom itests: $names"
           # `yarn fantom` shells out to `yarn`; it must be Yarn 1.
           SHIM_DIR=$(mktemp -d)
           printf '#!/usr/bin/env bash\nexec corepack yarn@1.22.22 "$@"\n' > "$SHIM_DIR/yarn"
