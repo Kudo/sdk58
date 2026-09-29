@@ -1,0 +1,9 @@
+node_modules/
+.yarn/*
+!.yarn/releases
+.pnp.*
+dist/
+*.log
+.DS_Store
+/tmp/
+.metro-cache/
