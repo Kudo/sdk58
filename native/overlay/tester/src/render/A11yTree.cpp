@@ -38,6 +38,7 @@
 #include <cstring>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
 
 namespace facebook::react {
 
@@ -525,9 +526,80 @@ void addLegacyInteropProps(folly::dynamic& result, const folly::dynamic& otherPr
   }
 }
 
+using MountedViews = std::unordered_map<Tag, const StubView*>;
+
+void collectMountedViews(const StubView& view, MountedViews& views) {
+  views[view.tag] = &view;
+  for (const auto& child : view.children) {
+    collectMountedViews(*child, views);
+  }
+}
+
+bool framesEqual(const Rect& lhs, const Rect& rhs) {
+  constexpr Float kEpsilon = 0.001;
+  return std::abs(lhs.origin.x - rhs.origin.x) < kEpsilon &&
+      std::abs(lhs.origin.y - rhs.origin.y) < kEpsilon &&
+      std::abs(lhs.size.width - rhs.size.width) < kEpsilon &&
+      std::abs(lhs.size.height - rhs.size.height) < kEpsilon;
+}
+
+/*
+ * Mounted values that differ from the shadow node: opacity, transform,
+ * backgroundColor and frame. The frame is only compared when the mounted
+ * parent is the shadow parent (flattened ancestors change the mounted
+ * frame's origin).
+ */
+folly::dynamic mountedDifferences(
+    const ShadowNode& node,
+    const LayoutMetrics* layoutMetrics,
+    Tag parentTag,
+    const MountedViews& mountedViews) {
+  auto it = mountedViews.find(node.getTag());
+  if (it == mountedViews.end()) {
+    return nullptr;
+  }
+  const auto& mountedView = *it->second;
+  folly::dynamic mounted = folly::dynamic::object();
+
+  const auto* props = dynamic_cast<const BaseViewProps*>(node.getProps().get());
+  const auto* mountedProps =
+      dynamic_cast<const BaseViewProps*>(mountedView.props.get());
+  if (props != nullptr && mountedProps != nullptr && props != mountedProps) {
+    if (props->opacity != mountedProps->opacity) {
+      mounted["opacity"] = number(mountedProps->opacity);
+    }
+    if (props->backgroundColor != mountedProps->backgroundColor) {
+      mounted["backgroundColor"] = mountedProps->backgroundColor
+          ? folly::dynamic(colorToString(mountedProps->backgroundColor))
+          : folly::dynamic(nullptr);
+    }
+    if (layoutMetrics != nullptr) {
+      auto transform = props->resolveTransform(*layoutMetrics);
+      auto mountedTransform =
+          mountedProps->resolveTransform(mountedView.layoutMetrics);
+      if (transform.matrix != mountedTransform.matrix) {
+        folly::dynamic matrix = folly::dynamic::array();
+        for (auto value : mountedTransform.matrix) {
+          matrix.push_back(number(value));
+        }
+        mounted["transform"] = matrix;
+      }
+    }
+  }
+
+  if (layoutMetrics != nullptr && mountedView.parentTag == parentTag &&
+      !framesEqual(layoutMetrics->frame, mountedView.layoutMetrics.frame)) {
+    mounted["frame"] = rectToDynamic(mountedView.layoutMetrics.frame);
+  }
+
+  return mounted.empty() ? folly::dynamic(nullptr) : mounted;
+}
+
 folly::dynamic renderNode(
     const ShadowNode& node,
     const A11yTreeOptions& options,
+    const MountedViews* mountedViews,
+    Tag parentTag,
     bool isRoot) {
   folly::dynamic result = folly::dynamic::object("type", node.getComponentName())(
       "tag", node.getTag());
@@ -717,6 +789,14 @@ folly::dynamic renderNode(
   }
 #endif
 
+  if (mountedViews != nullptr) {
+    auto mounted =
+        mountedDifferences(node, layoutMetrics, parentTag, *mountedViews);
+    if (!mounted.isNull()) {
+      result["mounted"] = std::move(mounted);
+    }
+  }
+
 #if RN_DEBUG_STRING_CONVERTIBLE
   if (options.includeDebugProps) {
     folly::dynamic debugProps = folly::dynamic::object();
@@ -734,7 +814,8 @@ folly::dynamic renderNode(
   if (!children.empty()) {
     folly::dynamic childArray = folly::dynamic::array();
     for (const auto& child : children) {
-      childArray.push_back(renderNode(*child, options, false));
+      childArray.push_back(
+          renderNode(*child, options, mountedViews, node.getTag(), false));
     }
     result["children"] = childArray;
   }
@@ -747,7 +828,12 @@ folly::dynamic renderNode(
 folly::dynamic renderA11yTree(
     const ShadowNode& rootShadowNode,
     const A11yTreeOptions& options) {
-  return renderNode(rootShadowNode, options, true);
+  if (options.mountedViewTree != nullptr) {
+    MountedViews mountedViews;
+    collectMountedViews(options.mountedViewTree->getRootStubView(), mountedViews);
+    return renderNode(rootShadowNode, options, &mountedViews, NO_VIEW_TAG, true);
+  }
+  return renderNode(rootShadowNode, options, nullptr, NO_VIEW_TAG, true);
 }
 
 } // namespace facebook::react

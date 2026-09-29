@@ -32,7 +32,8 @@ namespace facebook::react {
 
 namespace {
 
-// getA11yTree(surfaceId: number, includeDebugProps?: ?boolean): string
+// getA11yTree(surfaceId: number, includeDebugProps?: ?boolean,
+//             includeMountedProps?: ?boolean /* default true */): string
 jsi::Value getA11yTreeHostFunction(
     jsi::Runtime& runtime,
     TurboModule& turboModule,
@@ -44,10 +45,13 @@ jsi::Value getA11yTreeHostFunction(
   }
   auto surfaceId = static_cast<SurfaceId>(args[0].asNumber());
   bool includeDebugProps = count > 1 && args[1].isBool() && args[1].getBool();
+  bool includeMountedProps =
+      !(count > 2 && args[2].isBool() && !args[2].getBool());
   return jsi::String::createFromUtf8(
       runtime,
       static_cast<NativeFantom&>(turboModule)
-          .getA11yTree(runtime, surfaceId, includeDebugProps));
+          .getA11yTree(
+              runtime, surfaceId, includeDebugProps, includeMountedProps));
 }
 
 SurfaceId surfaceIdArg(jsi::Runtime& runtime, const jsi::Value* args, size_t count, const char* method) {
@@ -230,7 +234,7 @@ NativeFantom::NativeFantom(
     : NativeFantomCxxSpec<NativeFantom>(std::move(jsInvoker)),
       appDelegate_(appDelegate) {
   methodMap_["getA11yTree"] =
-      MethodMetadata{.argCount = 2, .invoker = getA11yTreeHostFunction};
+      MethodMetadata{.argCount = 3, .invoker = getA11yTreeHostFunction};
   methodMap_["hitTest"] =
       MethodMetadata{.argCount = 3, .invoker = hitTestHostFunction};
   methodMap_["enqueueNativeEventByTag"] = MethodMetadata{
@@ -335,7 +339,8 @@ std::string NativeFantom::getRenderedOutput(
 std::string NativeFantom::getA11yTree(
     jsi::Runtime& runtime,
     SurfaceId surfaceId,
-    bool includeDebugProps) {
+    bool includeDebugProps,
+    bool includeMountedProps) {
   auto uiManagerBinding = UIManagerBinding::getBinding(runtime);
   if (uiManagerBinding == nullptr) {
     throw jsi::JSError(runtime, "getA11yTree: UIManagerBinding is not available");
@@ -347,9 +352,17 @@ std::string NativeFantom::getA11yTree(
         auto rootShadowNode = shadowTree.getCurrentRevision().rootShadowNode;
         folly::json::serialization_opts opts;
         opts.sort_keys = true;
+        std::optional<StubViewTree> mountedViewTree;
+        if (includeMountedProps) {
+          mountedViewTree = appDelegate_.mountingManager_->getViewTree(surfaceId);
+        }
         result = folly::json::serialize(
             renderA11yTree(
-                *rootShadowNode, {.includeDebugProps = includeDebugProps}),
+                *rootShadowNode,
+                {.includeDebugProps = includeDebugProps,
+                 .mountedViewTree = mountedViewTree.has_value()
+                     ? &mountedViewTree.value()
+                     : nullptr}),
             opts);
       });
   if (!found) {

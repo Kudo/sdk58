@@ -37,7 +37,12 @@ Every file is a full copy of the upstream file with changes, or a new file:
 Signatures of the added `NativeFantom` methods (Flow):
 
 ```js
-getA11yTree: (surfaceId: RootTag, includeDebugProps?: ?boolean) => string;
+// includeMountedProps defaults to true (see "Mounted values" below).
+getA11yTree: (
+  surfaceId: RootTag,
+  includeDebugProps?: ?boolean,
+  includeMountedProps?: ?boolean,
+) => string;
 // JSON: {"tag", "type", "path": [root tag, ..., tag], "viaHitSlop"} or "null".
 hitTest: (surfaceId: RootTag, x: number, y: number) => string;
 enqueueNativeEventByTag: (
@@ -69,6 +74,25 @@ current shadow tree (or, for the scroll and text methods, if the node is not a
 ScrollView / AndroidTextInput). Like the node-based Fantom methods, they only
 enqueue: call `NativeFantom.flushEventQueue()` and then `Fantom.runWorkLoop()`
 (this is what `Fantom.runOnUIThread` + `runWorkLoop` do).
+
+## Mounted values in getA11yTree
+
+`getA11yTree` serializes the shadow tree. Some changes only reach the mounted
+views: Reanimated layout animations (`entering`, `exiting`, layout
+transitions) are applied as mounting overrides and never change the shadow
+tree. With `includeMountedProps` (third argument, default `true`), every node
+whose mounted view (the Fantom mounting manager's view tree, the data of
+`getRenderedOutput`) differs from the shadow node gets
+`mounted: {opacity?, transform?, backgroundColor?, frame?}` with the mounted
+values. Only these four fields are compared. `frame` is compared only when the
+mounted parent is the shadow parent (a flattened ancestor changes the mounted
+origin). Flattened nodes have no mounted view and never get `mounted`. Example
+(`entering={FadeIn}`): after 150 ms of frames the node has no `opacity` (1 in
+the shadow tree) and `mounted: {opacity: 0.5}`; when the animation is done,
+`mounted` is absent.
+
+`hitTest` uses the shadow tree only (not the mounted values), so a view in the
+middle of a layout animation is hit at its final layout.
 
 ## Interactions
 

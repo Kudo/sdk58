@@ -133,15 +133,31 @@ describe('reanimated in Fantom', () => {
       );
     });
     const o0 = opacity();
+    const node0 = find(getA11yTree(root), 'fade');
     Fantom.unstable_produceFramesForDuration(150);
     const o150 = opacity();
+    const node150 = find(getA11yTree(root), 'fade');
     Fantom.unstable_produceFramesForDuration(1000);
     const oEnd = opacity();
-    const shadowOpacity = find(getA11yTree(root), 'fade').opacity ?? 1;
-    log('c', {o0, o150, oEnd, shadowOpacity});
+    const nodeEnd = find(getA11yTree(root), 'fade');
+    const shadowOpacity = nodeEnd.opacity ?? 1;
+    log('c', {
+      o0,
+      o150,
+      oEnd,
+      shadowOpacity,
+      mounted0: node0.mounted,
+      mounted150: node150.mounted,
+      opacity150: node150.opacity,
+      mountedEnd: nodeEnd.mounted,
+    });
 
     expect(oEnd == null || oEnd === 1).toBe(true);
     expect(shadowOpacity).toBe(1);
+    // getA11yTree reports the mounted values that differ from the shadow tree.
+    expect(node150.opacity ?? 1).toBe(1);
+    expect(node150.mounted?.opacity).toBeCloseTo(0.5, 1);
+    expect(nodeEnd.mounted).toBeUndefined();
     root.destroy();
   });
 

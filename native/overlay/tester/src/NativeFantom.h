@@ -106,7 +106,8 @@ class NativeFantom : public NativeFantomCxxSpec<NativeFantom> {
    * and style information. Not part of the codegen spec: it is registered in
    * the constructor so it works without regenerating FBReactNativeSpec.
    */
-  std::string getA11yTree(jsi::Runtime &runtime, SurfaceId surfaceId, bool includeDebugProps);
+  std::string
+  getA11yTree(jsi::Runtime &runtime, SurfaceId surfaceId, bool includeDebugProps, bool includeMountedProps = true);
 
   /*
    * Methods below are not part of the codegen spec either (see getA11yTree).
