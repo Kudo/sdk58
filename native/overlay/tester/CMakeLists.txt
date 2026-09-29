@@ -95,6 +95,14 @@ add_react_common_subdir(react/renderer/components/modal)
 add_react_common_subdir(react/renderer/components/root)
 add_react_common_subdir(react/renderer/components/scrollview)
 add_react_common_subdir(react/renderer/components/text)
+add_react_common_subdir(react/renderer/components/textinput)
+# The platform/android sources need JNI, RN_SERIALIZABLE_STATE and the Android
+# TextLayoutManager API. The tester registers its own AndroidTextInput shadow
+# node (src/components/FantomTextInput.h) and only uses the cross-platform
+# sources of rrc_textinput (BaseTextInputProps, TextInputEventEmitter).
+get_target_property(RRC_TEXTINPUT_SOURCES rrc_textinput SOURCES)
+list(FILTER RRC_TEXTINPUT_SOURCES EXCLUDE REGEX "/androidtextinput/[^/]*\\.cpp$")
+set_property(TARGET rrc_textinput PROPERTY SOURCES ${RRC_TEXTINPUT_SOURCES})
 add_react_common_subdir(react/renderer/components/view)
 add_react_common_subdir(react/renderer/consistency)
 add_react_common_subdir(react/renderer/core)
@@ -156,6 +164,7 @@ add_react_cxx_platform_subdir(react/utils)
 
 file(GLOB SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/components/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/render/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/oss/*.cpp
@@ -247,6 +256,7 @@ target_link_libraries(fantom_tester
     rrc_root
     rrc_scrollview
     rrc_text
+    rrc_textinput
     rrc_view
     runtimeexecutor
     yogacore

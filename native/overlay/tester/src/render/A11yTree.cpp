@@ -19,6 +19,9 @@
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <yoga/style/Style.h>
 
+#include "components/FantomSwitch.h"
+#include "components/FantomTextInput.h"
+
 #include <cmath>
 #include <iomanip>
 #include <sstream>
@@ -552,6 +555,23 @@ folly::dynamic renderNode(
     result["contentOffset"] = folly::dynamic::object(
         "x", number(scrollViewProps->contentOffset.x))(
         "y", number(scrollViewProps->contentOffset.y));
+  } else if (const auto* textInputProps = dynamic_cast<const FantomAndroidTextInputProps*>(props.get())) {
+    result["text"] = textInputProps->text;
+    if (!textInputProps->defaultValue.empty()) {
+      result["defaultValue"] = textInputProps->defaultValue;
+    }
+    if (!textInputProps->placeholder.empty()) {
+      result["placeholder"] = textInputProps->placeholder;
+    }
+    result["editable"] = textInputProps->editable;
+    result["secureTextEntry"] = textInputProps->secureTextEntry;
+    result["multiline"] = textInputProps->multiline;
+  } else if (const auto* switchProps = dynamic_cast<const AndroidSwitchProps*>(props.get())) {
+    // Android's Switch.js sends the value as `on` (and also `value`).
+    result["value"] = switchProps->on || switchProps->value;
+    if (!switchProps->enabled || switchProps->disabled) {
+      result["disabled"] = true;
+    }
   } else if (const auto* interopProps = dynamic_cast<const LegacyViewManagerInteropViewProps*>(props.get())) {
     addLegacyInteropProps(result, interopProps->otherProps);
   }

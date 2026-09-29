@@ -17,9 +17,11 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | File | Change |
 |---|---|
 | `tester/third-party/nlohmann_json/CMakeLists.txt` | `SYSTEM` include directory. Apple clang 21 with `-Werror` fails on `-Wdeprecated-literal-operator` in the bundled `json.hpp`. |
-| `tester/CMakeLists.txt` | On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
+| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
 | `tester/src/platform/macos/TextLayoutManager.mm` (new) | Text measurement with AppKit/TextKit 1 (`NSLayoutManager`). Port of the iOS `RCTTextLayoutManager.mm`, `RCTAttributedTextUtils.mm` and `RCTFontUtils.mm`. The upstream stub returns the minimum size (height 0) for all text. |
 | `tester/src/render/A11yTree.h`, `A11yTree.cpp` (new) | Serializes the shadow tree (not the mounted tree, so views are not flattened) to typed JSON. |
+| `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
+| `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the two component descriptors above. |
 | `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`. It is registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
 
 `NativeFantom.getA11yTree` signature (Flow):
@@ -27,6 +29,40 @@ Every file is a full copy of the upstream file with changes, or a new file:
 ```js
 getA11yTree: (surfaceId: RootTag, includeDebugProps?: ?boolean) => string;
 ```
+
+## TextInput and Switch
+
+The JS bundle uses the Android implementations, which render the native
+components `AndroidTextInput` and `AndroidSwitch`. Upstream Fantom does not
+register them, so they fell back to the legacy interop with 0-width frames.
+The ReactCommon Android versions cannot compile here: they need JNI
+(`FabricUIManager.getThemeData`, `AndroidSwitchMeasurementsManager`), the
+Android TextLayoutManager API (`measureCachedSpannableById`, `measureLines`) and
+`RN_SERIALIZABLE_STATE`. The iOS `TextInputComponentDescriptor` has the name
+`TextInput`, which only the iOS JS (`SinglelineTextInputView` /
+`MultilineTextInputView`) uses.
+
+- `AndroidTextInput`: `BaseTextInputShadowNode` (the base of the iOS
+  `TextInputShadowNode`) with `BaseTextInputProps` + `secureTextEntry`. It
+  measures the text, or the placeholder if the text is empty, with the macOS
+  TextLayoutManager. Single-line inputs measure with unlimited width; multiline
+  inputs wrap to their width.
+- `AndroidSwitch`: codegen `AndroidSwitchProps`, leaf node with a fixed
+  intrinsic size of 51x31. Explicit `width`/`height` styles override it.
+
+`getA11yTree` keys: `AndroidTextInput` gives `text`, `placeholder` (if not
+empty), `defaultValue` (if set; Android JS sends `defaultValue` as `text`),
+`editable`, `secureTextEntry`, `multiline`. `AndroidSwitch` gives `value` and
+`disabled: true` when disabled.
+
+Known differences from a device:
+
+- No Android `EditText` theme padding. The Android descriptor reads it through
+  JNI, so a TextInput without padding styles has 0 padding.
+- `secureTextEntry` text is measured unmasked (Android measures bullets).
+- 51x31 is the intrinsic size of iOS `UISwitch`, not an Android measurement.
+- Baseline alignment of TextInput is not supported (the TextLayoutManager has
+  no `measureLines`); Yoga gets only the top padding and border.
 
 ## Build
 
@@ -63,6 +99,7 @@ cd third_party/react-native
 yarn fantom FantomProbe       # View layout and getRenderedOutput with layout metrics
 yarn fantom FantomTextProbe   # Text measurement (needs the macOS TextLayoutManager)
 yarn fantom FantomA11yTree    # NativeFantom.getA11yTree
+yarn fantom FantomInputs      # TextInput measurement and Switch size
 FANTOM_PRINT_OUTPUT=1 yarn fantom FantomA11yTree   # also print the raw binary stdout
 ```
 
