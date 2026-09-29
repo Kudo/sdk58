@@ -94,7 +94,7 @@ type HostLine =
  * `{"type":"console-log",...}` and our result as
  * `{"type":"rn-a11y-tree-result","rnA11yTree":{...}}`); glog goes to stderr.
  */
-export async function runHost(options: HostOptions): Promise<HostPayload> {
+export async function runHost<T = HostPayload>(options: HostOptions): Promise<T> {
   const bin = getHostBin();
   const child = spawn(bin, hostArgs(options), {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -106,7 +106,7 @@ export async function runHost(options: HostOptions): Promise<HostPayload> {
     if (options.verbose) process.stderr.write(chunk);
   });
 
-  let result: HostPayload | undefined;
+  let result: T | undefined;
   let jsError: {message: string; stack?: string} | undefined;
 
   const rl = readline.createInterface({input: child.stdout});
@@ -121,7 +121,7 @@ export async function runHost(options: HostOptions): Promise<HostPayload> {
       return;
     }
     if (parsed?.type === RESULT_TYPE && 'rnA11yTree' in parsed) {
-      result = parsed.rnA11yTree as HostPayload;
+      result = parsed.rnA11yTree as T;
     } else if (parsed?.type === ERROR_TYPE && 'error' in parsed) {
       jsError = parsed.error as {message: string; stack?: string};
     } else if (parsed?.type === 'console-log') {

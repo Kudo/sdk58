@@ -25,6 +25,8 @@ export const RUNTIME_DIR = path.join(PACKAGE_ROOT, 'runtime');
  */
 const FALLBACK_PLATFORM = 'android';
 
+export type TapMode = 'touch' | 'click' | 'both';
+
 export type BundleOptions = {
   /** Path to the user's component file. */
   appPath: string;
@@ -32,6 +34,9 @@ export type BundleOptions = {
   viewportHeight: number;
   /** Ask the host for raw debug props on each node (`getA11yTree` only). */
   includeDebugProps?: boolean;
+  /** Actions for `run --script` (already validated), or undefined for `render`. */
+  script?: unknown[];
+  tapMode?: TapMode;
   /** Metro platform (required): `android`, `ios`, or an out-of-tree name such as `a11ytree`. */
   platform: string;
   /** Output bundle path. Defaults to a file in a new temp dir. */
@@ -70,6 +75,8 @@ export function renderEntry(options: {
   viewportWidth: number;
   viewportHeight: number;
   includeDebugProps?: boolean;
+  script?: unknown[];
+  tapMode?: TapMode;
 }): string {
   const template = fs.readFileSync(
     path.join(RUNTIME_DIR, 'entry-template.js'),
@@ -87,7 +94,9 @@ export function renderEntry(options: {
     .replaceAll(
       '__INCLUDE_DEBUG_PROPS__',
       String(options.includeDebugProps === true),
-    );
+    )
+    .replaceAll('__SCRIPT__', () => JSON.stringify(options.script ?? null))
+    .replaceAll('__TAP_MODE__', () => JSON.stringify(options.tapMode ?? 'touch'));
 }
 
 function isInside(file: string, dir: string): boolean {
@@ -235,6 +244,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
       viewportWidth: options.viewportWidth,
       viewportHeight: options.viewportHeight,
       includeDebugProps: options.includeDebugProps,
+      script: options.script,
+      tapMode: options.tapMode,
     }),
   );
   const bundlePath = path.resolve(

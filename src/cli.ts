@@ -2,9 +2,11 @@ import fs from 'node:fs';
 
 import {Command, InvalidArgumentError} from 'commander';
 
-import {bundle} from './bundle.ts';
+import {bundle, type TapMode} from './bundle.ts';
 import {getHostBin, HostError, runHost} from './host.ts';
-import {toRenderResult} from './tree.ts';
+import type {HostPayload, HostRunPayload} from './schema.ts';
+import {ScriptError, validateScript} from './script.ts';
+import {toRenderResult, toRunResult} from './tree.ts';
 
 // stdout is reserved for the JSON result. Metro and @expo/metro-config log
 // with console.log/info (e.g. "Could not resolve react-native!"), so send
@@ -43,11 +45,50 @@ function write(text: string, out: string | undefined) {
 const PLATFORM_REQUIRED_MESSAGE = `--platform <name> is required. Known values: android, ios, a11ytree. Any Metro platform name is accepted.
 Note: React Native core components branch on Platform.OS (e.g. TextInput, Switch), so use android or ios for them to render.`;
 
-async function render(file: string, options: RenderOptions) {
-  const platform = options.platform;
+type RunOptions = RenderOptions & {script?: string; tapMode: string};
+
+const TAP_MODES: TapMode[] = ['touch', 'click', 'both'];
+
+function requirePlatform(platform: string | undefined): string {
   if (platform == null || platform === '') {
     throw new Error(PLATFORM_REQUIRED_MESSAGE);
   }
+  return platform;
+}
+
+function readScript(scriptPath: string | undefined) {
+  if (scriptPath == null || scriptPath === '') {
+    throw new ScriptError('--script <json> is required');
+  }
+  let text: string;
+  try {
+    text = fs.readFileSync(scriptPath, 'utf8');
+  } catch (error) {
+    throw new ScriptError(`cannot read ${scriptPath}: ${(error as Error).message}`);
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch (error) {
+    throw new ScriptError(`${scriptPath} is not valid JSON: ${(error as Error).message}`);
+  }
+  try {
+    return validateScript(json);
+  } catch (error) {
+    throw new ScriptError(`${scriptPath}: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Bundles the app (with an optional script), runs the host and returns the
+ * payload. Returns undefined for --bundle-only.
+ */
+async function execute<T>(
+  file: string,
+  options: RenderOptions,
+  extra: {script?: unknown[]; tapMode?: TapMode},
+): Promise<T | undefined> {
+  const platform = requirePlatform(options.platform);
   if (!options.bundleOnly) {
     // Fail before spending time on Metro.
     getHostBin();
@@ -60,6 +101,7 @@ async function render(file: string, options: RenderOptions) {
     dev: options.dev,
     includeDebugProps: options.debugProps,
     verbose: options.verbose,
+    ...extra,
   });
   const cleanUp = () => {
     if (!options.keepBundle && !options.bundleOnly) {
@@ -73,19 +115,41 @@ async function render(file: string, options: RenderOptions) {
     );
   }
   if (options.bundleOnly) {
-    return;
+    return undefined;
   }
 
   try {
-    const payload = await runHost({
+    return await runHost<T>({
       bundlePath: result.bundlePath,
       windowWidth: options.width,
       windowHeight: options.height,
       verbose: options.verbose,
     });
-    write(JSON.stringify(toRenderResult(payload), null, 2) + '\n', options.out);
   } finally {
     cleanUp();
+  }
+}
+
+async function render(file: string, options: RenderOptions) {
+  const payload = await execute<HostPayload>(file, options, {});
+  if (payload) {
+    write(JSON.stringify(toRenderResult(payload), null, 2) + '\n', options.out);
+  }
+}
+
+async function run(file: string, options: RunOptions) {
+  requirePlatform(options.platform);
+  if (!TAP_MODES.includes(options.tapMode as TapMode)) {
+    throw new Error(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
+  }
+  // Validate before bundling.
+  const script = readScript(options.script);
+  const payload = await execute<HostRunPayload>(file, options, {
+    script,
+    tapMode: options.tapMode as TapMode,
+  });
+  if (payload) {
+    write(JSON.stringify(toRunResult(payload), null, 2) + '\n', options.out);
   }
 }
 
@@ -95,26 +159,36 @@ const program = new Command()
     'Render a React Native component headlessly and print its accessibility/layout tree as JSON',
   );
 
-program
-  .command('render')
-  .argument('<file>', 'component file (default export or `App` named export)')
-  .option('--width <dp>', 'viewport width', positiveNumber, 390)
-  .option('--height <dp>', 'viewport height', positiveNumber, 844)
-  .option(
-    '--platform <name>',
-    'Metro platform (required): android, ios, a11ytree, or any Metro platform name',
-  )
-  .option('--out <file>', 'write JSON to a file instead of stdout')
-  .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
-  .option('--bundle-only', 'only build the bundle, do not run the host', false)
+function addCommonOptions(command: Command): Command {
+  return command
+    .argument('<file>', 'component file (default export or `App` named export)')
+    .option('--width <dp>', 'viewport width', positiveNumber, 390)
+    .option('--height <dp>', 'viewport height', positiveNumber, 844)
+    .option(
+      '--platform <name>',
+      'Metro platform (required): android, ios, a11ytree, or any Metro platform name',
+    )
+    .option('--out <file>', 'write JSON to a file instead of stdout')
+    .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
+    .option('--bundle-only', 'only build the bundle, do not run the host', false)
+    .option('--dev', 'build a development bundle (__DEV__ = true)', false)
+    .option('-v, --verbose', 'print Metro progress and host logs to stderr', false);
+}
+
+addCommonOptions(program.command('render'))
+  .description('render the component and print its tree')
   .option(
     '--debug-props',
     'include raw host debug props on each node (hosts with getA11yTree only)',
     false,
   )
-  .option('--dev', 'build a development bundle (__DEV__ = true)', false)
-  .option('-v, --verbose', 'print Metro progress and host logs to stderr', false)
   .action(render);
+
+addCommonOptions(program.command('run'))
+  .description('render the component, run a script of actions, print steps and trees')
+  .option('--script <json>', 'JSON file with an array of actions (required)')
+  .option('--tap-mode <mode>', 'events for taps: touch, click or both', 'touch')
+  .action(run);
 
 try {
   await program.parseAsync(process.argv);

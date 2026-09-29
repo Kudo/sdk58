@@ -4,8 +4,11 @@ import type {
   Box,
   FantomNode,
   HostPayload,
+  HostRunPayload,
   RenderResult,
+  RunResult,
   ShadowNodeJSON,
+  StepNode,
   TreeNode,
 } from './schema.ts';
 
@@ -27,6 +30,39 @@ export function toRenderResult(payload: HostPayload): RenderResult {
     source: 'mounted',
     root: convertMountedNode(payload.tree, ORIGIN, '', nextRef, null),
   };
+}
+
+/** Converts the payload of `run --script`: every snapshot and the final tree. */
+export function toRunResult(payload: HostRunPayload): RunResult {
+  const snapshots: Record<string, TreeNode> = {};
+  for (const [name, tree] of Object.entries(payload.snapshots)) {
+    snapshots[name] = convertShadowTree(tree);
+  }
+  return {
+    viewport: payload.viewport,
+    source: 'shadowTree',
+    steps: payload.steps.map(step => ({
+      ...step,
+      target: roundStepNode(step.target),
+      hit: roundStepNode(step.hit),
+    })),
+    snapshots,
+    final: convertShadowTree(payload.final),
+  };
+}
+
+function roundStepNode(node: StepNode | null): StepNode | null {
+  if (node?.box == null) return node;
+  const {x, y, width, height} = node.box;
+  return {
+    ...node,
+    box: {x: round(x), y: round(y), width: round(width), height: round(height)},
+  };
+}
+
+/** Converts one typed getA11yTree root. Refs start at `n0` for each tree. */
+export function convertShadowTree(tree: ShadowNodeJSON): TreeNode {
+  return convertShadowNode(tree, ORIGIN, '', refCounter(), null);
 }
 
 // ---------------------------------------------------------------------------

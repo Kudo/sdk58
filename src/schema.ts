@@ -174,6 +174,48 @@ export type ShadowNodeJSON = {
   children?: ShadowNodeJSON[];
 };
 
+/** One executed action of `run --script` (built in runtime/actions.js). */
+export type StepNode = {
+  tag: number | null;
+  ref: string | null;
+  testID: string | null;
+  type: string;
+  /** Absolute box in dp; null when the host hit test found a node that is not in the tree. */
+  box: Box | null;
+};
+
+export type Step = {
+  index: number;
+  action: string;
+  /** The node the action was aimed at (for coordinate taps: the hit node). */
+  target: StepNode | null;
+  /** The node the host (or JS fallback) hit test found at the tap point. */
+  hit: StepNode | null;
+  /** Native events sent, in order (plus `wait <n>ms` markers). */
+  events: string[];
+  /** Which implementation was used: host methods (`native`) or the JS fallback (`js`). */
+  via?: {hitTest: 'native' | 'js' | null; events: 'native' | 'js' | null};
+  warnings?: string[];
+  error?: string;
+};
+
+export type RunResult = {
+  viewport: {width: number; height: number};
+  source: 'shadowTree';
+  steps: Step[];
+  snapshots: Record<string, TreeNode>;
+  final: TreeNode;
+};
+
+/** Payload printed by the entry for `run --script`. */
+export type HostRunPayload = {
+  viewport: {width: number; height: number};
+  source: 'shadowTree';
+  steps: Step[];
+  snapshots: Record<string, ShadowNodeJSON>;
+  final: ShadowNodeJSON;
+};
+
 /** Payload the JS entry prints inside `{"type":"rn-a11y-tree-result","rnA11yTree":...}`. */
 export type HostPayload =
   | {
