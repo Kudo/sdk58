@@ -11,6 +11,9 @@ test('accepts every action form', () => {
     {longPress: {testID: 'submit'}},
     {type: {testID: 'email', text: 'a@b.c', submit: true}},
     {scroll: {testID: 'list', x: 0, y: 300}},
+    {pan: {testID: 'drag', dx: 100}},
+    {pan: {x: 10, y: 20, dx: 5, dy: -5, steps: 4, durationMs: 100}},
+    {pinch: {testID: 'photo', scale: 2}},
     {wait: 500},
     {snapshot: 'after'},
   ];
@@ -32,6 +35,10 @@ test('reports the step index and the problem', () => {
     [[{tap: {testID: 'a'}, wait: 1}], /exactly one action key/],
     [['tap'], /must be an object/],
     [[{tap: {testID: 'a', x: 1, y: 2}}], /unknown key "testID"/],
+    [[{pan: {testID: 'a'}}], /pan: needs "dx" and\/or "dy"/],
+    [[{pan: {testID: 'a', dx: 1, steps: 0}}], /"steps" must be an integer >= 1/],
+    [[{pinch: {testID: 'a'}}], /pinch: "scale" must be a number > 0/],
+    [[{pinch: {x: 1, y: 2, scale: 2}}], /pinch: unknown key "x"/],
   ];
   for (const [script, pattern] of cases) {
     assert.throws(() => validateScript(script), pattern, JSON.stringify(script));

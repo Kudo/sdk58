@@ -1,0 +1,10 @@
+[
+  {"tap": {"testID": "drag"}},
+  {"snapshot": "after-tap"},
+  {"pan": {"testID": "drag", "dx": 100, "dy": 0}},
+  {"snapshot": "after-pan"},
+  {"longPress": {"testID": "drag"}},
+  {"snapshot": "after-long-press"},
+  {"tap": {"testID": "rect"}},
+  {"snapshot": "after-rect"}
+]

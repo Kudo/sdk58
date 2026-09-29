@@ -65,7 +65,7 @@ test('session: JSON lines over the interactive host protocol (fake host)', {time
   assert.deepEqual(out[3], {id: 3, ok: false, error: 'boom from JS'});
   assert.equal(out[4].ok, false);
   assert.match(out[4].error, /invalid JSON/);
-  assert.deepEqual(out[5], {id: 4, ok: false, error: 'unknown action "swipe" (one of: tap, longPress, type, scroll, wait, snapshot)'});
+  assert.deepEqual(out[5], {id: 4, ok: false, error: 'unknown action "swipe" (one of: tap, longPress, type, scroll, pan, pinch, wait, snapshot)'});
   assert.deepEqual(out[6], {id: 5, ok: true});
   // App console output goes to stderr with an [app] prefix.
   assert.match(proc.stderr, /\[app\] request \{"id":1,/);

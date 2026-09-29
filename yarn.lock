@@ -1675,6 +1675,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@react-native-a11y-tree/example-gestures@workspace:examples/gestures":
+  version: 0.0.0-use.local
+  resolution: "@react-native-a11y-tree/example-gestures@workspace:examples/gestures"
+  dependencies:
+    react: "npm:19.3.0"
+    react-native: "npm:0.88.0-rc.2"
+    react-native-gesture-handler: "npm:~3.2.1"
+  languageName: unknown
+  linkType: soft
+
 "@react-native-a11y-tree/example-navigation-stack@workspace:examples/navigation-stack":
   version: 0.0.0-use.local
   resolution: "@react-native-a11y-tree/example-navigation-stack@workspace:examples/navigation-stack"

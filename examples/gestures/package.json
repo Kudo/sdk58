@@ -1,0 +1,10 @@
+{
+  "name": "@react-native-a11y-tree/example-gestures",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "19.3.0",
+    "react-native": "0.88.0-rc.2",
+    "react-native-gesture-handler": "~3.2.1"
+  }
+}

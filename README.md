@@ -164,6 +164,8 @@ step index.
 | `longPress` | same as `tap` | `touchStart`, `wait 600`, `touchEnd` |
 | `type` | `{"testID":"..","text":"..","submit":false}` | `focus`; per character `keyPress {key}` and `change {text, eventCount}`; `submitEditing` if `submit`; `endEditing`, `blur` |
 | `scroll` | `{"testID":"..","x":0,"y":300}` | one scroll event on a `ScrollView` (`zoomScale: 1`), which also updates the ScrollView's state |
+| `pan` | `{"testID":"..","dx":100,"dy":0,"steps":10,"durationMs":200}` (or `x`,`y` instead of a target) | `touchStart`, `steps` x (`wait durationMs/steps`, `touchMove`), `touchEnd`; the same pointer samples go to react-native-gesture-handler |
+| `pinch` | `{"testID":"..","scale":2,"steps":10,"durationMs":300}` | two pointers around the target's center, moved apart/together; react-native-gesture-handler only (no multi-touch responder events yet) |
 | `wait` | milliseconds | in 16.333 ms slices (the host's frame length): `produceFramesForDuration` (stub clock + one UI tick, which drives C++ animation backends), mocked JS timers, work loop, queued native events |
 | `snapshot` | name | stores the tree at this point |
 
@@ -217,6 +219,51 @@ Rules:
 Examples: `examples/basic/actions.json` (typing, Switch, Pressable) and
 `examples/scrolling/actions.json` (ScrollView offset, tap after scroll,
 FlatList windowing).
+
+## react-native-gesture-handler
+
+The host has no native gesture handler engine. RNGH 3.2.1's native module
+and native v3 detector are replaced in the bundle (`src/bundle.ts`
+`RESOLVED_ALIASES`, matched on the resolved file path):
+
+| RNGH file | Replaced by |
+| --- | --- |
+| `src/specs/NativeRNGestureHandlerModule.ts` | `runtime/gh/NativeRNGestureHandlerModule.js` |
+| `src/v3/detectors/HostGestureDetector.tsx` | `runtime/gh/HostGestureDetector.js` |
+
+- The module implements the 8 spec methods with RNGH's own web classes
+  (`src/web/`: handlers, `GestureHandlerOrchestrator`, `InteractionManager`,
+  `NodeManager`). Views are `HostView` objects over the element found by tag
+  (`hasAttribute` → false, `dispatchEvent` no-op, bounds from
+  `getBoundingClientRect`; a `display: contents` detector uses the union of
+  its children). Input comes from the action runner through a
+  `HostEventManager` (an RNGH `EventManager` without DOM listeners).
+- Pointer routing: on DOWN, the handlers attached to the hit view and its
+  ancestors get the pointer (deepest first) if it is inside their view; MOVE
+  and UP go to the same handlers. `time` comes from the mocked clock, so
+  Tap/LongPress timers, pan slop (15 dp) and velocity behave.
+- Events go back the way the native platforms send them: v2
+  (`GestureDetector` with `Gesture.*`, old handler components) as flat
+  payloads on `DeviceEventEmitter` `onGestureHandlerEvent` /
+  `onGestureHandlerStateChange` (Android); v3 (`NativeDetector`, e.g.
+  `RectButton`) as Fabric events `gestureHandlerEvent` /
+  `gestureHandlerStateChange` / `gestureHandlerTouchEvent` on the
+  `RNGestureHandlerDetector` element.
+- `HostGestureDetector.js` renders the real `RNGestureHandlerDetector` and
+  attaches each handler to the detector, or, for Native gestures, to its only
+  child (like the Android detector view). A Native handler attached to an
+  `RNGestureHandlerButton` gets the button role, so it activates on release
+  like on Android.
+- `tap`, `longPress`, `pan` and `pinch` feed RNGH as well as the responder
+  system; `step.gestureHandlers` counts the handlers that got the pointer.
+- Not supported yet: Reanimated worklet callbacks (use `.runOnJS(true)`),
+  Animated events, virtual detectors, transforms in `absoluteToLocal`.
+- RNGH resets the pan start point on activation, so `translationX` after a
+  `pan` of `dx: 100` is `100` minus the distance moved before activation.
+
+`runtime/turboModuleStubs.js` adds JS stand-ins for core TurboModules the
+host lacks but libraries require at import time: `StatusBarManager` (RNGH
+imports `DrawerLayoutAndroid`, which imports `StatusBar`).
 
 ## Session mode
 
