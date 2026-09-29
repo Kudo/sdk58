@@ -200,7 +200,6 @@ const SHADOW_COMPONENT_KEYS = [
   'editable',
   'secureTextEntry',
   'multiline',
-  'enabled',
   'sources',
   'value',
   'horizontal',
@@ -409,11 +408,17 @@ function shadowA11yInfo(node: ShadowNodeJSON): A11yInfo {
   if (hint) info.hint = hint;
 
   const state = shadowA11yState(node.accessibilityState);
-  // A Switch's value is its checked state for screen readers.
-  if (SWITCH_TYPES.has(node.type) && typeof node.value === 'boolean') {
-    const withValue = state ?? {};
-    if (withValue.checked === undefined) withValue.checked = node.value;
-    info.state = withValue;
+  if (SWITCH_TYPES.has(node.type)) {
+    // A Switch's value is its checked state for screen readers, and the host
+    // reports `disabled: true` outside accessibilityState.
+    const switchState = state ?? {};
+    if (switchState.checked === undefined && typeof node.value === 'boolean') {
+      switchState.checked = node.value;
+    }
+    if (switchState.disabled === undefined && node.disabled === true) {
+      switchState.disabled = true;
+    }
+    if (Object.keys(switchState).length > 0) info.state = switchState;
   } else if (state) {
     info.state = state;
   }

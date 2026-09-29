@@ -39,7 +39,7 @@ Options for `render <file>`:
 | --- | --- | --- |
 | `--width <dp>` | `390` | Viewport width |
 | `--height <dp>` | `844` | Viewport height |
-| `--platform <name>` | `a11ytree` | Metro platform (see "Platform" below) |
+| `--platform <name>` | `android` | Metro platform (see "Platform" below) |
 | `--out <file>` | stdout | Write the JSON to a file |
 | `--keep-bundle` | off | Keep the bundle and print its path to stderr |
 | `--bundle-only` | off | Build the bundle and stop (no host needed) |
@@ -133,7 +133,7 @@ rn-a11y-tree render App.tsx
   │
   ├─ src/bundle.ts   write runtime/entry-template.js (placeholders filled) to a temp dir
   │                  Metro.runBuild with expo/metro-config getDefaultConfig + overrides
-  │                  -> single-file bundle (platform "a11ytree", dev=false, minify=false)
+  │                  -> single-file bundle (platform "android", dev=false, minify=false)
   │
   ├─ src/host.ts     spawn $RN_A11Y_HOST_BIN --bundlePath <bundle> --featureFlags {} --minLogLevel error
   │                  read newline-delimited JSON on stdout
@@ -160,27 +160,36 @@ Base: `getDefaultConfig(projectRoot)` from `expo/metro-config`. Overrides:
   off), like Fantom.
 - `resolver.blockList` adds `RendererProxy.fb.js`.
 - `transformer.hermesParser: true`.
-- `resolver.platforms` starts with the platform (`a11ytree`) and `native`.
+- `resolver.platforms` starts with the platform (default `android`) and `native`.
 - `watchFolders` adds the project root, this package, and the temp entry dir
   (Metro does not find files in the project root without it when the project
   is outside this repo).
 - `resolver.resolveRequest`:
   - Bare imports from `runtime/` and the generated entry resolve from the
     user's project first, so there is one copy of `react` and `react-native`.
-  - Platform fallback: a file is taken for `a11ytree` only if it is a
-    `.a11ytree.*` file. Otherwise the request resolves as `android` (Fantom
-    also bundles for `android`). This is needed because react-native has
-    modules that exist only as `.ios.js` / `.android.js`, and some `.js`
-    files re-import themselves by platform (`Libraries/Utilities/Platform.js`
-    imports `./Platform`).
+  - Platform fallback (only with a custom `--platform`, for example
+    `a11ytree`): a file is taken for the custom platform only if it is a
+    `.a11ytree.*` file. Otherwise the request resolves as `android`. This is
+    needed because react-native has modules that exist only as `.ios.js` /
+    `.android.js`, and some `.js` files re-import themselves by platform
+    (`Libraries/Utilities/Platform.js` imports `./Platform`).
 - The user's `metro.config.js` is not loaded.
 
 ### Platform
 
-Metro inlines `Platform.OS` from the bundle platform, so app code sees
-`Platform.OS === 'a11ytree'` and `Platform.select` picks `native` /
-`default`. react-native internals resolve to their Android implementations.
-Use `--platform android` to make both agree.
+The default Metro platform is `android`, the same as Fantom. Metro inlines
+`Platform.OS` from the bundle platform in all modules, including
+react-native's own code. react-native picks native components with
+`Platform.OS === 'android'` / `'ios'` checks (for example TextInput and
+Switch), and the host implements the Android ones (`AndroidTextInput`,
+`AndroidSwitch`). So app code sees `Platform.OS === 'android'`.
+
+`--platform <custom>` (for example `a11ytree`) is still supported: files
+named `.<custom>.*` are used when they exist, and all other platform files
+resolve as `android`. But `Platform.OS` is then `'<custom>'` everywhere, so
+components with `Platform.OS` checks break: with `a11ytree`, TextInput
+renders nothing and Switch renders the iOS `Switch` component, which the
+host does not implement (0x0 box).
 
 ### Host stdout protocol
 

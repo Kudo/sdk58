@@ -156,17 +156,17 @@ export type ShadowNodeJSON = {
     ellipsizeMode?: string;
     adjustsFontSizeToFit?: boolean;
   };
-  // TextInput
+  // TextInput (AndroidTextInput): `text` is always present ("" when empty)
   defaultValue?: string;
   placeholder?: string;
   editable?: boolean;
   secureTextEntry?: boolean;
   multiline?: boolean;
-  enabled?: boolean;
   // Image
   sources?: Array<{uri: string; width?: number; height?: number}>;
-  // Switch
+  // Switch (AndroidSwitch)
   value?: unknown;
+  disabled?: boolean;
   // ScrollView
   horizontal?: boolean;
   contentOffset?: {x: number; y: number};

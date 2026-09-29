@@ -15,14 +15,23 @@ export const PACKAGE_ROOT = fs.realpathSync(
 );
 export const RUNTIME_DIR = path.join(PACKAGE_ROOT, 'runtime');
 
-export const DEFAULT_PLATFORM = 'a11ytree';
+/**
+ * Default Metro platform. Metro inlines `Platform.OS` from the bundle
+ * platform in every module, including react-native's own code, and
+ * components such as TextInput and Switch pick their native component with
+ * `Platform.OS === 'android' / 'ios'` checks. Under a custom platform
+ * (`a11ytree`) neither branch matches: TextInput renders nothing and Switch
+ * uses the iOS `Switch` component, which the host does not implement. So the
+ * default is `android`, the platform Fantom itself bundles for.
+ */
+export const DEFAULT_PLATFORM = 'android';
 
 /**
- * Platform used to resolve `.<platform>.js` files that have no `a11ytree`
- * variant. react-native ships some modules only as `.ios.js`/`.android.js`
+ * With a custom `--platform` (e.g. `a11ytree`): platform used to resolve
+ * `.<platform>.js` files that have no variant for the custom platform. react-native ships some modules only as `.ios.js`/`.android.js`
  * (e.g. `Libraries/Utilities/Platform.js` just re-imports `./Platform`, which
  * would resolve to itself). Fantom bundles its tests for `android`, so we do
- * the same for anything without an explicit `.a11ytree.*` file.
+ * the same for anything without an explicit `.<platform>.*` file.
  */
 const FALLBACK_PLATFORM = 'android';
 
