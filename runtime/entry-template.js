@@ -36,6 +36,9 @@ registerRender(() => {
   const viewportWidth = __VIEWPORT_WIDTH__;
   const viewportHeight = __VIEWPORT_HEIGHT__;
   const includeDebugProps = __INCLUDE_DEBUG_PROPS__;
+  // `run --script`: array of actions (see runtime/actions.js), else null.
+  const script = __SCRIPT__;
+  const tapMode = __TAP_MODE__;
 
   return () => {
     const root = Fantom.createRoot({viewportWidth, viewportHeight});
@@ -44,6 +47,26 @@ registerRender(() => {
     });
 
     const rootTag = root.getRootTag();
+    const viewport = {width: viewportWidth, height: viewportHeight};
+
+    if (script != null) {
+      if (typeof NativeFantom.getA11yTree !== 'function') {
+        throw new Error(
+          'rn-a11y-tree run: the host has no NativeFantom.getA11yTree; rebuild it with `yarn build:host`',
+        );
+      }
+      const {runActions} = require('__RUNTIME_DIR__/actions');
+      const {steps, snapshots, final} = runActions({root, script, tapMode});
+      root.destroy();
+      return JSON.stringify({
+        viewport,
+        source: 'shadowTree',
+        steps,
+        snapshots,
+        final,
+      });
+    }
+
     let source;
     let tree;
     if (typeof NativeFantom.getA11yTree === 'function') {
@@ -64,9 +87,8 @@ registerRender(() => {
     root.destroy();
 
     // `tree` is already a JSON string; splice it in as-is.
-    return `{"viewport":${JSON.stringify({
-      width: viewportWidth,
-      height: viewportHeight,
-    })},"source":${JSON.stringify(source)},"tree":${tree}}`;
+    return `{"viewport":${JSON.stringify(viewport)},"source":${JSON.stringify(
+      source,
+    )},"tree":${tree}}`;
   };
 });
