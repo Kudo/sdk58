@@ -12,8 +12,10 @@ runs in a headless React Native Fabric host (React Native's "Fantom" tester:
 C++ + Hermes, no simulator). The output is the mounted shadow tree with
 absolute layout boxes.
 
-Status: the JS/CLI side works up to producing the bundle. The host binary is
-built separately; point `RN_A11Y_HOST_BIN` at it.
+Status: works end to end with a locally built Fantom host
+(`fantom_tester`); point `RN_A11Y_HOST_BIN` at it. Text measurement in the
+host is not done yet, so `Paragraph` boxes have height 0 (and width 0 when
+they are not stretched).
 
 ## Usage
 
@@ -80,6 +82,15 @@ Notes:
   and all values are strings. This needs a host built with
   `RN_DEBUG_STRING_CONVERTIBLE=1`; without it, `props` is empty and there are
   no boxes.
+- The tree is the mounted host view tree after Fabric view flattening, the
+  same as on iOS/Android:
+  - A `<View>` with only layout styles is removed from the tree. Use
+    `collapsable={false}` to keep it.
+  - A `<View>` that draws something (for example `backgroundColor`) but does
+    not form a stacking context is kept, but its children are moved up to the
+    nearest ancestor that forms a stacking context. They appear as siblings
+    that come after the `View`, not as its children. Their frames are relative
+    to their new parent, so `box` is still correct.
 - `<Text>` renders as a `Paragraph` host node. Nested `<Text>` spans appear
   as `Text` child nodes without their own layout; they get the `Paragraph`'s
   box.
@@ -173,9 +184,9 @@ Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,
 ## Milestones
 
 1. JS/CLI: Metro bundle, vendored Fantom runtime, host protocol, tree
-   conversion. (done, except running on the real host)
+   conversion. (done; `yarn test:e2e` passes with a local host build)
 2. Host binary: build Fantom's tester standalone for macOS/Linux, with
-   `RN_DEBUG_STRING_CONVERTIBLE`. Run `yarn test:e2e`.
+   `RN_DEBUG_STRING_CONVERTIBLE`, and text measurement (CoreText).
 3. Accessibility fidelity: report `role`, `aria-*`, `accessibilityValue`,
    and per-span text layout from the host; derive names the way iOS/Android
    screen readers do.
