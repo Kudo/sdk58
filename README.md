@@ -30,7 +30,7 @@ macOS arm64 only (the host is built by `yarn build:host`).
 | react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No transitions; `--platform ios` fails in the navigation example (see Platform) |
 | react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
 | react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner | `e2e/gestures.test.ts` | No worklet callbacks, virtual detectors or transforms |
-| react-native-reanimated | In progress (host port) | `e2e/reanimated.test.ts` (skips) | Import fails in the host today |
+| react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms) | `e2e/reanimated.test.ts` | `entering`/`exiting` opacity needs the host's mounted-view overrides (`getA11yTree.mounted`) |
 | Expo modules, `@expo/ui` | Not started | none | |
 
 ## Quick start
@@ -57,7 +57,7 @@ failure, with the message on stderr; stdout has only the JSON.
 | Command | What it does | Output |
 | --- | --- | --- |
 | `render <file>` | Render once and print the tree | `{viewport, source, root}` ([schema](#output-schema)) |
-| `run <file> --script <json>` | Render, run the actions, print steps and trees | `{viewport, source, steps, snapshots, final, fallbacks}` ([Interactions](#interactions)) |
+| `run <file> --script <json>` | Render, run the actions, print steps and trees | `{viewport, source, steps, snapshots, final, fallbacks, capabilities}` ([Interactions](#interactions)) |
 | `session <file>` | Render, then serve JSON-line requests on stdin | one JSON object per line ([Session mode](#session-mode)) |
 
 | Option | Commands | Default | Description |
@@ -100,7 +100,9 @@ TypeScript types: [`src/schema.ts`](src/schema.ts).
       "hidden": true,          // importantForAccessibility no/no-hide-descendants, accessibilityElementsHidden, aria-hidden
       "raw": {"accessibilityRole": "button"}  // accessibility props as reported (strings)
     },
-    "box": {"x": 0, "y": 0, "width": 390, "height": 844},  // absolute, dp
+    "box": {"x": 0, "y": 0, "width": 390, "height": 844},  // on screen, dp (ShadowTree layout)
+    "visualBox": {...},        // only if a transform/mounted frame applies: where it is drawn
+    "effectiveOpacity": 0.5,   // only if < 1: own x ancestors' opacity (mounted opacity if reported)
     "style": {"backgroundColor": "rgba(255, 255, 255, 1)"}, // other props: visual, Yoga style, font, component props
     "text": null,              // text content of Paragraph / Text fragment / TextInput nodes
     "testID": null,
@@ -129,6 +131,14 @@ the host implements it, else `NativeFantom.getRenderedOutput`.
   - `RNSScreenStackHeaderConfig` gets its `title` as `name` (role stays
     `null`). Screen and header props (`activityState`, `stackPresentation`,
     `title`, `hidden`, ...) and safe-area `insets` are in `style`.
+  - `visualBox`: `box` is the layout. When the node or an ancestor has a
+    non-identity `transform` (4x4 matrix in `style.transform`), or the host
+    reports a different mounted frame, `visualBox` is the axis-aligned
+    bounding box of the drawn frame after the transforms. Like React Native,
+    a transform applies about the view's center; ancestors' transforms
+    compose. `style.mounted` has the mounted-view values that differ from
+    the ShadowNode (e.g. during a Reanimated `entering` animation); they are
+    used for `visualBox` and `effectiveOpacity`.
   - `box` values are rounded to 1/1000 dp (layout is pixel-snapped, which
     leaves float noise such as `63.99999`).
   - `yogaStyle` edge and gutter objects are flattened to React Native style
@@ -249,7 +259,9 @@ Rules:
   For hosts that report `contentOffset` from props only, the runner reads the
   state offset through the DOM API (`element.scrollTop` / `scrollLeft`)
   (fallback `scrollOffset: dom`).
-- `run` needs a host with `getA11yTree`.
+- `run` needs a host with `getA11yTree`. The output's `capabilities` lists
+  the optional host methods found plus `NativeFantom.getCapabilities()`
+  (e.g. `getA11yTree.mounted`); session mode reports it in the `ready` line.
 
 Examples: `examples/basic/actions.json` (typing, Switch, Pressable) and
 `examples/scrolling/actions.json` (ScrollView offset, tap after scroll,
@@ -525,7 +537,9 @@ react-native-safe-area-context in the host; react-native-gesture-handler
 (JS module on its web handlers + host descriptors); CI workflow (not yet run
 on GitHub).
 
-Pending: react-native-reanimated/worklets (host port in progress); release
+Reanimated/worklets are in the host (mounted-view overrides pending).
+
+Pending: release
 (prebuilt host binaries for macOS arm64/x86_64 and Linux, no Homebrew
 OpenSSL dependency); Expo modules and `@expo/ui`; a `check` command
 (design tokens, contrast).

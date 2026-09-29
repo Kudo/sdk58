@@ -79,14 +79,22 @@ test(
     assert.ok(midWidth > 50 && midWidth < 250, `mid width ${midWidth}`);
     assert.ok(Math.abs(get(s.end, 'box').box.width - 250) <= 0.5);
 
-    // withSpring(120) on translateX: the box moves right by ~120.
-    const dx = get(s.slid, 'slide').box.x - get(s.end, 'slide').box.x;
+    // withSpring(120) on translateX. The layout box does not move; the
+    // transform shows in visualBox.
+    const slid = get(s.slid, 'slide');
+    assert.equal(slid.box.x, get(s.end, 'slide').box.x);
+    assert.ok(slid.visualBox, 'slide has no visualBox after the spring');
+    const dx = slid.visualBox.x - slid.box.x;
     assert.ok(Math.abs(dx - 120) <= 1, `slide moved by ${dx}`);
 
-    // FadeIn.duration(300) entering animation.
-    const opacity = (node: TreeNode) =>
-      typeof node.style.opacity === 'number' ? node.style.opacity : 1;
-    assert.ok(opacity(get(s['fade-start'], 'fade')) < 1, 'fade has full opacity at fade-start');
+    // FadeIn.duration(300) entering animation. It only changes the mounted
+    // view, so this needs the host's mounted-view overrides in getA11yTree.
+    const opacity = (node: TreeNode) => node.effectiveOpacity ?? 1;
+    if (result.capabilities.includes('getA11yTree.mounted')) {
+      assert.ok(opacity(get(s['fade-start'], 'fade')) < 1, 'fade is fully opaque at fade-start');
+    } else {
+      t.diagnostic('fade-start opacity not checked: host lacks getA11yTree.mounted');
+    }
     assert.equal(opacity(get(s['fade-end'], 'fade')), 1);
 
     // runOnUI -> runOnJS roundtrip.

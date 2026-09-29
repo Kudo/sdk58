@@ -76,11 +76,11 @@ Actions: tap `drag`, pan `drag` by dx 100, long press `drag`, tap `rect`.
 
 ## `e2e/reanimated.test.ts` — `examples/reanimated/actions.json`, `run`
 
-Skips with "host lacks reanimated support" while the app fails at import
-(today: `Cannot read property 'loadUnpackersWithCode' of undefined`). When it
-runs:
+Skips with "host lacks reanimated support" if the app fails at import (hosts
+without Reanimated).
 
-- `box` width 50 at `start`, strictly between 50 and 250 at `mid` (200 ms into a 400 ms `withTiming`), 250 at `end` (±0.5).
-- `slide` moved by ~120 (±1) after `withSpring(120)` and 1000 ms.
-- `fade` opacity < 1 at `fade-start` (50 ms into `FadeIn.duration(300)`) and 1 at `fade-end`.
+- No step has an error.
+- `box` width 50 at `start`, strictly between 50 and 250 at `mid` (200 ms into a 400 ms `withTiming`; 150 today), 250 at `end` (±0.5).
+- `slide`: the layout `box` does not move; `visualBox.x - box.x` ≈ 120 (±1) after `withSpring(120)` and 1000 ms (`style.transform[12]` = 120).
+- `fade`: `effectiveOpacity` < 1 at `fade-start` (50 ms into `FadeIn.duration(300)`) — checked only when `capabilities` has `getA11yTree.mounted`; otherwise logged as a diagnostic — and 1 at `fade-end`.
 - `label` = "from-ui" (`runOnUI` → `runOnJS` roundtrip).

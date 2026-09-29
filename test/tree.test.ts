@@ -221,3 +221,52 @@ test('contentOriginOffset places children (RNSScreen header, ScrollView)', () =>
   // contentOriginOffset wins over contentOffset (no double counting).
   assert.equal(find(root, n => n.testID === 'row')!.box.y, 91 + 100 - 600 + 720);
 });
+
+test('visualBox applies transforms (about the center, composed with ancestors) and mounted overrides', () => {
+  const T = (x: number, y: number) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1];
+  const S = (k: number) => [k, 0, 0, 0, 0, k, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const tree: ShadowNodeJSON = {
+    type: 'RootView',
+    frame: {x: 0, y: 0, width: 390, height: 844},
+    children: [
+      {type: 'View', testID: 'plain', frame: {x: 10, y: 10, width: 50, height: 40}, children: []},
+      {type: 'View', testID: 'slide', frame: {x: 24, y: 100, width: 50, height: 40}, transform: T(120, 0), children: []},
+      {
+        type: 'View',
+        testID: 'scaled',
+        frame: {x: 100, y: 200, width: 100, height: 100},
+        transform: S(2),
+        opacity: 0.5,
+        children: [
+          {
+            type: 'View',
+            testID: 'child',
+            frame: {x: 0, y: 0, width: 10, height: 10},
+            mounted: {opacity: 0.4, transform: T(5, 0)},
+            children: [],
+          },
+        ],
+      },
+    ],
+  };
+  const {root} = toRenderResult({viewport: {width: 390, height: 844}, source: 'shadowTree', tree});
+  const byID = (id: string) => find(root, n => n.testID === id)!;
+
+  assert.equal(byID('plain').visualBox, undefined);
+  assert.equal(byID('plain').effectiveOpacity, undefined);
+
+  // Translate: layout box unchanged, visual box moved by 120.
+  assert.deepEqual(byID('slide').box, {x: 24, y: 100, width: 50, height: 40});
+  assert.deepEqual(byID('slide').visualBox, {x: 144, y: 100, width: 50, height: 40});
+
+  // Scale 2 about the center (150, 250): 100x100 -> 200x200 at (50, 150).
+  assert.deepEqual(byID('scaled').visualBox, {x: 50, y: 150, width: 200, height: 200});
+  assert.equal(byID('scaled').effectiveOpacity, 0.5);
+
+  // Child at (100,200,10,10), mounted translate 5 about its own center, then
+  // the parent's scale 2 about (150,250): x 105 -> 60, y 200 -> 150, size 20.
+  assert.deepEqual(byID('child').visualBox, {x: 60, y: 150, width: 20, height: 20});
+  // Mounted opacity 0.4 times the parent's 0.5.
+  assert.equal(byID('child').effectiveOpacity, 0.2);
+  assert.deepEqual(byID('child').style.mounted, {opacity: 0.4, transform: T(5, 0)});
+});
