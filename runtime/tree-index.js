@@ -123,8 +123,10 @@ export function hitTestEntries(entries, x, y) {
 
 /** True if `entry` is `ancestor` or one of its descendants. */
 export function isWithin(entry, ancestor) {
+  if (ancestor == null) return false;
   for (let e = entry; e != null; e = e.parent) {
-    if (e === ancestor) return true;
+    // Compare by tag too: the host hit test returns a copy of the entry.
+    if (e === ancestor || (e.tag != null && e.tag === ancestor.tag)) return true;
   }
   return false;
 }

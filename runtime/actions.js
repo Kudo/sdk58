@@ -123,54 +123,61 @@ export function runActions({root, script, tapMode}) {
       via.hitTest = 'native';
       const result = JSON.parse(NativeFantom.hitTest(surfaceId, x, y));
       if (result == null) return null;
-      return entries.find(e => e.tag === result.tag) ?? {
+      const entry = entries.find(e => e.tag === result.tag) ?? {
         tag: result.tag,
         type: result.type,
         ref: null,
         testID: null,
         box: null,
+        parent: null,
       };
+      return {...entry, viaHitSlop: result.viaHitSlop === true};
     }
     via.hitTest = 'js';
     fallbacks.add('hitTest: js');
     return hitTestEntries(entries, x, y);
   }
 
-  function touch(tag, point, box) {
-    const t = timestamp++;
-    const touchPoint = {
+  // Touch payloads in the shape the native worker verified with Pressable
+  // (tests/FantomInteraction-itest.js): no top-level target/identifier.
+  function touchPoint(tag, point, box) {
+    return {
       pageX: point.x,
       pageY: point.y,
       locationX: box ? point.x - box.x : 0,
       locationY: box ? point.y - box.y : 0,
-      identifier: 1,
+      screenX: point.x,
+      screenY: point.y,
+      identifier: 0,
       target: tag,
-      timestamp: t,
-    };
-    return {
-      touches: [touchPoint],
-      changedTouches: [touchPoint],
-      target: tag,
-      identifier: 1,
-      timestamp: t,
+      timestamp: timestamp++,
+      force: 1,
     };
   }
 
-  function touchEndPayload(start) {
-    return {...start, touches: [], timestamp: timestamp++};
+  function touchStartPayload(tag, point, box) {
+    const t = touchPoint(tag, point, box);
+    return {touches: [t], changedTouches: [t], targetTouches: [t]};
+  }
+
+  function touchEndPayload(tag, point, box) {
+    const t = touchPoint(tag, point, box);
+    return {touches: [], changedTouches: [t], targetTouches: []};
   }
 
   // --- targets -------------------------------------------------------------
 
   function describe(entry) {
     if (entry == null) return null;
-    return {
+    const result = {
       tag: entry.tag,
       ref: entry.ref,
       testID: entry.testID,
       type: entry.type,
       box: entry.box,
     };
+    if (entry.viaHitSlop !== undefined) result.viaHitSlop = entry.viaHitSlop;
+    return result;
   }
 
   /** Resolves the target and the hit node for tap-like actions. */
@@ -228,13 +235,14 @@ export function runActions({root, script, tapMode}) {
     }
 
     if (tapMode === 'touch' || tapMode === 'both') {
-      const start = touch(hit.tag, point, hit.box);
+      const start = touchStartPayload(hit.tag, point, hit.box);
       dispatch(hit.tag, [['touchStart', start, NativeEventCategory.ContinuousStart]], step.events);
       if (longPress) {
         timers.advanceTimersByTime(LONG_PRESS_MS);
         step.events.push(`wait ${LONG_PRESS_MS}ms`);
       }
-      dispatch(hit.tag, [['touchEnd', touchEndPayload(start), NativeEventCategory.ContinuousEnd]], step.events);
+      const end = touchEndPayload(hit.tag, point, hit.box);
+      dispatch(hit.tag, [['touchEnd', end, NativeEventCategory.ContinuousEnd]], step.events);
     }
     if (!longPress && (tapMode === 'click' || tapMode === 'both')) {
       // `click` does not bubble from a child (e.g. the label Paragraph) to
@@ -262,20 +270,16 @@ export function runActions({root, script, tapMode}) {
     for (const key of Array.from(spec.text)) {
       text += key;
       eventCount++;
-      dispatch(
-        tag,
-        [
-          ['keyPress', {key, target: tag}],
-          ['change', {text, eventCount, target: tag}],
-        ],
-        step.events,
-      );
+      dispatch(tag, [['keyPress', {key, target: tag}]], step.events);
+      // Update the input's ShadowTree state first (as the native side does
+      // on a real device), then tell JS with `change`.
       if (has('setTextInputTextByTag')) {
         NativeFantom.setTextInputTextByTag(surfaceId, tag, text);
       } else if (warnings.length === 0) {
         fallbacks.add('text: not reflected');
         warnings.push('Host has no setTextInputTextByTag: the ShadowTree text of the input is not updated');
       }
+      dispatch(tag, [['change', {text, eventCount, target: tag}]], step.events);
     }
     if (spec.submit === true) {
       dispatch(tag, [['submitEditing', {text, target: tag}]], step.events);

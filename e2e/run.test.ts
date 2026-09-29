@@ -59,6 +59,7 @@ test(
     );
     for (const step of result.steps) {
       assert.equal(step.error, undefined, `step ${step.index} failed: ${step.error}`);
+      assert.equal(step.warnings, undefined, `step ${step.index} warnings: ${step.warnings}`);
       if (step.action !== 'snapshot') {
         assert.ok(step.hit, `step ${step.index} (${step.action}) has no hit`);
       }
@@ -69,6 +70,12 @@ test(
     const [status] = findAll(final, n => n.testID === 'status');
     assert.ok(status, 'status node not found: Submit onPress did not fire');
     assert.equal(status.text, 'Submitted');
+
+    // With setTextInputTextByTag the input's own text is in the tree.
+    if (!result.fallbacks.includes('text: not reflected')) {
+      const [email] = findAll(final, n => n.testID === 'email');
+      assert.equal(email.text, 'a@b.c');
+    }
 
     const [echo] = findAll(final, n => n.testID === 'echo');
     assert.ok(echo, 'echo node not found: onChangeText did not fire');

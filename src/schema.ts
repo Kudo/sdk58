@@ -185,6 +185,8 @@ export type StepNode = {
   type: string;
   /** Absolute box in dp; null when the host hit test found a node that is not in the tree. */
   box: Box | null;
+  /** Only on `hit` from the host hit test: the point was outside the node's frame but inside its hitSlop. */
+  viaHitSlop?: boolean;
 };
 
 export type Step = {
