@@ -258,6 +258,8 @@ SurfaceId NativeFantom::startSurface(
     double viewportOffsetY) {
   SurfaceId surfaceId = nextSurfaceId_;
   nextSurfaceId_ += 10;
+  setSafeAreaWindowSize(Size{
+      static_cast<Float>(viewportWidth), static_cast<Float>(viewportHeight)});
   appDelegate_.startSurface(
       runtime,
       static_cast<float>(viewportWidth),

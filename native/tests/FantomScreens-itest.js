@@ -147,4 +147,70 @@ describe('react-native-screens native stack', () => {
     console.log('AFTER_BACK ' + JSON.stringify(screensAfterBack.map(s => ({tag: s.tag, screenId: s.screenId, activityState: s.activityState}))));
     expect(screensAfterBack.length).toBe(1);
   });
+
+  it('sends screen lifecycle events', () => {
+    // $FlowFixMe[cannot-resolve-module]
+    const {useFocusEffect} = require('@react-navigation/native');
+    // $FlowFixMe[cannot-resolve-module]
+    const {useHeaderHeight} = require('@react-navigation/elements');
+    const log: Array<string> = [];
+    const Stack = createNativeStackNavigator();
+
+    function useLog(name: string, navigation: $FlowFixMe) {
+      React.useEffect(() => {
+        const unsubscribes = ['focus', 'blur', 'transitionStart', 'transitionEnd'].map(type =>
+          navigation.addListener(type, (e: $FlowFixMe) =>
+            log.push(`${name} ${type}${e.data != null ? ' ' + JSON.stringify(e.data) : ''}`),
+          ),
+        );
+        return () => unsubscribes.forEach(unsubscribe => unsubscribe());
+      }, [name, navigation]);
+      useFocusEffect(
+        React.useCallback(() => {
+          log.push(`${name} useFocusEffect`);
+          return () => log.push(`${name} useFocusEffect cleanup`);
+        }, [name]),
+      );
+      const headerHeight = useHeaderHeight();
+      React.useEffect(() => {
+        log.push(`${name} useHeaderHeight ${headerHeight}`);
+      }, [headerHeight, name]);
+    }
+
+    function Home({navigation}: $FlowFixMe) {
+      useLog('Home', navigation);
+      return (
+        <Pressable testID="go-details" style={{padding: 12}} onPress={() => navigation.navigate('Details')}>
+          <Text>Go</Text>
+        </Pressable>
+      );
+    }
+    function Details({navigation}: $FlowFixMe) {
+      useLog('Details', navigation);
+      return (
+        <Pressable testID="go-back" style={{padding: 12}} onPress={() => navigation.goBack()}>
+          <Text>Back</Text>
+        </Pressable>
+      );
+    }
+
+    const root = Fantom.createRoot({viewportWidth: 390, viewportHeight: 844});
+    const surfaceId = root.getRootTag();
+    Fantom.runTask(() => {
+      root.render(
+        <NavigationContainer>
+          <Stack.Navigator>
+            <Stack.Screen name="Home" component={Home} />
+            <Stack.Screen name="Details" component={Details} />
+          </Stack.Navigator>
+        </NavigationContainer>,
+      );
+    });
+    settle();
+    console.log('LOG_INITIAL ' + JSON.stringify(log.splice(0)));
+    tap(surfaceId, root, 'go-details');
+    console.log('LOG_PUSH ' + JSON.stringify(log.splice(0)));
+    tap(surfaceId, root, 'go-back');
+    console.log('LOG_POP ' + JSON.stringify(log.splice(0)));
+  });
 });

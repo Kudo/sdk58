@@ -29,6 +29,9 @@
 
 #include <algorithm>
 #include <cstring>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
 #endif
 
 namespace facebook::react {
@@ -128,6 +131,88 @@ bool headerOffsetsContent(const ShadowNode& headerConfig) {
   return !props.hidden && !props.translucent && !props.largeTitle;
 }
 
+std::mutex lifecycleMutex;
+// RNSScreenStack tag -> tags of its RNSScreen children at the last update.
+std::unordered_map<Tag, std::vector<Tag>> stackScreens;
+// RNSScreen tag -> last header height sent with onHeaderHeightChange.
+std::unordered_map<Tag, Float> emittedHeaderHeights;
+
+std::shared_ptr<const RNSScreenEventEmitter> screenEventEmitter(
+    const ShadowNode& screen) {
+  return std::dynamic_pointer_cast<const RNSScreenEventEmitter>(
+      screen.getEventEmitter());
+}
+
+/*
+ * Events a native stack sends for a push/pop without animation: the new top
+ * screen gets onWillAppear and onAppear, the screen that is no longer on top
+ * (if still in the stack) gets onWillDisappear and onDisappear. The top
+ * screen is the last RNSScreen child. Screens removed by JS get no events
+ * (their components are already unmounted; onDismissed is only sent for
+ * dismissals that start on the native side, which do not exist here).
+ */
+int emitStackLifecycleEvents(const ShadowNode& stack) {
+  std::vector<std::shared_ptr<const ShadowNode>> screens;
+  std::vector<Tag> tags;
+  for (const auto& child : stack.getChildren()) {
+    if (isComponent(*child, "RNSScreen")) {
+      screens.push_back(child);
+      tags.push_back(child->getTag());
+    }
+  }
+
+  std::vector<Tag> previousTags;
+  {
+    std::lock_guard<std::mutex> lock(lifecycleMutex);
+    auto it = stackScreens.find(stack.getTag());
+    if (it != stackScreens.end()) {
+      previousTags = it->second;
+    }
+    if (previousTags == tags) {
+      return 0;
+    }
+    stackScreens[stack.getTag()] = tags;
+  }
+
+  std::optional<Tag> previousTop =
+      previousTags.empty() ? std::nullopt : std::optional{previousTags.back()};
+  std::optional<Tag> currentTop =
+      tags.empty() ? std::nullopt : std::optional{tags.back()};
+  if (previousTop == currentTop) {
+    return 0;
+  }
+
+  std::shared_ptr<const RNSScreenEventEmitter> disappearing;
+  if (previousTop.has_value()) {
+    for (const auto& screen : screens) {
+      if (screen->getTag() == *previousTop) {
+        disappearing = screenEventEmitter(*screen);
+      }
+    }
+  }
+  auto appearing =
+      screens.empty() ? nullptr : screenEventEmitter(*screens.back());
+
+  int events = 0;
+  if (disappearing) {
+    disappearing->onWillDisappear({});
+    events++;
+  }
+  if (appearing) {
+    appearing->onWillAppear({});
+    events++;
+  }
+  if (disappearing) {
+    disappearing->onDisappear({});
+    events++;
+  }
+  if (appearing) {
+    appearing->onAppear({});
+    events++;
+  }
+  return events;
+}
+
 int updateScreen(
     const ShadowNode& screen,
     const ShadowNode& parent,
@@ -157,6 +242,26 @@ int updateScreen(
       : 0;
 
   int updates = 0;
+
+  // onHeaderHeightChange: status bar + bar height (iOS calculateHeaderHeight),
+  // 0 without a visible header.
+  Float emittedHeaderHeight =
+      hasVisibleHeader ? screenTopInset + headerHeight : 0;
+  bool headerHeightChanged = false;
+  {
+    std::lock_guard<std::mutex> lock(lifecycleMutex);
+    auto it = emittedHeaderHeights.find(screen.getTag());
+    if (it == emittedHeaderHeights.end() || it->second != emittedHeaderHeight) {
+      emittedHeaderHeights[screen.getTag()] = emittedHeaderHeight;
+      headerHeightChanged = true;
+    }
+  }
+  if (headerHeightChanged) {
+    if (auto eventEmitter = screenEventEmitter(screen)) {
+      eventEmitter->onHeaderHeightChange({.headerHeight = emittedHeaderHeight});
+      updates++;
+    }
+  }
 
   const auto& screenData = screenShadowNode->getStateData();
   if (screenData.frameSize != parentSize ||
@@ -206,6 +311,9 @@ int updateSubtree(
       continue;
     }
     auto origin = contentOrigin + layoutable->getLayoutMetrics().frame.origin;
+    if (isComponent(*child, "RNSScreenStack")) {
+      updates += emitStackLifecycleEvents(*child);
+    }
     if (isComponent(*child, "RNSScreen")) {
       auto screenTopInset = std::max<Float>(0, windowTopInset - origin.y);
       updates += updateScreen(*child, node, screenTopInset, headerHeight);

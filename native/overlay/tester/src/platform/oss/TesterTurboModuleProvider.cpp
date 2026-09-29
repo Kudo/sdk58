@@ -8,6 +8,7 @@
 #include "../TesterTurboModuleProvider.h"
 
 #include "../../components/FantomGestureHandler.h"
+#include "../../components/FantomSafeArea.h"
 
 namespace facebook::react {
 /* static */ TurboModuleProvider
@@ -17,6 +18,9 @@ TesterTurboModuleProvider::getTurboModuleProvider() {
           -> std::shared_ptr<TurboModule> {
         if (name == "RNGestureHandlerModule") {
           return createGestureHandlerModule(jsInvoker);
+        }
+        if (name == "RNCSafeAreaContext") {
+          return createSafeAreaContextModule(jsInvoker);
         }
         return nullptr;
       }};

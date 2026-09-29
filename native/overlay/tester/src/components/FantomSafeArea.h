@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <ReactCommon/CallInvoker.h>
+#include <ReactCommon/TurboModule.h>
 #include <react/renderer/componentregistry/ComponentDescriptorProviderRegistry.h>
 #include <react/renderer/core/ShadowNode.h>
 #include <react/renderer/graphics/RectangleEdges.h>
@@ -39,6 +41,18 @@ EdgeInsets getSafeAreaInsets();
  * event queue is flushed). Returns the number of dispatched events/updates.
  */
 int updateSafeAreas(const ShadowNode &rootShadowNode);
+
+// Size of the most recently started surface (used as the window frame of
+// `initialWindowMetrics`).
+void setSafeAreaWindowSize(Size size);
+
+/*
+ * `RNCSafeAreaContext` TurboModule: `getConstants()` returns
+ * `{initialWindowMetrics: {frame: {x, y, width, height}, insets}}` with the
+ * size of the most recently started surface (or the tester's window size) and
+ * the current safe area insets. Returns nullptr without safe-area-context.
+ */
+std::shared_ptr<TurboModule> createSafeAreaContextModule(std::shared_ptr<CallInvoker> jsInvoker);
 
 // The insets last emitted for the RNCSafeAreaProvider with `tag`.
 std::optional<EdgeInsets> getEmittedSafeAreaProviderInsets(Tag tag);

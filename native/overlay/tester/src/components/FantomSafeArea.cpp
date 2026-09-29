@@ -7,6 +7,8 @@
 
 #include "FantomSafeArea.h"
 
+#include "AppSettings.h"
+
 #include <mutex>
 #include <unordered_map>
 
@@ -32,8 +34,14 @@ struct EmittedMetrics {
   Rect frame;
 };
 std::unordered_map<Tag, EmittedMetrics> emittedMetrics;
+std::optional<Size> windowSize;
 
 } // namespace
+
+void setSafeAreaWindowSize(Size size) {
+  std::lock_guard<std::mutex> lock(safeAreaMutex);
+  windowSize = size;
+}
 
 void setSafeAreaInsets(EdgeInsets insets) {
   std::lock_guard<std::mutex> lock(safeAreaMutex);
@@ -165,6 +173,54 @@ struct Walker {
 
 } // namespace
 
+namespace {
+
+class FantomSafeAreaContextModule : public TurboModule {
+ public:
+  explicit FantomSafeAreaContextModule(std::shared_ptr<CallInvoker> jsInvoker)
+      : TurboModule("RNCSafeAreaContext", std::move(jsInvoker)) {
+    methodMap_["getConstants"] = MethodMetadata{
+        .argCount = 0,
+        .invoker = [](jsi::Runtime& runtime,
+                      TurboModule&,
+                      const jsi::Value*,
+                      size_t) -> jsi::Value {
+          Size size;
+          EdgeInsets insets;
+          {
+            std::lock_guard<std::mutex> lock(safeAreaMutex);
+            size = windowSize.value_or(Size{
+                static_cast<Float>(AppSettings::windowWidth),
+                static_cast<Float>(AppSettings::windowHeight)});
+            insets = windowInsets;
+          }
+          auto frame = jsi::Object(runtime);
+          frame.setProperty(runtime, "x", 0);
+          frame.setProperty(runtime, "y", 0);
+          frame.setProperty(runtime, "width", size.width);
+          frame.setProperty(runtime, "height", size.height);
+          auto insetsObject = jsi::Object(runtime);
+          insetsObject.setProperty(runtime, "top", insets.top);
+          insetsObject.setProperty(runtime, "right", insets.right);
+          insetsObject.setProperty(runtime, "bottom", insets.bottom);
+          insetsObject.setProperty(runtime, "left", insets.left);
+          auto metrics = jsi::Object(runtime);
+          metrics.setProperty(runtime, "frame", frame);
+          metrics.setProperty(runtime, "insets", insetsObject);
+          auto constants = jsi::Object(runtime);
+          constants.setProperty(runtime, "initialWindowMetrics", metrics);
+          return constants;
+        }};
+  }
+};
+
+} // namespace
+
+std::shared_ptr<TurboModule> createSafeAreaContextModule(
+    std::shared_ptr<CallInvoker> jsInvoker) {
+  return std::make_shared<FantomSafeAreaContextModule>(std::move(jsInvoker));
+}
+
 int updateSafeAreas(const ShadowNode& rootShadowNode) {
   const auto* root = dynamic_cast<const LayoutableShadowNode*>(&rootShadowNode);
   if (root == nullptr) {
@@ -185,6 +241,11 @@ void registerSafeAreaComponentDescriptors(
 
 int updateSafeAreas(const ShadowNode& /*rootShadowNode*/) {
   return 0;
+}
+
+std::shared_ptr<TurboModule> createSafeAreaContextModule(
+    std::shared_ptr<CallInvoker> /*jsInvoker*/) {
+  return nullptr;
 }
 
 #endif

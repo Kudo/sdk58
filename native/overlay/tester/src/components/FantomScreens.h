@@ -52,9 +52,16 @@ Float getScreensHeaderHeight();
  *    height), no insets, frameOrigin = (0, top inset - contentOffset.y), so
  *    the header is placed below the status bar at the top of the screen,
  *    where the native bar is drawn.
+ *  - Screen events: onHeaderHeightChange {headerHeight} (top inset + header
+ *    height, 0 without a visible header) when it changes; for each
+ *    RNSScreenStack whose top screen (last RNSScreen child) changed, the new
+ *    top gets onWillAppear + onAppear and the previous top (if still in the
+ *    stack) gets onWillDisappear + onDisappear (a push/pop without
+ *    animation). No onDismissed/onTransitionProgress.
  * Updates are dispatched with ConcreteState::updateState (asynchronous, like
  * the platform); they are committed when the event queue is flushed. Only
- * changed states are dispatched. Returns the number of dispatched updates.
+ * changed states are dispatched. Returns the number of dispatched updates
+ * and events.
  */
 int updateScreenStates(const ShadowNode &rootShadowNode);
 

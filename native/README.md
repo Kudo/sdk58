@@ -23,7 +23,7 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
 | `tester/src/components/FantomScreens.h`, `FantomScreens.cpp`, `FantomScreensSplitScreen.cpp` (new) | react-native-screens: descriptor registration, context entry, emulated native state updates (see Screens). |
 | `tester/src/components/FantomGestureHandler.h`, `FantomGestureHandler.cpp` (new) | react-native-gesture-handler: descriptor registration and the no-op `RNGestureHandlerModule` TurboModule (see Gesture handler). |
-| `tester/src/platform/oss/TesterTurboModuleProvider.cpp` | Provides `RNGestureHandlerModule`. |
+| `tester/src/platform/oss/TesterTurboModuleProvider.cpp` | Provides `RNGestureHandlerModule` and `RNCSafeAreaContext`. |
 | `tester/src/components/FantomSafeArea.h`, `FantomSafeArea.cpp` (new) | react-native-safe-area-context: descriptor registration, `onInsetsChange` events and `RNCSafeAreaView` state (see Safe area). |
 | `tester/scripts/codegen-lib.sh` (new) | Runs React Native codegen for a native library (used by CMake for the native libraries). |
 | `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the TextInput/Switch descriptors above and the native library descriptors. |
@@ -194,6 +194,18 @@ non-zero content origin offset has `contentOriginOffset` (ScrollView:
 parent position + parent `contentOriginOffset` + child `frame` origin.
 `hitTest` uses the same offsets.
 
+Screen events (also after every mount): `onHeaderHeightChange`
+`{headerHeight}` (top inset + header height; 0 without a visible header)
+when it changes; and for each `RNSScreenStack` whose top screen (the last
+`RNSScreen` child) changed, what a native stack sends for a push/pop without
+animation: `onWillDisappear` to the previous top (if it is still in the
+stack), `onWillAppear` to the new top, then `onDisappear` and `onAppear`.
+The initial top screen gets `onWillAppear` + `onAppear`. No `onDismissed`
+(screens removed by JS are already unmounted; a dismissal from the native
+side does not exist here), no `onTransitionProgress`. With
+`@react-navigation/native-stack` this gives `transitionStart`/`transitionEnd`
+events; `focus`/`blur` and `useFocusEffect` come from the navigation state.
+
 TurboModules: the JS asks for `RNSModule` with `TurboModuleRegistry.get`
 (not enforcing; empty spec), and it is not provided. Nothing else is needed
 for the native stack. `global.RNScreensTurboModule` is only used by the
@@ -225,9 +237,12 @@ screen still present, and one screen after tapping "go-back".
   padding or margin according to `mode` and `edges`.
 - `getA11yTree`: the provider has `insets` (the last emitted ones) and
   `RNCSafeAreaView` has `insets` (its state).
-- The `RNCSafeAreaContext` TurboModule (`getConstants` with
-  `initialWindowMetrics`) is not provided; the JS asks for it with
-  `TurboModuleRegistry.get`, so `initialWindowMetrics` is null.
+- The `RNCSafeAreaContext` TurboModule is provided: `getConstants()`
+  returns `{initialWindowMetrics: {frame: {x: 0, y: 0, width, height},
+  insets}}` with the size of the most recently started surface (or the
+  tester's `--windowWidth`/`--windowHeight`) and the current insets. The JS
+  reads it once, when `react-native-safe-area-context` is first evaluated, so
+  call `setSafeAreaInsets` before that.
 
 ## Gesture handler (react-native-gesture-handler)
 
