@@ -2020,7 +2020,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:^19.1.1":
+"@types/react-test-renderer@npm:^19.1.0":
+  version: 19.3.0
+  resolution: "@types/react-test-renderer@npm:19.3.0"
+  dependencies:
+    "@types/react": "npm:*"
+  checksum: 10c0/37f5588f698a057a33c1f4d5fd28a042f3df7f29a3554ddebb7f9c8ecd3e5fba085e5b12d14b30734c30b51959ef17544650b2a9704d629d0af251f126d8ae73
+  languageName: node
+  linkType: hard
+
+"@types/react@npm:*, @types/react@npm:^19.1.1":
   version: 19.3.0
   resolution: "@types/react@npm:19.3.0"
   dependencies:
@@ -4505,6 +4514,7 @@ __metadata:
     metro-config: "npm:0.87.1"
     react: "npm:19.3.0"
     react-native: "npm:0.88.0-rc.2"
+    react-native-gesture-handler: "npm:~3.2.1"
     react-native-reanimated: "npm:4.7.0"
     react-native-safe-area-context: "npm:~5.9.1"
     react-native-screens: "npm:~4.28.0"
@@ -4515,6 +4525,19 @@ __metadata:
     rn-a11y-tree: ./bin/rn-a11y-tree.js
   languageName: unknown
   linkType: soft
+
+"react-native-gesture-handler@npm:~3.2.1":
+  version: 3.2.1
+  resolution: "react-native-gesture-handler@npm:3.2.1"
+  dependencies:
+    "@types/react-test-renderer": "npm:^19.1.0"
+    invariant: "npm:^2.2.4"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/e20537d1eafe35206494eae7885ef85e7cd85185b32ccaac3d25f3e87beafa007ac79556c0af8da245db1140f6b5df35d20509d7fa56301d730de5a8abb1b90f
+  languageName: node
+  linkType: hard
 
 "react-native-is-edge-to-edge@npm:^1.3.1":
   version: 1.3.1
