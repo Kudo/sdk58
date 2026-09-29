@@ -352,6 +352,10 @@ add_executable(fantom_tester ${SOURCES})
 
 target_include_directories(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
+  target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_MACOS_TEXT_LAYOUT=1)
+endif()
+
 foreach(library ${FANTOM_NATIVE_LIBRARIES})
   string(TOUPPER "${library}" library_upper)
   target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_${library_upper}=1)

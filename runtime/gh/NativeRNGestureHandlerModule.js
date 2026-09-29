@@ -19,8 +19,11 @@
  *   'gestureHandlerStateChange' / 'gestureHandlerTouchEvent' on the
  *   RNGestureHandlerDetector element (see runtime/gh/HostGestureDetector.js).
  *
- * Not supported yet: Reanimated worklet delivery (REANIMATED_WORKLET,
- * dispatchesReanimatedEvents), Animated events, virtual detectors,
+ * - v2 with worklet callbacks (REANIMATED_WORKLET, NATIVE_ANIMATED_EVENT):
+ *   Fabric events 'gestureHandlerEvent' / 'gestureHandlerStateChange' on the
+ *   attached view, which Reanimated routes to its `useEvent` worklet.
+ *
+ * Not supported yet: v3 `dispatchesReanimatedEvents`, virtual detectors,
  * transforms in absoluteToLocal.
  */
 
@@ -35,7 +38,7 @@ import EventManager from 'react-native-gesture-handler/src/web/tools/EventManage
 import InteractionManager from 'react-native-gesture-handler/src/web/tools/InteractionManager';
 import NodeManager from 'react-native-gesture-handler/src/web/tools/NodeManager';
 
-import {findElementByTag} from './hostContext';
+import {findElementByTag, getRootTag} from './hostContext';
 
 const NativeFantom = require('../fantom/specs/NativeFantom').default;
 const {NativeEventCategory} = require('../fantom/specs/NativeFantom');
@@ -263,20 +266,52 @@ function deviceEventProps() {
 
 /** Native events queued during `feed`; the runner flushes them. */
 let pendingDetectorEvents = 0;
+/** Of those, events for Reanimated (applied on the next UI tick). */
+let pendingReanimatedEvents = 0;
+
+function enqueueOnElement(element, type, payload) {
+  const tag = element.__nativeTag;
+  if (typeof NativeFantom.enqueueNativeEventByTag === 'function' && getRootTag() != null) {
+    NativeFantom.enqueueNativeEventByTag(getRootTag(), tag, type, payload, NativeEventCategory.Discrete, false);
+  } else {
+    NativeFantom.enqueueNativeEvent(
+      require('react-native/src/private/webapis/dom/nodes/internals/NodeInternals').getNativeNodeReference(element),
+      type,
+      payload,
+      NativeEventCategory.Discrete,
+      false,
+    );
+  }
+  pendingDetectorEvents++;
+}
+
+/**
+ * v2 with worklet callbacks (REANIMATED_WORKLET) and NATIVE_ANIMATED_EVENT:
+ * like Android's reanimatedProxy.sendEvent, Fabric events on the attached
+ * view with the flat payload. Fabric names them topGestureHandlerEvent /
+ * topGestureHandlerStateChange; Reanimated maps top* to on* and runs the
+ * `useEvent(..., ['onGestureHandlerStateChange', 'onGestureHandlerEvent'])`
+ * worklet registered for that view on the UI runtime.
+ */
+function viewEventProps(element) {
+  const send = type => event => {
+    enqueueOnElement(element, type, event.nativeEvent);
+    pendingReanimatedEvents++;
+  };
+  return {
+    current: {
+      onGestureHandlerEvent: send('gestureHandlerEvent'),
+      onGestureHandlerStateChange: send('gestureHandlerStateChange'),
+      // Android sends touch events for Reanimated as onGestureHandlerEvent.
+      onGestureHandlerTouchEvent: send('gestureHandlerEvent'),
+    },
+  };
+}
 
 /** v3: Fabric events on the RNGestureHandlerDetector element. */
 function detectorEventProps(detectorElement) {
   const send = type => event => {
-    NativeFantom.enqueueNativeEvent(
-      require('react-native/src/private/webapis/dom/nodes/internals/NodeInternals').getNativeNodeReference(
-        detectorElement,
-      ),
-      type,
-      event.nativeEvent,
-      NativeEventCategory.Discrete,
-      false,
-    );
-    pendingDetectorEvents++;
+    enqueueOnElement(detectorElement, type, event.nativeEvent);
   };
   return {
     current: {
@@ -298,7 +333,12 @@ function isButtonElement(element) {
 export function attachToElement(handlerTag, element, actionType, detectorElement) {
   const handler = NodeManager.getHandler(handlerTag);
   const propsRef =
-    detectorElement != null ? detectorEventProps(detectorElement) : deviceEventProps();
+    detectorElement != null
+      ? detectorEventProps(detectorElement)
+      : actionType === ActionType.REANIMATED_WORKLET ||
+          actionType === ActionType.NATIVE_ANIMATED_EVENT
+        ? viewEventProps(element)
+        : deviceEventProps();
   handler.init(
     new HostView(element),
     propsRef,
@@ -369,6 +409,7 @@ const captured = new Map(); // pointerId -> HostEventManager[]
  */
 function feed(kind, sample, path) {
   pendingDetectorEvents = 0;
+  pendingReanimatedEvents = 0;
   let targets;
   if (kind === 'down') {
     const order = new Map(path.map((tag, index) => [tag, index]));
@@ -377,12 +418,20 @@ function feed(kind, sample, path) {
       .sort((a, b) => order.get(b.view.tag) - order.get(a.view.tag));
     const taken = targets.filter(m => m.feed('down', sample));
     captured.set(sample.pointerId, taken);
-    return {handlers: taken.length, detectorEvents: pendingDetectorEvents};
+    return {
+      handlers: taken.length,
+      detectorEvents: pendingDetectorEvents,
+      reanimatedEvents: pendingReanimatedEvents,
+    };
   }
   targets = captured.get(sample.pointerId) ?? [];
   for (const m of targets) m.feed(kind, sample);
   if (kind === 'up' || kind === 'cancel') captured.delete(sample.pointerId);
-  return {handlers: targets.length, detectorEvents: pendingDetectorEvents};
+  return {
+    handlers: targets.length,
+    detectorEvents: pendingDetectorEvents,
+    reanimatedEvents: pendingReanimatedEvents,
+  };
 }
 
 globalThis.__rnA11yGestureHandler = {

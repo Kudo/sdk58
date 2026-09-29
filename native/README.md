@@ -32,7 +32,7 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the TextInput/Switch descriptors above and the native library descriptors. |
 | `tester/src/TesterAppDelegate.cpp` | Adds the react-native-screens context entry and runs the screens and safe-area updates after every mount. With reanimated: provides its TurboModules, sets its clock and produces its frames (see Reanimated). `loadScript` flushes the message queue until the JS runtime pointer is set (at most 30 s, then a fatal error). Upstream flushes once; when the runtime task was queued after that flush, `loadScriptAndRunTests` crashed with SIGSEGV (null `runtime_`, `TesterAppDelegate.cpp:187`). |
 | `tester/src/render/HitTest.h`, `HitTest.cpp` (new) | Hit testing with `hitSlop`, and tag lookup in the shadow tree. |
-| `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`, `hitTest`, `enqueueNativeEventByTag`, `enqueueScrollEventByTag`, `setTextInputTextByTag`, `updateScreenStates` (also registered as `updateNativeStates`), `setScreensHeaderHeight` and `setSafeAreaInsets`. They are registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
+| `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`, `hitTest`, `enqueueNativeEventByTag`, `enqueueScrollEventByTag`, `setTextInputTextByTag`, `updateScreenStates` (also registered as `updateNativeStates`), `setScreensHeaderHeight`, `setSafeAreaInsets` and `getCapabilities`. They are registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
 
 Signatures of the added `NativeFantom` methods (Flow):
 
@@ -67,6 +67,12 @@ setScreensHeaderHeight: (height: number) => void;
 // Window safe area insets, default 0. Applied at the next mount or
 // updateNativeStates call.
 setSafeAreaInsets: (insets: {top?: number, left?: number, right?: number, bottom?: number}) => void;
+// JSON array of feature strings: always "getA11yTree", "getA11yTree.mounted",
+// "mountedProps", "hitTest", "eventsByTag", "setTextInputText",
+// "updateNativeStates", "statusBarManager", "textInput", "switch"; and, when
+// built in, "textLayout" (macOS text measurement), "safeArea", "screens",
+// "gestureHandler", "worklets", "reanimated".
+getCapabilities: () => string;
 ```
 
 The by-tag methods throw a `JSError` if the tag is not in the surface's

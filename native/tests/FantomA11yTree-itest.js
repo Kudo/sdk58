@@ -114,4 +114,12 @@ describe('getA11yTree', () => {
     });
     console.log('A11Y_TREE2 ' + JSON.stringify(getA11yTree(root)));
   });
+
+  it('reports capabilities', () => {
+    // $FlowFixMe[prop-missing] registered natively, not in the codegen spec.
+    const capabilities = JSON.parse(NativeFantom.getCapabilities());
+    console.log('CAPABILITIES ' + JSON.stringify(capabilities));
+    expect(capabilities).toContain('getA11yTree');
+    expect(capabilities).toContain('getA11yTree.mounted');
+  });
 });

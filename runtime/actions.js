@@ -206,7 +206,9 @@ export function createRunner({root, tapMode}) {
       if (target == null) {
         throw new Error(`Target not found: ${JSON.stringify(spec)}`);
       }
-      point = center(target.box);
+      // Aim at where the target is drawn (transforms move it; the host
+      // hit test honors transforms).
+      point = center(target.visualBox ?? target.box);
     }
     const hit = hitTest(entries, point.x, point.y);
     if (target == null) target = hit;
@@ -259,6 +261,12 @@ export function createRunner({root, tapMode}) {
     // v3 handlers report through Fabric events on the detector.
     NativeFantom.flushEventQueue();
     Fantom.runWorkLoop();
+    if (result != null && result.reanimatedEvents > 0) {
+      // Reanimated applies worklet updates on the next UI tick; run one
+      // without moving the clock noticeably (1 µs).
+      NativeFantom.produceFramesForDuration(0.001);
+      Fantom.flushAllNativeEvents();
+    }
     if (result != null && result.handlers > 0) {
       step.gestureHandlers = Math.max(step.gestureHandlers ?? 0, result.handlers);
       const name = `gh:${kind}`;

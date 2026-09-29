@@ -180,6 +180,44 @@ jsi::Value setTextInputTextByTagHostFunction(
   return jsi::Value::undefined();
 }
 
+// getCapabilities(): string (JSON array of the host's feature strings)
+jsi::Value getCapabilitiesHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& /*turboModule*/,
+    const jsi::Value* /*args*/,
+    size_t /*count*/) {
+  folly::dynamic capabilities = folly::dynamic::array(
+      "getA11yTree",
+      "getA11yTree.mounted",
+      "mountedProps",
+      "hitTest",
+      "eventsByTag",
+      "setTextInputText",
+      "updateNativeStates",
+      "statusBarManager",
+      "textInput",
+      "switch");
+#ifdef FANTOM_WITH_MACOS_TEXT_LAYOUT
+  capabilities.push_back("textLayout");
+#endif
+#ifdef FANTOM_WITH_SAFEAREACONTEXT
+  capabilities.push_back("safeArea");
+#endif
+#ifdef FANTOM_WITH_RNSCREENS
+  capabilities.push_back("screens");
+#endif
+#ifdef FANTOM_WITH_RNGESTUREHANDLER
+  capabilities.push_back("gestureHandler");
+#endif
+#ifdef FANTOM_WITH_WORKLETS
+  capabilities.push_back("worklets");
+#endif
+#ifdef FANTOM_WITH_REANIMATED
+  capabilities.push_back("reanimated");
+#endif
+  return jsi::String::createFromUtf8(runtime, folly::toJson(capabilities));
+}
+
 // updateScreenStates(surfaceId): number
 jsi::Value updateScreenStatesHostFunction(
     jsi::Runtime& runtime,
@@ -247,6 +285,8 @@ NativeFantom::NativeFantom(
       .argCount = 1, .invoker = updateScreenStatesHostFunction};
   methodMap_["setScreensHeaderHeight"] = MethodMetadata{
       .argCount = 1, .invoker = setScreensHeaderHeightHostFunction};
+  methodMap_["getCapabilities"] = MethodMetadata{
+      .argCount = 0, .invoker = getCapabilitiesHostFunction};
   methodMap_["updateNativeStates"] = MethodMetadata{
       .argCount = 1, .invoker = updateScreenStatesHostFunction};
   methodMap_["setSafeAreaInsets"] = MethodMetadata{

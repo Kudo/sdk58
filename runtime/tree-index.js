@@ -31,11 +31,92 @@ export function isKeptChild(child) {
  * scroll offsets), `parent` is the parent entry
  * (or null) and `children` are child entries.
  */
+// --- transforms (same rules as src/tree.ts visualFor) -----------------------
+
+const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+function multiply(a, b) {
+  const out = new Array(16);
+  for (let col = 0; col < 4; col++) {
+    for (let row = 0; row < 4; row++) {
+      let sum = 0;
+      for (let k = 0; k < 4; k++) sum += a[k * 4 + row] * b[col * 4 + k];
+      out[col * 4 + row] = sum;
+    }
+  }
+  return out;
+}
+
+function translation(x, y) {
+  return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1];
+}
+
+function isIdentity(m) {
+  return m.every((v, i) => Math.abs(v - IDENTITY[i]) < 1e-9);
+}
+
+function applyMatrix(m, x, y) {
+  const w = m[3] * x + m[7] * y + m[15] || 1;
+  return {x: (m[0] * x + m[4] * y + m[12]) / w, y: (m[1] * x + m[5] * y + m[13]) / w};
+}
+
+function boundsAfter(m, rect) {
+  const corners = [
+    applyMatrix(m, rect.x, rect.y),
+    applyMatrix(m, rect.x + rect.width, rect.y),
+    applyMatrix(m, rect.x, rect.y + rect.height),
+    applyMatrix(m, rect.x + rect.width, rect.y + rect.height),
+  ];
+  const xs = corners.map(c => c.x);
+  const ys = corners.map(c => c.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return {x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y};
+}
+
+function asMatrix(value) {
+  return Array.isArray(value) && value.length === 16 ? value : null;
+}
+
+/** Returns {visualBox, childMatrix} for a node with layout box `box`. */
+function visualOf(node, origin, box, virtual, parentMatrix) {
+  if (virtual) {
+    return {
+      visualBox: parentMatrix != null ? boundsAfter(parentMatrix, box) : box,
+      childMatrix: parentMatrix,
+    };
+  }
+  const mounted = node.mounted;
+  const drawn =
+    mounted?.frame != null
+      ? {
+          x: origin.x + mounted.frame.x,
+          y: origin.y + mounted.frame.y,
+          width: mounted.frame.width,
+          height: mounted.frame.height,
+        }
+      : box;
+  const transform = asMatrix(mounted?.transform) ?? asMatrix(node.transform);
+  let about = null;
+  if (transform != null && !isIdentity(transform)) {
+    const cx = drawn.x + drawn.width / 2;
+    const cy = drawn.y + drawn.height / 2;
+    about = multiply(translation(cx, cy), multiply(transform, translation(-cx, -cy)));
+  }
+  let local = null;
+  if (drawn.x !== box.x || drawn.y !== box.y) local = translation(drawn.x - box.x, drawn.y - box.y);
+  if (about != null) local = local != null ? multiply(about, local) : about;
+  const childMatrix =
+    parentMatrix != null && local != null ? multiply(parentMatrix, local) : (local ?? parentMatrix);
+  const own = about != null ? (parentMatrix != null ? multiply(parentMatrix, about) : about) : parentMatrix;
+  return {visualBox: own != null ? boundsAfter(own, drawn) : drawn, childMatrix};
+}
+
 export function indexTree(root) {
   const entries = [];
   let counter = 0;
 
-  function visit(node, origin, parentBox, parent) {
+  function visit(node, origin, parentBox, parent, parentMatrix) {
     const virtual = node.frame == null;
     const box = virtual
       ? {...(parentBox ?? {x: origin.x, y: origin.y, width: 0, height: 0})}
@@ -45,9 +126,13 @@ export function indexTree(root) {
           width: node.frame.width,
           height: node.frame.height,
         };
+    const {visualBox, childMatrix} = visualOf(node, origin, box, virtual, parentMatrix);
     const entry = {
       node,
       ref: `n${counter++}`,
+      // Where the node is drawn (transforms, mounted frame); equals `box`
+      // when nothing applies. Taps aim at its center; the JS hit test uses it.
+      visualBox,
       tag: node.tag ?? null,
       type: node.type,
       testID: node.testID ?? null,
@@ -70,13 +155,13 @@ export function indexTree(root) {
       : {x: box.x + offset.x, y: box.y + offset.y};
     for (const child of node.children ?? []) {
       if (isKeptChild(child)) {
-        entry.children.push(visit(child, childOrigin, box, entry));
+        entry.children.push(visit(child, childOrigin, box, entry, childMatrix));
       }
     }
     return entry;
   }
 
-  visit(root, {x: 0, y: 0}, null, null);
+  visit(root, {x: 0, y: 0}, null, null, null);
   return entries;
 }
 
@@ -114,7 +199,7 @@ export function hitTestEntries(entries, x, y) {
     if (entry.virtual) return null;
     const pointerEvents = entry.node.pointerEvents ?? 'auto';
     if (pointerEvents === 'none') return null;
-    if (!contains(entry.box, x, y)) return null;
+    if (!contains(entry.visualBox ?? entry.box, x, y)) return null;
     if (pointerEvents !== 'box-only') {
       for (let i = entry.children.length - 1; i >= 0; i--) {
         const found = hit(entry.children[i]);
