@@ -103,7 +103,7 @@ registerRender(() => {
       // Typed JSON dump of the committed ShadowTree (hierarchy before view
       // flattening, numbers/booleans instead of debug strings).
       source = 'shadowTree';
-      tree = NativeFantom.getA11yTree(rootTag, includeDebugProps);
+      tree = require('__RUNTIME_DIR__/hostConfig').readA11yTree(rootTag, includeDebugProps);
     } else {
       // Fallback for hosts without getA11yTree: the mounted view tree from
       // Fantom's RenderOutput (type/props/children, debug-string props with

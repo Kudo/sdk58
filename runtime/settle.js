@@ -7,13 +7,15 @@
  */
 
 const Fantom = require('./fantom/index');
+import {readA11yTree} from './hostConfig';
+
 const NativeFantom = require('./fantom/specs/NativeFantom').default;
 
 const MAX_ROUNDS = 10;
 
 export function settle(surfaceId) {
   const canCompare = typeof NativeFantom.getA11yTree === 'function';
-  let previous = canCompare ? NativeFantom.getA11yTree(surfaceId, false) : null;
+  let previous = canCompare ? readA11yTree(surfaceId) : null;
   for (let round = 0; round < MAX_ROUNDS; round++) {
     // Host-emulated native state (react-native-screens, safe area); the
     // host also does this after every mount.
@@ -22,7 +24,7 @@ export function settle(surfaceId) {
     }
     Fantom.flushAllNativeEvents();
     if (!canCompare) continue;
-    const current = NativeFantom.getA11yTree(surfaceId, false);
+    const current = readA11yTree(surfaceId);
     if (current === previous) return round + 1;
     previous = current;
   }

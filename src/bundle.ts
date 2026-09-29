@@ -28,6 +28,8 @@ const FALLBACK_PLATFORM = 'android';
 export type TapMode = 'touch' | 'click' | 'both';
 
 export type HostConfig = {
+  /** getA11yTree includeMountedProps (default true). */
+  mounted?: boolean;
   headerHeight?: number;
   safeAreaInsets?: {top: number; left: number; right: number; bottom: number};
 };

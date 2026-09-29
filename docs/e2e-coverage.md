@@ -84,5 +84,5 @@ without Reanimated).
 - No step has an error.
 - `box` width 50 at `start`, strictly between 50 and 250 at `mid` (200 ms into a 400 ms `withTiming`; 150 today), 250 at `end` (±0.5).
 - `slide`: the layout `box` does not move; `visualBox.x - box.x` ≈ 120 (±1) after `withSpring(120)` and 1000 ms (`style.transform[12]` = 120).
-- `fade`: `effectiveOpacity` < 1 at `fade-start` (50 ms into `FadeIn.duration(300)`) — checked only when `capabilities` has `getA11yTree.mounted`; otherwise logged as a diagnostic — and 1 at `fade-end`.
+- `fade`: `effectiveOpacity` < 1 at `fade-start` (50 ms into `FadeIn.duration(300)`; mounted opacity ≈ 0.056 today) — checked when `capabilities` has `getA11yTree.mounted`, otherwise logged as a diagnostic — and 1 at `fade-end`.
 - `label` = "from-ui" (`runOnUI` → `runOnJS` roundtrip).

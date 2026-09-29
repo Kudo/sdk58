@@ -20,7 +20,10 @@ const OPTIONAL_METHODS = [
 export function getCapabilities() {
   const out = OPTIONAL_METHODS.filter(name => typeof NativeFantom[name] === 'function');
   if (typeof NativeFantom.getCapabilities === 'function') {
-    for (const name of NativeFantom.getCapabilities()) {
+    // The host returns a JSON array (string); accept an array too.
+    const raw = NativeFantom.getCapabilities();
+    const reported = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    for (const name of Array.isArray(reported) ? reported : []) {
       if (!out.includes(name)) out.push(name);
     }
   }

@@ -4,7 +4,7 @@
  * work loop itself).
  *
  * Host methods (NativeFantom, added by react-native-a11y-tree's host):
- *   getA11yTree(surfaceId, includeDebugProps) -> string       (required)
+ *   getA11yTree(surfaceId, includeDebugProps, includeMountedProps) -> string (required)
  *   hitTest(surfaceId, x, y) -> string ('{"tag","type","path"}' | 'null')
  *   enqueueNativeEventByTag(surfaceId, tag, type, payload?, category?, isUnique?)
  *   enqueueScrollEventByTag(surfaceId, tag, {x, y, zoomScale?})
@@ -15,6 +15,7 @@
  * `root.document`. Each step reports which path it used (`via`).
  */
 
+import {readA11yTree} from './hostConfig';
 import {settle} from './settle';
 import {
   center,
@@ -58,7 +59,7 @@ export function createRunner({root, tapMode}) {
    * (`element.scrollLeft/scrollTop`, which reads the ShadowTree state).
    */
   function readTree() {
-    const tree = JSON.parse(NativeFantom.getA11yTree(surfaceId, false));
+    const tree = JSON.parse(readA11yTree(surfaceId));
     const visit = node => {
       if (/ScrollView$/.test(node.type) && node.tag != null) {
         const element = findElementByTagOrNull(node.tag);

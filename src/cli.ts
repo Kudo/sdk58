@@ -24,6 +24,7 @@ function positiveNumber(value: string): number {
 }
 
 type HostConfigOptions = {
+  mounted?: boolean;
   headerHeight?: number;
   safeAreaInsets?: HostConfig['safeAreaInsets'];
 };
@@ -78,6 +79,7 @@ function parseInsets(value: string): NonNullable<HostConfig['safeAreaInsets']> {
  */
 function hostConfigFor(platform: string, options: HostConfigOptions): HostConfig {
   const config: HostConfig = {};
+  if (options.mounted === false) config.mounted = false;
   const headerHeight = options.headerHeight ?? (platform === 'ios' ? 44 : undefined);
   if (headerHeight != null) config.headerHeight = headerHeight;
   if (options.safeAreaInsets != null) config.safeAreaInsets = options.safeAreaInsets;
@@ -269,6 +271,7 @@ function addCommonOptions(command: Command): Command {
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
+    .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
     .option(
       '--header-height <dp>',
       'react-native-screens native header height (default: 44 for --platform ios, else the host default 56)',
@@ -318,6 +321,7 @@ program
   )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
+  .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
   .option(
     '--header-height <dp>',
     'react-native-screens native header height (default: 44 for --platform ios, else the host default 56)',

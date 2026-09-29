@@ -30,7 +30,7 @@ macOS arm64 only (the host is built by `yarn build:host`).
 | react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No transitions; `--platform ios` fails in the navigation example (see Platform) |
 | react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
 | react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner; worklet callbacks through Reanimated | `e2e/gestures.test.ts` | No v3 Reanimated detector events, virtual detectors, or transforms in `absoluteToLocal` |
-| react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms) | `e2e/reanimated.test.ts` | `entering`/`exiting` opacity needs the host's mounted-view overrides (`getA11yTree.mounted`) |
+| react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
 | Expo modules, `@expo/ui` | Not started | none | |
 
 ## Quick start
@@ -67,6 +67,7 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--height <dp>` | all | `844` | Viewport height |
 | `--header-height <dp>` | all | 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
 | `--safe-area-insets <t,l,r,b>` | all | `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
+| `--no-mounted` | all | mounted on | Do not read mounted-view values (`getA11yTree` `includeMountedProps`; used for `visualBox`, `effectiveOpacity`) |
 | `--dev` | all | off | Development bundle (`__DEV__ = true`) |
 | `--keep-bundle` | all | off | Keep the bundle and print its path to stderr |
 | `-v, --verbose` | all | off | Metro progress, host glog and console output on stderr |
@@ -548,7 +549,7 @@ react-native-safe-area-context in the host; react-native-gesture-handler
 (JS module on its web handlers + host descriptors); CI workflow (not yet run
 on GitHub).
 
-Reanimated/worklets are in the host (mounted-view overrides pending).
+Reanimated/worklets are in the host, including mounted-view values.
 
 Pending: release
 (prebuilt host binaries for macOS arm64/x86_64 and Linux, no Homebrew
