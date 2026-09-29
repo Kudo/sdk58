@@ -184,3 +184,40 @@ test('children of a scrolled ScrollView are shifted by its contentOffset', () =>
   assert.equal(content.box.y, -500);
   assert.equal(find(root, n => n.testID === 'row-12')!.box.y, 220);
 });
+
+test('contentOriginOffset places children (RNSScreen header, ScrollView)', () => {
+  const tree: ShadowNodeJSON = {
+    type: 'RootView',
+    frame: {x: 0, y: 0, width: 390, height: 844},
+    children: [
+      {
+        type: 'RNSScreen',
+        frame: {x: 0, y: 0, width: 390, height: 844},
+        contentOriginOffset: {x: 0, y: 91},
+        activityState: 2,
+        children: [
+          {type: 'View', testID: 'content', frame: {x: 0, y: 0, width: 390, height: 753}, children: []},
+          {type: 'RNSScreenStackHeaderConfig', title: 'Home', frame: {x: 0, y: -44, width: 390, height: 44}, children: []},
+          {
+            type: 'ScrollView',
+            frame: {x: 0, y: 100, width: 390, height: 400},
+            contentOffset: {x: 0, y: 600},
+            contentOriginOffset: {x: 0, y: -600},
+            children: [{type: 'View', testID: 'row', frame: {x: 0, y: 720, width: 390, height: 60}, children: []}],
+          },
+        ],
+      },
+    ],
+  };
+  const {root} = toRenderResult({viewport: {width: 390, height: 844}, source: 'shadowTree', tree});
+  const screen = root.children[0];
+  assert.equal(screen.style.activityState, 2);
+  assert.deepEqual(screen.style.contentOriginOffset, {x: 0, y: 91});
+  assert.equal(find(root, n => n.testID === 'content')!.box.y, 91);
+  const header = find(root, n => n.type === 'RNSScreenStackHeaderConfig')!;
+  assert.deepEqual(header.box, {x: 0, y: 47, width: 390, height: 44});
+  assert.equal(header.name, 'Home');
+  assert.equal(header.role, null);
+  // contentOriginOffset wins over contentOffset (no double counting).
+  assert.equal(find(root, n => n.testID === 'row')!.box.y, 91 + 100 - 600 + 720);
+});

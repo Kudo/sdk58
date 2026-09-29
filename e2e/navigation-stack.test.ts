@@ -24,17 +24,6 @@ function findAll(node: TreeNode, pred: (n: TreeNode) => boolean): TreeNode[] {
 const byType = (root: TreeNode, type: string) => findAll(root, n => n.type === type);
 const byTestID = (root: TreeNode, testID: string) => findAll(root, n => n.testID === testID)[0];
 
-/** All strings a header node exposes: its props (style), a11y, text, and descendant text. */
-function headerStrings(header: TreeNode): string[] {
-  const out: string[] = [];
-  for (const n of findAll(header, () => true)) {
-    for (const value of [n.text, n.name, ...Object.values(n.style), ...Object.values(n.a11y.raw ?? {})]) {
-      if (typeof value === 'string') out.push(value);
-    }
-  }
-  return out;
-}
-
 test(
   'run examples/navigation-stack/actions.json',
   {
@@ -61,15 +50,14 @@ test(
     }
     const {home, details, back} = result.snapshots;
 
-    // Without native screens support the RNS* components come through the
-    // legacy interop layer: screens have no size and headers expose no title.
+    // Without native screens support the RNS* components come through a
+    // fallback descriptor: no header title and no header height.
     const firstScreen = byType(home, 'RNSScreen')[0];
-    const detailsHeaders = byType(details, 'RNSScreenStackHeaderConfig');
     if (firstScreen == null || firstScreen.box.width === 0) {
       t.skip('host lacks react-native-screens support (RNSScreen has no size)');
       return;
     }
-    if (!detailsHeaders.some(h => headerStrings(h).includes('Details'))) {
+    if (!byType(home, 'RNSScreenStackHeaderConfig').some(h => h.style.title === 'Home')) {
       t.skip('host lacks react-native-screens support (RNSScreenStackHeaderConfig has no title)');
       return;
     }
@@ -82,6 +70,16 @@ test(
     assert.deepEqual(screens[1].box, stack.box);
     assert.ok(byTestID(screens[1], 'details-text'), 'details-text is not in the second screen');
     assert.equal(byTestID(screens[1], 'details-text').text, 'Details 42');
+
+    // The top screen's native header: title "Details", 56 dp (Android
+    // toolbar) at the top; the screen content starts below it.
+    const header = screens[1].children.find(c => c.type === 'RNSScreenStackHeaderConfig');
+    assert.ok(header, 'RNSScreenStackHeaderConfig not found in the second screen');
+    assert.equal(header.style.title, 'Details');
+    assert.equal(header.name, 'Details');
+    assert.equal(header.role, null);
+    assert.deepEqual(header.box, {x: 0, y: 0, width: 390, height: 56});
+    assert.ok(byTestID(screens[1], 'details-text').box.y >= 56, 'content is not below the header');
 
     // back: one screen again, Home content visible.
     const [backStack] = byType(back, 'RNSScreenStack');

@@ -43,6 +43,8 @@ Options for `render <file>`:
 | `--out <file>` | stdout | Write the JSON to a file |
 | `--keep-bundle` | off | Keep the bundle and print its path to stderr |
 | `--bundle-only` | off | Build the bundle and stop (no host needed) |
+| `--header-height <dp>` | 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
+| `--safe-area-insets <t,l,r,b>` | `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
 | `--debug-props` | off | Add raw host debug props to each node (`debugProps`; `shadowTree` source only) |
 | `--dev` | off | Development bundle (`__DEV__ = true`) |
 | `-v, --verbose` | off | Metro progress, host glog and console output on stderr |
@@ -93,6 +95,14 @@ the host implements it, else `NativeFantom.getRenderedOutput`.
   values are typed (numbers, booleans), and `role`, `accessibilityValue` and
   text fragments are available. Mapping tables are at the top of the
   `shadowTree` section in `src/tree.ts`. Notes:
+  - Children are placed at parent position + parent `contentOriginOffset`
+    + child frame. The host emits `contentOriginOffset` where it is non-zero:
+    ScrollView `-contentOffset`, `RNSScreen` `(0, topInset + headerHeight)`.
+    So `box` is the position on screen (e.g. an `RNSScreenStackHeaderConfig`
+    frame of `{0,-56,390,56}` inside a screen with offset 56 is at y = 0).
+  - `RNSScreenStackHeaderConfig` gets its `title` as `name` (role stays
+    `null`). Screen and header props (`activityState`, `stackPresentation`,
+    `title`, `hidden`, ...) and safe-area `insets` are in `style`.
   - `box` values are rounded to 1/1000 dp (layout is pixel-snapped, which
     leaves float noise such as `63.99999`).
   - `yogaStyle` edge and gutter objects are flattened to React Native style
@@ -208,12 +218,11 @@ Rules:
   this, `onLayout` never reaches JS and FlatList cannot compute its window.
   This also applies to `render`.
 - Scrolling: ShadowTree frames do not move when a ScrollView scrolls (the
-  offset is in the ScrollView's state). `box` values are on-screen positions:
-  children of a ScrollView are shifted by its `contentOffset`, and the JS hit
-  test uses the same positions. The host's `getA11yTree` reports
-  `contentOffset` from props today, so the runner reads the state offset
-  through the DOM API (`element.scrollTop` / `scrollLeft`) and writes it into
-  the ScrollView's `contentOffset` (fallback `scrollOffset: dom`).
+  offset is in the ScrollView's state). `box` values are on-screen positions
+  (see `contentOriginOffset`), and the JS hit test uses the same positions.
+  For hosts that report `contentOffset` from props only, the runner reads the
+  state offset through the DOM API (`element.scrollTop` / `scrollLeft`)
+  (fallback `scrollOffset: dom`).
 - `run` needs a host with `getA11yTree`.
 
 Examples: `examples/basic/actions.json` (typing, Switch, Pressable) and
