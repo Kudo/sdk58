@@ -61,6 +61,7 @@ describe('hitTest and by-tag events', () => {
     let presses = 0;
     const changes: Array<string> = [];
     const scrolls: Array<number> = [];
+    let lastScrollEvent: $FlowFixMe = null;
 
     Fantom.runTask(() => {
       root.render(
@@ -99,7 +100,10 @@ describe('hitTest and by-tag events', () => {
           <ScrollView
             testID="scroll"
             style={{height: 100}}
-            onScroll={e => scrolls.push(e.nativeEvent.contentOffset.y)}>
+            onScroll={e => {
+              scrolls.push(e.nativeEvent.contentOffset.y);
+              lastScrollEvent = {...e.nativeEvent};
+            }}>
             <View style={{height: 1000}} />
           </ScrollView>
         </View>,
@@ -222,6 +226,10 @@ describe('hitTest and by-tag events', () => {
     console.log('SCROLL ' + JSON.stringify({contentOffset: scrollAfter.contentOffset, scrolls}));
     expect(scrollAfter.contentOffset.y).toBe(250);
     expect(scrolls).toEqual([250]);
+    console.log('SCROLL_EVENT ' + JSON.stringify(lastScrollEvent));
+    expect(lastScrollEvent.zoomScale).toBe(1);
+    expect(lastScrollEvent.contentSize.height).toBeCloseTo(1000, 3);
+    expect(lastScrollEvent.layoutMeasurement.height).toBeCloseTo(100, 3);
 
     // Unknown tag
     expect(() => Native.enqueueNativeEventByTag(surfaceId, 99999, 'click', {})).toThrow();

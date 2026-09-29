@@ -96,6 +96,11 @@ Events that worked in `tests/FantomInteraction-itest.js` (Pressable with
   `getA11yTree` then shows the new `text` and width.
 - `enqueueScrollEventByTag` calls `onScroll` and updates the ScrollView state;
   `getA11yTree` reads `contentOffset` (and `contentSize`) from the state.
+  The `onScroll` payload has `contentSize` from the ScrollView state (the
+  children's layout), `layoutMeasurement` from the ScrollView frame, and
+  `zoomScale` 1 unless the caller passes one (upstream Fantom sends 0, the
+  `ScrollEvent` default, also through `enqueueScrollEvent`). Sizes are Yoga
+  floats, so they can be off by about 1e-4 (for example 1000.00006).
 
 ## TextInput and Switch
 

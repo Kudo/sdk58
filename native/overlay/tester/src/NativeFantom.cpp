@@ -469,7 +469,9 @@ void NativeFantom::enqueueScrollEvent(
       scrollViewShadowNode->getLayoutMetrics().frame.size;
   scrollEvent.contentInset =
       scrollViewShadowNode->getConcreteProps().contentInset;
-  scrollEvent.zoomScale = options.zoomScale.value_or(scrollEvent.zoomScale);
+  // ScrollEvent's default zoomScale is 0; devices report 1 when not zoomed
+  // (VirtualizedList divides/multiplies offsets by it).
+  scrollEvent.zoomScale = options.zoomScale.value_or(1);
 
   scrollViewShadowNode->getConcreteEventEmitter().onScroll(scrollEvent);
 
