@@ -791,3 +791,360 @@ inserts that key. It creates `ReanimatedMountHook` and `ReanimatedCommitHook`.
 
 Trial artifacts (not in the repo): `/tmp/libs/` (tarballs), `/tmp/cg/`
 (schemas, generated codegen, compile flags, `chk.sh`).
+
+## 5. RNGH port map
+
+Goal: keep the NATIVE JS paths of RNGH 3.2.1 (bundle platform `android`) and
+replace only the native module with a JS module built on the classes in
+`src/web/`. All paths are relative to
+`/tmp/libs/react-native-gesture-handler-3.2.1/package/src/` unless stated.
+
+### 5.1 DOM and web globals in the handler core
+
+Direct uses (not through `delegate.*` or an `EventManager`) found by grep for
+`document`, `window`, `HTMLElement`, `Element`, `getComputedStyle`, `style`,
+`addEventListener`, `PointerEvent`, `requestAnimationFrame`, `performance.now`,
+`Date.now`, `setTimeout`, `navigator`, `DOMMatrix`, `instanceof`,
+`getAttribute`:
+
+| File | Lines | Use |
+|---|---|---|
+| `web/handlers/GestureHandler.ts` | 532, 552, 570, 669, 716 | `Date.now()` for `timeStamp` |
+| `web/handlers/TapGestureHandler.ts` | 89-90, 96, 108 | `setTimeout` / `clearTimeout` (`maxDurationMs`, `maxDelayMs`) |
+| `web/handlers/LongPressGestureHandler.ts` | 56, 157 | `Date.now()` (`duration`) |
+| | 83, 169 | `setTimeout` / `clearTimeout` (activation after `minDurationMs`) |
+| `web/handlers/PanGestureHandler.ts` | 199, 506 | `setTimeout` / `clearTimeout` (`activateAfterLongPress`) |
+| | 337, 339 | `setTimeout` (end of wheel gesture) |
+| `web/handlers/FlingGestureHandler.ts` | 56, 102 | `setTimeout` / `clearTimeout` (`maxDurationMs`) |
+| `web/handlers/NativeViewGestureHandler.ts` | 70 | `isStylableElement(view)` (`web/utils.ts:22-28`: `canUseDOM()` + `instanceof HTMLElement \|\| SVGElement`) |
+| | 79-85 | `view.getAttribute('rngh-role')`, `getAttribute('role')`, `querySelector(':scope > input[role="switch"]')` (inside the `isStylableElement` guard) |
+| | 116-124 | `view.style.touchAction` / `WebkitTouchCallout` (guarded) |
+| | 149-152, 302-305 | `dispatchGestureLifecycleEvent(view)` → `view?.dispatchEvent(new CustomEvent(...))` (`web/tools/GestureLifecycleEvents.ts:13`) |
+| | 155 | `view.hasAttribute('rnghtext')` (NOT guarded) |
+| | 322, 385 | `setTimeout` / `clearTimeout` (button long press) |
+| | 354-366 | `dispatchButtonEvent(view)` → `view?.dispatchEvent(new CustomEvent(name, {detail}))` (`web/tools/ButtonEvents.ts:19`) |
+
+No direct DOM or web-global use in: `HoverGestureHandler.ts`,
+`ManualGestureHandler.ts`, `PinchGestureHandler.ts`, `RotationGestureHandler.ts`,
+`IGestureHandler.ts`, `tools/GestureHandlerOrchestrator.ts`,
+`tools/InteractionManager.ts` (line 110 is a comment; it compares
+`constructor.name`), `tools/NodeManager.ts`, `tools/PointerTracker.ts`,
+`tools/VelocityTracker.ts`, `tools/CircularBuffer.ts`,
+`tools/LeastSquareSolver.ts`, `tools/Vector.ts`,
+`detectors/RotationGestureDetector.ts`, `detectors/ScaleGestureDetector.ts`.
+
+Runtime imports of these files stay inside `src/web/`, `src/State`,
+`src/PointerType`, `src/ActionType`, `src/TouchEventType`, `src/Directions`,
+`src/utils` (`tagMessage`), `src/handlers/gestureHandlerCommon`,
+`src/v3/types`. None import `GestureHandlerWebDelegate` or the event managers.
+
+View access in the core goes through the delegate:
+
+- `GestureHandler.ts`: `delegate.init`, `detach`, `destroy`, `reset`,
+  `updateDOM`, `measureView` (4 calls: touch payloads), `onActivate`,
+  `onEnd`, `onCancel`, `onFail`, `onEnabledChange`.
+- `GestureHandlerOrchestrator.ts:327` compares `handler.delegate.view` by
+  identity; `:350-351` calls `delegate.isPointerInBounds(point)`.
+- `PinchGestureHandler.ts`, `RotationGestureHandler.ts`:
+  `delegate.absoluteToLocal`.
+- `NativeViewGestureHandler.ts`: `delegate.view` (8 uses),
+  `delegate.isPointerInBounds` (2).
+
+Conclusion:
+
+- Usable as-is in Hermes (`setTimeout`, `clearTimeout`, `Date.now` exist in
+  RN): `GestureHandler.ts`, Tap, Pan, LongPress, Fling, Hover, Manual, Pinch,
+  Rotation, orchestrator, `InteractionManager`, `NodeManager`,
+  `PointerTracker`, `VelocityTracker`, both detectors. Timers must run in the
+  Fantom work loop (`FantomTimerRegistry`) for Tap, LongPress, Fling and
+  `activateAfterLongPress` to resolve.
+- Needs a patch or wrapper: `NativeViewGestureHandler.ts`. With a non-DOM
+  view, `isStylableElement` is false (`window` is undefined in Hermes), so
+  lines 70-124 are skipped and `role` stays `null`. Line 155
+  `view.hasAttribute` throws unless the delegate's `view` has `hasAttribute`
+  (RN 0.88 `ReadOnlyElement` has no `hasAttribute`) and, with
+  `enableImperativeEvents` off, `dispatchEvent` is `undefined` on
+  `ReactNativeElement`, so `view?.dispatchEvent(...)` throws `TypeError`
+  (the `?.` guards only `view`). `CustomEvent` is not a Hermes global.
+  Options: give the delegate a small view object (not the element) with
+  `hasAttribute() → false` and a `dispatchEvent` that forwards button events;
+  or patch these call sites.
+- `GestureHandlerWebDelegate.ts`, `PointerEventManager.ts`,
+  `KeyboardEventManager.ts`, `WheelEventManager.ts`, `findNodeHandle.web.ts`,
+  `web/utils.ts` bounding helpers: replace (DOM only; see section 2).
+
+### 5.2 Event payloads: web sender vs native
+
+Web builders (`web/handlers/GestureHandler.ts`):
+
+- v2 (not native/virtual detector), `transformEventData` (517-534), used for
+  both state change and update:
+  `{ nativeEvent: { numberOfPointers, state, ...transformNativeEvent(), handlerTag, oldState: newState !== oldState ? oldState : undefined, pointerType }, timeStamp: Date.now() }`.
+- v3 state change, `transformStateChangeEvent` (536-554):
+  `{ nativeEvent: { state, handlerTag, oldState, handlerData: { numberOfPointers, pointerType, ...transformNativeEvent() } }, timeStamp }`.
+- v3 update, `transformUpdateEvent` (556-572): same without `oldState`.
+- Touch, `transformTouchEvent` (574-676):
+  `{ nativeEvent: { handlerTag, state, eventType, changedTouches, allTouches, numberOfTouches, pointerType }, timeStamp }`,
+  touch = `{ id, x, y, absoluteX, absoluteY }` with `x/y = absolute - delegate.measureView().pageX/pageY`.
+  `numberOfTouches` is decremented on UP. `cancelTouches` (678-737) sends
+  `TOUCHES_CANCEL` with all tracked pointers.
+- `sendEvent` (452-510): state change goes to `onGestureHandlerStateChange`
+  (or `onGestureHandlerReanimatedStateChange` when `forReanimated`); updates
+  only while `ACTIVE` go to `onGestureHandlerReanimatedEvent` /
+  `onGestureHandlerAnimatedEvent` / `onGestureHandlerEvent`. `forReanimated`
+  and `forAnimated` come from config `dispatchesReanimatedEvents` /
+  `dispatchesAnimatedEvents` (804-809). Touch events are sent only when
+  config `needsPointerData` (820-821, 411-415).
+
+`transformNativeEvent` fields (base 752-761: `x, y, absoluteX, absoluteY`
+from `tracker` relative/absolute averages):
+
+| Handler | Web extras | Android `*EventDataBuilder.kt` |
+|---|---|---|
+| all | `numberOfPointers`, `pointerType` added by the builders above | `GestureHandlerEventDataBuilder.kt:13-14` `numberOfPointers`, `pointerType` |
+| Tap | none (base) | `x, y, absoluteX, absoluteY` |
+| Pan (`PanGestureHandler.ts:177-189`) | `translationX/Y` (NaN → 0), `velocityX/Y`, `stylusData` | `x, y, absoluteX/Y, translationX/Y, velocityX/Y`, `stylusData` if present |
+| LongPress (`:53-58`) | `duration: Date.now() - startTime` | base + `duration` (int) |
+| Fling | none (base) | `x, y, absoluteX, absoluteY` |
+| Native (`:390-400`) | `pointerInside, x, y, absoluteX, absoluteY` (no base spread) | `pointerInside, x, y, absoluteX, absoluteY` |
+| Hover (`:22-27`) | `stylusData` | base + `stylusData` |
+| Pinch (`:73-85`) | `focalX, focalY, velocity, scale` (no base x/y) | `scale, focalX, focalY, velocity` |
+| Rotation (`:73-82`) | `rotation, anchorX, anchorY, velocity` | `rotation, anchorX, anchorY, velocity` |
+| Manual | none (base) | none beyond the common fields |
+
+Units: web velocity is px/s (`VelocityTracker.ts:76-77` multiplies the fit by
+1000; `time` is in ms). Android converts px to DIP (`PixelUtil.toDIPFromPixel`),
+so values match when `AdaptedEvent` coordinates are in dp.
+
+Native delivery, Android (`android/src/main/java/com/swmansion/gesturehandler/react/events/`):
+
+- v2 `JS_FUNCTION_OLD_API` / `JS_FUNCTION_NEW_API`:
+  `deviceEventEmitter.emit("onGestureHandlerEvent" | "onGestureHandlerStateChange", data)`
+  (`RNGestureHandlerEventDispatcher.kt:62-73, 119-137, 225-228`). Flat data:
+  update = builder fields + `handlerTag`, `state`
+  (`RNGestureHandlerEvent.kt:86-90`); state change = builder fields +
+  `handlerTag`, `state`, `oldState` (`RNGestureHandlerStateChangeEvent.kt:84-90`).
+  Touch events (new API) also go to `"onGestureHandlerEvent"`:
+  `handlerTag, state, numberOfTouches, eventType, pointerType, changedTouches, allTouches`
+  (`RNGestureHandlerTouchEvent.kt:65-79`; state is reported as BEGAN while
+  `isAwaiting && ACTIVE`). Pointer data: `id, x, y, absoluteX, absoluteY`
+  (`core/GestureHandler.kt:582-588`).
+- v2 `REANIMATED_WORKLET`: `reanimatedProxy.sendEvent(event)`
+  (`RNGestureHandlerEventDispatcher.kt:210-213`) with event names
+  `onGestureHandlerEvent` / `onGestureHandlerStateChange` on the handler's
+  view tag. JS side: `useAnimatedGesture.ts:198-200`
+  `Reanimated.useEvent(..., ['onGestureHandlerStateChange', 'onGestureHandlerEvent'])`.
+- v3 `NATIVE_DETECTOR` / `VIRTUAL_DETECTOR`: `handler.hostDetectorView?.dispatchEvent(event)`
+  (`:79-99, 139-155, 193-203`). Payload wraps builder fields in
+  `handlerData`: `{ handlerData, handlerTag, state }` and
+  `{ handlerData, handlerTag, state, oldState }`
+  (`RNGestureHandlerEvent.kt:92-102`, `RNGestureHandlerStateChangeEvent.kt:92-107`).
+- iOS uses the same names: `apple/RNGestureHandlerEvents.mm:207-211, 277`;
+  device events through `sendDeviceEventWithName:@"onGestureHandlerStateChange"`
+  (`RNGestureHandlerManager.mm:562`).
+
+v2 JS receiver (`handlers/gestures/eventReceiver.ts`): listens on
+`DeviceEventEmitter` `'onGestureHandlerEvent'` and
+`'onGestureHandlerStateChange'` (`startListening`). Classifies by
+`event.oldState != null` (state change) and `event.eventType != null` (touch),
+else update. It expects the FLAT payload (not `{nativeEvent}`); old-API
+handlers get `{ nativeEvent: event }` through `findOldGestureHandler`.
+
+v3 detector events (codegen spec `specs/RNGestureHandlerDetectorNativeComponent.ts`,
+generated `EventEmitters.cpp`): `gestureHandlerEvent` `{handlerTag, state, handlerData}`,
+`gestureHandlerStateChange` `{handlerTag, state, oldState, handlerData}`,
+`gestureHandlerTouchEvent` `{handlerTag, numberOfTouches, state, eventType, allTouches[], changedTouches[], pointerType}`,
+plus `gestureHandlerReanimatedEvent`, `gestureHandlerReanimatedStateChange`,
+`gestureHandlerReanimatedTouchEvent`, `gestureHandlerAnimatedEvent`. Button
+events (`specs/RNGestureHandlerButtonNativeComponent.ts:24-31`): `buttonPress`,
+`buttonPressIn`, `buttonPressOut`, `buttonLongPress`, `buttonHoverIn`,
+`buttonHoverOut`, `buttonInteractionFinished`.
+
+Differences in the web sender:
+
+- v2 update payload has an explicit `oldState: undefined` key (harmless:
+  receiver checks `!= null`) and adds `pointerType`, which Android also sends.
+- The web sender calls JS functions from `propsRef`; the native paths expect
+  a `DeviceEventEmitter` emit (v2) or a Fabric event on the detector (v3).
+  Our module must translate: for v2 emit `result.nativeEvent` on
+  `DeviceEventEmitter`; for v3 dispatch `gestureHandler*` on the detector's
+  shadow node. The host NativeFantom already has `enqueueNativeEvent(node, type, payload)`,
+  which calls `shadowNode->getEventEmitter()->dispatchEvent(type, payload)`
+  (`third_party/react-native/private/react-native-fantom/tester/src/NativeFantom.cpp:431-440`),
+  and `enqueueNativeEventByTag(surfaceId, tag, type, payload)` (`:113-140`).
+- Touch `id` on web is a remapped id (`tracker.getMappedTouchEventId`);
+  Android uses the pointer id.
+- Web never reports `state = BEGAN` for `isAwaiting && ACTIVE` in touch
+  events (Android does, `RNGestureHandlerTouchEvent.kt:76-78`).
+- Web sends no events for handlers with negative tags (not applicable).
+
+### 5.3 `Platform.OS` web branches (native value: `'android'`)
+
+There are 28 `Platform.OS` checks against `'web'` (`===` and `!==`) outside
+`src/web/`. With `--platform android` all take the native branch.
+
+| File:line | Native branch | Module needs |
+|---|---|---|
+| `handlers/gestures/GestureDetector/attachHandlers.ts:84` | `attachGestureHandler(tag, viewTag, actionType)`; `viewTag` is a number from `findNodeHandle` | resolve tag to a view (5.4) |
+| `handlers/createHandler.tsx:283` | `registerOldGestureHandler(tag, {onGestureEvent, onGestureStateChange})` then `attachGestureHandler(tag, viewTag, actionType)` | tag to view; emit flat events on `DeviceEventEmitter` |
+| `handlers/createHandler.tsx:194` | `unregisterOldGestureHandler(tag)` on unmount | nothing |
+| `handlers/createHandler.tsx:398` | dev warning if no root view context | nothing |
+| `handlers/utils.ts:51` | `transformIntoHandlerTags`: string ids / refs to numeric tags (> 0) | relations arrive as numbers |
+| `handlers/utils.ts:68` | `findNodeHandle` → RN `findNodeHandle(node)` (number) | tag to view |
+| `v3/detectors/NativeDetector.tsx:55` | passes only `onGestureHandlerReanimatedEvent` (Reanimated routes by event name) | dispatch `gestureHandlerReanimated*` names when `dispatchesReanimatedEvents` |
+| `v3/detectors/VirtualDetector/InterceptingGestureDetector.tsx:63` | virtual children as `{viewTag, handlerTags}` (no `viewRef`) | tag to view for virtual children |
+| `v3/detectors/VirtualDetector/InterceptingGestureDetector.tsx:250` | same as NativeDetector:55 | same |
+| `v3/detectors/VirtualDetector/VirtualDetector.tsx:48` | `viewTag = findNodeHandle(node)` | tag to view |
+| `v3/detectors/VirtualDetector/VirtualDetector.tsx:94` | `viewRef: undefined` | tag to view |
+| `v3/detectors/useEnsureGestureHandlerRootView.ts:9` | dev error without root view | wrap apps in `GestureHandlerRootView` |
+| `components/GestureButtons.tsx:31` | `shouldActivateOnStart: false` for buttons | handlers see the native config |
+| `components/Text.tsx:47` | skips setting the `rnghtext` attribute | NativeView must not call `hasAttribute` on elements (5.1) |
+| `components/Pressable/stateDefinitions.ts:145` | Android state machine (`getAndroidStatesConfig`) | expects Android event order |
+| `components/Pressable/Pressable.tsx:257` | LongPress `minDuration(INT32_MAX)` | nothing |
+| `components/Pressable/Pressable.tsx:280` | LongPress `onFinalize` ignored | nothing |
+| `components/Pressable/Pressable.tsx:297` | `Native.onTouchesCancelled` resets the press | touch events needed (`needsPointerData`) |
+| `components/Pressable/Pressable.tsx:322` | `Native.onFinalize` drives FINALIZE / CANCEL | Native handler must END / FAIL correctly |
+| `components/Pressable/Pressable.tsx:336` | `shouldActivateOnStart(false)` | nothing |
+| `components/Pressable/Pressable.tsx:362` | no cursor style | nothing |
+| `v3/components/StatefulPressable.tsx:293, 322, 343, 383, 408, 419` | same pattern as `Pressable.tsx` | same |
+
+On Android, `Gesture.Native()` in `Pressable` is attached to the native
+`RNGestureHandlerButton` / `View`, and the Android native view manager
+decides activation. The web `NativeViewGestureHandler` activates on
+`role === Button && shouldActivateOnStart`, Switch or `rnghtext`
+(`NativeViewGestureHandler.ts:157-161`); otherwise it activates after
+movement or on up. With `role = null` (non-DOM view) the Android state
+machine in `stateDefinitions.ts` is the only reference; this needs testing.
+
+### 5.4 View identity and config
+
+v2 (`GestureDetector`): `attachHandlers.ts:80-100` calls
+`RNGestureHandlerModule.attachGestureHandler(handlerTag, viewTag, actionType)`
+with `viewTag` a number (react tag of the detector child via
+`handlers/utils.ts:67-72` → RN `findNodeHandle`). Action types
+(`ActionType.ts:1-9`): `NONE 0`, `REANIMATED_WORKLET 1`,
+`NATIVE_ANIMATED_EVENT 2`, `JS_FUNCTION_OLD_API 3`, `JS_FUNCTION_NEW_API 4`,
+`NATIVE_DETECTOR 5`, `VIRTUAL_DETECTOR 6`. Old API (`createHandler.tsx`)
+passes the same number.
+
+v3 (`NativeDetector`): JS never calls `attachGestureHandler`. The detector
+renders `RNGestureHandlerDetector` with props `handlerTags`,
+`virtualChildren: [{handlerTags, viewTag}]`, `moduleId={globalThis._RNGH_MODULE_ID}`
+(`v3/detectors/NativeDetector.tsx:98`). `_RNGH_MODULE_ID` is set by C++
+`RNGHRuntimeDecorator::installRNRuntimeBindings` (`shared/runtime/RNGHRuntimeDecorator.cpp:91-93`).
+The Android view (`RNGestureHandlerDetectorView.kt:29-157`) observes each tag
+in its registry and calls `registry.attachHandlerToView(tag, viewTag, actionType, hostDetector)`;
+handlers where `wantsToAttachDirectlyToView()` (NativeView) attach to the single
+child view instead. The web equivalent is `HostGestureDetector.web.tsx`
+(`attachReadyHandler`, `shouldAttachGestureToChildView()`,
+`NativeViewGestureHandler.ts:267-269`), which imports
+`RNGestureHandlerModule.web` and `NodeManager` directly.
+Consequence: a JS module alone does not see v3 attachments; either alias
+`v3/detectors/HostGestureDetector.tsx` to a JS component (for example the
+`.web.tsx` logic with element refs), or read the detector props from the host.
+
+Tag to view: RN 0.88 JS has no public tag → element lookup. The JS module
+needs one of: alias `handlers/utils.ts` `findNodeHandle` to return the
+instance; or a host method that measures by tag (the overlay NativeFantom
+already has `*ByTag` methods: `enqueueNativeEventByTag`,
+`enqueueScrollEventByTag`, `setTextInputTextByTag`).
+
+Config keys:
+
+- v2 `GestureDetector` sends `filterConfig(handler.config, ALLOWED_PROPS)`
+  (`attachHandlers.ts:52, 67`; list in
+  `handlers/gestures/GestureDetector/utils.ts:25-35`):
+  - common (`handlers/gestureHandlerCommon.ts`): `id`, `enabled`,
+    `shouldCancelWhenOutside`, `hitSlop` (normalized by `normalizeHitSlop`),
+    `cancelsTouchesInView`, `userSelect`, `activeCursor`, `mouseButton`,
+    `enableContextMenu`, `touchAction`, `needsPointerData`, `manualActivation`.
+  - Tap: `maxDurationMs`, `maxDelayMs`, `numberOfTaps`, `maxDeltaX`,
+    `maxDeltaY`, `maxDist`, `minPointers`.
+  - Pan: `activeOffsetY/X`, `failOffsetY/X`, `minDist`, `minVelocity`,
+    `minVelocityX/Y`, `minPointers`, `maxPointers`, `avgTouches`,
+    `enableTrackpadTwoFingerGesture`, `activateAfterLongPress`, and
+    `activeOffsetXStart/End`, `activeOffsetYStart/End`,
+    `failOffsetXStart/End`, `failOffsetYStart/End`. The web Pan reads only the
+    `*Start/End` forms (`web/handlers/PanGestureHandler.ts:96-132`).
+  - LongPress: `minDurationMs`, `maxDist`, `numberOfPointers`.
+  - Fling: `numberOfPointers`, `direction`.
+  - Native: `shouldActivateOnStart`, `disallowInterruption`.
+  - Old API also sends `waitFor` / `simultaneousHandlers` as tags
+    (`filterConfig`, `handlers/utils.ts:26-30`).
+- v3 `useGesture` (`v3/hooks/useGesture.ts:87-100`):
+  `createGestureHandler(type, tag, {})`, then
+  `setGestureHandlerConfig(tag, prepareConfigForNativeSide(type, config))`
+  (`v3/hooks/utils/configUtils.ts:88-113`: whitelist per handler plus
+  `dispatchesReanimatedEvents = shouldUseReanimatedDetector && !runOnJS`).
+  `updateGestureHandlerConfig` is used for SharedValue bindings (may run on
+  the UI runtime).
+- Web base reads (`web/handlers/GestureHandler.ts`): `enabled`, `hitSlop`,
+  `shouldCancelWhenOutside`, `manualActivation`, `mouseButton`,
+  `needsPointerData`, `dispatchesAnimatedEvents`, `dispatchesReanimatedEvents`,
+  `activeCursor`, `enableContextMenu`, `touchAction`, `userSelect`, `testID`.
+
+Relations: `configureRelations(tag, {waitFor: number[], simultaneousHandlers: number[], blocksHandlers: number[]})`
+(`v3/types/ConfigTypes.ts:46-50`). v2 builds it with `extractGestureRelations`
+(`GestureDetector/utils.ts:67-79`: `requireToFail` → `waitFor`,
+`simultaneousWith` → `simultaneousHandlers`, `blocksHandlers`); old API with
+`selectProperties(newConfig, ['waitFor', 'simultaneousHandlers', 'blocksHandlers'])`
+(`createHandler.tsx:270-278`). Web `InteractionManager.configureInteractions`
+(`web/tools/InteractionManager.ts:16-60`) accepts numbers or handler objects.
+
+### 5.5 Pointer input expected by the handlers
+
+`AdaptedEvent` (`web/interfaces.ts:136-148`):
+`x, y` (absolute, page coordinates), `offsetX, offsetY` (relative to the
+attached view), `pointerId`, `eventType`, `pointerType` (`PointerType`:
+`TOUCH 0, STYLUS 1, MOUSE 2, KEY 3, OTHER 4`), `time` (ms; velocity math uses
+it), `button?` (bitmask, `MouseButton.LEFT = 1`, `RIGHT = 2`),
+`stylusData?`, `wheelDeltaY?`.
+
+The `EventManager` calls (`web/tools/PointerEventManager.ts`):
+
+- `onPointerDown` for the first pointer, `onPointerAdd` for more
+  (`eventType = ADDITIONAL_POINTER_DOWN`); only when the point is inside the
+  view (lines 31-55).
+- On move (86-140): `onPointerMove` if still inside;
+  `onPointerEnter` / `onPointerLeave` on crossing the bounds;
+  `onPointerOutOfBounds` for moves outside. Moves are ignored when no pointer
+  is down (unless hover).
+- `onPointerUp` for the last pointer, `onPointerRemove` for others
+  (`ADDITIONAL_POINTER_UP`); ignored when `activePointersCounter === 0`.
+- `onPointerCancel` on cancel; the manager then resets its counters.
+
+Tap sequence: DOWN (inside) → optional MOVE → UP. `TapGestureHandler.ts`:
+`onPointerDown` checks `isButtonInConfig(event.button)` (121-123), adds to
+tracker, calls `begin()` on DOWN (`updateState`, state UNDETERMINED) and
+`startTap` (starts the `maxDurationMs` timer). MOVE updates `lastX/Y` and fails
+past `maxDeltaX/Y` / `maxDist`. UP in BEGAN calls `endTap`, which activates
+and ends after `numberOfTaps` taps (otherwise starts the `maxDelayMs` timer).
+
+Pan sequence: DOWN → MOVE... → UP. `PanGestureHandler.ts`: `onPointerDown`
+(215-231) checks the button, tracks, `tryBegin`, `checkBegan`. MOVE (306-316)
+tracks, updates velocity, and activates when `shouldActivate()` (388+) passes
+`minDist` (default `DEFAULT_TOUCH_SLOP = 15`, `web/constants.ts:1`) or the
+offset / velocity criteria. UP ends if ACTIVE, else fails. Velocity uses the
+last samples within 300 ms (`VelocityTracker.ts:6-9`, 40 ms stop threshold,
+minimum 3 samples), so moves need increasing `time` values.
+
+`button`: `isButtonInConfig` (`GestureHandler.ts:938-944`) passes when
+`button` is undefined or 0, or LEFT with no `mouseButton` config. It is used by
+Tap, Pan, LongPress, Fling (lines 121, 218, 87, 118). The web manager passes
+`event.buttons` (1 while the left button is down, 0 on up).
+
+`pointerType`: set on DOWN (`GestureHandler.ts:342`). `TOUCH` makes the
+orchestrator cancel mouse and pen gestures (344-346,
+`GestureHandlerOrchestrator.ts:373-374`). Use `TOUCH` for tap/pan emulation;
+`MOUSE` is the default before any event (line 76).
+
+NativeViewGestureHandler on web: `shouldAttachGestureToChildView() → true`
+(267-269); `shouldCancelWhenOutside = true` in `init` (68); `role` from DOM
+attributes (79-86); button events and lifecycle events go through
+`view.dispatchEvent` (5.1). For our port it needs: a `delegate.view` that
+provides `hasAttribute` and `dispatchEvent` (or a patch), a way to deliver
+`buttonPress*` events to `RNGestureHandlerButton` (for example
+`enqueueNativeEvent(node, 'buttonPress', {pointerInside, x, y, absoluteX, absoluteY, numberOfPointers, pointerType})`,
+payload from `getButtonEventData`, 380-400), and a decision for ScrollView
+(web `role` detection does not apply; Android wraps ScrollView in a Native
+handler that the native view manager drives).
