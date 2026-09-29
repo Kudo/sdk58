@@ -162,7 +162,7 @@ add_react_cxx_platform_subdir(react/runtime)
 add_react_cxx_platform_subdir(react/threading)
 add_react_cxx_platform_subdir(react/utils)
 
-file(GLOB SOURCES
+file(GLOB SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/components/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/render/*.cpp
