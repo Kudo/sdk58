@@ -10,6 +10,56 @@ if (!bundlePath || !fs.existsSync(bundlePath)) {
   console.error(`E0000 fake-host: bundle not found: ${bundlePath}`);
   process.exit(2);
 }
+if (args.includes('--interactive')) {
+  // Fantom --interactive protocol: "<byte length>\n<code bytes>" frames on
+  // stdin; one repl-eval-complete line per frame; exit when stdin closes.
+  const shadow = JSON.parse(
+    fs.readFileSync(
+      path.join(path.dirname(fileURLToPath(import.meta.url)), 'shadow-tree.json'),
+      'utf8',
+    ),
+  );
+  let buffer = Buffer.alloc(0);
+  let evalId = 0;
+  const respond = response =>
+    console.log(JSON.stringify({type: 'rn-a11y-tree-response', fallbacks: [], ...response}));
+  const handle = code => {
+    const match = /request\(("(?:[^"\\]|\\.)*")\)/.exec(code);
+    const request = JSON.parse(JSON.parse(match[1]));
+    const {id} = request;
+    console.log(JSON.stringify({type: 'console-log', level: 'info', message: `request ${JSON.stringify(request)}`}));
+    if (request.start) {
+      respond({id, ok: true, ready: true, tree: shadow});
+    } else if (request.tree) {
+      respond({id, ok: true, tree: shadow});
+    } else if (request.quit) {
+      respond({id, ok: true, quit: true});
+    } else if (request.action?.tap?.testID === 'boom') {
+      console.log(JSON.stringify({type: 'repl-error', message: 'boom from JS', stack: ''}));
+    } else if (request.action) {
+      const name = Object.keys(request.action)[0];
+      respond({
+        id,
+        ok: true,
+        step: {index: 0, action: name, target: null, hit: {tag: 5, ref: 'n6', testID: 'submit', type: 'View', box: {x: 24.00001, y: 154, width: 342, height: 48}}, events: ['touchStart', 'touchEnd']},
+      });
+    }
+    console.log(JSON.stringify({type: 'repl-eval-complete', id: evalId++}));
+  };
+  process.stdin.on('data', chunk => {
+    buffer = Buffer.concat([buffer, chunk]);
+    for (;;) {
+      const newline = buffer.indexOf(10);
+      if (newline < 0) return;
+      const length = Number(buffer.subarray(0, newline).toString());
+      if (buffer.length < newline + 1 + length) return;
+      const code = buffer.subarray(newline + 1, newline + 1 + length).toString('utf8');
+      buffer = buffer.subarray(newline + 1 + length);
+      handle(code);
+    }
+  });
+  process.stdin.on('end', () => process.exit(0));
+} else {
 if (process.env.FAKE_HOST_MODE === 'js-error') {
   console.log(JSON.stringify({type: 'rn-a11y-tree-error', error: {message: 'boom', stack: 'Error: boom\n    at App'}}));
   process.exit(0);
@@ -51,3 +101,4 @@ const tree = fs.readFileSync(
 console.error('I0000 fake-host: glog line on stderr');
 console.log(JSON.stringify({type: 'console-log', level: 'info', message: 'hello from JS'}));
 console.log(`{"type":"rn-a11y-tree-result","rnA11yTree":{"viewport":{"width":390,"height":844},"source":"mounted","tree":${JSON.stringify(JSON.parse(tree))}}}`);
+}

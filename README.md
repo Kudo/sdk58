@@ -218,6 +218,48 @@ Examples: `examples/basic/actions.json` (typing, Switch, Pressable) and
 `examples/scrolling/actions.json` (ScrollView offset, tap after scroll,
 FlatList windowing).
 
+## Session mode
+
+```sh
+yarn rn-a11y-tree session examples/basic/App.tsx --platform android [--tap-mode touch|click|both]
+```
+
+Bundles once, renders the app, and then serves requests: one JSON object per
+line on stdin, one JSON response per line on stdout. Requests are handled in
+order, one at a time.
+
+```jsonc
+// out, after the initial render:
+{"ready": true, "tree": {...}}
+// in                                           // out
+{"id": 1, "action": {"tap": {"testID": "submit"}}}   {"id": 1, "ok": true, "step": {...}}
+{"id": 2, "action": {"snapshot": "x"}}               {"id": 2, "ok": true, "step": {...}, "tree": {...}}
+{"id": 3, "tree": true}                              {"id": 3, "ok": true, "tree": {...}}
+{"id": 4, "action": {"tap": {"testID": "nope"}}}     {"id": 4, "ok": false, "error": "Target not found: ...", "step": {...}}
+{"id": 5, "quit": true}                              {"id": 5, "ok": true}
+```
+
+- `action` takes the same objects as `run --script`; `step` has the same
+  shape as in `run`, and trees the same schema as `render`. Invalid requests
+  get `{"id", "ok": false, "error"}` without reaching the app.
+- `fallbacks` is added to a response when JS fallbacks were used.
+- If the app fails to load, the first line is `{"ready": false, "error"}`
+  and the exit code is 1.
+- `quit`, or the end of stdin, unmounts the app and stops the host; the exit
+  code is the host's (0).
+- App console output goes to stderr as `[app] ...` lines.
+
+How it works: the host runs in Fantom's `--interactive` mode. It evaluates the
+bundle, then reads frames from stdin (a line with the byte length, then that
+many bytes of JS), evaluates each one, and prints
+`{"type":"repl-eval-complete","id":n}` (and `{"type":"repl-error",...}` for a
+thrown error) on stdout. The session bundle installs
+`globalThis.__rnA11y.request(json)` (`runtime/session.js`, which uses the
+same action runner as `run`). Each request is sent as one line of JS that
+calls it; it prints one `{"type":"rn-a11y-tree-response",...}` line through
+`NativeFantom.reportTestSuiteResultsJSON`. The host exits when its stdin is
+closed.
+
 ## Architecture
 
 ```
