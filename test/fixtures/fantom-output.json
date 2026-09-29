@@ -1,0 +1,59 @@
+{
+  "type": "RootView",
+  "props": {
+    "layoutMetrics-frame": "{x:0,y:0,width:390,height:844}",
+    "layoutMetrics-displayType": "Flex"
+  },
+  "children": [
+    {
+      "type": "View",
+      "props": {
+        "backgroundColor": "rgba(255, 255, 255, 1)",
+        "layoutMetrics-frame": "{x:0,y:0,width:390,height:844}"
+      },
+      "children": [
+        {
+          "type": "Paragraph",
+          "props": {
+            "accessibilityRole": "header",
+            "accessible": "true",
+            "layoutMetrics-frame": "{x:24,y:24,width:342,height:34}"
+          },
+          "children": ["Sign in"]
+        },
+        {
+          "type": "Image",
+          "props": {
+            "accessibilityLabel": "Company logo",
+            "source-1x-uri": "https://example.com/logo.png",
+            "layoutMetrics-frame": "{x:24,y:74,width:64,height:64}"
+          },
+          "children": []
+        },
+        {
+          "type": "View",
+          "props": {
+            "accessibilityRole": "button",
+            "accessible": "true",
+            "accessibilityState": "{disabled:false,selected:false,checked:None,busy:false,expanded:null}",
+            "testID": "submit",
+            "layoutMetrics-frame": "{x:24,y:154,width:342,height:48}"
+          },
+          "children": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "accessible": "true",
+                "layoutMetrics-frame": "{x:140,y:14,width:62,height:20}"
+              },
+              "children": [
+                "Sub",
+                {"type": "Text", "props": {"fontWeight": "700"}, "children": "mit"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
