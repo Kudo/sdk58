@@ -26,49 +26,152 @@ export type A11yInfo = {
   state?: A11yState;
   /** `importantForAccessibility` / `aria-hidden` / `accessibilityElementsHidden`. */
   hidden?: boolean;
-  /** Raw accessibility-related props as reported by the host (string values). */
-  raw?: Record<string, string>;
+  /**
+   * Raw accessibility-related props as reported by the host. Strings for the
+   * `mounted` source; typed values for the `shadowTree` source.
+   */
+  raw?: Record<string, unknown>;
 };
 
 export type TreeNode = {
   /** Stable id within one render: `n0`, `n1`, ... in pre-order. */
   ref: string;
-  /** Host component name from the shadow tree: `View`, `Paragraph`, `Image`, `Text` (text fragment), ... */
+  /** Host component name: `View`, `Paragraph`, `Image`, `Text` (text fragment, mounted source only), ... */
   type: string;
   /**
    * Selector for this node. `#testID` when a testID is set, otherwise a path
    * of types with 1-based sibling indices, e.g. `RootView>View>Paragraph:2`.
    */
   sel: string;
-  /** Accessibility role (`button`, `image`, `header`, `text`, ...) or `null`. */
+  /** Accessibility role: `role` prop, else `accessibilityRole`, else the component default; `null` if none. */
   role: string | null;
-  /** Accessible name: label, else aria-label, else text content. */
+  /** Accessible name: label, else aria-label, else own text, else descendant text if accessible. */
   name: string | null;
   a11y: A11yInfo;
   /** Absolute frame in dp (sum of parent frames). */
   box: Box;
-  /** Non-a11y, non-layout props reported by the host (string values). */
-  style: Record<string, string>;
-  /** Text content for `Paragraph` / `Text` nodes, else `null`. */
+  /**
+   * Other props reported by the host: visual style, flattened Yoga style,
+   * font props (Paragraph), component props (Image sources, TextInput
+   * placeholder, ...). Strings for the `mounted` source.
+   */
+  style: Record<string, unknown>;
+  /** Text content (Paragraph, Text fragment, TextInput value), else `null`. */
   text: string | null;
   testID: string | null;
+  /** Raw debug props from the host; only with `--debug-props` and the `shadowTree` source. */
+  debugProps?: Record<string, string>;
   children: TreeNode[];
 };
 
+/**
+ * Where the tree comes from:
+ * - `shadowTree`: the host's `getA11yTree` (committed ShadowTree, full
+ *   hierarchy, typed values).
+ * - `mounted`: Fantom's `getRenderedOutput` (mounted views after view
+ *   flattening, debug-string props).
+ */
+export type TreeSource = 'shadowTree' | 'mounted';
+
 export type RenderResult = {
   viewport: {width: number; height: number};
+  source: TreeSource;
   root: TreeNode;
 };
 
-/** Raw shape produced by Fantom's native `RenderOutput::renderView`. */
+/** Raw shape produced by Fantom's native `RenderOutput::renderView` (`mounted`). */
 export type FantomNode = {
   type: string;
   props: Record<string, string>;
   children: Array<FantomNode | string> | string;
 };
 
-/** Payload the JS entry prints inside `{"type":"rn-a11y-tree-result","rnA11yTree":...}`. */
-export type HostPayload = {
-  viewport: {width: number; height: number};
-  tree: FantomNode;
+/**
+ * Raw shape produced by the host's `NativeFantom.getA11yTree` (`shadowTree`).
+ * Tentative, from the native worker's proposal. Keys are omitted when they
+ * have their default value.
+ */
+export type ShadowNodeJSON = {
+  type: string;
+  tag?: number;
+  frame: Box;
+  layoutDirection?: string;
+  pointScaleFactor?: number;
+  accessible?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  accessibilityRole?: string;
+  role?: string;
+  accessibilityState?: {
+    disabled?: boolean;
+    selected?: boolean;
+    checked?: boolean | string;
+    busy?: boolean;
+    expanded?: boolean | null;
+  };
+  accessibilityValue?: unknown;
+  accessibilityActions?: string[];
+  importantForAccessibility?: string;
+  accessibilityElementsHidden?: boolean;
+  accessibilityLiveRegion?: string;
+  accessibilityLabelledBy?: unknown;
+  accessibilityLanguage?: string;
+  testID?: string;
+  nativeId?: string;
+  collapsable?: boolean;
+  pointerEvents?: string;
+  opacity?: number;
+  backgroundColor?: unknown;
+  borderColors?: unknown;
+  borderRadii?: unknown;
+  borderWidths?: unknown;
+  zIndex?: number;
+  transform?: number[];
+  yogaStyle?: Record<string, unknown>;
+  text?: string;
+  fragments?: Array<{
+    text: string;
+    fontSize?: number;
+    fontWeight?: unknown;
+    fontStyle?: string;
+    fontFamily?: string;
+    color?: unknown;
+    lineHeight?: number;
+    letterSpacing?: number;
+    textAlign?: string;
+    textDecorationLine?: string;
+  }>;
+  paragraphAttributes?: {
+    numberOfLines?: number;
+    ellipsizeMode?: string;
+    adjustsFontSizeToFit?: boolean;
+  };
+  // TextInput
+  defaultValue?: string;
+  placeholder?: string;
+  editable?: boolean;
+  secureTextEntry?: boolean;
+  // Image
+  sources?: Array<{uri: string; width?: number; height?: number}>;
+  // Switch
+  value?: unknown;
+  // ScrollView
+  horizontal?: boolean;
+  contentOffset?: {x: number; y: number};
+  debugProps?: Record<string, string>;
+  children: ShadowNodeJSON[];
 };
+
+/** Payload the JS entry prints inside `{"type":"rn-a11y-tree-result","rnA11yTree":...}`. */
+export type HostPayload =
+  | {
+      viewport: {width: number; height: number};
+      source: 'shadowTree';
+      tree: ShadowNodeJSON;
+    }
+  | {
+      viewport: {width: number; height: number};
+      /** Absent in payloads from entries built before `source` existed. */
+      source?: 'mounted';
+      tree: FantomNode;
+    };
