@@ -11,9 +11,9 @@
 import type {
   RootTag,
   TurboModule,
-} from '../../../../../Libraries/TurboModule/RCTExport';
+} from 'react-native/Libraries/TurboModule/RCTExport';
 
-import * as TurboModuleRegistry from '../../../../../Libraries/TurboModule/TurboModuleRegistry';
+import * as TurboModuleRegistry from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 // match RenderFormatOptions.h
 export type RenderFormatOptions = {

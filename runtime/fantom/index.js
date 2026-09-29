@@ -17,14 +17,11 @@ import type {MixedElement} from 'react';
 import type {RootTag} from 'react-native';
 import type ReactNativeDocument from 'react-native/src/private/webapis/dom/nodes/ReactNativeDocument';
 
-import * as Benchmark from './Benchmark';
 import {getConstants} from './Constants';
 import getFantomRenderedOutput from './getFantomRenderedOutput';
 import {LogBox} from 'react-native';
 import ErrorUtils from 'react-native/Libraries/vendor/core/ErrorUtils';
-import NativeFantom, {
-  NativeEventCategory,
-} from 'react-native/src/private/testing/fantom/specs/NativeFantom';
+import NativeFantom, {NativeEventCategory} from './specs/NativeFantom';
 import {
   getInstanceHandle,
   getNativeNodeReference,
@@ -146,7 +143,7 @@ class Root {
 
 export type {Root};
 
-export {NativeEventCategory} from 'react-native/src/private/testing/fantom/specs/NativeFantom';
+export {NativeEventCategory} from './specs/NativeFantom';
 
 const DEFAULT_TASK_PRIORITY = unstable_ImmediatePriority;
 
@@ -651,13 +648,6 @@ export function enqueueModalSizeUpdate(
   NativeFantom.enqueueModalSizeUpdate(shadowNode, size.width, size.height);
 }
 
-export const unstable_benchmark = Benchmark;
-
-export type {
-  SuiteOptions as BenchmarkSuiteOptions,
-  TestOptions as BenchmarkTestOptions,
-} from './Benchmark';
-
 /**
  * Returns a function that returns the current reference count for the supplied
  * element's shadow node. If the reference count is zero, that means the shadow
@@ -737,7 +727,7 @@ function runLogBoxCheck() {
   if (isLogBoxCheckEnabled && LogBox.isInstalled()) {
     const message =
       'Cannot run work loop while LogBox is installed, as LogBox intercepts errors thrown in tests.' +
-      ' If you are installing LogBox unintentionally using `InitializeCore`, replace it with `@react-native/fantom/src/setUpDefaultReactNativeEnvironment` to avoid this problem.';
+      ' If you are installing LogBox unintentionally using `InitializeCore`, replace it with `react-native-a11y-tree/runtime/fantom/setUpDefaultReactNativeEnvironment` to avoid this problem.';
 
     // This is will go through even if throwing doesn't.
     console.error(message);

@@ -8,7 +8,7 @@
  * @format
  */
 
-import NativeFantom from 'react-native/src/private/testing/fantom/specs/NativeFantom';
+import NativeFantom from './specs/NativeFantom';
 
 /**
  * Represents a mocked clock for `HighResTimeStamp` values.

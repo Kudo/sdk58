@@ -11,7 +11,7 @@
 import type {RootTag} from 'react-native';
 
 import * as React from 'react';
-import NativeFantom from 'react-native/src/private/testing/fantom/specs/NativeFantom';
+import NativeFantom from './specs/NativeFantom';
 
 export type RenderOutputConfig = {
   ...FantomRenderedOutputConfig,

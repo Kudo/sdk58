@@ -9,7 +9,7 @@
  */
 
 import {runWorkLoop} from './index';
-import NativeFantom from 'react-native/src/private/testing/fantom/specs/NativeFantom';
+import NativeFantom from './specs/NativeFantom';
 
 /**
  * Controls the deterministic timer mock for `setTimeout`/`setInterval`.
