@@ -1,0 +1,9 @@
+[
+  {"snapshot": "home"},
+  {"tap": {"testID": "go-details"}},
+  {"wait": 300},
+  {"snapshot": "details"},
+  {"tap": {"testID": "go-back"}},
+  {"wait": 300},
+  {"snapshot": "back"}
+]

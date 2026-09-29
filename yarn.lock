@@ -1642,6 +1642,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@react-native-a11y-tree/example-navigation-stack@workspace:examples/navigation-stack":
+  version: 0.0.0-use.local
+  resolution: "@react-native-a11y-tree/example-navigation-stack@workspace:examples/navigation-stack"
+  dependencies:
+    "@react-navigation/native": "npm:^7.5.0"
+    "@react-navigation/native-stack": "npm:^7.20.0"
+    react: "npm:19.3.0"
+    react-native: "npm:0.88.0-rc.2"
+    react-native-safe-area-context: "npm:~5.9.1"
+    react-native-screens: "npm:~4.28.0"
+  languageName: unknown
+  linkType: soft
+
 "@react-native-a11y-tree/example-scrolling@workspace:examples/scrolling":
   version: 0.0.0-use.local
   resolution: "@react-native-a11y-tree/example-scrolling@workspace:examples/scrolling"
