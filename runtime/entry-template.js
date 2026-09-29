@@ -93,6 +93,7 @@ registerRender(() => {
         snapshots,
         final,
         fallbacks,
+        capabilities: require('__RUNTIME_DIR__/capabilities').getCapabilities(),
       });
     }
 

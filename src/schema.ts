@@ -68,6 +68,18 @@ export type TreeNode = {
    * parent's box. Only for the `shadowTree` source.
    */
   virtual?: boolean;
+  /**
+   * Where the node is drawn, when it differs from `box`: the bounding box of
+   * the (mounted) frame after the transforms of the node and its ancestors
+   * (`shadowTree` source). Absent when there is no transform or mounted
+   * frame override on the path.
+   */
+  visualBox?: Box;
+  /**
+   * Product of the node's and its ancestors' opacity (mounted opacity when
+   * the host reports one). Present only when below 1.
+   */
+  effectiveOpacity?: number;
   /** Raw debug props from the host; only with `--debug-props` and the `shadowTree` source. */
   debugProps?: Record<string, string>;
   children: TreeNode[];
@@ -194,6 +206,13 @@ export type ShadowNodeJSON = {
   largeTitle?: boolean;
   backTitle?: string;
   hideBackButton?: boolean;
+  /** Mounted-view values that differ from the ShadowNode (e.g. during Reanimated `entering`). */
+  mounted?: {
+    opacity?: number;
+    transform?: number[];
+    backgroundColor?: unknown;
+    frame?: Box;
+  };
   // RNCSafeAreaProvider / RNCSafeAreaView
   insets?: {top: number; left: number; right: number; bottom: number};
   debugProps?: Record<string, string>;
@@ -241,6 +260,8 @@ export type RunResult = {
   final: TreeNode;
   /** JS fallbacks used because the host lacks native methods (empty when none). */
   fallbacks: string[];
+  /** Optional host features found (NativeFantom methods and getCapabilities()). */
+  capabilities: string[];
 };
 
 /** Payload printed by the entry for `run --script`. */
@@ -252,6 +273,7 @@ export type HostRunPayload = {
   final: ShadowNodeJSON;
   /** JS fallbacks the runner used, e.g. `hitTest: js`, `scrollOffset: dom`. */
   fallbacks?: string[];
+  capabilities?: string[];
 };
 
 /** Payload the JS entry prints inside `{"type":"rn-a11y-tree-result","rnA11yTree":...}`. */

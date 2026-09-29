@@ -46,6 +46,7 @@ export function toRunResult(payload: HostRunPayload): RunResult {
     snapshots,
     final: convertShadowTree(payload.final),
     fallbacks: payload.fallbacks ?? [],
+    capabilities: payload.capabilities ?? [],
   };
 }
 
@@ -265,6 +266,8 @@ const SHADOW_COMPONENT_KEYS = [
   'hideBackButton',
   // react-native-safe-area-context
   'insets',
+  // Mounted-view values that differ from the ShadowNode (raw).
+  'mounted',
 ] as const;
 
 /**
@@ -351,6 +354,140 @@ export function contentOrigin(node: ShadowNodeJSON): {x: number; y: number} {
   return {x: 0, y: 0};
 }
 
+// --- visual geometry: transforms and mounted-view overrides ----------------
+//
+// `box` is the ShadowTree layout. `visualBox` is where the node is drawn:
+// the axis-aligned bounding box of its (mounted) frame after the transforms
+// of the node and its ancestors. Like React Native, a view's transform is
+// applied about the view's center, in its parent's coordinate space.
+// `mounted` holds mounted-view values that differ from the ShadowNode
+// (e.g. Reanimated `entering` animations only touch the mounted views).
+
+type Matrix = number[]; // 4x4, column-major (the host's `transform` format)
+
+const IDENTITY: Matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+type Visual = {
+  /** Maps absolute layout coordinates to screen coordinates; null = identity. */
+  matrix: Matrix | null;
+  opacity: number;
+};
+
+const ROOT_VISUAL: Visual = {matrix: null, opacity: 1};
+
+function multiply(a: Matrix, b: Matrix): Matrix {
+  // a · b: apply b first.
+  const out = new Array<number>(16);
+  for (let col = 0; col < 4; col++) {
+    for (let row = 0; row < 4; row++) {
+      let sum = 0;
+      for (let k = 0; k < 4; k++) sum += a[k * 4 + row] * b[col * 4 + k];
+      out[col * 4 + row] = sum;
+    }
+  }
+  return out;
+}
+
+function translation(x: number, y: number): Matrix {
+  return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1];
+}
+
+function isIdentity(m: Matrix): boolean {
+  return m.every((v, i) => Math.abs(v - IDENTITY[i]) < 1e-9);
+}
+
+function applyMatrix(m: Matrix, x: number, y: number): Point {
+  const w = m[3] * x + m[7] * y + m[15] || 1;
+  return {x: (m[0] * x + m[4] * y + m[12]) / w, y: (m[1] * x + m[5] * y + m[13]) / w};
+}
+
+function boundsAfter(m: Matrix, rect: Box): Box {
+  const corners = [
+    applyMatrix(m, rect.x, rect.y),
+    applyMatrix(m, rect.x + rect.width, rect.y),
+    applyMatrix(m, rect.x, rect.y + rect.height),
+    applyMatrix(m, rect.x + rect.width, rect.y + rect.height),
+  ];
+  const xs = corners.map(c => c.x);
+  const ys = corners.map(c => c.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return {
+    x: round(x),
+    y: round(y),
+    width: round(Math.max(...xs) - x),
+    height: round(Math.max(...ys) - y),
+  };
+}
+
+function asMatrix(value: unknown): Matrix | null {
+  return Array.isArray(value) && value.length === 16 && value.every(v => typeof v === 'number')
+    ? (value as Matrix)
+    : null;
+}
+
+function visualFor(
+  node: ShadowNodeJSON,
+  origin: Point,
+  box: Box,
+  isVirtual: boolean,
+  parent: Visual,
+): {visualBox: Box | null; opacity: number; forChildren: Visual} {
+  const mounted = node.mounted;
+  const opacity =
+    parent.opacity *
+    (typeof mounted?.opacity === 'number'
+      ? mounted.opacity
+      : typeof node.opacity === 'number'
+        ? node.opacity
+        : 1);
+
+  if (isVirtual) {
+    return {
+      visualBox: parent.matrix != null ? boundsAfter(parent.matrix, box) : null,
+      opacity,
+      forChildren: {matrix: parent.matrix, opacity},
+    };
+  }
+
+  // The drawn rect: the mounted frame if it differs, else the layout box.
+  const drawn = mounted?.frame != null ? absoluteBox(origin, mounted.frame) : box;
+  const transform = asMatrix(mounted?.transform) ?? asMatrix(node.transform);
+
+  let local: Matrix | null = null;
+  if (drawn.x !== box.x || drawn.y !== box.y) {
+    local = translation(drawn.x - box.x, drawn.y - box.y);
+  }
+  if (transform != null && !isIdentity(transform)) {
+    const cx = drawn.x + drawn.width / 2;
+    const cy = drawn.y + drawn.height / 2;
+    const about = multiply(translation(cx, cy), multiply(transform, translation(-cx, -cy)));
+    local = local != null ? multiply(about, local) : about;
+  }
+
+  const matrix =
+    parent.matrix != null && local != null
+      ? multiply(parent.matrix, local)
+      : (local ?? parent.matrix);
+  const sizeDiffers = drawn.width !== box.width || drawn.height !== box.height;
+
+  let visualBox: Box | null = null;
+  if (matrix != null || sizeDiffers) {
+    // Own drawn rect: the node's own transform about its drawn center, then
+    // the ancestors'. `drawn` is already at the mounted position.
+    let own: Matrix | null = parent.matrix;
+    if (transform != null && !isIdentity(transform)) {
+      const cx = drawn.x + drawn.width / 2;
+      const cy = drawn.y + drawn.height / 2;
+      const about = multiply(translation(cx, cy), multiply(transform, translation(-cx, -cy)));
+      own = own != null ? multiply(own, about) : about;
+    }
+    visualBox = own != null ? boundsAfter(own, drawn) : {...drawn};
+  }
+
+  return {visualBox, opacity, forChildren: {matrix, opacity}};
+}
+
 /**
  * Paragraph children in the ShadowTree are `RawText` and nested `Text` span
  * nodes without layout. `RawText` is dropped (its text is in the Paragraph's
@@ -371,6 +508,7 @@ function convertShadowNode(
   nextRef: () => string,
   sibling: SiblingIndex,
   parentBox?: Box,
+  parentVisual: Visual = ROOT_VISUAL,
 ): TreeNode {
   const ref = nextRef();
   // Nodes without a frame (text spans, other virtual nodes) get the parent's box.
@@ -378,6 +516,7 @@ function convertShadowNode(
   const box = isVirtual
     ? {...(parentBox ?? {x: origin.x, y: origin.y, width: 0, height: 0})}
     : absoluteBox(origin, node.frame ?? null);
+  const visual = visualFor(node, origin, box, isVirtual, parentVisual);
   const testID = nonEmpty(node.testID);
   const {sel, pathSel} = selectors(node.type, testID, parentSel, sibling);
 
@@ -397,6 +536,7 @@ function convertShadowNode(
       nextRef,
       indexFor(child.type),
       box,
+      visual.forChildren,
     ),
   );
 
@@ -455,6 +595,12 @@ function convertShadowNode(
   };
   if (isVirtual) {
     result.virtual = true;
+  }
+  if (visual.visualBox != null) {
+    result.visualBox = visual.visualBox;
+  }
+  if (visual.opacity < 1) {
+    result.effectiveOpacity = round(visual.opacity);
   }
   if (node.debugProps) {
     result.debugProps = node.debugProps;

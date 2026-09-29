@@ -33,6 +33,7 @@ type HostResponse = {
   step?: Step;
   tree?: ShadowNodeJSON;
   fallbacks?: string[];
+  capabilities?: string[];
 };
 
 type Frame = {
@@ -216,7 +217,11 @@ export async function runSession(options: {
     await finish();
     return 1;
   }
-  writeLine({ready: true, tree: start.tree ? convertShadowTree(start.tree) : null});
+  writeLine({
+    ready: true,
+    tree: start.tree ? convertShadowTree(start.tree) : null,
+    capabilities: start.capabilities ?? [],
+  });
 
   // Requests, one at a time, in order.
   let quitSent = false;

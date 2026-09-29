@@ -18,6 +18,7 @@
  */
 
 import {createRunner} from './actions';
+import {getCapabilities} from './capabilities';
 import {setRootTag} from './gh/hostContext';
 import {applyHostConfig} from './hostConfig';
 import {settle} from './settle';
@@ -63,7 +64,7 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
       });
       settle(root.getRootTag());
       runner = createRunner({root, tapMode});
-      report({id, ok: true, ready: true, tree: runner.readTree()});
+      report({id, ok: true, ready: true, tree: runner.readTree(), capabilities: getCapabilities()});
     } else if (request.action != null) {
       requireStarted();
       const {step, snapshot} = runner.runStep(request.action, nextIndex++);
