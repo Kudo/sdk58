@@ -79,26 +79,40 @@ test('converts the typed getA11yTree JSON (shadowTree) to the output schema', ()
     container.children.map(c => c.type),
     ['Paragraph', 'Image', 'View', 'Switch', 'View'],
   );
+  // Yoga edge/gutter objects are flattened to React Native style names.
   assert.deepEqual(container.style, {
     backgroundColor: 'rgba(255, 255, 255, 1)',
     flex: 1,
     padding: 24,
+    paddingTop: 8,
+    rowGap: 4,
   });
-  // Pre-order refs.
+  // Pre-order refs (n3 is the kept link span inside the title).
   assert.deepEqual(
     [root, container, ...container.children].map(n => n.ref),
-    ['n0', 'n1', 'n2', 'n3', 'n4', 'n6', 'n7'],
+    ['n0', 'n1', 'n2', 'n4', 'n5', 'n7', 'n8'],
   );
 
   const title = container.children[0];
   assert.equal(title.role, 'header');
-  assert.equal(title.name, 'Sign in');
-  assert.equal(title.text, 'Sign in');
+  assert.equal(title.name, 'Sign in now');
+  assert.equal(title.text, 'Sign in now');
   assert.equal(title.sel, 'RootView>View>Paragraph');
   assert.equal(title.style.fontSize, 28);
-  assert.equal(title.style.fontWeight, '700');
+  assert.equal(title.style.fontWeight, 700);
   assert.equal(title.style.ellipsizeMode, 'tail');
   assert.equal(title.style.marginBottom, 16);
+  assert.equal(title.virtual, undefined);
+  // RawText and the span without a11y props are dropped; the link span is
+  // kept with the Paragraph's box.
+  assert.equal(title.children.length, 1);
+  const link = title.children[0];
+  assert.equal(link.type, 'Text');
+  assert.equal(link.role, 'link');
+  assert.equal(link.text, 'now');
+  assert.equal(link.name, 'now');
+  assert.equal(link.virtual, true);
+  assert.deepEqual(link.box, title.box);
 
   const image = container.children[1];
   assert.equal(image.role, 'image');

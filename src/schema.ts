@@ -59,6 +59,12 @@ export type TreeNode = {
   /** Text content (Paragraph, Text fragment, TextInput value), else `null`. */
   text: string | null;
   testID: string | null;
+  /**
+   * `true` when the host node has no frame of its own (nested `<Text>` span
+   * kept for its a11y props, or another virtual node). `box` is then the
+   * parent's box. Only for the `shadowTree` source.
+   */
+  virtual?: boolean;
   /** Raw debug props from the host; only with `--debug-props` and the `shadowTree` source. */
   debugProps?: Record<string, string>;
   children: TreeNode[];
@@ -94,7 +100,9 @@ export type FantomNode = {
 export type ShadowNodeJSON = {
   type: string;
   tag?: number;
-  frame: Box;
+  /** Relative to the parent. Absent on RawText / nested Text span nodes. */
+  frame?: Box;
+  /** `"ltr"` / `"rtl"`. */
   layoutDirection?: string;
   pointScaleFactor?: number;
   accessible?: boolean;
@@ -116,8 +124,9 @@ export type ShadowNodeJSON = {
   accessibilityLiveRegion?: string;
   accessibilityLabelledBy?: unknown;
   accessibilityLanguage?: string;
+  accessibilityViewIsModal?: boolean;
   testID?: string;
-  nativeId?: string;
+  nativeID?: string;
   collapsable?: boolean;
   pointerEvents?: string;
   opacity?: number;
@@ -140,6 +149,7 @@ export type ShadowNodeJSON = {
     letterSpacing?: number;
     textAlign?: string;
     textDecorationLine?: string;
+    textTransform?: string;
   }>;
   paragraphAttributes?: {
     numberOfLines?: number;
@@ -151,6 +161,8 @@ export type ShadowNodeJSON = {
   placeholder?: string;
   editable?: boolean;
   secureTextEntry?: boolean;
+  multiline?: boolean;
+  enabled?: boolean;
   // Image
   sources?: Array<{uri: string; width?: number; height?: number}>;
   // Switch
@@ -159,7 +171,7 @@ export type ShadowNodeJSON = {
   horizontal?: boolean;
   contentOffset?: {x: number; y: number};
   debugProps?: Record<string, string>;
-  children: ShadowNodeJSON[];
+  children?: ShadowNodeJSON[];
 };
 
 /** Payload the JS entry prints inside `{"type":"rn-a11y-tree-result","rnA11yTree":...}`. */

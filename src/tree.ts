@@ -102,13 +102,17 @@ function selectors(
   return {sel: testID ? `#${testID}` : pathSel, pathSel};
 }
 
+// Layout is pixel-snapped at the point scale factor (e.g. 1/3 dp), which
+// leaves float noise like 63.99999237. Round to 1/1000 dp.
+const round = (n: number) => Math.round(n * 1000) / 1000;
+
 function absoluteBox(origin: Point, frame: Box | null, fallback?: Box): Box {
   if (frame) {
     return {
-      x: origin.x + frame.x,
-      y: origin.y + frame.y,
-      width: frame.width,
-      height: frame.height,
+      x: round(origin.x + frame.x),
+      y: round(origin.y + frame.y),
+      width: round(frame.width),
+      height: round(frame.height),
     };
   }
   return fallback ?? {x: origin.x, y: origin.y, width: 0, height: 0};
@@ -157,6 +161,7 @@ const SHADOW_A11Y_RAW_KEYS = [
   'accessibilityLiveRegion',
   'accessibilityLabelledBy',
   'accessibilityLanguage',
+  'accessibilityViewIsModal',
 ] as const;
 
 /** Visual keys copied into `style` as-is. */
@@ -170,7 +175,7 @@ const SHADOW_STYLE_KEYS = [
   'transform',
   'pointerEvents',
   'layoutDirection',
-  'nativeId',
+  'nativeID',
   'collapsable',
 ] as const;
 
@@ -185,6 +190,7 @@ const FRAGMENT_STYLE_KEYS = [
   'letterSpacing',
   'textAlign',
   'textDecorationLine',
+  'textTransform',
 ] as const;
 
 /** Component-specific keys copied into `style` as-is. */
@@ -193,14 +199,97 @@ const SHADOW_COMPONENT_KEYS = [
   'defaultValue',
   'editable',
   'secureTextEntry',
+  'multiline',
+  'enabled',
   'sources',
   'value',
   'horizontal',
   'contentOffset',
 ] as const;
 
+/**
+ * Yoga edge/gutter objects (`"padding":{"all":16,"top":4}`) are flattened to
+ * React Native style names (`padding: 16, paddingTop: 4`). Keys not listed
+ * here are copied as-is.
+ */
+const YOGA_EDGE_NAMES: Record<string, Record<string, string>> = {
+  padding: edgeNames('padding', ''),
+  margin: edgeNames('margin', ''),
+  border: {
+    all: 'borderWidth',
+    horizontal: 'borderHorizontalWidth',
+    vertical: 'borderVerticalWidth',
+    left: 'borderLeftWidth',
+    top: 'borderTopWidth',
+    right: 'borderRightWidth',
+    bottom: 'borderBottomWidth',
+    start: 'borderStartWidth',
+    end: 'borderEndWidth',
+  },
+  position: {
+    all: 'inset',
+    horizontal: 'insetInline',
+    vertical: 'insetBlock',
+    left: 'left',
+    top: 'top',
+    right: 'right',
+    bottom: 'bottom',
+    start: 'start',
+    end: 'end',
+  },
+  gap: {all: 'gap', row: 'rowGap', column: 'columnGap'},
+};
+
+function edgeNames(prefix: string, suffix: string): Record<string, string> {
+  const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+  const out: Record<string, string> = {all: prefix + suffix};
+  for (const edge of ['horizontal', 'vertical', 'left', 'top', 'right', 'bottom', 'start', 'end']) {
+    out[edge] = prefix + cap(edge) + suffix;
+  }
+  return out;
+}
+
+export function flattenYogaStyle(
+  yogaStyle: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(yogaStyle)) {
+    const names = YOGA_EDGE_NAMES[key];
+    if (names && value != null && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [edge, edgeValue] of Object.entries(value)) {
+        out[names[edge] ?? `${key}.${edge}`] = edgeValue;
+      }
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+/** Nested `<Text>` spans are kept only if they carry one of these. */
+const SPAN_A11Y_KEYS = [
+  'accessibilityLabel',
+  'role',
+  'accessibilityRole',
+  'accessible',
+  'testID',
+] as const;
+
 const TEXT_INPUT_TYPES = new Set(['TextInput', 'AndroidTextInput']);
 const SWITCH_TYPES = new Set(['Switch', 'AndroidSwitch']);
+
+/**
+ * Paragraph children in the ShadowTree are `RawText` and nested `Text` span
+ * nodes without layout. `RawText` is dropped (its text is in the Paragraph's
+ * `text`); spans are dropped unless they carry accessibility props.
+ */
+function isKeptChild(child: ShadowNodeJSON): boolean {
+  if (child.type === 'RawText') return false;
+  if (child.type === 'Text') {
+    return SPAN_A11Y_KEYS.some(key => child[key] !== undefined);
+  }
+  return true;
+}
 
 function convertShadowNode(
   node: ShadowNodeJSON,
@@ -208,21 +297,29 @@ function convertShadowNode(
   parentSel: string,
   nextRef: () => string,
   sibling: SiblingIndex,
+  parentBox?: Box,
 ): TreeNode {
   const ref = nextRef();
-  const box = absoluteBox(origin, node.frame ?? null);
+  // Nodes without a frame (text spans, other virtual nodes) get the parent's box.
+  const isVirtual = node.frame == null;
+  const box = isVirtual
+    ? {...(parentBox ?? {x: origin.x, y: origin.y, width: 0, height: 0})}
+    : absoluteBox(origin, node.frame ?? null);
   const testID = nonEmpty(node.testID);
   const {sel, pathSel} = selectors(node.type, testID, parentSel, sibling);
 
-  const childNodes = node.children ?? [];
+  const childNodes = (node.children ?? []).filter(isKeptChild);
   const indexFor = siblingIndexer(childNodes.map(c => c.type));
   const children = childNodes.map(child =>
     convertShadowNode(
       child,
-      {x: box.x, y: box.y},
+      // Virtual nodes have no frame, so children stay relative to the
+      // nearest ancestor with one.
+      isVirtual ? origin : {x: box.x, y: box.y},
       pathSel,
       nextRef,
       indexFor(child.type),
+      box,
     ),
   );
 
@@ -230,6 +327,8 @@ function convertShadowNode(
   if (node.type === 'Paragraph') {
     text =
       node.text ?? (node.fragments ? node.fragments.map(f => f.text).join('') : null);
+  } else if (node.type === 'Text' || node.type === 'RawText') {
+    text = nonEmpty(node.text) ?? spanText(node);
   } else if (TEXT_INPUT_TYPES.has(node.type)) {
     text = nonEmpty(node.text) ?? nonEmpty(node.defaultValue);
   }
@@ -238,7 +337,7 @@ function convertShadowNode(
   const role = deriveRole(node.type, node.role, node.accessibilityRole);
   const name = deriveName(
     a11y.label,
-    node.type === 'Paragraph' ? text : null,
+    node.type === 'Paragraph' || node.type === 'Text' ? text : null,
     a11y.accessible,
     children,
   );
@@ -248,7 +347,7 @@ function convertShadowNode(
     if (node[key] !== undefined) style[key] = node[key];
   }
   if (node.yogaStyle) {
-    Object.assign(style, node.yogaStyle);
+    Object.assign(style, flattenYogaStyle(node.yogaStyle));
   }
   const firstFragment = node.fragments?.[0];
   if (firstFragment) {
@@ -276,10 +375,24 @@ function convertShadowNode(
     testID,
     children,
   };
+  if (isVirtual) {
+    result.virtual = true;
+  }
   if (node.debugProps) {
     result.debugProps = node.debugProps;
   }
   return result;
+}
+
+/** Text of a nested `Text` span: concatenated `RawText` descendants. */
+function spanText(node: ShadowNodeJSON): string | null {
+  const parts: string[] = [];
+  const walk = (n: ShadowNodeJSON) => {
+    if (n.type === 'RawText' && n.text) parts.push(n.text);
+    for (const c of n.children ?? []) walk(c);
+  };
+  for (const c of node.children ?? []) walk(c);
+  return parts.length > 0 ? parts.join('') : null;
 }
 
 function shadowA11yInfo(node: ShadowNodeJSON): A11yInfo {

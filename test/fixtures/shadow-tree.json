@@ -1,56 +1,167 @@
 {
-  "_comment": "Hand-written fixture (NOT real host output). Shape follows the tentative NativeFantom.getA11yTree proposal; values mimic examples/basic/App.tsx.",
+  "_comment": "Hand-written fixture (NOT real host output). Shape follows NativeFantom.getA11yTree as described by the native worker; values mimic examples/basic/App.tsx.",
   "type": "RootView",
   "tag": 1,
-  "frame": {"x": 0, "y": 0, "width": 390, "height": 844},
+  "frame": {
+    "x": 0,
+    "y": 0,
+    "width": 390,
+    "height": 844
+  },
   "pointScaleFactor": 3,
   "children": [
     {
       "type": "View",
       "tag": 2,
-      "frame": {"x": 0, "y": 0, "width": 390, "height": 844},
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
       "backgroundColor": "rgba(255, 255, 255, 1)",
-      "yogaStyle": {"flex": 1, "padding": 24},
+      "yogaStyle": {
+        "flex": 1,
+        "padding": {
+          "all": 24,
+          "top": 8
+        },
+        "gap": {
+          "row": 4
+        }
+      },
       "children": [
         {
           "type": "Paragraph",
           "tag": 3,
-          "frame": {"x": 24, "y": 24, "width": 342, "height": 34},
+          "frame": {
+            "x": 24,
+            "y": 24,
+            "width": 342,
+            "height": 34
+          },
           "accessible": true,
           "accessibilityRole": "header",
-          "yogaStyle": {"marginBottom": 16},
-          "text": "Sign in",
-          "fragments": [{"text": "Sign in", "fontSize": 28, "fontWeight": "700", "color": "rgba(0, 0, 0, 1)"}],
-          "paragraphAttributes": {"numberOfLines": 0, "ellipsizeMode": "tail"},
-          "children": []
+          "yogaStyle": {
+            "margin": {
+              "bottom": 16
+            }
+          },
+          "text": "Sign in now",
+          "fragments": [
+            {
+              "text": "Sign in ",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "color": "rgba(0, 0, 0, 1)"
+            },
+            {
+              "text": "now",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "color": "rgba(0, 0, 255, 1)"
+            }
+          ],
+          "paragraphAttributes": {
+            "numberOfLines": 0,
+            "ellipsizeMode": "tail"
+          },
+          "children": [
+            {
+              "type": "RawText",
+              "tag": 30,
+              "text": "Sign in "
+            },
+            {
+              "type": "Text",
+              "tag": 31,
+              "accessibilityRole": "link",
+              "children": [
+                {
+                  "type": "RawText",
+                  "tag": 32,
+                  "text": "now"
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "tag": 33,
+              "children": [
+                {
+                  "type": "RawText",
+                  "tag": 34,
+                  "text": ""
+                }
+              ]
+            }
+          ]
         },
         {
           "type": "Image",
           "tag": 4,
-          "frame": {"x": 24, "y": 74, "width": 64, "height": 64},
+          "frame": {
+            "x": 24,
+            "y": 74,
+            "width": 64,
+            "height": 64
+          },
           "accessibilityLabel": "Company logo",
-          "sources": [{"uri": "https://example.com/logo.png", "width": 64, "height": 64}],
+          "sources": [
+            {
+              "uri": "https://example.com/logo.png",
+              "width": 64,
+              "height": 64
+            }
+          ],
           "children": []
         },
         {
           "type": "View",
           "tag": 5,
-          "frame": {"x": 24, "y": 154, "width": 342, "height": 48},
+          "frame": {
+            "x": 24,
+            "y": 154,
+            "width": 342,
+            "height": 48
+          },
           "accessible": true,
           "role": "button",
-          "accessibilityState": {"disabled": false, "selected": false, "checked": "None", "busy": false, "expanded": null},
+          "accessibilityState": {
+            "disabled": false,
+            "selected": false,
+            "checked": "None",
+            "busy": false,
+            "expanded": null
+          },
           "testID": "submit",
           "backgroundColor": "rgba(30, 111, 255, 1)",
-          "borderRadii": {"all": 8},
-          "debugProps": {"testID": "submit", "accessible": "true"},
+          "borderRadii": {
+            "all": 8
+          },
+          "debugProps": {
+            "testID": "submit",
+            "accessible": "true"
+          },
           "children": [
             {
               "type": "Paragraph",
               "tag": 6,
-              "frame": {"x": 140, "y": 14, "width": 62, "height": 20},
+              "frame": {
+                "x": 140,
+                "y": 14,
+                "width": 62,
+                "height": 20
+              },
               "accessible": true,
               "text": "Submit",
-              "fragments": [{"text": "Submit", "fontSize": 16, "color": "rgba(255, 255, 255, 1)"}],
+              "fragments": [
+                {
+                  "text": "Submit",
+                  "fontSize": 16,
+                  "color": "rgba(255, 255, 255, 1)"
+                }
+              ],
               "children": []
             }
           ]
@@ -58,14 +169,24 @@
         {
           "type": "Switch",
           "tag": 7,
-          "frame": {"x": 24, "y": 218, "width": 51, "height": 31},
+          "frame": {
+            "x": 24,
+            "y": 218,
+            "width": 51,
+            "height": 31
+          },
           "value": true,
           "children": []
         },
         {
           "type": "View",
           "tag": 8,
-          "frame": {"x": 0, "y": 300, "width": 10, "height": 10},
+          "frame": {
+            "x": 0,
+            "y": 300,
+            "width": 10,
+            "height": 10
+          },
           "accessibilityRole": "none",
           "role": "presentation",
           "importantForAccessibility": "no-hide-descendants",

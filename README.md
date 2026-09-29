@@ -13,9 +13,8 @@ C++ + Hermes, no simulator). The output is the mounted shadow tree with
 absolute layout boxes.
 
 Status: works end to end on macOS arm64 with the host built by
-`yarn build:host`. Text measurement in the
-host is not done yet, so `Paragraph` boxes have height 0 (and width 0 when
-they are not stretched).
+`yarn build:host`. Text is measured with CoreText, and the tree comes from the
+committed ShadowTree (`source: "shadowTree"`).
 
 ## Usage
 
@@ -77,6 +76,7 @@ TypeScript types: [`src/schema.ts`](src/schema.ts).
     "style": {"backgroundColor": "rgba(255, 255, 255, 1)"}, // other props: visual, Yoga style, font, component props
     "text": null,              // text content of Paragraph / Text fragment / TextInput nodes
     "testID": null,
+    "virtual": true,           // only on nodes without their own frame (box = parent's box)
     "debugProps": {},          // only with --debug-props (shadowTree source)
     "children": []
   }
@@ -88,11 +88,24 @@ TypeScript types: [`src/schema.ts`](src/schema.ts).
 The entry uses `NativeFantom.getA11yTree(surfaceId, includeDebugProps)` when
 the host implements it, else `NativeFantom.getRenderedOutput`.
 
-- `shadowTree` (`getA11yTree`, being added to the host): the committed
-  ShadowTree. The hierarchy is complete (no view flattening), values are
-  typed (numbers, booleans), and `role`, `accessibilityValue` and text
-  fragments are available. Mapping tables are at the top of the
-  `shadowTree` section in `src/tree.ts`.
+- `shadowTree` (`getA11yTree`, in the host built by `yarn build:host`): the
+  committed ShadowTree. The hierarchy is complete (no view flattening),
+  values are typed (numbers, booleans), and `role`, `accessibilityValue` and
+  text fragments are available. Mapping tables are at the top of the
+  `shadowTree` section in `src/tree.ts`. Notes:
+  - `box` values are rounded to 1/1000 dp (layout is pixel-snapped, which
+    leaves float noise such as `63.99999`).
+  - `yogaStyle` edge and gutter objects are flattened to React Native style
+    names: `padding: {all: 24, top: 8}` becomes `padding: 24, paddingTop: 8`
+    (same for `margin`; `border` -> `borderWidth`, `borderTopWidth`, ...;
+    `position` -> `inset`, `insetInline`, `insetBlock`, `left`, `top`, ...;
+    `gap` -> `gap`, `rowGap`, `columnGap`). Other Yoga keys keep their Yoga
+    names (for example `positionType`).
+  - A `Paragraph`'s `RawText` children are dropped (the text is in `text`).
+    Nested `<Text>` spans are dropped unless they have `accessibilityLabel`,
+    `role`, `accessibilityRole`, `accessible` or `testID`; kept spans have no
+    frame of their own, so they get the `Paragraph`'s box and
+    `"virtual": true`. Any other node without a frame is handled the same way.
 - `mounted` (`getRenderedOutput`, upstream Fantom): the mounted view tree.
   Notes:
   - Props are React Native debug-string props (`getDebugProps`): only
@@ -230,11 +243,13 @@ Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,
 ## Milestones
 
 1. JS/CLI: Metro bundle, vendored Fantom runtime, host protocol, tree
-   conversion. (done; `yarn test:e2e` passes with a local host build)
-2. Host binary: build Fantom's tester standalone for macOS/Linux, with
-   `RN_DEBUG_STRING_CONVERTIBLE`, and text measurement (CoreText).
-3. Accessibility fidelity: report `role`, `aria-*`, `accessibilityValue`,
-   and per-span text layout from the host; derive names the way iOS/Android
-   screen readers do.
-4. Packaging: publish with prebuilt host binaries; support Expo modules that
-   need native code (stubs).
+   conversion. (done)
+2. Host build from this repo: `yarn build:host`, relocatable
+   `native/dist/<arch>/`. (done, macOS arm64)
+3. Text measurement with CoreText in the host. (done)
+4. Typed ShadowTree dump (`NativeFantom.getA11yTree`): full hierarchy,
+   `role`, typed a11y state, text fragments. (done)
+5. CI and release: build and publish prebuilt host binaries (macOS
+   arm64/x86_64, Linux), remove the Homebrew OpenSSL dependency. (pending)
+6. Expo modules and other libraries with native code: stubs or host
+   implementations. (pending)
