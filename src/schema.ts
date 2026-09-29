@@ -103,6 +103,11 @@ export type FantomNode = {
 export type ShadowNodeJSON = {
   type: string;
   tag?: number;
+  /**
+   * Offset of the children's origin relative to this node's frame, where
+   * non-zero (ScrollView: -contentOffset; RNSScreen: (0, topInset + headerHeight)).
+   */
+  contentOriginOffset?: {x: number; y: number};
   /** Relative to the parent. Absent on RawText / nested Text span nodes. */
   frame?: Box;
   /** `"ltr"` / `"rtl"`. */
@@ -173,6 +178,24 @@ export type ShadowNodeJSON = {
   // ScrollView
   horizontal?: boolean;
   contentOffset?: {x: number; y: number};
+  contentSize?: {width: number; height: number};
+  // react-native-screens: RNSScreen
+  activityState?: number;
+  stackPresentation?: string;
+  stackAnimation?: string;
+  screenId?: string;
+  gestureEnabled?: boolean;
+  stateFrameSize?: unknown;
+  stateContentOffset?: unknown;
+  // RNSScreenStackHeaderConfig
+  title?: string;
+  hidden?: boolean;
+  translucent?: boolean;
+  largeTitle?: boolean;
+  backTitle?: string;
+  hideBackButton?: boolean;
+  // RNCSafeAreaProvider / RNCSafeAreaView
+  insets?: {top: number; left: number; right: number; bottom: number};
   debugProps?: Record<string, string>;
   children?: ShadowNodeJSON[];
 };

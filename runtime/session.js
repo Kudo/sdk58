@@ -19,6 +19,7 @@
 
 import {createRunner} from './actions';
 import {setRootTag} from './gh/hostContext';
+import {applyHostConfig} from './hostConfig';
 import {settle} from './settle';
 
 const Fantom = require('./fantom/index');
@@ -26,7 +27,7 @@ const NativeFantom = require('./fantom/specs/NativeFantom').default;
 
 export const RESPONSE_TYPE = 'rn-a11y-tree-response';
 
-export function installSession({React, App, viewport, tapMode}) {
+export function installSession({React, App, viewport, tapMode, hostConfig}) {
   let root = null;
   let runner = null;
   let nextIndex = 0;
@@ -51,6 +52,7 @@ export function installSession({React, App, viewport, tapMode}) {
         );
       }
       if (runner != null) throw new Error('Session is already started');
+      applyHostConfig(hostConfig ?? {});
       root = Fantom.createRoot({
         viewportWidth: viewport.width,
         viewportHeight: viewport.height,

@@ -247,6 +247,24 @@ const SHADOW_COMPONENT_KEYS = [
   'value',
   'horizontal',
   'contentOffset',
+  'contentSize',
+  'contentOriginOffset',
+  // react-native-screens
+  'activityState',
+  'stackPresentation',
+  'stackAnimation',
+  'screenId',
+  'gestureEnabled',
+  'stateFrameSize',
+  'stateContentOffset',
+  'title',
+  'hidden',
+  'translucent',
+  'largeTitle',
+  'backTitle',
+  'hideBackButton',
+  // react-native-safe-area-context
+  'insets',
 ] as const;
 
 /**
@@ -321,6 +339,19 @@ const TEXT_INPUT_TYPES = new Set(['TextInput', 'AndroidTextInput']);
 const SWITCH_TYPES = new Set(['Switch', 'AndroidSwitch']);
 
 /**
+ * Offset of a node's content relative to its frame. Uses the host's
+ * `contentOriginOffset`; hosts from before that key only report a
+ * ScrollView's `contentOffset`, which moves the content the other way.
+ */
+export function contentOrigin(node: ShadowNodeJSON): {x: number; y: number} {
+  if (node.contentOriginOffset != null) return node.contentOriginOffset;
+  if (node.contentOffset != null) {
+    return {x: -(node.contentOffset.x ?? 0), y: -(node.contentOffset.y ?? 0)};
+  }
+  return {x: 0, y: 0};
+}
+
+/**
  * Paragraph children in the ShadowTree are `RawText` and nested `Text` span
  * nodes without layout. `RawText` is dropped (its text is in the Paragraph's
  * `text`); spans are dropped unless they carry accessibility props.
@@ -352,15 +383,16 @@ function convertShadowNode(
 
   const childNodes = (node.children ?? []).filter(isKeptChild);
   const indexFor = siblingIndexer(childNodes.map(c => c.type));
-  // ShadowTree frames do not move when a ScrollView scrolls; its children
-  // are shifted by its `contentOffset` so `box` is the on-screen position.
-  const scroll = node.contentOffset ?? {x: 0, y: 0};
+  // Children are placed at parent position + parent contentOriginOffset +
+  // child frame (the host emits contentOriginOffset where it is non-zero:
+  // ScrollView = -contentOffset, RNSScreen = (0, topInset + headerHeight)).
+  const origin_ = contentOrigin(node);
   const children = childNodes.map(child =>
     convertShadowNode(
       child,
       // Virtual nodes have no frame, so children stay relative to the
       // nearest ancestor with one.
-      isVirtual ? origin : {x: box.x - scroll.x, y: box.y - scroll.y},
+      isVirtual ? origin : {x: box.x + origin_.x, y: box.y + origin_.y},
       pathSel,
       nextRef,
       indexFor(child.type),
@@ -381,7 +413,8 @@ function convertShadowNode(
   const a11y = shadowA11yInfo(node);
   const role = deriveRole(node.type, node.role, node.accessibilityRole);
   const name = deriveName(
-    a11y.label,
+    // A native stack header is announced by its title.
+    a11y.label ?? (node.type === 'RNSScreenStackHeaderConfig' ? nonEmpty(node.title) : null),
     node.type === 'Paragraph' || node.type === 'Text' ? text : null,
     a11y.accessible,
     children,

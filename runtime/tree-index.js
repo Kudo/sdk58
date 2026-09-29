@@ -57,12 +57,17 @@ export function indexTree(root) {
       children: [],
     };
     entries.push(entry);
-    // Children of a scroll view move by its scroll offset (frames in the
-    // ShadowTree do not). Must match src/tree.ts.
-    const scroll = node.contentOffset ?? {x: 0, y: 0};
+    // Children are at parent position + contentOriginOffset + child frame
+    // (ScrollView: -contentOffset, RNSScreen: header height). Must match
+    // src/tree.ts contentOrigin().
+    const offset =
+      node.contentOriginOffset ??
+      (node.contentOffset != null
+        ? {x: -(node.contentOffset.x ?? 0), y: -(node.contentOffset.y ?? 0)}
+        : {x: 0, y: 0});
     const childOrigin = virtual
       ? origin
-      : {x: box.x - (scroll.x ?? 0), y: box.y - (scroll.y ?? 0)};
+      : {x: box.x + offset.x, y: box.y + offset.y};
     for (const child of node.children ?? []) {
       if (isKeptChild(child)) {
         entry.children.push(visit(child, childOrigin, box, entry));

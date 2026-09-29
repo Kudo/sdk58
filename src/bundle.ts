@@ -27,6 +27,11 @@ const FALLBACK_PLATFORM = 'android';
 
 export type TapMode = 'touch' | 'click' | 'both';
 
+export type HostConfig = {
+  headerHeight?: number;
+  safeAreaInsets?: {top: number; left: number; right: number; bottom: number};
+};
+
 export type BundleOptions = {
   /** Path to the user's component file. */
   appPath: string;
@@ -39,6 +44,8 @@ export type BundleOptions = {
   tapMode?: TapMode;
   /** Build a bundle for `session` (host --interactive mode). */
   session?: boolean;
+  /** Host settings applied before the first render (runtime/hostConfig.js). */
+  hostConfig?: HostConfig;
   /** Metro platform (required): `android`, `ios`, or an out-of-tree name such as `a11ytree`. */
   platform: string;
   /** Output bundle path. Defaults to a file in a new temp dir. */
@@ -80,6 +87,7 @@ export function renderEntry(options: {
   script?: unknown[];
   tapMode?: TapMode;
   session?: boolean;
+  hostConfig?: HostConfig;
 }): string {
   const template = fs.readFileSync(
     path.join(RUNTIME_DIR, 'entry-template.js'),
@@ -100,7 +108,8 @@ export function renderEntry(options: {
     )
     .replaceAll('__SCRIPT__', () => JSON.stringify(options.script ?? null))
     .replaceAll('__TAP_MODE__', () => JSON.stringify(options.tapMode ?? 'touch'))
-    .replaceAll('__SESSION__', String(options.session === true));
+    .replaceAll('__SESSION__', String(options.session === true))
+    .replaceAll('__HOST_CONFIG__', () => JSON.stringify(options.hostConfig ?? {}));
 }
 
 function isInside(file: string, dir: string): boolean {
@@ -280,6 +289,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
       script: options.script,
       tapMode: options.tapMode,
       session: options.session,
+      hostConfig: options.hostConfig,
     }),
   );
   const bundlePath = path.resolve(

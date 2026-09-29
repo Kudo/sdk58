@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import {Command, InvalidArgumentError} from 'commander';
 
-import {bundle, type TapMode} from './bundle.ts';
+import {bundle, type HostConfig, type TapMode} from './bundle.ts';
 import {getHostBin, HostError, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
@@ -23,7 +23,12 @@ function positiveNumber(value: string): number {
   return n;
 }
 
-type RenderOptions = {
+type HostConfigOptions = {
+  headerHeight?: number;
+  safeAreaInsets?: HostConfig['safeAreaInsets'];
+};
+
+type RenderOptions = HostConfigOptions & {
   width: number;
   height: number;
   platform?: string;
@@ -49,6 +54,35 @@ Note: React Native core components branch on Platform.OS (e.g. TextInput, Switch
 type RunOptions = RenderOptions & {script?: string; tapMode: string; timeout?: number};
 
 const TAP_MODES: TapMode[] = ['touch', 'click', 'both'];
+
+function nonNegativeNumber(value: string): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new InvalidArgumentError('Must be a number >= 0.');
+  }
+  return n;
+}
+
+function parseInsets(value: string): NonNullable<HostConfig['safeAreaInsets']> {
+  const parts = value.split(',').map(p => Number(p.trim()));
+  if (parts.length !== 4 || parts.some(n => !Number.isFinite(n) || n < 0)) {
+    throw new InvalidArgumentError('Expected top,left,right,bottom (numbers >= 0), e.g. 47,0,0,34.');
+  }
+  const [top, left, right, bottom] = parts;
+  return {top, left, right, bottom};
+}
+
+/**
+ * Host settings for the first render. iOS uses a 44 dp navigation bar; the
+ * host default (56 dp) is the Android toolbar.
+ */
+function hostConfigFor(platform: string, options: HostConfigOptions): HostConfig {
+  const config: HostConfig = {};
+  const headerHeight = options.headerHeight ?? (platform === 'ios' ? 44 : undefined);
+  if (headerHeight != null) config.headerHeight = headerHeight;
+  if (options.safeAreaInsets != null) config.safeAreaInsets = options.safeAreaInsets;
+  return config;
+}
 
 function requirePlatform(platform: string | undefined): string {
   if (platform == null || platform === '') {
@@ -102,6 +136,7 @@ async function execute<T>(
     dev: options.dev,
     includeDebugProps: options.debugProps,
     verbose: options.verbose,
+    hostConfig: hostConfigFor(platform, options),
     ...extra,
   });
   const cleanUp = () => {
@@ -177,6 +212,7 @@ async function session(file: string, options: RunOptions) {
     verbose: options.verbose,
     tapMode: options.tapMode as TapMode,
     session: true,
+    hostConfig: hostConfigFor(platform, options),
   });
   if (options.keepBundle || options.verbose) {
     process.stderr.write(`Bundle: ${result.bundlePath} (${result.sizeBytes} bytes)\n`);
@@ -233,6 +269,16 @@ function addCommonOptions(command: Command): Command {
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
+    .option(
+      '--header-height <dp>',
+      'react-native-screens native header height (default: 44 for --platform ios, else the host default 56)',
+      nonNegativeNumber,
+    )
+    .option(
+      '--safe-area-insets <top,left,right,bottom>',
+      'safe area insets for react-native-safe-area-context (default 0,0,0,0)',
+      parseInsets,
+    )
     .option('-v, --verbose', 'print Metro progress and host logs to stderr', false);
 }
 
@@ -272,6 +318,16 @@ program
   )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
+  .option(
+    '--header-height <dp>',
+    'react-native-screens native header height (default: 44 for --platform ios, else the host default 56)',
+    nonNegativeNumber,
+  )
+  .option(
+    '--safe-area-insets <top,left,right,bottom>',
+    'safe area insets for react-native-safe-area-context (default 0,0,0,0)',
+    parseInsets,
+  )
   .option('-v, --verbose', 'print Metro progress and host logs to stderr', false)
   .action(session);
 
