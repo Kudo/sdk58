@@ -4290,6 +4290,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-freeze@npm:^1.0.0":
+  version: 1.0.4
+  resolution: "react-freeze@npm:1.0.4"
+  peerDependencies:
+    react: ">=17.0.0"
+  checksum: 10c0/8f51257c261bfefff86f618e958683536248f708019632d309ee5ebdd52f25d3c130660d06fb6f0f4fdef79f00f8ec7177233a872c2321f7d46b7e77ccc522a1
+  languageName: node
+  linkType: hard
+
 "react-is@npm:^18.0.0":
   version: 18.3.1
   resolution: "react-is@npm:18.3.1"
@@ -4309,12 +4318,26 @@ __metadata:
     metro-config: "npm:0.87.1"
     react: "npm:19.3.0"
     react-native: "npm:0.88.0-rc.2"
+    react-native-screens: "npm:~4.28.0"
     tsx: "npm:^4.23.15"
     typescript: "npm:~5.9.3"
   bin:
     rn-a11y-tree: ./bin/rn-a11y-tree.js
   languageName: unknown
   linkType: soft
+
+"react-native-screens@npm:~4.28.0":
+  version: 4.28.0
+  resolution: "react-native-screens@npm:4.28.0"
+  dependencies:
+    react-freeze: "npm:^1.0.0"
+    warn-once: "npm:^0.1.0"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/5bd57be437b1966e50f71917c26b80cac38e73d2e23bfa7fb093d8613d2d80a38ffedeb77a5ea6e2664787fba2f1ede58ced9ed2c79af786f67272b114683b59
+  languageName: node
+  linkType: hard
 
 "react-native@npm:0.88.0-rc.2":
   version: 0.88.0-rc.2
@@ -5029,6 +5052,13 @@ __metadata:
   dependencies:
     makeerror: "npm:1.0.12"
   checksum: 10c0/a17e037bccd3ca8a25a80cb850903facdfed0de4864bd8728f1782370715d679fa72e0a0f5da7c1c1379365159901e5935f35be531229da53bbfc0efdabdb48e
+  languageName: node
+  linkType: hard
+
+"warn-once@npm:^0.1.0":
+  version: 0.1.1
+  resolution: "warn-once@npm:0.1.1"
+  checksum: 10c0/f531e7b2382124f51e6d8f97b8c865246db8ab6ff4e53257a2d274e0f02b97d7201eb35db481843dc155815e154ad7afb53b01c4d4db15fb5aa073562496aff7
   languageName: node
   linkType: hard
 
