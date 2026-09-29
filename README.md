@@ -143,7 +143,7 @@ renders the component, runs the actions in order, and prints:
     {
       "index": 2, "action": "tap",
       "target": {"tag": 16, "ref": "n7", "testID": "submit", "type": "View", "box": {...}},
-      "hit": {"tag": 14, "ref": "n8", "testID": null, "type": "Paragraph", "box": {...}},
+      "hit": {"tag": 14, "ref": "n8", "testID": null, "type": "Paragraph", "box": {...}, "viaHitSlop": false},
       "events": ["touchStart", "touchEnd"],
       "via": {"hitTest": "js", "events": "js"},   // host methods ("native") or the JS fallback
       "warnings": ["..."],                        // optional, e.g. the target is covered
@@ -176,6 +176,15 @@ Rules:
   Touch events go to the hit node (the responder system bubbles them).
   `click` goes to the target, because it does not bubble from a child to a
   Pressable in this host.
+- The host `hitTest` honors pointerEvents, transforms, overflow clipping,
+  ScrollView offsets, zIndex, `display: none` and hitSlop; `viaHitSlop` is
+  `true` when the point was only inside the hitSlop area.
+- Touch payloads: `touchStart {touches, changedTouches, targetTouches}` and
+  `touchEnd {touches: [], changedTouches, targetTouches: []}`, each touch
+  `{pageX, pageY, locationX, locationY, screenX, screenY, identifier: 0,
+  target, timestamp, force: 1}`.
+- `type`: for each character, `keyPress`, then `setTextInputTextByTag` (the
+  input's ShadowTree state, so `text` in the tree changes), then `change`.
 - Timers are mocked during the script (`Fantom.installTimerMock`), so
   `wait` and `longPress` are deterministic.
 - Host methods: `hitTest`, `enqueueNativeEventByTag`,
