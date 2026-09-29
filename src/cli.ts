@@ -6,6 +6,12 @@ import {bundle, DEFAULT_PLATFORM} from './bundle.ts';
 import {getHostBin, HostError, runHost} from './host.ts';
 import {toRenderResult} from './tree.ts';
 
+// stdout is reserved for the JSON result. Metro and @expo/metro-config log
+// with console.log/info (e.g. "Could not resolve react-native!"), so send
+// those to stderr.
+console.log = console.error;
+console.info = console.error;
+
 function positiveNumber(value: string): number {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) {

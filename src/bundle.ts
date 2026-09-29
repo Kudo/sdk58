@@ -10,9 +10,8 @@ import type {CustomResolutionContext, Resolution} from 'metro-resolver';
 const require = createRequire(import.meta.url);
 
 /** Root of this package (contains `runtime/`). */
-export const PACKAGE_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
+export const PACKAGE_ROOT = fs.realpathSync(
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'),
 );
 export const RUNTIME_DIR = path.join(PACKAGE_ROOT, 'runtime');
 
@@ -139,7 +138,7 @@ export function createMetroConfig(options: {
   const overrides: InputConfigT = {
     projectRoot,
     watchFolders: [
-      ...new Set([...(base.watchFolders ?? []), PACKAGE_ROOT, workDir]),
+      ...new Set([...(base.watchFolders ?? []), projectRoot, PACKAGE_ROOT, workDir]),
     ],
     reporter: {update: () => {}},
     resolver: {
@@ -199,10 +198,11 @@ export function createMetroConfig(options: {
 
 export async function bundle(options: BundleOptions): Promise<BundleResult> {
   const platform = options.platform ?? DEFAULT_PLATFORM;
-  const appPath = path.resolve(options.appPath);
-  if (!fs.existsSync(appPath)) {
-    throw new Error(`File not found: ${appPath}`);
+  if (!fs.existsSync(options.appPath)) {
+    throw new Error(`File not found: ${path.resolve(options.appPath)}`);
   }
+  // Metro's file map uses real paths (e.g. /tmp -> /private/tmp on macOS).
+  const appPath = fs.realpathSync(options.appPath);
   const projectRoot = findProjectRoot(appPath);
 
   const workDir = fs.realpathSync(
