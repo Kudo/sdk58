@@ -785,7 +785,7 @@ source revision changes; its build imports the native hermesc through
 `IMPORT_HOST_COMPILERS`, so no Rosetta is needed to build), then the tester in
 `build/tester-<type>-<arch>`, into `native/dist/<arch>/rn-a11y-host` (+ dSYM).
 `universal` builds both slices and joins them (and the dSYMs) with `lipo` into
-`native/dist/universal/`. `scripts/release-host.mjs --pack` makes its own
+`native/dist/universal/`. `scripts/release-host.ts --pack` makes its own
 universal file when `native/dist/arm64` and `native/dist/x86_64` both exist.
 Running the x86_64 slice on an arm64 Mac needs Rosetta; CI checks it on an
 Intel runner.

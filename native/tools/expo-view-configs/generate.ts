@@ -1,10 +1,10 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Generates the view configs (props and events) of @expo/ui's native views from the Swift and
 // Kotlin sources, so a host without the Expo native runtime can answer
 // `globalThis.expo.getViewConfig(moduleName, viewName)`.
 //
 // Usage:
-//   node native/tools/expo-view-configs/generate.js [--src <expo checkout>] [--ref <git ref>]
+//   bun native/tools/expo-view-configs/generate.ts [--src <expo checkout>] [--ref <git ref>]
 //        [--expo-repo <path>] [--out <file>]
 //
 // Sources, in this order:
@@ -37,11 +37,42 @@ const __dirname = path.dirname(__filename);
 const EXPO_UI = 'packages/expo-ui';
 const MODULE_NAME = 'ExpoUI';
 
+type Args = { src: string | null; ref: string; expoRepo: string; out: string };
+type Sources = { describe: string; list(dir: string, ext: string): string[]; read(file: string): string };
+type Prop = { name: string; type: string; default?: string; source: string };
+type ViewEvent = { name: string; source: string };
+type ViewConfig = {
+  validAttributes: Record<string, true>;
+  directEventTypes: Record<string, { registrationName: string }>;
+};
+type View = ViewConfig & {
+  viewName: string;
+  typeName: string;
+  dsl: string;
+  commonModifiers?: boolean;
+  file: string | null;
+  registeredAt: string;
+  propsClass: string | null;
+  cssProps?: boolean;
+  props: Prop[];
+  events: ViewEvent[];
+};
+type SwiftType = {
+  kind: string;
+  file: string;
+  code: string;
+  line: number;
+  bases: string[];
+  body: string;
+  bodyOffset: number;
+};
+type KotlinClass = { file: string; code: string; header: string; params: string; body: string; line: number };
+
 // ---------------------------------------------------------------------------------------------
 // Arguments and sources
 
-function parseArgs(argv) {
-  const args = {
+function parseArgs(argv: string[]): Args {
+  const args: Args = {
     src: null,
     ref: 'origin/sdk-58',
     expoRepo: path.join(os.homedir(), 'Developer/expo'),
@@ -69,14 +100,14 @@ function parseArgs(argv) {
 }
 
 /** Returns { describe, list(dir, ext), read(file) } over a checkout or a git ref. */
-function openSources(args) {
+function openSources(args: Args): Sources {
   if (args.src) {
     const root = path.resolve(args.src);
     return {
       describe: root,
       list(dir, ext) {
-        const out = [];
-        const walk = (d) => {
+        const out: string[] = [];
+        const walk = (d: string) => {
           for (const entry of fs.readdirSync(path.join(root, d), { withFileTypes: true })) {
             const rel = path.posix.join(d, entry.name);
             if (entry.isDirectory()) walk(rel);
@@ -89,7 +120,7 @@ function openSources(args) {
       read: (file) => fs.readFileSync(path.join(root, file), 'utf8'),
     };
   }
-  const git = (...gitArgs) =>
+  const git = (...gitArgs: string[]) =>
     execFileSync('git', ['-C', args.expoRepo, ...gitArgs], { encoding: 'utf8', maxBuffer: 1 << 28 });
   return {
     describe: `${args.expoRepo} @ ${args.ref}`,
@@ -106,7 +137,7 @@ function openSources(args) {
 // Shared parsing helpers
 
 /** Replaces comments with spaces (keeps offsets and line numbers), respecting string literals. */
-function stripComments(code) {
+function stripComments(code: string) {
   let out = '';
   let i = 0;
   while (i < code.length) {
@@ -140,8 +171,8 @@ function stripComments(code) {
 }
 
 /** Index of the bracket that closes the one at `open`. */
-function matchBracket(code, open) {
-  const pairs = { '{': '}', '(': ')', '<': '>' };
+function matchBracket(code: string, open: number) {
+  const pairs: Record<string, string> = { '{': '}', '(': ')', '<': '>' };
   const openChar = code[open];
   const closeChar = pairs[openChar];
   let depth = 0;
@@ -161,7 +192,7 @@ function matchBracket(code, open) {
 }
 
 /** The text of a block body with nested blocks blanked, so only its own members remain. */
-function topLevel(body) {
+function topLevel(body: string) {
   let out = '';
   let depth = 0;
   for (const c of body) {
@@ -173,13 +204,13 @@ function topLevel(body) {
   return out;
 }
 
-function lineOf(code, index) {
+function lineOf(code: string, index: number) {
   return code.slice(0, index).split('\n').length;
 }
 
 /** Splits on top-level commas (not inside (), <>, [], {}). */
-function splitTopLevel(text) {
-  const parts = [];
+function splitTopLevel(text: string) {
+  const parts: string[] = [];
   let depth = 0;
   let start = 0;
   for (let i = 0; i < text.length; i++) {
@@ -195,7 +226,7 @@ function splitTopLevel(text) {
   return parts.map((p) => p.trim()).filter(Boolean);
 }
 
-function inferType(defaultValue) {
+function inferType(defaultValue: string | undefined): string | null {
   if (defaultValue == null) return null;
   const v = defaultValue.trim();
   if (v === 'true' || v === 'false') return 'Bool';
@@ -206,18 +237,18 @@ function inferType(defaultValue) {
   return call ? call[1] : null;
 }
 
-const iosEventKey = (name) =>
+const iosEventKey = (name: string) =>
   name.startsWith('on')
     ? 'top' + name.slice(2)
     : name.startsWith('top')
       ? name
       : 'top' + name[0].toUpperCase() + name.slice(1);
-const androidEventKey = (name) => (name.startsWith('on') ? 'top' + name.slice(2) : name);
+const androidEventKey = (name: string) => (name.startsWith('on') ? 'top' + name.slice(2) : name);
 
-function viewConfig(props, events, eventKey) {
-  const validAttributes = {};
+function viewConfig(props: Prop[], events: ViewEvent[], eventKey: (name: string) => string): ViewConfig {
+  const validAttributes: ViewConfig['validAttributes'] = {};
   for (const prop of props) validAttributes[prop.name] = true;
-  const directEventTypes = {};
+  const directEventTypes: ViewConfig['directEventTypes'] = {};
   for (const event of events) directEventTypes[eventKey(event.name)] = { registrationName: event.name };
   return { validAttributes, directEventTypes };
 }
@@ -225,20 +256,20 @@ function viewConfig(props, events, eventKey) {
 // ---------------------------------------------------------------------------------------------
 // iOS (Swift)
 
-function parseSwift(sources, warnings) {
+function parseSwift(sources: Sources, warnings: string[]) {
   const files = sources.list(`${EXPO_UI}/ios`, '.swift');
-  const types = new Map(); // name -> { file, code, body, bases, kind, line }
+  const types = new Map<string, SwiftType>(); // name -> { file, code, body, bases, kind, line }
   for (const file of files) {
     const code = stripComments(sources.read(file));
     const declRe =
       /\b(struct|class|enum|extension)\s+([A-Za-z_][\w.]*)(\s*<[^{]*?>)?\s*(?::\s*([^{]+?))?\s*(?:where [^{]+)?\{/g;
-    let m;
+    let m: RegExpExecArray | null;
     while ((m = declRe.exec(code))) {
       if (m[1] === 'extension') continue;
       const open = m.index + m[0].length - 1;
       const close = matchBracket(code, open);
       if (close < 0) continue;
-      const name = m[2].split('.').pop();
+      const name = m[2].split('.').pop()!;
       if (!types.has(name)) {
         types.set(name, {
           kind: m[1],
@@ -257,13 +288,13 @@ function parseSwift(sources, warnings) {
   const moduleFile = `${EXPO_UI}/ios/ExpoUIModule.swift`;
   const moduleCode = stripComments(sources.read(moduleFile));
   const regRe = /\b(View|ExpoUIView)\(\s*([\w.]+)\.self/g;
-  const registrations = [];
-  let m;
+  const registrations: { dsl: string; typeName: string; line: number }[] = [];
+  let m: RegExpExecArray | null;
   while ((m = regRe.exec(moduleCode))) {
     registrations.push({ dsl: m[1], typeName: m[2], line: lineOf(moduleCode, m.index) });
   }
 
-  function propsOf(className, seen = new Set()) {
+  function propsOf(className: string, seen = new Set<string>()): { props: Prop[]; events: ViewEvent[] } {
     if (seen.has(className)) return { props: [], events: [] };
     seen.add(className);
     if (className === 'ExpoSwiftUI.ViewProps' || className === 'ViewProps') {
@@ -283,12 +314,12 @@ function parseSwift(sources, warnings) {
       return { props: [], events: [] };
     }
     const own = topLevel(type.body);
-    const props = [];
-    const events = [];
+    const props: Prop[] = [];
+    const events: ViewEvent[] = [];
     const source = `${type.file}:${type.line}`;
     const fieldRe =
       /@Field(?:\(\s*"([^"]+)"\s*\))?\s+(?:(?:public|internal|private|fileprivate|open)\s+)*var\s+(\w+)\s*(?::\s*([^=\n]+?))?\s*(?:=\s*([^\n]+?))?\s*$/gm;
-    let f;
+    let f: RegExpExecArray | null;
     while ((f = fieldRe.exec(own))) {
       const defaultValue = f[4] ? f[4].trim() : undefined;
       props.push({
@@ -305,8 +336,8 @@ function parseSwift(sources, warnings) {
     // Superclass: the first base that is a class we know, or the SwiftUI base props.
     for (const base of type.bases) {
       const baseName = base.replace(/<.*$/, '').trim();
-      if (baseName === 'ExpoSwiftUI.ViewProps' || types.get(baseName.split('.').pop())?.kind === 'class') {
-        const inherited = propsOf(baseName === 'ExpoSwiftUI.ViewProps' ? baseName : baseName.split('.').pop(), seen);
+      if (baseName === 'ExpoSwiftUI.ViewProps' || types.get(baseName.split('.').pop()!)?.kind === 'class') {
+        const inherited = propsOf(baseName === 'ExpoSwiftUI.ViewProps' ? baseName : baseName.split('.').pop()!, seen);
         props.unshift(...inherited.props);
         events.unshift(...inherited.events);
         break;
@@ -315,9 +346,9 @@ function parseSwift(sources, warnings) {
     return { props, events };
   }
 
-  const views = {};
+  const views: Record<string, View> = {};
   for (const reg of registrations) {
-    const viewName = reg.typeName.split('.').pop();
+    const viewName = reg.typeName.split('.').pop()!;
     const type = types.get(viewName);
     if (!type) {
       warnings.push(`ios: view type ${reg.typeName} not found`);
@@ -326,7 +357,7 @@ function parseSwift(sources, warnings) {
     const propsMatch = topLevel(type.body).match(/\bvar\s+props\s*:\s*([\w.]+)/);
     const propsClass = propsMatch ? propsMatch[1] : null;
     const { props, events } = propsClass
-      ? propsOf(propsClass.split('.').pop() === 'ViewProps' ? propsClass : propsClass.split('.').pop())
+      ? propsOf(propsClass.split('.').pop() === 'ViewProps' ? propsClass : propsClass.split('.').pop()!)
       : { props: [], events: [] };
     if (!propsClass) warnings.push(`ios: ${viewName} has no props class`);
     views[viewName] = {
@@ -348,13 +379,13 @@ function parseSwift(sources, warnings) {
 // ---------------------------------------------------------------------------------------------
 // Android (Kotlin)
 
-function parseKotlin(sources, warnings) {
+function parseKotlin(sources: Sources, warnings: string[]) {
   const files = sources.list(`${EXPO_UI}/android/src/main`, '.kt');
-  const classes = new Map(); // name -> { file, code, header, params, body, line }
+  const classes = new Map<string, KotlinClass>(); // name -> { file, code, header, params, body, line }
   for (const file of files) {
     const code = stripComments(sources.read(file));
     const classRe = /\bclass\s+(\w+)(\s*<[^>]*>)?/g;
-    let m;
+    let m: RegExpExecArray | null;
     while ((m = classRe.exec(code))) {
       let i = m.index + m[0].length;
       while (/\s/.test(code[i])) i++;
@@ -381,7 +412,7 @@ function parseKotlin(sources, warnings) {
     }
   }
 
-  function propsOfDataClass(name) {
+  function propsOfDataClass(name: string): Prop[] {
     const cls = classes.get(name);
     if (!cls) {
       warnings.push(`android: props class ${name} not found`);
@@ -400,24 +431,24 @@ function parseKotlin(sources, warnings) {
           source,
         };
       })
-      .filter(Boolean);
+      .filter((prop): prop is Prop => prop !== null);
   }
 
   const moduleFile = `${EXPO_UI}/android/src/main/java/expo/modules/ui/ExpoUIModule.kt`;
   const moduleCode = stripComments(sources.read(moduleFile));
-  const views = {};
+  const views: Record<string, View> = {};
 
-  const blockAfter = (index) => {
+  const blockAfter = (index: number) => {
     let i = index;
     while (/[ \t]/.test(moduleCode[i])) i++;
     if (moduleCode[i] !== '{') return '';
     return moduleCode.slice(i + 1, matchBracket(moduleCode, i));
   };
-  const quoted = (text) => [...text.matchAll(/"(\w+)"/g)].map((q) => q[1]);
+  const quoted = (text: string) => [...text.matchAll(/"(\w+)"/g)].map((q) => q[1]);
 
   // Class-based: View(X::class) { Events(...); Prop("...") }
   const classRe = /\bView\(\s*(\w+)::class\s*\)/g;
-  let m;
+  let m: RegExpExecArray | null;
   while ((m = classRe.exec(moduleCode))) {
     const viewName = m[1];
     const block = blockAfter(m.index + m[0].length);
@@ -480,15 +511,15 @@ function parseKotlin(sources, warnings) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const sources = openSources(args);
-  const warnings = [];
+  const warnings: string[] = [];
   const ios = parseSwift(sources, warnings);
   const android = parseKotlin(sources, warnings);
 
-  const views = {};
+  const views: Record<string, { moduleName: string; viewName: string; ios?: View; android?: View }> = {};
   for (const [platform, platformViews] of [
     ['ios', ios],
     ['android', android],
-  ]) {
+  ] as const) {
     for (const [name, config] of Object.entries(platformViews)) {
       const key = `ViewManagerAdapter_${MODULE_NAME}_${name}`;
       views[key] ??= { moduleName: MODULE_NAME, viewName: name };
@@ -497,7 +528,7 @@ function main() {
   }
   const sortedViews = Object.fromEntries(Object.entries(views).sort(([a], [b]) => a.localeCompare(b)));
 
-  const stat = (platformViews) => ({
+  const stat = (platformViews: Record<string, View>) => ({
     views: Object.keys(platformViews).length,
     props: Object.values(platformViews).reduce((n, v) => n + v.props.length, 0),
     events: Object.values(platformViews).reduce((n, v) => n + v.events.length, 0),
@@ -507,7 +538,7 @@ function main() {
   });
 
   const output = {
-    generatedBy: 'native/tools/expo-view-configs/generate.js',
+    generatedBy: 'native/tools/expo-view-configs/generate.ts',
     source: sources.describe,
     stats: { ios: stat(ios), android: stat(android), keys: Object.keys(sortedViews).length },
     warnings,

@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 
 /**
  * The packages as users get them: `npm pack` of react-native-a11y-tree (with
- * the tsc build in dist/) and rn-a11y-host (filled by release-host --pack),
+ * the bun build in dist/) and rn-a11y-host (filled by release-host --pack),
  * installed into a scratch Expo project with npm; `npx rn-a11y-tree render`.
  */
 
@@ -44,19 +44,18 @@ test('npm pack both packages, install into a scratch Expo project, npx rn-a11y-t
       recursive: true,
       filter: src => !/[\\/](osx-bin|linux64-bin|win64-bin|host-version\.json)$/.test(src),
     });
-    run(process.execPath, [path.join(ROOT, 'scripts', 'release-host.mjs'), '--pack', '--package-dir', hostDir], ROOT);
+    run('bun', [path.join(ROOT, 'scripts', 'release-host.ts'), '--pack', '--package-dir', hostDir], ROOT);
     const tarballs = path.join(work, 'tarballs');
     fs.mkdirSync(tarballs);
     run('npm', ['pack', '--pack-destination', tarballs], hostDir);
-    // react-native-a11y-tree: dist/ from tsc, then the files whitelist.
-    run(process.execPath, [path.join(ROOT, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', 'tsconfig.build.json'], ROOT);
+    // react-native-a11y-tree: dist/ from `bun run build` (prepack), then the files whitelist.
     run('npm', ['pack', '--pack-destination', tarballs], ROOT);
     const files = fs.readdirSync(tarballs).sort();
     assert.deepEqual(files.map(f => f.replace(/-\d+\.\d+\.\d+.*\.tgz$/, '')), ['react-native-a11y-tree', 'rn-a11y-host']);
     for (const f of files) t.annotate(`${f}: ${fs.statSync(path.join(tarballs, f)).size} bytes`);
 
     const listing = run('tar', ['-tzf', path.join(tarballs, files[0])], work).stdout;
-    assert.match(listing, /package\/dist\/cli\.js/);
+    assert.match(listing, /package\/dist\/rn-a11y-tree\.js/);
     assert.doesNotMatch(listing, /package\/(src|native|test|e2e|examples|third_party)\//);
 
     const project = path.join(work, 'app');

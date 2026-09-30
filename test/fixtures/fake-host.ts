@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Stand-in for the Fantom host binary: mimics its stdout protocol.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -35,10 +35,11 @@ if (args.includes('--interactive')) {
   );
   let buffer = Buffer.alloc(0);
   let evalId = 0;
-  const respond = response =>
+  const respond = (response: Record<string, unknown>) =>
     console.log(JSON.stringify({type: 'rn-a11y-tree-response', fallbacks: [], ...response}));
-  const handle = code => {
+  const handle = (code: string) => {
     const match = /request\(("(?:[^"\\]|\\.)*")\)/.exec(code);
+    if (match == null) throw new Error(`fake-host: no request() in ${code}`);
     const request = JSON.parse(JSON.parse(match[1]));
     const {id} = request;
     console.log(JSON.stringify({type: 'console-log', level: 'info', message: `request ${JSON.stringify(request)}`}));
@@ -67,7 +68,7 @@ if (args.includes('--interactive')) {
     }
     console.log(JSON.stringify({type: 'repl-eval-complete', id: evalId++}));
   };
-  process.stdin.on('data', chunk => {
+  process.stdin.on('data', (chunk: Buffer) => {
     buffer = Buffer.concat([buffer, chunk]);
     for (;;) {
       const newline = buffer.indexOf(10);

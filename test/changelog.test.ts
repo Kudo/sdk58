@@ -5,11 +5,11 @@ import path from 'node:path';
 import {test} from 'node:test';
 import {fileURLToPath} from 'node:url';
 
-import {changelogSection} from '../scripts/changelog-section.mjs';
+import {changelogSection} from '../scripts/changelog-section.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('CHANGELOG.md has a section for the package version; changelog-section.mjs extracts it', () => {
+test('CHANGELOG.md has a section for the package version; changelog-section.ts extracts it', () => {
   const text = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
   const version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
   assert.equal(JSON.parse(fs.readFileSync(path.join(ROOT, 'packages/rn-a11y-host/package.json'), 'utf8')).version, version);
@@ -21,9 +21,9 @@ test('CHANGELOG.md has a section for the package version; changelog-section.mjs 
   assert.ok(!first.includes('[0.1.0]: https://'), 'link references are not part of the section');
   assert.equal(changelogSection(text, '9.9.9'), null);
 
-  const cli = spawnSync(process.execPath, [path.join(ROOT, 'scripts/changelog-section.mjs'), `v${version}`], {encoding: 'utf8'});
+  const cli = spawnSync('bun', [path.join(ROOT, 'scripts/changelog-section.ts'), `v${version}`], {encoding: 'utf8'});
   assert.equal(cli.status, 0, cli.stderr);
   assert.equal(cli.stdout, current);
-  const missing = spawnSync(process.execPath, [path.join(ROOT, 'scripts/changelog-section.mjs'), 'v9.9.9'], {encoding: 'utf8'});
+  const missing = spawnSync('bun', [path.join(ROOT, 'scripts/changelog-section.ts'), 'v9.9.9'], {encoding: 'utf8'});
   assert.equal(missing.status, 1);
 });

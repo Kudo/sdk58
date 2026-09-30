@@ -6,9 +6,9 @@ real SwiftUI ([`swiftui-ref`](../swiftui-ref/)).
 
 ```sh
 native/tools/swiftui-layout-test/build.sh                          # engine CLI + swiftui-ref
-node native/tools/swiftui-layout-test/compare.mjs                  # macOS reference
-node native/tools/swiftui-layout-test/compare.mjs --platform ios   # iOS simulator reference (~25 s)
-node native/tools/swiftui-layout-test/compare.mjs 13-text -v       # one tree, all differences
+bun native/tools/swiftui-layout-test/compare.ts                  # macOS reference
+bun native/tools/swiftui-layout-test/compare.ts --platform ios   # iOS simulator reference (~25 s)
+bun native/tools/swiftui-layout-test/compare.ts 13-text -v       # one tree, all differences
 ```
 
 Every tree in `../swiftui-ref/examples/*.json` and `cases/*.json` goes through the reference and
@@ -20,7 +20,7 @@ and `contentFrame` must match within 0.5 pt (`--tolerance`). Exit code 1 if a tr
 | `build.sh` | Builds `build/swiftui-layout` (clang++, C++17, AppKit/CoreText) and swiftui-ref |
 | `main.mm` | `swiftui-layout [--platform macos\|ios] < tree.json`: the engine, output in the swiftui-ref format |
 | `CoreTextMeasurer.{h,mm}` | `TextMeasurer` with the text layout SwiftUI uses on macOS (see below) |
-| `compare.mjs` | Runs both and compares |
+| `compare.ts` | Runs both and compares |
 | `cases/*.json` | Test trees (same input format as swiftui-ref) |
 
 ## Text measurement (observed)

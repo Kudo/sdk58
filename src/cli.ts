@@ -224,7 +224,7 @@ function describeBundle(result: BundleResult): string {
 }
 
 function printTiming(timing: Timing) {
-  // performance.now() counts from process start, so this includes Node/tsx startup.
+  // performance.now() counts from process start, so this includes Node startup.
   timing.totalMs = round3(performance.now());
   process.stderr.write(`rn-a11y-tree timing: ${JSON.stringify(timing)}\n`);
 }

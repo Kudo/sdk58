@@ -202,7 +202,7 @@ describe('reanimated in Fantom', () => {
         fired = find(getA11yTree(root), 'timed').frame.width;
       }, 150);
     });
-    // runtime/actions.js advance(): produceFramesForDuration + advanceTimersByTime per slice.
+    // runtime/actions.ts advance(): produceFramesForDuration + advanceTimersByTime per slice.
     const advance = (ms: number) => {
       for (let remaining = ms; remaining > 0; remaining -= 16) {
         const slice = Math.min(16, remaining);

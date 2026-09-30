@@ -107,8 +107,8 @@ Compose (`@expo/ui/jetpack-compose/modifiers`, 43 types):
 | SwiftUI, `ios()` | swiftui-ref on the iOS 26.5 simulator (scale 3) | 43 | 41 within 0.5 pt |
 | Compose | compose-ref (Compose Desktop, CMP 1.10.3, material3 1.10.0-alpha05) | 28 | 28 exact (0 px) at densities 1, 2.75, 2.625, 3.5 |
 
-Commands: `native/tools/swiftui-layout-test/build.sh && node native/tools/swiftui-layout-test/compare.mjs [--platform ios]`;
-`cd native/tools/compose-layout-test && ./build.sh && node compare.mjs`. Host test:
+Commands: `native/tools/swiftui-layout-test/build.sh && bun native/tools/swiftui-layout-test/compare.ts [--platform ios]`;
+`cd native/tools/compose-layout-test && ./build.sh && bun compare.ts`. Host test:
 `yarn fantom FantomExpoUI` (see `native/README.md`); e2e: `e2e/expo-ui.test.ts`.
 
 ## Known deviations
@@ -136,7 +136,7 @@ Commands: `native/tools/swiftui-layout-test/build.sh && node native/tools/swiftu
 3. Reference: add the component to the harness builder (`native/tools/swiftui-ref/Sources/swiftui-ref/Builder.swift`,
    mirroring the `@expo/ui` Swift view; `native/tools/compose-ref/src/main/kotlin/Builder.kt`).
 4. Cases: add trees under `native/tools/swiftui-layout-test/cases/` or
-   `native/tools/compose-layout-test/cases/` and run `compare.mjs` (for SwiftUI also
+   `native/tools/compose-layout-test/cases/` and run `compare.ts` (for SwiftUI also
    `--platform ios`).
 5. Host test: extend `native/tests/FantomExpoUI-itest.js` with frames from the engine, then
    `bun run build:host` and `bun run check`.
@@ -154,4 +154,4 @@ iOS runtime) and lays out every input in one launch. `out.json` maps each input 
 plus `_device` (screen scale, iOS version, `UIFont.preferredFont` metrics per text style) and, with
 `SWIFTUI_REF_SYMBOLS`, `_symbols` (UIImage sizes at 11-100 pt, regular and semibold). The iOS values
 live in `ControlMetrics::ios()` (`expoui/layout/Layout.cpp`) and `expoui/layout/Symbols.cpp`;
-after a change run `node native/tools/swiftui-layout-test/compare.mjs --platform ios`.
+after a change run `bun native/tools/swiftui-layout-test/compare.ts --platform ios`.

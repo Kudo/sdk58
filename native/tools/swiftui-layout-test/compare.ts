@@ -1,8 +1,8 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Runs every test tree through the reference (swiftui-ref: real SwiftUI on macOS) and the C++
 // engine (build/swiftui-layout, platform macos) and compares the frames.
 //
-//   node native/tools/swiftui-layout-test/compare.mjs [--platform macos|ios] [--tolerance 0.5]
+//   bun native/tools/swiftui-layout-test/compare.ts [--platform macos|ios] [--tolerance 0.5]
 //        [--verbose] [--summary] [filter]
 //
 // Trees: native/tools/swiftui-ref/examples/*.json and native/tools/swiftui-layout-test/cases/*.json.
@@ -21,12 +21,20 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const refBin = path.join(here, '../swiftui-ref/.build/release/swiftui-ref');
 const engineBin = path.join(here, 'build/swiftui-layout');
 
+type Rect = { x: number; y: number; width: number; height: number };
+type LayoutNode = { path: string; type: string; frame?: Rect; contentFrame?: Rect };
+type LayoutResult = {
+  host: { width: number; height: number; x?: number; y?: number };
+  nodes: LayoutNode[];
+  unsupported?: Record<string, unknown>;
+};
+
 const args = process.argv.slice(2);
 let tolerance = 0.5;
 let verbose = false;
 let summary = false;
 let platform = 'macos';
-let filter = null;
+let filter: string | null = null;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--tolerance') tolerance = Number(args[++i]);
   else if (args[i] === '--platform') platform = args[++i];
@@ -43,19 +51,20 @@ const files = [
   .filter((f) => !filter || f.includes(filter))
   .sort();
 
-const run = (bin, input, extra = []) => JSON.parse(execFileSync(bin, extra, { input, encoding: 'utf8' }));
+const run = (bin: string, input: string, extra: string[] = []): LayoutResult =>
+  JSON.parse(execFileSync(bin, extra, { input, encoding: 'utf8' }));
 
-function diffRect(label, a, b) {
+function diffRect(label: string, a: Rect | undefined, b: Rect | undefined): string[] {
   if (!a && !b) return [];
   if (!a || !b) return [`${label}: ref ${JSON.stringify(a)} engine ${JSON.stringify(b)}`];
-  const out = [];
-  for (const k of ['x', 'y', 'width', 'height']) {
+  const out: string[] = [];
+  for (const k of ['x', 'y', 'width', 'height'] as const) {
     if (Math.abs(a[k] - b[k]) > tolerance) out.push(`${label}.${k}: ref ${a[k]} engine ${b[k]}`);
   }
   return out;
 }
 
-let iosRefs = null;
+let iosRefs: Record<string, LayoutResult> | null = null;
 if (platform === 'ios') {
   const out = path.join(here, 'build/ios-reference.json');
   execFileSync(path.join(here, '../swiftui-ref/scripts/run-ios.sh'), [out, ...files], { stdio: 'inherit' });
@@ -63,12 +72,12 @@ if (platform === 'ios') {
 }
 
 let passed = 0;
-const failures = [];
+const failures: { name: string; problems: string[] }[] = [];
 for (const file of files) {
   const input = fs.readFileSync(file, 'utf8');
   const ref = iosRefs ? iosRefs[path.resolve(file)] : run(refBin, input);
   const engine = run(engineBin, input, ['--platform', platform]);
-  const problems = [];
+  const problems: string[] = [];
   problems.push(...diffRect('host', { x: 0, y: 0, ...ref.host }, { x: 0, y: 0, ...engine.host }));
   const refNodes = new Map(ref.nodes.map((n) => [n.path, n]));
   const engineNodes = new Map(engine.nodes.map((n) => [n.path, n]));

@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {loadProjectConfig, PRESETS, resolveSettings} from '../src/presets.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
+const CLI = path.join(ROOT, 'src', 'cli.ts');
 
 function tmpProject(config?: unknown): string {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-preset-')));
@@ -52,7 +52,7 @@ test('loadProjectConfig validates keys and types', () => {
 test('CLI: a11y-tree.json supplies the platform and viewport; flags override', {timeout: 180_000}, () => {
   const dir = tmpProject({preset: 'android-tablet', height: 1000});
   const bundleOnly = (extra: string[]) =>
-    spawnSync(process.execPath, [CLI, 'render', path.join(dir, 'App.tsx'), '--bundle-only', '--no-cache', ...extra], {
+    spawnSync('node', [CLI, 'render', path.join(dir, 'App.tsx'), '--bundle-only', '--no-cache', ...extra], {
       cwd: ROOT,
       encoding: 'utf8',
     });

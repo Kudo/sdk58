@@ -7,10 +7,10 @@ viewName)` (see [`docs/research/expo-ui.md`](../../../docs/research/expo-ui.md)
 sections 4 and 5).
 
 ```sh
-node native/tools/expo-view-configs/generate.js                 # /tmp/expo-sdk58 if present
-node native/tools/expo-view-configs/generate.js --src <expo checkout>
-node native/tools/expo-view-configs/generate.js --expo-repo ~/Developer/expo --ref origin/sdk-58
-node native/tools/expo-view-configs/generate.js --out <file>
+bun native/tools/expo-view-configs/generate.ts                 # /tmp/expo-sdk58 if present
+bun native/tools/expo-view-configs/generate.ts --src <expo checkout>
+bun native/tools/expo-view-configs/generate.ts --expo-repo ~/Developer/expo --ref origin/sdk-58
+bun native/tools/expo-view-configs/generate.ts --out <file>
 ```
 
 No dependencies (Node >= 18). Sources: `--src <dir>` (a checkout), else

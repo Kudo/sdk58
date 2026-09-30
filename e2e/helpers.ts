@@ -15,7 +15,7 @@ import {type PresetName, PRESETS} from '../src/presets.ts';
 import type {TreeNode} from '../src/schema.ts';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
+export const CLI = path.join(ROOT, 'src', 'cli.ts');
 
 const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
 export const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
@@ -43,7 +43,7 @@ export function isIOS(preset: Preset): boolean {
 
 /** Runs the CLI with `--preset <preset>` (after the command and file). */
 export function cli(args: string[], preset: Preset, input?: string): SpawnSyncReturns<string> {
-  return spawnSync(process.execPath, [CLI, ...args, '--preset', preset.name], {
+  return spawnSync('node', [CLI, ...args, '--preset', preset.name], {
     cwd: ROOT,
     encoding: 'utf8',
     input,

@@ -103,16 +103,16 @@ test('formats of a run result', () => {
 
 test('CLI: --format text --select (fake host)', {timeout: 120_000}, () => {
   const proc = spawnSync(
-    process.execPath,
-    [path.join(ROOT, 'bin', 'rn-a11y-tree.js'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'text', '--select', 'role=button'],
-    {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.js'), FAKE_HOST_MODE: 'shadow-tree'}},
+    'node',
+    [path.join(ROOT, 'src', 'cli.ts'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'text', '--select', 'role=button'],
+    {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.ts'), FAKE_HOST_MODE: 'shadow-tree'}},
   );
   assert.equal(proc.status, 0, proc.stderr);
   assert.match(proc.stdout.trim(), /^submit View #submit role=button "Submit" \{24,154,342x48\}$/);
   const bad = spawnSync(
-    process.execPath,
-    [path.join(ROOT, 'bin', 'rn-a11y-tree.js'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'xml'],
-    {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.js')}},
+    'node',
+    [path.join(ROOT, 'src', 'cli.ts'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'xml'],
+    {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.ts')}},
   );
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /--format must be one of: json, compact, text, ndjson/);

@@ -1,5 +1,5 @@
 {
-  "generatedBy": "native/tools/expo-view-configs/generate.js",
+  "generatedBy": "native/tools/expo-view-configs/generate.ts",
   "source": "/tmp/expo-sdk58",
   "stats": {
     "ios": {

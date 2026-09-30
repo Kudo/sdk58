@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Packages the built host (native/dist/<arch>/rn-a11y-host) for download:
  *
@@ -13,8 +13,8 @@
  * The CLI downloads `<RN_A11Y_HOST_BASE_URL>/<file>` for the version in the
  * host-version.json it is given (see src/hostDownload.ts).
  *
- * Usage: node scripts/release-host.mjs [--out <dir>] [--arch <arch>] [--bin <file>] [--pin]
- *        node scripts/release-host.mjs --pack [--package-dir <dir>] [--bin <file>]
+ * Usage: bun scripts/release-host.ts [--out <dir>] [--arch <arch>] [--bin <file>] [--pin]
+ *        bun scripts/release-host.ts --pack [--package-dir <dir>] [--bin <file>]
  *   --pack fill packages/rn-a11y-host (osx-bin/rn-a11y-host + host-version.json)
  *   --bin  package this file instead of native/dist/<arch>/rn-a11y-host (tests)
  *   --pin  also write host-version.json to the repo root (the version the
@@ -45,21 +45,21 @@ export const NATIVE_PACKAGES = [
   'hermes-compiler',
 ];
 
-function arg(name, fallback) {
+function arg<T extends string | null>(name: string, fallback: T): string | T {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : fallback;
 }
 
-function git(args, cwd = ROOT) {
+function git(args: string[], cwd = ROOT): string {
   return execFileSync('git', args, {cwd, encoding: 'utf8'}).trim();
 }
 
-const sha256 = data => crypto.createHash('sha256').update(data).digest('hex');
+const sha256 = (data: string | Buffer): string => crypto.createHash('sha256').update(data).digest('hex');
 
 /** sha256 over every file in native/overlay (what build-host.sh copies): path and content hash, sorted. */
-export function overlayHash(dir = OVERLAY_DIR) {
-  const files = [];
-  const walk = d => {
+export function overlayHash(dir = OVERLAY_DIR): {hash: string; files: number; newestMtimeMs: number} {
+  const files: string[] = [];
+  const walk = (d: string) => {
     for (const entry of fs.readdirSync(d, {withFileTypes: true})) {
       if (entry.name === '.DS_Store') continue;
       const full = path.join(d, entry.name);
@@ -74,9 +74,9 @@ export function overlayHash(dir = OVERLAY_DIR) {
   return {hash: sha256(lines.join('\n')), files: files.length, newestMtimeMs: Math.max(...files.map(f => fs.statSync(f).mtimeMs))};
 }
 
-export function nativeLibVersions() {
+export function nativeLibVersions(): Record<string, string | null> {
   const require = createRequire(path.join(ROOT, 'package.json'));
-  const out = {};
+  const out: Record<string, string | null> = {};
   for (const name of NATIVE_PACKAGES) {
     try {
       out[name] = require(`${name}/package.json`).version;
@@ -95,7 +95,7 @@ export function nativeLibVersions() {
 export const HOST_PROTOCOL_VERSION = 1;
 
 /** What the host was built from (the manifest without `assets`). */
-function buildInfo(bin) {
+function buildInfo(bin: string) {
   const submoduleCommit = git(['rev-parse', 'HEAD'], RN_DIR);
   // The commit recorded in this repo (differs from HEAD when the submodule was moved but not committed).
   const pinned = git(['ls-tree', 'HEAD', 'third_party/react-native']).split(/\s+/)[2] ?? null;
@@ -126,9 +126,23 @@ function buildInfo(bin) {
   };
 }
 
+/** index.js (bun build) and index.d.ts (tsc) of packages/rn-a11y-host/index.ts, written to `packageDir`. */
+function buildPackageEntry(packageDir: string) {
+  const entry = path.join(ROOT, 'packages', 'rn-a11y-host', 'index.ts');
+  execFileSync('bun', ['build', entry, '--target', 'node', '--format', 'esm', '--outfile', path.join(packageDir, 'index.js')], {
+    stdio: ['ignore', 'ignore', 'inherit'],
+  });
+  const tsc = path.join(ROOT, 'node_modules', 'typescript', 'bin', 'tsc');
+  execFileSync(
+    process.execPath,
+    [tsc, entry, '--declaration', '--emitDeclarationOnly', '--target', 'es2023', '--module', 'nodenext', '--types', 'node', '--skipLibCheck', '--outDir', packageDir],
+    {stdio: 'inherit'},
+  );
+}
+
 /**
  * --pack: fills packages/rn-a11y-host (or --package-dir) in the hermesc
- * layout. macOS: osx-bin/rn-a11y-host, a universal binary (lipo) when both
+ * layout, and builds its index.js + index.d.ts. macOS: osx-bin/rn-a11y-host, a universal binary (lipo) when both
  * native/dist/arm64 and native/dist/x86_64 exist, else the one that exists.
  */
 function pack() {
@@ -144,6 +158,7 @@ function pack() {
     console.error('release-host: no native/dist/<arch>/rn-a11y-host; run `bun run build:host` first');
     process.exit(1);
   }
+  buildPackageEntry(packageDir);
   const outBin = path.join(packageDir, 'osx-bin', 'rn-a11y-host');
   fs.mkdirSync(path.dirname(outBin), {recursive: true});
   if (inputs.length > 1) {
@@ -191,7 +206,8 @@ function main() {
   try {
     fs.copyFileSync(bin, path.join(stage, 'rn-a11y-host'));
     fs.chmodSync(path.join(stage, 'rn-a11y-host'), 0o755);
-    const manifest = {...info, assets: {} /* filled below */};
+    type Asset = {file: string; sha256: string; size: number};
+    const manifest = {...info, assets: {} as Record<string, Asset> /* filled below */};
     fs.writeFileSync(path.join(stage, 'host-version.json'), JSON.stringify({...manifest, assets: undefined}, null, 2) + '\n');
     const tarPath = path.join(outDir, file);
     execFileSync('tar', ['-czf', tarPath, '-C', stage, 'rn-a11y-host', 'host-version.json']);
@@ -199,7 +215,9 @@ function main() {
     fs.writeFileSync(`${tarPath}.sha256`, `${digest}  ${file}\n`);
     // Another arch packaged into the same directory for the same version: keep its asset.
     const previousPath = path.join(outDir, 'host-version.json');
-    const previous = fs.existsSync(previousPath) ? JSON.parse(fs.readFileSync(previousPath, 'utf8')) : null;
+    const previous: {version?: string; assets?: Record<string, Asset>} | null = fs.existsSync(previousPath)
+      ? JSON.parse(fs.readFileSync(previousPath, 'utf8'))
+      : null;
     manifest.assets = {
       ...(previous?.version === version ? previous.assets : {}),
       [assetKey]: {file, sha256: digest, size: fs.statSync(tarPath).size},

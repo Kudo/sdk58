@@ -11,9 +11,9 @@ import {generate, SCHEMAS} from '../src/genSchema.ts';
 import {type ToolName, TOOLS, toolArgv} from '../src/tools.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
+const CLI = path.join(ROOT, 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
-const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.js');
+const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.ts');
 
 const ajv = new Ajv({strict: false, allErrors: true});
 const readJson = (file: string) => JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf8'));
@@ -33,7 +33,7 @@ function assertValid(file: string, value: unknown, pick?: (json: Record<string, 
 }
 
 function cli(args: string[], env: Record<string, string> = {}, input?: string) {
-  return spawnSync(process.execPath, [CLI, ...args], {
+  return spawnSync('node', [CLI, ...args], {
     cwd: ROOT,
     encoding: 'utf8',
     env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST, ...env},

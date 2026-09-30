@@ -7,8 +7,8 @@ against [`compose-ref`](../compose-ref) (real Compose Desktop).
 ```sh
 cd native/tools/compose-layout-test
 ./build.sh                        # build/compose-layout (clang++, the engine + a CoreText measurer)
-node compare.mjs                  # every tree at density 1 and 2.75, tolerance 1 px
-node compare.mjs --tolerance 0 --densities 1,2.75,2.625,3.5 -v 17-rtl
+bun compare.ts                  # every tree at density 1 and 2.75, tolerance 1 px
+bun compare.ts --tolerance 0 --densities 1,2.75,2.625,3.5 -v 17-rtl
 ```
 
 `build/compose-layout` has compose-ref's interface (`--density`,
@@ -18,7 +18,7 @@ text adapter `tester/src/components/FantomComposeText.mm` and the embedded
 Roboto (`native/fonts/roboto`, generated with `tester/cmake/embed-files.cmake`,
 registered by `tester/src/platform/macos/EmbeddedFonts.mm`). So the comparison
 also checks the host's text path. compose-ref still reads its own Roboto from
-`../compose-ref/fonts` (`fetch-fonts.sh`, all 12 faces). `compare.mjs` runs both tools on
+`../compose-ref/fonts` (`fetch-fonts.sh`, all 12 faces). `compare.ts` runs both tools on
 `../compose-ref/examples/*.json` and `cases/*.json`, compares `host`, every
 node's `frame` and `contentFrame` in px, the node set and the `unsupported`
 keys. compose-ref takes about 2.7 s per run, so its results are cached in

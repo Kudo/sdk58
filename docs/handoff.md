@@ -83,14 +83,14 @@ bun install
 bun run build:host            # Release, arm64; ~5 min first time, ~10-60 s incremental
 bun run check                 # tsc + schema check + unit tests + e2e (both presets)
 bun run test | bun run test:e2e
-./bin/rn-a11y-tree.js render examples/basic/App.tsx --preset android-phone --format text
-./bin/rn-a11y-tree.js run examples/basic/App.tsx --preset ios-phone --script examples/basic/actions.json --format text
-./bin/rn-a11y-tree.js check examples/basic/App.tsx --preset android-phone --rules examples/basic/rules-fail.json --format text
+bun run rn-a11y-tree render examples/basic/App.tsx --preset android-phone --format text
+bun run rn-a11y-tree run examples/basic/App.tsx --preset ios-phone --script examples/basic/actions.json --format text
+bun run rn-a11y-tree check examples/basic/App.tsx --preset android-phone --rules examples/basic/rules-fail.json --format text
 RN_A11Y_HOST_BUILD_TYPE=Debug bun run build:host          # 2-3 s incremental native iteration
 RN_A11Y_HOST_SANITIZE=1 RN_A11Y_HOST_BUILD_TYPE=Release bun run build:host   # ASan+UBSan+vptr host
 RN_A11Y_HOST_ARCH=universal bun run build:host            # arm64 + x86_64 (x86_64 Hermes ~90 s)
-node scripts/release-host.mjs --pack                      # stage packages/rn-a11y-host/osx-bin
-node scripts/perf.mjs                                     # perf tables (docs/perf-analysis.md)
+bun scripts/release-host.ts --pack                        # stage packages/rn-a11y-host/osx-bin
+bun scripts/perf.ts                                       # perf tables (docs/perf-analysis.md)
 ```
 
 Toolchain on the dev Mac: Xcode 26.6, JDK 17 at `/opt/homebrew/opt/openjdk@17`
@@ -131,7 +131,7 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
   "use-after-free" entries in `CHANGELOG.md`).
 - A Debug sanitizer build did not reproduce that bug; a Release sanitizer build
   did. The `sanitize` CI job therefore builds Release.
-- `release-host.mjs` writes to `release/` (git-ignored). It used to write into
+- `release-host.ts` writes to `release/` (git-ignored). It used to write into
   `dist/`, which leaked a 4.7 MB archive into the CLI tarball. `test/pack.test.ts`
   guards this.
 - CI runners: macOS 15 with Xcode 26.3 (dev Mac has macOS 26 / Xcode 26.6).
@@ -154,7 +154,7 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 | Host overlay over Fantom | `native/overlay/tester/` (`CMakeLists.txt`, `src/components/*` custom shadow nodes, `src/render/A11yTree.cpp`, `HitTest.cpp`, `src/reanimated/`, `src/expoui/layout/` SwiftUI engine, `src/expoui/compose/` Compose engine, `src/platform/macos/` CoreText text + fonts, `src/stubs/crypto/`) |
 | Fantom itests | `native/tests/` |
 | Reference harnesses | `native/tools/swiftui-ref/` (real SwiftUI, macOS + iOS sim), `native/tools/compose-ref/` (Compose Desktop), `native/tools/*-layout-test/` (engine vs reference) |
-| Host build script | `scripts/build-host.sh`; release packaging `scripts/release-host.mjs` |
+| Host build script | `scripts/build-host.sh`; release packaging `scripts/release-host.ts` |
 | Packages | root = CLI; `packages/rn-a11y-host/` (hermesc-style `osx-bin/`, `linux64-bin/`, `win64-bin/`) |
 | Docs | `docs/agent-friendliness.md`, `docs/build-analysis.md`, `docs/perf-analysis.md`, `docs/expo-ui-status.md`, `docs/e2e-coverage.md`, `docs/research/*` |
 | Schemas / tool descriptors | `schema/*.json`, `tools/*.json` (regenerate with `bun run schema`) |

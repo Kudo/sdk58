@@ -6,11 +6,11 @@ import path from 'node:path';
 import {test} from 'node:test';
 import {fileURLToPath} from 'node:url';
 
-import {getHostPath, HostUnavailableError, hostRelativePath} from 'rn-a11y-host';
+import {getHostPath, HostUnavailableError, hostRelativePath} from '../packages/rn-a11y-host/index.ts';
 
 import {CliError, EXIT_CODES} from '../src/errors.ts';
 import {checkProtocol, findHost, type HostProbes, SUPPORTED_PROTOCOL} from '../src/host.ts';
-import {HOST_PROTOCOL_VERSION} from '../scripts/release-host.mjs';
+import {HOST_PROTOCOL_VERSION} from '../scripts/release-host.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -122,13 +122,13 @@ test('checkProtocol: HOST_INCOMPATIBLE outside the supported range; release-host
   assert.equal(EXIT_CODES.HOST_INCOMPATIBLE, 5);
 });
 
-test('release-host.mjs --pack fills the package directory (osx-bin + host-version.json)', {skip: process.platform !== 'darwin'}, () => {
+test('release-host.ts --pack fills the package directory (osx-bin + host-version.json)', {skip: process.platform !== 'darwin'}, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-host-pack-'));
   const bin = path.join(dir, 'fake-host');
   fs.writeFileSync(bin, '#!/bin/sh\necho host\n');
   const out = execFileSync(
-    process.execPath,
-    [path.join(ROOT, 'scripts/release-host.mjs'), '--pack', '--bin', bin, '--package-dir', path.join(dir, 'pkg')],
+    'bun',
+    [path.join(ROOT, 'scripts/release-host.ts'), '--pack', '--bin', bin, '--package-dir', path.join(dir, 'pkg')],
     {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']},
   );
   const manifest = JSON.parse(out);
@@ -146,27 +146,27 @@ test('RN_A11Y_HOST_STDERR_LOG collects the host stderr of every run (fake host)'
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-stderr-'));
   const log = path.join(dir, 'host-stderr.log');
   const proc = spawnSync(
-    process.execPath,
-    [path.join(ROOT, 'bin/rn-a11y-tree.js'), 'render', path.join(ROOT, 'examples/basic/App.tsx'), '--platform', 'android'],
+    'node',
+    [path.join(ROOT, 'src/cli.ts'), 'render', path.join(ROOT, 'examples/basic/App.tsx'), '--platform', 'android'],
     {
       cwd: ROOT,
       encoding: 'utf8',
-      env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.js'), RN_A11Y_HOST_STDERR_LOG: log},
+      env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.ts'), RN_A11Y_HOST_STDERR_LOG: log},
     },
   );
   assert.equal(proc.status, 0, proc.stderr);
   const text = fs.readFileSync(log, 'utf8');
-  assert.match(text, /^--- .*fake-host\.js \(pid \d+\) ---$/m);
+  assert.match(text, /^--- .*fake-host\.ts \(pid \d+\) ---$/m);
   assert.match(text, /fake-host: glog line on stderr/);
   fs.rmSync(dir, {recursive: true, force: true});
 });
 
 function cliRun(args: string[], env: Record<string, string>, input?: string) {
-  return spawnSync(process.execPath, [path.join(ROOT, 'bin/rn-a11y-tree.js'), ...args], {
+  return spawnSync('node', [path.join(ROOT, 'src/cli.ts'), ...args], {
     cwd: ROOT,
     encoding: 'utf8',
     input,
-    env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.js'), ...env},
+    env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.ts'), ...env},
   });
 }
 
@@ -183,7 +183,7 @@ test('runtime protocol check (getHostInfo) and hostInfo in the output (fake host
     engines: {swiftui: true, compose: true},
     fonts: {roboto: true},
   });
-  assert.match(ok.stderr, /rn-a11y-tree: host: env .*fake-host\.js/);
+  assert.match(ok.stderr, /rn-a11y-tree: host: env .*fake-host\.ts/);
   assert.match(ok.stderr, /rn-a11y-tree: host info: \{"protocolVersion":1/);
 
   const run = cliRun(['run', app, '--platform', 'android', '--script', 'examples/basic/actions.json'], {FAKE_HOST_MODE: 'run'});

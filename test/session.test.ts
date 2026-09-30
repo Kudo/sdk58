@@ -7,9 +7,9 @@ import {fileURLToPath} from 'node:url';
 import {validateRequest} from '../src/session.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
+const CLI = path.join(ROOT, 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
-const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.js');
+const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.ts');
 
 test('validateRequest', () => {
   assert.equal(validateRequest({id: 1, action: {tap: {testID: 'submit'}}}), null);
@@ -28,7 +28,7 @@ test('validateRequest', () => {
 
 function runSession(lines: unknown[], extraArgs: string[] = []) {
   return spawnSync(
-    process.execPath,
+    'node',
     [CLI, 'session', APP, '--platform', 'android', ...extraArgs],
     {
       cwd: ROOT,
@@ -83,7 +83,7 @@ test('session: end of input without quit exits 0', {timeout: 120_000}, () => {
 });
 
 test('session: requires --platform', {timeout: 120_000}, () => {
-  const proc = spawnSync(process.execPath, [CLI, 'session', APP], {
+  const proc = spawnSync('node', [CLI, 'session', APP], {
     cwd: ROOT,
     encoding: 'utf8',
     env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST},

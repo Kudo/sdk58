@@ -17,7 +17,7 @@ import {
 } from '../src/bundleCache.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
+const CLI = path.join(ROOT, 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 
 function tmpDir(): string {
@@ -106,7 +106,7 @@ test('a cache entry is invalidated by file edits and by new files in module dire
 test('CLI: the second --bundle-only of an unchanged app is a cache hit', {timeout: 180_000}, () => {
   const cache = tmpDir();
   const run = () =>
-    spawnSync(process.execPath, [CLI, 'render', APP, '--platform', 'android', '--bundle-only', '--bytecode', 'off'], {
+    spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--bundle-only', '--bytecode', 'off'], {
       cwd: ROOT,
       encoding: 'utf8',
       env: {...process.env, RN_A11Y_TREE_CACHE_DIR: cache},

@@ -39,10 +39,12 @@ export type HostTiming = {spawn?: number; result?: number; exit?: number};
 
 /** Host or app failure; `code` is APP_THREW, HOST_MISSING or HOST_CRASHED. */
 export class HostError extends CliError {
+  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null};
+
   constructor(
     code: ErrorCode,
     message: string,
-    readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null},
+    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null},
     hint?: string,
   ) {
     const details: Record<string, unknown> = {};
@@ -50,6 +52,7 @@ export class HostError extends CliError {
     if (hostDetails?.exitCode != null) details.exitCode = hostDetails.exitCode;
     if (hostDetails?.stderr) details.stderrTail = hostDetails.stderr.trimEnd().split('\n').slice(-20).join('\n');
     super(code, message, {hint, details});
+    this.hostDetails = hostDetails;
     this.name = 'HostError';
   }
 }
@@ -70,7 +73,7 @@ export const DEFAULT_HOST_BIN = path.join(
 /**
  * Host <-> CLI contract version (bundle entry, NativeFantom methods, stdout
  * protocol) that this CLI supports. `host-version.json` records the host's
- * `protocolVersion` (scripts/release-host.mjs HOST_PROTOCOL_VERSION).
+ * `protocolVersion` (scripts/release-host.ts HOST_PROTOCOL_VERSION).
  */
 export const SUPPORTED_PROTOCOL = {min: 1, max: 1};
 
@@ -98,7 +101,7 @@ export type HostProbes = {
   /**
    * A repo checkout (src/cli.ts next to the running code): native/dist, the
    * host just built, ranks above the staged rn-a11y-host package (the
-   * git-ignored output of `release-host.mjs --pack`).
+   * git-ignored output of `release-host.ts --pack`).
    */
   checkout: boolean;
   log: (line: string) => void;

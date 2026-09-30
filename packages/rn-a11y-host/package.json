@@ -49,6 +49,6 @@
     "access": "public"
   },
   "scripts": {
-    "prepack": "node -e \"const f='osx-bin/rn-a11y-host';if(!require('fs').existsSync(f)){console.error('rn-a11y-host: '+f+' is missing: run node scripts/release-host.mjs --pack in the repo root first');process.exit(1)}\""
+    "prepack": "node -e \"const fs=require('fs');for(const f of ['osx-bin/rn-a11y-host','index.js','index.d.ts'])if(!fs.existsSync(f)){console.error('rn-a11y-host: '+f+' is missing: run bun scripts/release-host.ts --pack in the repo root first');process.exit(1)}\""
   }
 }

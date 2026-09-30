@@ -147,7 +147,7 @@ test('expoPolyfillPath: only for projects that list expo, expo-modules-core or @
 });
 
 test('runtime/expo/viewConfigs.json is generated from the native tables', {skip: !fs.existsSync(path.join(ROOT, 'native/tools/expo-view-configs/out/viewConfigs.json'))}, () => {
-  const proc = spawnSync(process.execPath, [path.join(ROOT, 'scripts/gen-expo-view-configs.mjs'), '--check'], {encoding: 'utf8'});
+  const proc = spawnSync('bun', [path.join(ROOT, 'scripts/gen-expo-view-configs.ts'), '--check'], {encoding: 'utf8'});
   assert.equal(proc.status, 0, proc.stderr);
   const configs = JSON.parse(fs.readFileSync(path.join(ROOT, 'runtime/expo/viewConfigs.json'), 'utf8'));
   assert.equal(Object.keys(configs.views).length, 152);

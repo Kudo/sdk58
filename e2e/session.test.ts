@@ -11,7 +11,7 @@ const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 for (const preset of E2E_PRESETS) {
   test(`[${preset.name}] session: start, tap submit, tree shows Submitted, quit`, {timeout: 180_000}, async t => {
     if (hostSkip) t.skip(hostSkip);
-    const child = spawn(process.execPath, [CLI, 'session', APP, '--preset', preset.name], {
+    const child = spawn('node', [CLI, 'session', APP, '--preset', preset.name], {
       cwd: ROOT,
       env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
       stdio: ['pipe', 'pipe', 'pipe'],

@@ -10,12 +10,12 @@ import os from 'node:os';
 import type {RenderResult, RunResult} from '../src/schema.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
+const CLI = path.join(ROOT, 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
-const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.js');
+const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.ts');
 
 function run(args: string[], env: Record<string, string | undefined>) {
-  return spawnSync(process.execPath, [CLI, ...args], {
+  return spawnSync('node', [CLI, ...args], {
     cwd: ROOT,
     encoding: 'utf8',
     env: {...process.env, ...env},
@@ -25,7 +25,7 @@ function run(args: string[], env: Record<string, string | undefined>) {
 
 test('requires --platform and lists the known values', {timeout: 120_000}, () => {
   for (const extra of [[], ['--bundle-only']]) {
-    const proc = spawnSync(process.execPath, [CLI, 'render', APP, ...extra], {
+    const proc = spawnSync('node', [CLI, 'render', APP, ...extra], {
       cwd: ROOT,
       encoding: 'utf8',
       env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST},

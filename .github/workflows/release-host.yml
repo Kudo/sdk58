@@ -1,7 +1,7 @@
 name: Release host
 
 # On a tag v*: build the host, test it, package it with
-# scripts/release-host.mjs and attach the tarball, its .sha256,
+# scripts/release-host.ts and attach the tarball, its .sha256,
 # host-version.json and the npm tarballs of rn-a11y-host and
 # react-native-a11y-tree (npm pack; not published) to the GitHub release. The CLI downloads it
 # with RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>
@@ -73,7 +73,7 @@ jobs:
         run: bun run build:host
 
       # x86_64 slice, cross-built on this arm64 runner (CMAKE_OSX_ARCHITECTURES);
-      # release-host.mjs then packs a universal binary (both native/dist/<arch>).
+      # release-host.ts then packs a universal binary (both native/dist/<arch>).
       - name: Build host (x86_64 slice)
         run: RN_A11Y_HOST_ARCH=x86_64 bun run build:host
 
@@ -89,13 +89,13 @@ jobs:
           bun run test:e2e
 
       - name: Package host
-        run: node scripts/release-host.mjs --out release
+        run: bun scripts/release-host.ts --out release
 
       # npm packages (not published yet): rn-a11y-host with osx-bin/ filled
-      # by --pack, and the CLI with its tsc build in dist/.
+      # by --pack, and the CLI with its bun build in dist/.
       - name: npm pack
         run: |
-          node scripts/release-host.mjs --pack
+          bun scripts/release-host.ts --pack
           bun run build
           npm pack --pack-destination release
           (cd packages/rn-a11y-host && npm pack --pack-destination ../../release)
@@ -122,7 +122,7 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           # Release body: the CHANGELOG.md section of the tag's version.
           notes="$RUNNER_TEMP/release-notes.md"
-          node scripts/changelog-section.mjs "$tag" > "$notes"
+          bun scripts/changelog-section.ts "$tag" > "$notes"
           printf '\nAssets: the npm tarballs of react-native-a11y-tree and rn-a11y-host, and the prebuilt host (tar.gz + .sha256 + host-version.json).\n' >> "$notes"
           if gh release view "$tag" > /dev/null 2>&1; then
             gh release edit "$tag" --notes-file "$notes"

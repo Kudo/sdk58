@@ -1,6 +1,6 @@
 # Runtime performance analysis
 
-Measured on 2026-09-29 with `scripts/perf.mjs` on the medium example
+Measured on 2026-09-29 with `scripts/perf.ts` on the medium example
 (`examples/medium/App.tsx`).
 
 - Machine: Apple M4, 10 cores, 16 GB, macOS 26.5.2, Node v26.5.0.
@@ -21,8 +21,8 @@ Measured on 2026-09-29 with `scripts/perf.mjs` on the medium example
 ## Methodology
 
 ```sh
-node scripts/perf.mjs --n 5 --label release --host /path/to/release/rn-a11y-host --out docs/perf/release.json
-node scripts/perf.mjs --n 5 --label debug   --host /path/to/debug/rn-a11y-host   --out docs/perf/debug.json
+bun scripts/perf.ts --n 5 --label release --host /path/to/release/rn-a11y-host --out docs/perf/release.json
+bun scripts/perf.ts --n 5 --label debug   --host /path/to/debug/rn-a11y-host   --out docs/perf/debug.json
 ```
 
 - Each scenario runs 5 times after one warm-up render. The tables show the

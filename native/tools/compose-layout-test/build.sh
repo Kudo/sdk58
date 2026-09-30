@@ -2,7 +2,7 @@
 # Builds build/compose-layout: the C++ Compose engine with the host's text adapter
 # (tester/src/components/FantomComposeText.mm) and the embedded Roboto
 # (native/fonts/roboto, generated into build/ like the host build does).
-# compare.mjs builds compose-ref itself (./compose-ref builds on first use).
+# compare.ts builds compose-ref itself (./compose-ref builds on first use).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 tester="$here/../../overlay/tester"

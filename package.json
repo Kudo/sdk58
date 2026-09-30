@@ -26,10 +26,9 @@
   },
   "type": "module",
   "bin": {
-    "rn-a11y-tree": "./bin/rn-a11y-tree.js"
+    "rn-a11y-tree": "./dist/rn-a11y-tree.js"
   },
   "files": [
-    "bin/",
     "dist/*.js",
     "runtime/",
     "schema/",
@@ -52,15 +51,15 @@
     "packages/*"
   ],
   "scripts": {
-    "rn-a11y-tree": "node ./bin/rn-a11y-tree.js",
+    "rn-a11y-tree": "node src/cli.ts",
     "build:host": "bash ./scripts/build-host.sh",
-    "perf": "node scripts/perf.mjs",
+    "perf": "bun scripts/perf.ts",
     "typecheck": "tsc --noEmit && tsc -p runtime --noEmit",
-    "schema": "node --import tsx src/genSchema.ts",
-    "test": "node --import tsx --test test/*.test.ts",
+    "schema": "bun src/genSchema.ts",
+    "test": "bun test ./test",
     "test:e2e": "vitest run",
     "check": "bun run typecheck && bun run schema --check && bun run test && bun run test:e2e",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && bun build src/cli.ts --target node --format esm --packages external --banner '#!/usr/bin/env node' --outfile dist/rn-a11y-tree.js",
     "prepack": "bun run build && bun run schema --check"
   },
   "dependencies": {
@@ -90,7 +89,6 @@
     "react-native-screens": "~4.28.0",
     "react-native-worklets": "0.13.0",
     "ts-json-schema-generator": "^2.9.0",
-    "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "vite": "^8",
     "vitest": "^5.0.3"

@@ -10,18 +10,18 @@ import {assetKey, downloadHost, type HostManifest} from '../src/hostDownload.ts'
 import {DEFAULT_HOST_BIN} from '../src/host.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
+const CLI = path.join(ROOT, 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
-const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.js');
+const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.ts');
 
-/** A release made by scripts/release-host.mjs from a wrapper around the fake host. */
+/** A release made by scripts/release-host.ts from a wrapper around the fake host. */
 function makeRelease() {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-host-dl-')));
   const bin = path.join(dir, 'fake-bin');
-  fs.writeFileSync(bin, `#!/bin/sh\nexec "${process.execPath}" "${FAKE_HOST}" "$@"\n`);
+  fs.writeFileSync(bin, `#!/bin/sh\nexec bun "${FAKE_HOST}" "$@"\n`);
   fs.chmodSync(bin, 0o755);
   const out = path.join(dir, 'release');
-  const stdout = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'release-host.mjs'), '--bin', bin, '--out', out], {
+  const stdout = execFileSync('bun', [path.join(ROOT, 'scripts', 'release-host.ts'), '--bin', bin, '--out', out], {
     cwd: ROOT,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
@@ -41,7 +41,7 @@ function withEnv<T>(env: Record<string, string>, fn: () => Promise<T>): Promise<
   });
 }
 
-test('release-host.mjs writes a tarball, its sha256 and host-version.json', () => {
+test('release-host.ts writes a tarball, its sha256 and host-version.json', () => {
   const release = makeRelease();
   const {manifest} = release;
   assert.match(manifest.version, /^\d+\.\d+\.\d+(-rc\.\d+)?-[0-9a-f]{12}$/);
@@ -111,7 +111,7 @@ test('CLI uses the downloaded host (RN_A11Y_HOST_BASE_URL, fake host)', {timeout
     RN_A11Y_HOST_MANIFEST: release.manifestFile,
     RN_A11Y_HOST_CACHE_DIR: release.cache,
   };
-  const proc = spawnSync(process.execPath, [CLI, 'render', APP, '--platform', 'android', '--no-quiet'], {
+  const proc = spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--no-quiet'], {
     cwd: ROOT,
     encoding: 'utf8',
     env,
@@ -122,7 +122,7 @@ test('CLI uses the downloaded host (RN_A11Y_HOST_BASE_URL, fake host)', {timeout
   assert.ok(fs.existsSync(path.join(release.cache, release.manifest.version, 'rn-a11y-host')));
 
   // A failed download falls back to native/dist (with a warning), else HOST_MISSING.
-  const failed = spawnSync(process.execPath, [CLI, 'render', APP, '--platform', 'android', '--no-quiet', '--format', 'text'], {
+  const failed = spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--no-quiet', '--format', 'text'], {
     cwd: ROOT,
     encoding: 'utf8',
     env: {...env, RN_A11Y_HOST_BASE_URL: 'file:///nonexistent', RN_A11Y_HOST_CACHE_DIR: path.join(release.dir, 'c2')},

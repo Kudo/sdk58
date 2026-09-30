@@ -17,7 +17,7 @@ function packFiles(dir: string): Array<{path: string; size: number}> {
   return json[0].files;
 }
 
-test('npm pack of the CLI: exactly the whitelisted 65 files, no release archives', {skip: !hasNpm && 'npm is not available', timeout: 300_000}, () => {
+test('npm pack of the CLI: exactly the whitelisted 49 files, no release archives', {skip: !hasNpm && 'npm is not available', timeout: 300_000}, () => {
   // Release archives next to the package must never be packed (v0.1.0 shipped
   // dist/release/*.tar.gz inside the CLI tarball).
   const planted = [
@@ -40,16 +40,14 @@ test('npm pack of the CLI: exactly the whitelisted 65 files, no release archives
     assert.deepEqual(Object.fromEntries([...top].sort()), {
       LICENSE: 1,
       'README.md': 1,
-      bin: 1,
-      dist: 16,
+      dist: 1,
       'package.json': 1,
       runtime: 29,
       schema: 10,
       tools: 6,
     });
-    assert.equal(files.length, 65);
-    assert.ok(files.includes('dist/cli.js'));
-    assert.ok(files.every(f => !f.startsWith('dist/') || /^dist\/[^/]+\.js$/.test(f)));
+    assert.equal(files.length, 49);
+    assert.ok(files.includes('dist/rn-a11y-tree.js'));
   } finally {
     for (const file of planted) fs.rmSync(file, {force: true});
     for (const dir of createdDirs) fs.rmSync(dir, {recursive: true, force: true});
@@ -57,7 +55,7 @@ test('npm pack of the CLI: exactly the whitelisted 65 files, no release archives
 });
 
 test('npm pack of rn-a11y-host: 7 files with the host binary', {
-  skip: !hasNpm ? 'npm is not available' : !fs.existsSync(path.join(ROOT, 'packages/rn-a11y-host/osx-bin/rn-a11y-host')) && 'osx-bin is not staged (node scripts/release-host.mjs --pack)',
+  skip: !hasNpm ? 'npm is not available' : !fs.existsSync(path.join(ROOT, 'packages/rn-a11y-host/osx-bin/rn-a11y-host')) && 'osx-bin is not staged (bun scripts/release-host.ts --pack)',
   timeout: 120_000,
 }, () => {
   const files = packFiles(path.join(ROOT, 'packages', 'rn-a11y-host'));

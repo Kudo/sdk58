@@ -1,7 +1,7 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Prints the CHANGELOG.md section of a version (without its heading), for
- * the GitHub release body: node scripts/changelog-section.mjs 0.1.1
+ * the GitHub release body: bun scripts/changelog-section.ts 0.1.1
  * Exits 1 when the version has no section.
  */
 
@@ -12,7 +12,7 @@ import {fileURLToPath} from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** The body of the `## [<version>]` section of `text`, or null. */
-export function changelogSection(text, version) {
+export function changelogSection(text: string, version: string): string | null {
   const lines = text.split('\n');
   const start = lines.findIndex(l => l.startsWith(`## [${version}]`));
   if (start < 0) return null;

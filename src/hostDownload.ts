@@ -5,7 +5,7 @@
  * `<base>/<file>` (file from host-version.json for this platform and arch)
  * into `~/.cache/rn-a11y-tree/host/<version>/`, verifies its sha256 and
  * unpacks it. The manifest is `host-version.json` in the package root
- * (written by `scripts/release-host.mjs --pin`), or `RN_A11Y_HOST_MANIFEST`.
+ * (written by `scripts/release-host.ts --pin`), or `RN_A11Y_HOST_MANIFEST`.
  * Order: RN_A11Y_HOST_BIN, then the download (or its cached copy), then
  * native/dist, else HOST_MISSING.
  */
@@ -74,7 +74,7 @@ function sha256File(file: string): string {
 export async function downloadHost(options: {baseUrl: string; log?: (line: string) => void}): Promise<string> {
   const found = readManifest();
   if (found == null) {
-    throw new Error(`no host-version.json (set ${MANIFEST_ENV}, or run scripts/release-host.mjs --pin)`);
+    throw new Error(`no host-version.json (set ${MANIFEST_ENV}, or run scripts/release-host.ts --pin)`);
   }
   const {manifest, file: manifestFile} = found;
   const asset = manifest.assets[assetKey()];

@@ -46,10 +46,11 @@ npx react-native-a11y-tree render App.tsx --preset android-phone --format text
 
 Two packages:
 
-- `react-native-a11y-tree`: the CLI. `bin/rn-a11y-tree.js` runs the tsc
-  build in `dist/` (`bun run build`, run by `prepack` together with
-  `bun run schema --check`); in a repo checkout (with `src/`) it
-  runs the TypeScript sources through `tsx`. Files: `bin/`, `dist/`,
+- `react-native-a11y-tree`: the CLI. Its `bin` is `dist/rn-a11y-tree.js`,
+  one ES module that `bun build` makes from `src/cli.ts` for Node
+  (`bun run build`, run by `prepack` together with `bun run schema
+  --check`); in a repo checkout, `bun run rn-a11y-tree` runs `node
+  src/cli.ts` (Node strips the types). Files: `dist/`,
   `runtime/`, `schema/`, `tools/`, `README.md`, `LICENSE`. Dependencies:
   `commander` and `rn-a11y-host`. Peer dependencies: `expo` (>= 58),
   `react-native`, `react`. Metro, `metro-config`, `expo/metro-config` and
@@ -58,9 +59,11 @@ Two packages:
 - `rn-a11y-host`: the prebuilt host, in hermes-compiler's layout
   (`osx-bin/`, `linux64-bin/`, `win64-bin/`, `host-version.json`,
   `getHostPath()`). 0.1.0 has a macOS arm64 binary only; see
-  [packages/rn-a11y-host/README.md](packages/rn-a11y-host/README.md). Its
-  `prepack` fails when `osx-bin/rn-a11y-host` is missing (run
-  `node scripts/release-host.mjs --pack` first).
+  [packages/rn-a11y-host/README.md](packages/rn-a11y-host/README.md). The
+  source is `index.ts`; `bun scripts/release-host.ts --pack` builds
+  `index.js` (`bun build`) and `index.d.ts` (`tsc`) next to it. Its
+  `prepack` fails when `osx-bin/rn-a11y-host`, `index.js` or `index.d.ts`
+  is missing (run `bun scripts/release-host.ts --pack` first).
 
 Local check of this flow: `e2e/package.test.ts` packs both packages
 (`npm pack`), installs them with `expo@58.0.0 react-native@0.88.0-rc.2
@@ -621,7 +624,7 @@ project, the entry runs, before the app module:
 
 Other projects get none of this (the basic example bundle has no Expo code).
 Listing the package is required because in a hoisted monorepo every project
-resolves `expo-modules-core`. `node scripts/gen-expo-view-configs.mjs`
+resolves `expo-modules-core`. `bun scripts/gen-expo-view-configs.ts`
 regenerates `viewConfigs.json` from `native/tools/expo-view-configs/out/viewConfigs.json`
 and `native/tests/fantomExpoUIViewConfig.json`. The Fantom tests' dev-bundle
 workaround (`NativeSourceCode` `scriptURL: null`) is not included: only
@@ -943,7 +946,7 @@ AppKit, CoreText, Foundation, libc++, libSystem).
 architecture) selects the host architecture. A foreign architecture (x86_64
 on an arm64 Mac) is cross-built with its own Hermes build into
 `native/dist/x86_64/`; `universal` builds both slices and joins them with
-`lipo` into `native/dist/universal/`. `release-host.mjs --pack` makes a
+`lipo` into `native/dist/universal/`. `release-host.ts --pack` makes a
 universal `osx-bin/rn-a11y-host` when both `native/dist/arm64` and
 `native/dist/x86_64` exist. An x86_64 slice cannot run on an arm64 Mac
 without Rosetta; the release workflow checks it on a `macos-15-intel`
@@ -951,7 +954,7 @@ runner.
 
 ### Prebuilt host
 
-`node scripts/release-host.mjs [--out release] [--pin]` packages
+`bun scripts/release-host.ts [--out release] [--pin]` packages
 `native/dist/<arch>/rn-a11y-host`:
 
 - `rn-a11y-host-<version>-<platform>-<arch>.tar.gz` (the binary and
@@ -970,7 +973,7 @@ runner.
 The script warns when `native/overlay` has uncommitted changes or files
 newer than the binary.
 
-`node scripts/release-host.mjs --pack [--package-dir <dir>]` fills
+`bun scripts/release-host.ts --pack [--package-dir <dir>]` fills
 `packages/rn-a11y-host` (the npm package of the host, see
 [Install](#install)): `osx-bin/rn-a11y-host` (a universal binary made
 with `lipo` when both `native/dist/arm64` and `native/dist/x86_64` exist)
@@ -1004,7 +1007,7 @@ output. `-v` prints the chosen host (`rn-a11y-tree: host: <source> <path>
 
 **Protocol check.** `host-version.json` of the package or of the download
 has `protocolVersion`, the version of the CLI <-> host contract
-(`HOST_PROTOCOL_VERSION` in `scripts/release-host.mjs`). The CLI supports
+(`HOST_PROTOCOL_VERSION` in `scripts/release-host.ts`). The CLI supports
 `SUPPORTED_PROTOCOL` (`src/host.ts`, now 1..1) and stops with
 `HOST_INCOMPATIBLE` (exit 5) for other versions. Hosts without a manifest
 (`RN_A11Y_HOST_BIN`, `native/dist`) are checked when the host runs: the
@@ -1037,7 +1040,7 @@ and that release's `host-version.json` (commit it to the repo root, or set
 ```sh
 bun run check            # all of the below: typecheck, unit tests, e2e
 bun run typecheck        # tsc --noEmit && tsc -p runtime --noEmit (the bundle runtime)
-bun run test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.js)
+bun run test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.ts)
 bun run test:e2e         # real host; skipped if there is no native/dist binary and no RN_A11Y_HOST_BIN
 RN_A11Y_E2E_PRESETS=android-phone bun run test:e2e   # presets to run the e2e suites under (default android-phone,ios-phone)
 bun run rn-a11y-tree render examples/basic/App.tsx --platform android --bundle-only
@@ -1047,7 +1050,10 @@ Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,
 `react@19.3.0`, Metro 0.87.1. Package manager and script runner: Bun
 1.3.14 (`bun.lock`; `bunfig.toml`: `linker = "hoisted"` for a flat
 `node_modules`, `peer = false` so peer dependencies that nothing depends on
-are not installed). The CLI and the tests run on Node (`node --import tsx`).
+are not installed). All sources are TypeScript (erasable syntax only,
+`erasableSyntaxOnly`). The CLI runs on Node (`node src/cli.ts` in a checkout,
+`dist/rn-a11y-tree.js` when installed); scripts run with `bun`, unit tests
+with `bun test` (they spawn the CLI with `node`), e2e tests with Vitest.
 The React Native submodule keeps its own Yarn 1 (`build-host.sh`,
 `yarn fantom`).
 
