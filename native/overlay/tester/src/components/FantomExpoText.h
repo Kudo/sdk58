@@ -29,6 +29,8 @@ struct ExpoTextMeasureOptions {
   // 100..900 (400 regular, 600 semibold, 700 bold).
   int weight{400};
   bool italic{false};
+  // Points added after each character (TextAttributes::letterSpacing).
+  Float letterSpacing{0};
   // SwiftUI Font.Design: "" / "default", "rounded", "serif", "monospaced"
   // (system font only; mapped to ui-rounded / ui-serif / ui-monospace).
   std::string design;

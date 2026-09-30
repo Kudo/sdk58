@@ -63,6 +63,8 @@ struct FontSpec {
   double lineHeight = 0;
   double leading = 0;
   double ascender = 0;
+  double letterSpacing = 0; // points added after each character (tracking, kerning stays on)
+  bool italic = false;
 };
 
 struct TextMeasurement {

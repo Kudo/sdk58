@@ -56,6 +56,11 @@ Size measureExpoText(
       static_cast<FontWeight>(std::clamp(options.weight, 100, 900) / 100 * 100);
   textAttributes.fontStyle =
       options.italic ? FontStyle::Italic : FontStyle::Normal;
+  if (options.letterSpacing != 0) {
+    // The macOS TextLayoutManager applies it as NSKernAttributeName, like
+    // React Native <Text> on iOS (the font's kerning is off for that text).
+    textAttributes.letterSpacing = options.letterSpacing;
+  }
 
   AttributedString attributedString;
   attributedString.setBaseTextAttributes(textAttributes);

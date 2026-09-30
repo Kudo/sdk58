@@ -398,6 +398,8 @@ class HostTextMeasurer final : public layout::TextMeasurer {
     options.size = static_cast<Float>(font.pointSize);
     options.weight = weightNumber(font.weight);
     options.design = font.design == "default" ? "" : font.design;
+    options.italic = font.italic;
+    options.letterSpacing = static_cast<Float>(font.letterSpacing);
     return options;
   }
 

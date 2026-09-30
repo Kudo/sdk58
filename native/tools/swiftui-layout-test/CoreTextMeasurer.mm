@@ -59,6 +59,11 @@ NSFont* resolve(const FontSpec& spec, bool useTextStyles) {
   } else {
     font = [NSFont systemFontOfSize:spec.pointSize weight:weight(spec.weight)];
   }
+  if (spec.italic) {
+    NSFontDescriptor* d = [font.fontDescriptor fontDescriptorWithSymbolicTraits:
+                                                  font.fontDescriptor.symbolicTraits | NSFontDescriptorTraitItalic];
+    font = [NSFont fontWithDescriptor:d size:font.pointSize] ?: font;
+  }
   if (!spec.design.empty() && spec.design != "default") {
     NSFontDescriptorSystemDesign design = spec.design == "rounded" ? NSFontDescriptorSystemDesignRounded
         : spec.design == "serif"                                  ? NSFontDescriptorSystemDesignSerif
@@ -71,23 +76,30 @@ NSFont* resolve(const FontSpec& spec, bool useTextStyles) {
   return font;
 }
 
-NSSize boundingSize(NSString* text, NSFont* font, double maxWidth) {
+NSSize boundingSize(NSString* text, NSFont* font, double maxWidth, double letterSpacing = 0) {
   // SwiftUI wraps with the standard line break strategy (no single-word last line: "push out").
   static NSParagraphStyle* paragraph = [] {
     NSMutableParagraphStyle* p = [NSMutableParagraphStyle new];
     p.lineBreakStrategy = NSLineBreakStrategyStandard;
     return p;
   }();
-  NSAttributedString* a = [[NSAttributedString alloc]
-      initWithString:text
-          attributes:@{NSFontAttributeName : font, NSParagraphStyleAttributeName : paragraph}];
+  NSMutableDictionary* attributes =
+      [@{NSFontAttributeName : font, NSParagraphStyleAttributeName : paragraph} mutableCopy];
+  if (letterSpacing != 0) {
+    // Tracking, not kern: NSKernAttributeName / kCTKernAttributeName turn off the font's kerning.
+    attributes[(__bridge NSString*)kCTTrackingAttributeName] = @(letterSpacing);
+  }
+  NSAttributedString* a = [[NSAttributedString alloc] initWithString:text attributes:attributes];
   // A width of exactly 0 means "unlimited" to NSStringDrawing; SwiftUI wraps every cluster.
   CGFloat w = std::isfinite(maxWidth) ? std::max(maxWidth, 0.001) : CGFLOAT_MAX;
   return [a boundingRectWithSize:NSMakeSize(w, CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin].size;
 }
 
-double truncatedWidth(NSString* text, NSFont* font, double maxWidth) {
-  NSDictionary* attrs = @{NSFontAttributeName : font};
+double truncatedWidth(NSString* text, NSFont* font, double maxWidth, double letterSpacing) {
+  NSMutableDictionary* attrs = [@{NSFontAttributeName : font} mutableCopy];
+  if (letterSpacing != 0) {
+    attrs[(__bridge NSString*)kCTTrackingAttributeName] = @(letterSpacing);
+  }
   NSAttributedString* a = [[NSAttributedString alloc] initWithString:text attributes:attrs];
   NSAttributedString* e = [[NSAttributedString alloc] initWithString:@"…" attributes:attrs];
   CTLineRef line = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)a);
@@ -101,12 +113,15 @@ double truncatedWidth(NSString* text, NSFont* font, double maxWidth) {
 }
 
 /// Width of `text` laid out in at most `maxLines` lines, the last one truncated (TextKit 1).
-double truncatedWidth(NSString* text, NSFont* font, double maxWidth, int maxLines) {
+double truncatedWidth(NSString* text, NSFont* font, double maxWidth, int maxLines, double letterSpacing) {
   NSMutableParagraphStyle* paragraph = [NSMutableParagraphStyle new];
   paragraph.lineBreakStrategy = NSLineBreakStrategyStandard;
-  NSTextStorage* storage = [[NSTextStorage alloc]
-      initWithString:text
-          attributes:@{NSFontAttributeName : font, NSParagraphStyleAttributeName : paragraph}];
+  NSMutableDictionary* attrs =
+      [@{NSFontAttributeName : font, NSParagraphStyleAttributeName : paragraph} mutableCopy];
+  if (letterSpacing != 0) {
+    attrs[(__bridge NSString*)kCTTrackingAttributeName] = @(letterSpacing);
+  }
+  NSTextStorage* storage = [[NSTextStorage alloc] initWithString:text attributes:attrs];
   NSLayoutManager* layout = [NSLayoutManager new];
   layout.usesFontLeading = NO;
   NSTextContainer* container = [[NSTextContainer alloc] initWithSize:NSMakeSize(maxWidth, CGFLOAT_MAX)];
@@ -131,7 +146,7 @@ TextMeasurement CoreTextMeasurer::measureText(const std::string& text, const Fon
   @autoreleasepool {
     NSFont* font = resolve(spec, useTextStyles_);
     NSString* s = [NSString stringWithUTF8String:text.c_str()] ?: @"";
-    NSSize full = boundingSize(s, font, maxWidth);
+    NSSize full = boundingSize(s, font, maxWidth, spec.letterSpacing);
     double line = boundingSize(@"A", font, INFINITY).height;
     TextMeasurement m;
     m.width = full.width;
@@ -141,7 +156,8 @@ TextMeasurement CoreTextMeasurer::measureText(const std::string& text, const Fon
     m.height = full.height;
     if (maxLines > 0 && lines > maxLines) {
       double w = std::isfinite(maxWidth) ? maxWidth : CGFLOAT_MAX;
-      m.width = maxLines == 1 ? truncatedWidth(s, font, w) : truncatedWidth(s, font, w, maxLines);
+      m.width = maxLines == 1 ? truncatedWidth(s, font, w, spec.letterSpacing)
+                              : truncatedWidth(s, font, w, maxLines, spec.letterSpacing);
       m.lines = maxLines;
       m.height = line * maxLines;
     }
