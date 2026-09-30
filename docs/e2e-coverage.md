@@ -45,6 +45,19 @@ Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 - For each example with `actions.json`: `run --diff` output validates against `schema/run-result.json`.
 - `check --rules examples/basic/rules-fail.json` output (exit code 2) validates against `schema/check-result.json`.
 
+## `e2e/expo-ui.test.ts` — `examples/expo-ui/actions.json`, `run`
+
+Actions: tap `go`, tap `remember`, tap `greeting`, snapshot. Capability gating: modifier callbacks need `expoModifierEvents`; boxes need `expoModifierEvents` and no `expoUI.fakeLayout` (the test prints a diagnostic when it skips them). Skipped without `expoUI`.
+
+- `App.tsx` (universal `@expo/ui`, `--platform android`): Host tree is `ExpoUI.HostView > ExpoUI.ColumnView > [ExpoUI.TextView, ExpoUI.Button > ExpoUI.TextView, ExpoUI.RowView > [ExpoUI.TextView, ExpoUI.SwitchView]]`; Host `layout: emulated`, Column `placeholder`.
+  - `go`: role `button`, name "Go", `expo.modifiers` `[{$type: testID}]`; `greeting`: role `text`, name/text "Hello", a `clickable` modifier; `remember`: role `switch`.
+  - Step events `buttonPressed`, `checkedChange`; `status` = "Pressed", `remember-state` = "Remember: off", `remember` `a11y.state.checked === false`.
+  - With `expoModifierEvents`: step 2 event `modifier:clickable`, `taps` = "Taps: 1"; else the step warns that the host has no `dispatchExpoModifierEvent`.
+  - Real layout only: Host height > 0, Text height ≈ 20.
+- `SwiftUIScreen.tsx` (`@expo/ui/swift-ui`, `--platform android`): `ExpoUI.HostView > ExpoUI.VStackView > [ExpoUI.TextView, ExpoUI.Button, ExpoUI.ToggleView]`; VStack `expo.modifiers` `[{$type: padding, all: 8}]`; `greeting` name "Greeting" (accessibilityLabel modifier), text "Hello"; `go` `frame` modifier; `remember` role `switch`, name "Remember".
+  - Step events `buttonPress`, `isOnChange`; `status` = "Pressed", `remember-state` = "Remember: off", `remember` unchecked.
+  - With `expoModifierEvents`: `modifier:onTapGesture`, `taps` = "Taps: 1".
+
 ## `e2e/scrolling.test.ts` — `examples/scrolling/actions.json`, `run`
 
 Actions: snapshot `before`, scroll `list` to y=600, snapshot `after`, tap

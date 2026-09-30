@@ -15,6 +15,7 @@
  * `root.document`. Each step reports which path it used (`via`).
  */
 
+import {dispatchModifier, expoText, expoTapPlan, expoTypeEvents, isExpo} from './expo/actions';
 import {readA11yTree} from './hostConfig';
 import {settle} from './settle';
 import {
@@ -276,11 +277,49 @@ export function createRunner({root, tapMode}) {
     }
   }
 
+  /**
+   * @expo/ui views react to direct events and modifier callbacks, not to
+   * touches (runtime/expo/actions.js). Returns true when handled.
+   */
+  function tapExpo(target, hit, warnings, step, longPress) {
+    // A target by testID/key is used as is: with placeholder frames
+    // (layout "placeholder") the hit test cannot find it.
+    const from = isExpo(target) ? target : hit;
+    const plan = expoTapPlan(from, {longPress, findElement: findElementByTagOrNull});
+    if (plan == null) return false;
+    if (isExpo(target) && (hit == null || !isWithin(hit, target))) {
+      const kept = warnings.filter(w => !w.startsWith('Target is covered') && !w.startsWith('Nothing is hittable'));
+      kept.push(
+        `${target.type} is not at its box center (layout ${target.node.layout ?? 'unknown'}): events sent to it without the hit test`,
+      );
+      step.warnings = kept;
+    }
+    if (plan.actionable != null) {
+      dispatch(plan.actionable.tag, plan.events.map(([type, payload]) => [type, payload]), step.events);
+    }
+    if (plan.gesture != null) {
+      const warning = dispatchModifier(plan.gesture);
+      if (warning != null) {
+        (step.warnings ??= []).push(warning);
+      } else {
+        step.events.push(`modifier:${plan.gesture.type}`);
+        NativeFantom.flushEventQueue();
+        Fantom.runWorkLoop();
+      }
+    }
+    if (longPress) {
+      advance(LONG_PRESS_MS);
+      step.events.push(`wait ${LONG_PRESS_MS}ms`);
+    }
+    return true;
+  }
+
   function tap(spec, step, {longPress = false} = {}) {
     const {target, hit, point, warnings} = locate(spec);
     step.target = describe(target);
     step.hit = describe(hit);
     if (warnings.length > 0) step.warnings = warnings;
+    if (tapExpo(target, hit, warnings, step, longPress)) return;
     if (hit == null) {
       throw new Error(warnings[0]);
     }
@@ -396,6 +435,18 @@ export function createRunner({root, tapMode}) {
     step.hit = describe(target);
     const tag = target.tag;
     const warnings = [];
+
+    if (isExpo(target)) {
+      let value = expoText(target);
+      if (expoTypeEvents(target, value, findElementByTagOrNull) == null) {
+        throw new Error(`${target.type} is not a text field`);
+      }
+      for (const key of Array.from(spec.text)) {
+        value += key;
+        dispatch(tag, expoTypeEvents(target, value, findElementByTagOrNull), step.events);
+      }
+      return;
+    }
 
     dispatch(tag, [['focus', {target: tag}]], step.events);
     let text = typeof target.node.text === 'string' ? target.node.text : '';

@@ -1,0 +1,143 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import {test} from 'node:test';
+import {fileURLToPath} from 'node:url';
+
+import type {RunResult, TreeNode} from '../src/schema.ts';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
+const EXAMPLE = path.join(ROOT, 'examples', 'expo-ui');
+const SCRIPT = path.join(EXAMPLE, 'actions.json');
+
+const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
+const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
+
+function run(file: string): RunResult {
+  const proc = spawnSync(process.execPath, [CLI, 'run', path.join(EXAMPLE, file), '--platform', 'android', '--script', SCRIPT], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  assert.equal(proc.status, 0, proc.stderr);
+  return JSON.parse(proc.stdout) as RunResult;
+}
+
+function findAll(node: TreeNode, pred: (n: TreeNode) => boolean): TreeNode[] {
+  const out = pred(node) ? [node] : [];
+  for (const child of node.children) out.push(...findAll(child, pred));
+  return out;
+}
+
+const byKey = (tree: TreeNode, key: string) => findAll(tree, n => n.key === key)[0];
+const shape = (n: TreeNode): unknown =>
+  n.children.length > 0 ? {[n.type]: n.children.map(shape)} : n.type;
+
+/**
+ * Capability gating:
+ * - `expoUI`: the host renders Expo module views (else the test is skipped);
+ * - `expoModifierEvents`: dispatchExpoModifierEvent (modifier callbacks) and
+ *   written Host frames (host step 2);
+ * - `expoUI.fakeLayout`: frames are the fake layout (rows of 40), not
+ *   SwiftUI/Compose layout.
+ * Box assertions need expoModifierEvents and no expoUI.fakeLayout.
+ */
+function gates(result: RunResult, t: {diagnostic: (m: string) => void}) {
+  const caps = new Set(result.capabilities);
+  const modifierEvents = caps.has('expoModifierEvents');
+  const realLayout = modifierEvents && !caps.has('expoUI.fakeLayout');
+  if (!modifierEvents) t.diagnostic('host without expoModifierEvents (step 1): modifier callbacks and frames not checked');
+  else if (!realLayout) t.diagnostic('fake layout (expoUI.fakeLayout): box assertions skipped');
+  return {modifierEvents, realLayout};
+}
+
+const skip = hostBin ? false : `no host binary: run \`yarn build:host\` or set RN_A11Y_HOST_BIN`;
+
+test('expo-ui: universal @expo/ui (Compose views) — tree, roles, button, switch, clickable Text', {skip, timeout: 180_000}, t => {
+  const result = run('App.tsx');
+  if (!result.capabilities.includes('expoUI')) {
+    t.skip('host has no expoUI capability');
+    return;
+  }
+  const {modifierEvents, realLayout} = gates(result, t);
+  const host = findAll(result.final, n => n.type === 'ExpoUI.HostView')[0];
+  assert.deepEqual(shape(host), {
+    'ExpoUI.HostView': [
+      {
+        'ExpoUI.ColumnView': [
+          'ExpoUI.TextView',
+          {'ExpoUI.Button': ['ExpoUI.TextView']},
+          {'ExpoUI.RowView': ['ExpoUI.TextView', 'ExpoUI.SwitchView']},
+        ],
+      },
+    ],
+  });
+  assert.equal(host.layout, 'emulated');
+  assert.equal(host.children[0].layout, 'placeholder');
+
+  const go = byKey(result.final, 'go');
+  assert.deepEqual([go.role, go.name], ['button', 'Go']);
+  assert.deepEqual(go.expo?.modifiers, [{$type: 'testID', testID: 'go'}]);
+  const greeting = byKey(result.final, 'greeting');
+  assert.deepEqual([greeting.role, greeting.name, greeting.text], ['text', 'Hello', 'Hello']);
+  assert.ok((greeting.expo?.modifiers as Array<{$type: string}>).some(m => m.$type === 'clickable'));
+  const remember = byKey(result.final, 'remember');
+  assert.equal(remember.role, 'switch');
+
+  // Steps: Compose events chosen from the JS props.
+  assert.deepEqual(result.steps[0].events, ['buttonPressed']);
+  assert.deepEqual(result.steps[1].events, ['checkedChange']);
+  assert.equal(byKey(result.final, 'status').text, 'Pressed');
+  assert.equal(byKey(result.final, 'remember-state').text, 'Remember: off');
+  assert.deepEqual(remember.a11y.state, {checked: false});
+  if (modifierEvents) {
+    assert.deepEqual(result.steps[2].events, ['modifier:clickable']);
+    assert.equal(byKey(result.final, 'taps').text, 'Taps: 1');
+  } else {
+    assert.match(String(result.steps[2].warnings), /no dispatchExpoModifierEvent/);
+  }
+  if (realLayout) {
+    assert.ok(host.box.height > 0);
+    assert.ok(Math.abs(greeting.box.height - 20) < 4, `Text height ${greeting.box.height}`);
+  }
+  assert.ok(result.snapshots.after);
+});
+
+test('expo-ui: @expo/ui/swift-ui (SwiftUI views) — tree, modifiers, button, toggle, onTapGesture', {skip, timeout: 180_000}, t => {
+  const result = run('SwiftUIScreen.tsx');
+  if (!result.capabilities.includes('expoUI')) {
+    t.skip('host has no expoUI capability');
+    return;
+  }
+  const {modifierEvents, realLayout} = gates(result, t);
+  const host = findAll(result.final, n => n.type === 'ExpoUI.HostView')[0];
+  assert.deepEqual(shape(host), {
+    'ExpoUI.HostView': [{'ExpoUI.VStackView': ['ExpoUI.TextView', 'ExpoUI.Button', 'ExpoUI.ToggleView']}],
+  });
+  assert.deepEqual(host.children[0].expo?.modifiers, [{$type: 'padding', all: 8}]);
+  const greeting = byKey(result.final, 'greeting');
+  assert.deepEqual([greeting.role, greeting.name, greeting.text], ['text', 'Greeting', 'Hello']);
+  const go = byKey(result.final, 'go');
+  assert.deepEqual([go.role, go.name], ['button', 'Go']);
+  assert.deepEqual(go.expo?.modifiers, [{$type: 'frame', height: 44}]);
+  const remember = byKey(result.final, 'remember');
+  assert.deepEqual([remember.role, remember.name, remember.a11y.state], ['switch', 'Remember', {checked: false}]);
+
+  assert.deepEqual(result.steps[0].events, ['buttonPress']);
+  assert.deepEqual(result.steps[1].events, ['isOnChange']);
+  assert.equal(byKey(result.final, 'status').text, 'Pressed');
+  assert.equal(byKey(result.final, 'remember-state').text, 'Remember: off');
+  if (modifierEvents) {
+    assert.deepEqual(result.steps[2].events, ['modifier:onTapGesture']);
+    assert.equal(byKey(result.final, 'taps').text, 'Taps: 1');
+  } else {
+    assert.match(String(result.steps[2].warnings), /no dispatchExpoModifierEvent/);
+  }
+  if (realLayout) {
+    assert.ok(host.box.height > 0);
+    assert.ok(Math.abs(greeting.box.height - 20) < 4, `Text height ${greeting.box.height}`);
+  }
+});

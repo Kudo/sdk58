@@ -1,0 +1,6 @@
+[
+  {"tap": {"testID": "go"}},
+  {"tap": {"testID": "remember"}},
+  {"tap": {"testID": "greeting"}},
+  {"snapshot": "after"}
+]

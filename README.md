@@ -31,7 +31,7 @@ macOS arm64 only (the host is built by `yarn build:host`).
 | react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
 | react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner; worklet callbacks through Reanimated | `e2e/gestures.test.ts` | No v3 Reanimated detector events, virtual detectors, or transforms in `absoluteToLocal` |
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
-| Expo modules, `@expo/ui` | Not started | none | |
+| `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | No SwiftUI/Compose layout yet (frames are placeholders or the fake layout); other Expo native modules are not emulated |
 
 ## Quick start
 
@@ -547,6 +547,91 @@ Rules:
 Examples: `examples/basic/actions.json` (typing, Switch, Pressable) and
 `examples/scrolling/actions.json` (ScrollView offset, tap after scroll,
 FlatList windowing).
+
+## Expo UI
+
+`@expo/ui` views render as Fabric views named `ViewManagerAdapter_ExpoUI_<View>`
+(see `native/README.md` "Expo UI"). The tree type is `ExpoUI.<View>`:
+Compose names with the universal `@expo/ui` entry and `--platform android`
+(`HostView`, `ColumnView`, `TextView`, `Button`, `SwitchView`, ...), SwiftUI
+names with `@expo/ui/swift-ui` on any platform (`VStackView`, `ToggleView`,
+...).
+
+```sh
+rn-a11y-tree run examples/expo-ui/App.tsx --platform android --script examples/expo-ui/actions.json --format text
+```
+
+**JS load path.** When the project's `package.json` lists `expo`,
+`expo-modules-core` or `@expo/ui` and `expo-modules-core` resolves from the
+project, the entry runs, before the app module:
+
+1. `installExpoGlobalPolyfill()` from `expo-modules-core/src/polyfill/dangerous-internal`
+   (the project's copy): `globalThis.expo` with `EventEmitter`,
+   `NativeModule`, `SharedObject`, `modules`.
+2. `runtime/expo/prelude.js`: `globalThis.expo.getViewConfig(module, view)`
+   from `runtime/expo/viewConfigs.json` (152 views, iOS and Android
+   attributes and events merged; views not in the table get the union of all
+   `@expo/ui` prop and event names; `children`, `key`, `ref`, `style` are
+   left out), and module stubs `ExpoUI`, `ExpoAsset`, `ExponentConstants` /
+   `ExpoConstants`.
+
+Other projects get none of this (the basic example bundle has no Expo code).
+Listing the package is required because in a hoisted monorepo every project
+resolves `expo-modules-core`. `node scripts/gen-expo-view-configs.mjs`
+regenerates `viewConfigs.json` from `native/tools/expo-view-configs/out/viewConfigs.json`
+and `native/tests/fantomExpoUIViewConfig.json`. The Fantom tests' dev-bundle
+workaround (`NativeSourceCode` `scriptURL: null`) is not included: only
+`__DEV__` bundles open the dev-server socket, so `--dev` bundles of Expo apps
+may need it.
+
+**Tree.** ExpoUI nodes have:
+
+- `expo`: the props the native view received (`modifiers` verbatim;
+  modifier callbacks are `"eventListener": null`);
+- `layout`: `emulated` (a Host sized from its content) or `placeholder`
+  (the other views: not the drawn SwiftUI/Compose frame);
+- `role` from the view name: `Button`/`*Button` → `button` (`ToggleButton`
+  → `togglebutton`, `RadioButton` → `radio`), `SwitchView`/`ToggleView` →
+  `switch`, `CheckboxView` → `checkbox`, `SliderView` → `adjustable`,
+  `TextField*`/`SecureField*` → `textbox`, `TextView` → `text`,
+  `Image*`/`Icon*` → `image`, `PickerView` → `radiogroup` (pickerStyle
+  `segmented`, `inline`, `palette`) else `combobox`, `ProgressView` →
+  `progressbar`. An explicit `role`/`accessibilityRole` wins;
+- `text` = `expo.text` (TextView, text fields); `name` = accessibility
+  label (the host maps the `accessibilityLabel` modifier), else the
+  `label`/`title` prop, else the text; buttons take their descendants' text;
+- `a11y.state.checked` from `value`/`isOn`/`checked`, `disabled` from
+  `enabled: false`/`disabled`.
+
+**Actions** (`runtime/expo/actions.js`). The event is chosen from the `on…`
+callbacks that the JS component passed to the native view (its React props),
+else from the view name:
+
+| Action | Callback prop | Event sent |
+| --- | --- | --- |
+| `tap` | `onButtonPress` (SwiftUI Button) | `buttonPress {}` |
+| `tap` | `onButtonPressed` (Compose buttons) | `buttonPressed {}` |
+| `tap` | `onCheckedChange` (Compose Switch, Checkbox) | `checkedChange {value: !value}` |
+| `tap` | `onIsOnChange` (SwiftUI Toggle) | `isOnChange {isOn: !isOn}` |
+| `type` | `onTextChange` (SwiftUI TextField) | `textChange {value}` per character |
+| `type` | `onValueChange` (Compose TextField) | `valueChange {text, selection}` per character |
+
+- The actionable view is the target (or hit) node or its nearest ancestor
+  inside the Host (under the fake layout, a tap hits the Button's Text child).
+- If that node or an ancestor inside the Host has a tap modifier
+  (`onTapGesture`, `clickable`, `combinedClickable`; long press:
+  `onLongPressGesture`), the runner also calls
+  `NativeFantom.dispatchExpoModifierEvent(tag, type, {})` (step event
+  `modifier:<type>`). Hosts without it add a warning.
+- A target given by testID/key gets the events even when its box center
+  does not hit it (placeholder frames); the step has a warning then.
+
+**Host capabilities.** `expoUI`: Expo module views render.
+`expoModifierEvents`: `dispatchExpoModifierEvent` and Host frames written by
+the layout emulation. `expoUI.fakeLayout`: the frames are the fake layout
+(each child a full-width row, 40 high), not SwiftUI/Compose layout.
+`e2e/expo-ui.test.ts` checks modifier callbacks only with
+`expoModifierEvents` and boxes only without `expoUI.fakeLayout`.
 
 ## react-native-gesture-handler
 

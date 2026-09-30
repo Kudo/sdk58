@@ -120,6 +120,8 @@ export function renderEntry(options: {
   session?: boolean;
   hostConfig?: HostConfig;
   runOptions?: {diff?: boolean};
+  /** Path of expo-modules-core's `installExpoGlobalPolyfill` module (see expoPolyfillPath), or null. */
+  expoPolyfill?: string | null;
 }): string {
   const template = fs.readFileSync(
     path.join(RUNTIME_DIR, 'entry-template.js'),
@@ -142,7 +144,44 @@ export function renderEntry(options: {
     .replaceAll('__TAP_MODE__', () => JSON.stringify(options.tapMode ?? 'touch'))
     .replaceAll('__SESSION__', String(options.session === true))
     .replaceAll('__HOST_CONFIG__', () => JSON.stringify(options.hostConfig ?? {}))
-    .replaceAll('__RUN_OPTIONS__', () => JSON.stringify(options.runOptions ?? {}));
+    .replaceAll('__RUN_OPTIONS__', () => JSON.stringify(options.runOptions ?? {}))
+    .replaceAll('/* __EXPO_PRELUDE__ */', () =>
+      options.expoPolyfill != null
+        ? `require('${quote(options.expoPolyfill)}').installExpoGlobalPolyfill();\n  ` +
+          `require('${quote(path.join(RUNTIME_DIR, 'expo', 'prelude'))}').installExpoPrelude();`
+        : '',
+    );
+}
+
+const EXPO_PACKAGES = ['expo', 'expo-modules-core', '@expo/ui'];
+
+/**
+ * The Expo prelude (runtime/expo/prelude.js) goes into the bundle when the
+ * project uses Expo: its package.json lists `expo`, `expo-modules-core` or
+ * `@expo/ui`, and expo-modules-core resolves from the project. (Resolving
+ * alone is not enough: in a hoisted monorepo every project resolves it.)
+ * Returns the path of expo-modules-core's global polyfill module, or null.
+ */
+export function expoPolyfillPath(projectRoot: string): string | null {
+  let pkg: Record<string, Record<string, string> | undefined>;
+  try {
+    pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+  const declared = ['dependencies', 'devDependencies', 'peerDependencies'].some(field =>
+    EXPO_PACKAGES.some(name => pkg[field]?.[name] != null),
+  );
+  if (!declared) return null;
+  try {
+    const coreDir = path.dirname(
+      fs.realpathSync(require.resolve('expo-modules-core/package.json', {paths: [projectRoot]})),
+    );
+    const polyfill = path.join(coreDir, 'src', 'polyfill', 'dangerous-internal.ts');
+    return fs.existsSync(polyfill) ? polyfill : null;
+  } catch {
+    return null;
+  }
 }
 
 function isInside(file: string, dir: string): boolean {
@@ -347,6 +386,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     session: options.session,
     hostConfig: options.hostConfig,
     runOptions: options.runOptions,
+    expoPolyfill: expoPolyfillPath(projectRoot),
   });
   const root = cacheRoot(projectRoot);
   const key = bundleKey({entry, platform, dev, minify, projectRoot});

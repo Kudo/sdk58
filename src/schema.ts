@@ -96,6 +96,17 @@ export type TreeNode = {
    * the host reports one). Present only when below 1.
    */
   effectiveOpacity?: number;
+  /**
+   * Expo module views (`@expo/ui`, type `ExpoUI.<View>`): the props the view
+   * received (`modifiers` verbatim; modifier callbacks are
+   * `"eventListener": null`).
+   */
+  expo?: Record<string, unknown>;
+  /**
+   * Expo module views: `emulated` (a Host sized from its content) or
+   * `placeholder` (the frame is not the drawn SwiftUI/Compose frame).
+   */
+  layout?: 'emulated' | 'placeholder';
   /** Raw debug props from the host; only with `--debug-props` and the `shadowTree` source. */
   debugProps?: Record<string, string>;
   children: TreeNode[];
@@ -241,6 +252,9 @@ export type ShadowNodeJSON = {
   };
   // RNCSafeAreaProvider / RNCSafeAreaView
   insets?: {top: number; left: number; right: number; bottom: number};
+  // Expo module views
+  expo?: Record<string, unknown>;
+  layout?: 'emulated' | 'placeholder';
   debugProps?: Record<string, string>;
   children?: ShadowNodeJSON[];
 };

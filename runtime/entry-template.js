@@ -28,6 +28,11 @@ registerRender(() => {
   const Fantom = require('__RUNTIME_DIR__/fantom/index');
   const NativeFantom = require('__RUNTIME_DIR__/fantom/specs/NativeFantom').default;
 
+  // Expo projects only (src/bundle.ts expoPolyfillPath): the JS
+  // `globalThis.expo`, Expo view configs and module stubs, before anything
+  // imports expo, expo-modules-core or @expo/ui.
+  /* __EXPO_PRELUDE__ */
+
   const appModule = require('__APP_PATH__');
   const App = appModule.default ?? appModule.App;
   if (typeof App !== 'function' && (typeof App !== 'object' || App == null)) {

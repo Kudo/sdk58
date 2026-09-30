@@ -118,6 +118,19 @@
           "type": "number",
           "description": "Product of the node's and its ancestors' opacity (mounted opacity when the host reports one). Present only when below 1."
         },
+        "expo": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Expo module views (`@expo/ui`, type `ExpoUI.<View>`): the props the view received (`modifiers` verbatim; modifier callbacks are `\"eventListener\": null`)."
+        },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "emulated",
+            "placeholder"
+          ],
+          "description": "Expo module views: `emulated` (a Host sized from its content) or `placeholder` (the frame is not the drawn SwiftUI/Compose frame)."
+        },
         "debugProps": {
           "type": "object",
           "additionalProperties": {

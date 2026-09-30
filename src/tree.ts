@@ -1,5 +1,6 @@
 import {diffTrees} from './diff.ts';
 import {stepErrorCode} from './errors.ts';
+import {expoGroupsChildren, expoLabel, expoRole, expoState, expoText, expoViewName} from './expo.ts';
 import type {
   A11yInfo,
   A11yState,
@@ -595,14 +596,33 @@ function convertShadowNode(
   }
 
   const a11y = shadowA11yInfo(node);
-  const role = deriveRole(node.type, node.role, node.accessibilityRole);
-  const name = deriveName(
-    // A native stack header is announced by its title.
-    a11y.label ?? (node.type === 'RNSScreenStackHeaderConfig' ? nonEmpty(node.title) : null),
-    node.type === 'Paragraph' || node.type === 'Text' ? text : null,
-    a11y.accessible,
-    children,
-  );
+  // @expo/ui views: role, name, text and state from the view name and props.
+  const expoView = expoViewName(node.type);
+  const expoProps = (node.expo ?? {}) as Record<string, unknown>;
+  let role: string | null;
+  let name: string | null;
+  if (expoView != null) {
+    text = expoText(expoView, expoProps);
+    const explicitRole = nonEmpty(node.role) ?? nonEmpty(node.accessibilityRole);
+    role = explicitRole != null ? deriveRole(node.type, node.role, node.accessibilityRole) : expoRole(expoView, expoProps);
+    name = deriveName(
+      a11y.label ?? expoLabel(expoView, expoProps),
+      text,
+      a11y.accessible ?? expoGroupsChildren(role),
+      children,
+    );
+    const state = expoState(expoView, expoProps);
+    if (state != null) a11y.state = {...state, ...a11y.state};
+  } else {
+    role = deriveRole(node.type, node.role, node.accessibilityRole);
+    name = deriveName(
+      // A native stack header is announced by its title.
+      a11y.label ?? (node.type === 'RNSScreenStackHeaderConfig' ? nonEmpty(node.title) : null),
+      node.type === 'Paragraph' || node.type === 'Text' ? text : null,
+      a11y.accessible,
+      children,
+    );
+  }
 
   const style: Record<string, unknown> = {};
   for (const key of SHADOW_STYLE_KEYS) {
@@ -646,6 +666,12 @@ function convertShadowNode(
   }
   if (visual.opacity < 1) {
     result.effectiveOpacity = round(visual.opacity);
+  }
+  if (node.expo != null) {
+    result.expo = node.expo;
+  }
+  if (node.layout != null) {
+    result.layout = node.layout;
   }
   if (node.debugProps) {
     result.debugProps = node.debugProps;
