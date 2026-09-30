@@ -90,6 +90,8 @@ log "Ninja:  $(ninja --version 2>/dev/null || echo 'not on PATH (the SDK CMake b
 log "NDK:    ${NDK_VERSION:-none} ${NDK_DIR:+($NDK_DIR)}; React Native pins ${PINNED_NDK:-?}"
 log "Gradle: $(sed -n 's/^distributionUrl=.*gradle-\([0-9.]*\)-.*/\1/p' "$RN_DIR/gradle/wrapper/gradle-wrapper.properties")"
 log "Node:   $(node --version)"
+log "Xcode:  $(xcodebuild -version 2>/dev/null | tr '\n' ' ')($(xcode-select -p 2>/dev/null))"
+log "Clang:  $(clang --version | head -n 1)"
 
 # RN's codegen shells out to `yarn`. It must be Yarn 1: put a shim first on PATH.
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0

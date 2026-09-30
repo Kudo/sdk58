@@ -109,6 +109,27 @@ jobs:
       - name: E2E tests (e2e/*.test.ts)
         run: bun run test:e2e
 
+      # Diagnostics when a step fails: the expo-ui example with host stderr,
+      # the macOS crash reports of the host, and the host binary (to run it
+      # locally under lldb).
+      - name: Re-run the expo-ui example verbosely (on failure)
+        if: failure()
+        continue-on-error: true
+        run: |
+          bun run rn-a11y-tree render examples/expo-ui/App.tsx --platform android --format text -v --no-quiet
+          ls -la ~/Library/Logs/DiagnosticReports/ || true
+
+      - name: Upload crash reports and the host binary (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: host-crash-${{ github.run_id }}
+          path: |
+            ~/Library/Logs/DiagnosticReports/rn-a11y-host*
+            ~/Library/Logs/DiagnosticReports/fantom_tester*
+            native/dist/arm64/rn-a11y-host
+          if-no-files-found: warn
+
       - name: Fantom itests (native/tests)
         run: |
           set -euo pipefail
