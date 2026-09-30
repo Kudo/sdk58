@@ -16,7 +16,7 @@
 import {type ChildProcess, spawn} from 'node:child_process';
 import readline from 'node:readline';
 
-import {getHostBin, type HostInfo, hostArgs} from './host.ts';
+import {appendHostStderr, getHostBin, type HostInfo, hostArgs} from './host.ts';
 import type {ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
@@ -105,6 +105,7 @@ export async function runSession(options: {
   let exited = false;
   const exitPromise = new Promise<number>(resolve => {
     child.on('close', code => {
+      appendHostStderr(getHostBin(), Buffer.concat(stderrChunks).toString('utf8'));
       exited = true;
       current?.resolve();
       resolve(code ?? 1);

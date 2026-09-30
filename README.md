@@ -1020,6 +1020,17 @@ CI). The installed libraries include `expo`, `expo-modules-core` and
 `native/tools/expo-view-configs/out/viewConfigs.json` is copied next to the
 tests as `fantomExpoUIViewConfigs.json` (read by `fantomExpoUIPrelude.js`).
 
+The `sanitize` job builds the host with `RN_A11Y_HOST_SANITIZE=1
+RN_A11Y_HOST_BUILD_TYPE=Release` (AddressSanitizer + UndefinedBehaviorSanitizer,
+cached under its own key) and runs `e2e/expo-ui`, `navigation-stack`,
+`gestures`, `reanimated` and `scrolling` against it with
+`ASAN_OPTIONS=detect_container_overflow=0:detect_stack_use_after_return=1:abort_on_error=1`
+and `UBSAN_OPTIONS=halt_on_error=1`. The CLI passes its environment to the
+host, and `RN_A11Y_HOST_STDERR_LOG=<file>` makes it append the host stderr
+of every run to the file; the job fails on a test failure or on
+`ERROR: AddressSanitizer` / `runtime error:` in that file (uploaded as an
+artifact on failure). No Fantom itests there.
+
 `.github/workflows/release-host.yml` packages and publishes the host on
 tags (see [Prebuilt host](#prebuilt-host)).
 

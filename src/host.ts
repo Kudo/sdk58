@@ -244,6 +244,20 @@ export function currentHost(): HostInfo | null {
 }
 
 /**
+ * RN_A11Y_HOST_STDERR_LOG=<file>: append the host's stderr of every run to
+ * the file (CI greps it for sanitizer reports of runs that did not fail).
+ */
+export function appendHostStderr(bin: string, stderr: string): void {
+  const file = process.env.RN_A11Y_HOST_STDERR_LOG;
+  if (!file) return;
+  try {
+    fs.appendFileSync(file, `--- ${bin} (pid ${process.pid}) ---\n${stderr}${stderr.endsWith('\n') ? '' : '\n'}`);
+  } catch {
+    // Diagnostics only.
+  }
+}
+
+/**
  * Builds the host argv. Flags are gflags defined in Fantom's
  * tester/src/AppSettings.cpp.
  */
@@ -333,6 +347,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     },
   );
   const stderr = Buffer.concat(stderrChunks).toString('utf8');
+  appendHostStderr(bin, stderr);
 
   if (jsError) {
     throw new HostError('APP_THREW', `Render failed in JS: ${jsError.message}`, {

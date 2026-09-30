@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {execFileSync} from 'node:child_process';
+import {execFileSync, spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -129,5 +129,24 @@ test('release-host.mjs --pack fills the package directory (osx-bin + host-versio
   assert.ok(fs.statSync(packed).mode & 0o100);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'pkg', 'host-version.json'), 'utf8')), manifest);
   assert.equal(manifest.binaries['osx-bin/rn-a11y-host'].size, fs.statSync(packed).size);
+  fs.rmSync(dir, {recursive: true, force: true});
+});
+
+test('RN_A11Y_HOST_STDERR_LOG collects the host stderr of every run (fake host)', {timeout: 120_000}, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-stderr-'));
+  const log = path.join(dir, 'host-stderr.log');
+  const proc = spawnSync(
+    process.execPath,
+    [path.join(ROOT, 'bin/rn-a11y-tree.js'), 'render', path.join(ROOT, 'examples/basic/App.tsx'), '--platform', 'android'],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.js'), RN_A11Y_HOST_STDERR_LOG: log},
+    },
+  );
+  assert.equal(proc.status, 0, proc.stderr);
+  const text = fs.readFileSync(log, 'utf8');
+  assert.match(text, /^--- .*fake-host\.js \(pid \d+\) ---$/m);
+  assert.match(text, /fake-host: glog line on stderr/);
   fs.rmSync(dir, {recursive: true, force: true});
 });

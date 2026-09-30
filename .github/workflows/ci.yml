@@ -190,3 +190,114 @@ jobs:
           # Fantom treats GITHUB_ACTIONS as Meta CI and tries Buck builds.
           # shellcheck disable=SC2086
           (cd "$RN" && env -u GITHUB_ACTIONS PATH="$SHIM_DIR:$PATH" yarn fantom $names)
+
+  # The host built with AddressSanitizer + UndefinedBehaviorSanitizer
+  # (Release, so NDEBUG code paths are the shipped ones) and the e2e suites
+  # that exercise native layout, gestures and animation against it. Fails on
+  # a non-zero exit and on any sanitizer report in the host stderr.
+  sanitize:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      SANITIZER_HOST: third_party/react-native/private/react-native-fantom/build/tester-release-sanitize/fantom_tester
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Android SDK
+        run: |
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            brew install --cask android-commandlinetools
+            echo "ANDROID_HOME=$(brew --prefix)/share/android-commandlinetools" >> "$GITHUB_ENV"
+          fi
+
+      - name: Android SDK CMake 3.30.5
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' | head -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "cmake;3.30.5"
+
+      - name: Homebrew packages
+        run: brew install cmake ninja openssl@3
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Host cache key
+        id: host-key
+        run: |
+          echo "submodule=$(git -C third_party/react-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "xcode=$(xcodebuild -version | head -n 1 | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+          libs=$(node -e '
+            const libs = ["react-native-screens", "react-native-safe-area-context",
+              "react-native-gesture-handler", "react-native-reanimated", "react-native-worklets",
+              "expo-modules-core", "@expo/ui"];
+            console.log(libs.map(l => {
+              try { return l + "@" + require(l + "/package.json").version; }
+              catch { return l + "@none"; }
+            }).join(","));')
+          echo "libs=$(echo "$libs" | shasum | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore sanitizer host
+        id: host-cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.SANITIZER_HOST }}
+          key: host-sanitize-release-${{ runner.os }}-${{ runner.arch }}-${{ steps.host-key.outputs.xcode }}-${{ steps.host-key.outputs.submodule }}-${{ steps.host-key.outputs.libs }}-${{ hashFiles('native/overlay/**', 'native/scripts/**', 'scripts/build-host.sh') }}
+
+      - name: Build sanitizer host (ASan + UBSan, Release)
+        if: steps.host-cache.outputs.cache-hit != 'true'
+        env:
+          RN_A11Y_HOST_SANITIZE: '1'
+          RN_A11Y_HOST_BUILD_TYPE: Release
+        run: bun run build:host
+
+      - name: E2E tests against the sanitizer host
+        env:
+          ASAN_OPTIONS: detect_container_overflow=0:detect_stack_use_after_return=1:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: |
+          set -o pipefail
+          export RN_A11Y_HOST_BIN="$PWD/$SANITIZER_HOST"
+          export RN_A11Y_HOST_STDERR_LOG="$RUNNER_TEMP/host-stderr.log"
+          : > "$RN_A11Y_HOST_STDERR_LOG"
+          status=0
+          node --import tsx --test \
+            e2e/expo-ui.test.ts e2e/navigation-stack.test.ts e2e/gestures.test.ts \
+            e2e/reanimated.test.ts e2e/scrolling.test.ts || status=$?
+          echo "host stderr log: $(wc -l < "$RN_A11Y_HOST_STDERR_LOG") lines"
+          if grep -nE 'ERROR: AddressSanitizer|runtime error:' "$RN_A11Y_HOST_STDERR_LOG"; then
+            echo "::error::sanitizer report in the host stderr (see above and the artifact)"
+            status=1
+          fi
+          exit "$status"
+
+      - name: Upload the host stderr log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sanitizer-host-stderr-${{ github.run_id }}
+          path: ${{ runner.temp }}/host-stderr.log
+          if-no-files-found: warn
