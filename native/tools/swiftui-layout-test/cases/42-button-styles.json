@@ -1,0 +1,138 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 10
+  },
+  "children": [
+   {
+    "type": "Button",
+    "props": {
+     "label": "Automatic"
+    },
+    "modifiers": []
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Plain"
+    },
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "plain"
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Borderless"
+    },
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "borderless"
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Bordered"
+    },
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "bordered"
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Prominent"
+    },
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "borderedProminent"
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "With icon",
+     "systemImage": "square.and.arrow.up"
+    },
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "bordered"
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "children": [
+     {
+      "type": "Button",
+      "props": {
+       "label": "One"
+      },
+      "modifiers": [
+       {
+        "$type": "buttonStyle",
+        "style": "bordered"
+       }
+      ]
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Two"
+      },
+      "modifiers": [
+       {
+        "$type": "buttonStyle",
+        "style": "borderedProminent"
+       }
+      ]
+     },
+     {
+      "type": "Spacer"
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Three"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Wide"
+    },
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "borderedProminent"
+     },
+     {
+      "$type": "frame",
+      "maxWidth": "infinity"
+     }
+    ]
+   }
+  ]
+ }
+}

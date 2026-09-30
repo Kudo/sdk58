@@ -81,6 +81,13 @@ class TextMeasurer {
   /// Lays out `text` in lines no wider than `maxWidth` (may be infinity). `maxLines` = 0 means
   /// unlimited; otherwise the last line is truncated with an ellipsis.
   virtual TextMeasurement measureText(const std::string& text, const FontSpec& font, double maxWidth, int maxLines) = 0;
+  /// Like `measureText`, with SwiftUI's `truncationMode` ("head", "middle", "tail") for the
+  /// truncated line. The default ignores the mode (tail truncation).
+  virtual TextMeasurement measureTextTruncated(const std::string& text, const FontSpec& font, double maxWidth,
+                                               int maxLines, const std::string& truncationMode) {
+    (void)truncationMode;
+    return measureText(text, font, maxWidth, maxLines);
+  }
   /// Line height of the font, used when `FontSpec::lineHeight` is 0.
   virtual double lineHeight(const FontSpec& font) = 0;
   /// Size of `Image(systemName:)` in this font.
@@ -121,10 +128,13 @@ struct SectionListMetrics {
   double headerToRows = 0;
   double rowsToFooter = 0;
   std::string headerTextStyle = "headline"; // Section(title:) header text
-  std::string headerSlotWeight; // header slot content: the section font in this weight ("" = same)
+  std::string headerSlotTextStyle; // header slot content: this text style ("" = the section font)
+  std::string headerSlotWeight; // header slot content: in this weight ("" = the font's)
   std::string footerTextStyle = "subheadline";
+  std::string footerWeight; // "" = the text style's
   double labelIconGap = -1; // Label in rows; -1 = ControlMetrics::labelIconGap
   double labelIconSlot = -1; // Label in rows: fixed icon column width (icon + gap); -1 = none
+  double labelIconMinWidth = 0; // Label in rows: the icon column is at least this wide (+ gap)
   bool looseRowsFormSection = true; // rows outside a Section form an implicit section
   // Whether controls inside a container in a row (e.g. a Toggle in an HStack) are styled as row
   // controls (macOS) or as plain controls (iOS).
@@ -202,6 +212,8 @@ struct ControlMetrics {
   double labelIconGap = 8;
   // Divider thickness.
   double dividerThickness = 1;
+  // SF Symbol sizes from the measured iOS table (Symbols.h) before asking the measurer.
+  bool iosSymbolTable = false;
   // Width of always-visible scrollers, added to a ScrollView whose content overflows (0 = overlay).
   double scrollerWidth = 0;
 

@@ -25,10 +25,14 @@ final class RefAppDelegate: UIResponder, UIApplicationDelegate {
     var args = Array(CommandLine.arguments.dropFirst())
     var outPath: String?
     var inputs: [String] = []
+    var symbolNames: [String] = []
     while !args.isEmpty {
       let arg = args.removeFirst()
       if arg == "--out", !args.isEmpty {
         outPath = args.removeFirst()
+      } else if arg == "--symbols", !args.isEmpty {
+        // Comma-separated SF Symbol names: their UIImage sizes go to "_symbols".
+        symbolNames = args.removeFirst().split(separator: ",").map(String.init)
       } else if !arg.hasPrefix("-") {
         inputs.append(arg)
       }
@@ -59,6 +63,23 @@ final class RefAppDelegate: UIResponder, UIApplicationDelegate {
         "descender": font.descender, "leading": font.leading, "fontName": font.fontName,
         "weight": (traits?[.weight] as? CGFloat) ?? 0,
       ]
+    }
+    if !symbolNames.isEmpty {
+      var symbols: [String: Any] = [:]
+      for name in symbolNames {
+        var sizes: [String: Any] = [:]
+        let points: [Double] = [11, 12, 13, 15, 16, 17, 20, 22, 28, 34, 48, 64, 100]
+        for pointSize in points {
+          for (weightName, weight) in [("regular", UIImage.SymbolWeight.regular), ("semibold", .semibold)] {
+            let config = UIImage.SymbolConfiguration(pointSize: pointSize, weight: weight, scale: .medium)
+            if let image = UIImage(systemName: name, withConfiguration: config) {
+              sizes["\(Int(pointSize)) \(weightName)"] = [image.size.width, image.size.height]
+            }
+          }
+        }
+        symbols[name] = sizes
+      }
+      results["_symbols"] = symbols
     }
     results["_device"] = [
       "screenScale": UIScreen.main.scale,

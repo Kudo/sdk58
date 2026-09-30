@@ -97,9 +97,12 @@ struct Builder {
     }
     let content = buildContent(node, path: path)
       .recordFrame(store, path: path, content: true)
-    return applyModifiers(node, to: AnyView(content), path: path)
+    // alignmentGuide goes outside the frame recorder: a GeometryReader behind a view with an
+    // explicit guide reports a frame shifted by the guide, not where the view is drawn.
+    let recorded = applyModifiers(node, to: AnyView(content), path: path) { $0 != "alignmentGuide" }
       .recordFrame(store, path: path)
       .eraseToAnyView()
+    return applyModifiers(node, to: recorded, path: path) { $0 == "alignmentGuide" }
   }
 
   private func children(_ nodes: [Node], path: String) -> some View {
@@ -218,6 +221,16 @@ struct Builder {
     }
     let contentPath = node.slot("content") != nil ? slotPath("content") : path
     if let title = node.string("title"), !title.isEmpty {
+      // SectionView.swift: a title with a footer slot is Section { } header: { Text(title) } footer: { }.
+      if let footer {
+        return Section {
+          children(content, path: contentPath)
+        } header: {
+          Text(title)
+        } footer: {
+          children(footer, path: slotPath("footer"))
+        }.eraseToAnyView()
+      }
       return Section(title) { children(content, path: contentPath) }.eraseToAnyView()
     }
     return Section {
@@ -274,9 +287,12 @@ struct Builder {
 
   // MARK: - Modifiers
 
-  private func applyModifiers(_ node: Node, to view: AnyView, path: String) -> AnyView {
+  private func applyModifiers(
+    _ node: Node, to view: AnyView, path: String, include: (String) -> Bool = { _ in true }
+  ) -> AnyView {
     node.modifiers.reduce(view) { view, params in
       let type = params["$type"] as? String ?? ""
+      guard include(type) else { return view }
       switch type {
       case "padding":
         return padding(params, view)
@@ -317,6 +333,36 @@ struct Builder {
         case "borderless": return view.buttonStyle(.borderless).eraseToAnyView()
         case "plain": return view.buttonStyle(.plain).eraseToAnyView()
         default: return view
+        }
+      case "alignmentGuide":
+        let value = CGFloat(parseNumber(params["value"]) ?? 0)
+        switch params["guide"] as? String {
+        case "leading": return view.alignmentGuide(.leading) { _ in value }.eraseToAnyView()
+        case "center": return view.alignmentGuide(HorizontalAlignment.center) { _ in value }.eraseToAnyView()
+        case "trailing": return view.alignmentGuide(.trailing) { _ in value }.eraseToAnyView()
+        default: return view
+        }
+      case "lineLimit":
+        // LineLimitModifier.swift
+        let limit = parseNumber(params["limit"]).map { Int($0) }
+        if let min = parseNumber(params["min"]), let max = parseNumber(params["max"]) {
+          return view.lineLimit(Int(min)...Int(max)).eraseToAnyView()
+        }
+        if let limit, params["reservesSpace"] as? Bool == true {
+          return view.lineLimit(limit, reservesSpace: true).eraseToAnyView()
+        }
+        return view.lineLimit(limit).eraseToAnyView()
+      case "truncationMode":
+        switch params["mode"] as? String {
+        case "head": return view.truncationMode(.head).eraseToAnyView()
+        case "middle": return view.truncationMode(.middle).eraseToAnyView()
+        default: return view.truncationMode(.tail).eraseToAnyView()
+        }
+      case "multilineTextAlignment":
+        switch params["alignment"] as? String {
+        case "center": return view.multilineTextAlignment(.center).eraseToAnyView()
+        case "trailing": return view.multilineTextAlignment(.trailing).eraseToAnyView()
+        default: return view.multilineTextAlignment(.leading).eraseToAnyView()
         }
       case "pickerStyle", "tag":
         // Applied by the Picker builder.

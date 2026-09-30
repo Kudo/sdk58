@@ -95,7 +95,8 @@ NSSize boundingSize(NSString* text, NSFont* font, double maxWidth, double letter
   return [a boundingRectWithSize:NSMakeSize(w, CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin].size;
 }
 
-double truncatedWidth(NSString* text, NSFont* font, double maxWidth, double letterSpacing) {
+double truncatedWidth(NSString* text, NSFont* font, double maxWidth, double letterSpacing,
+                      CTLineTruncationType type = kCTLineTruncationEnd) {
   NSMutableDictionary* attrs = [@{NSFontAttributeName : font} mutableCopy];
   if (letterSpacing != 0) {
     attrs[(__bridge NSString*)kCTTrackingAttributeName] = @(letterSpacing);
@@ -104,7 +105,7 @@ double truncatedWidth(NSString* text, NSFont* font, double maxWidth, double lett
   NSAttributedString* e = [[NSAttributedString alloc] initWithString:@"…" attributes:attrs];
   CTLineRef line = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)a);
   CTLineRef ellipsis = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)e);
-  CTLineRef truncated = CTLineCreateTruncatedLine(line, maxWidth, kCTLineTruncationEnd, ellipsis);
+  CTLineRef truncated = CTLineCreateTruncatedLine(line, maxWidth, type, ellipsis);
   double width = truncated ? CTLineGetTypographicBounds(truncated, nullptr, nullptr, nullptr) : 0;
   if (truncated) CFRelease(truncated);
   CFRelease(ellipsis);
@@ -113,7 +114,8 @@ double truncatedWidth(NSString* text, NSFont* font, double maxWidth, double lett
 }
 
 /// Width of `text` laid out in at most `maxLines` lines, the last one truncated (TextKit 1).
-double truncatedWidth(NSString* text, NSFont* font, double maxWidth, int maxLines, double letterSpacing) {
+double truncatedWidth(NSString* text, NSFont* font, double maxWidth, int maxLines, double letterSpacing,
+                      NSLineBreakMode mode = NSLineBreakByTruncatingTail) {
   NSMutableParagraphStyle* paragraph = [NSMutableParagraphStyle new];
   paragraph.lineBreakStrategy = NSLineBreakStrategyStandard;
   NSMutableDictionary* attrs =
@@ -127,7 +129,7 @@ double truncatedWidth(NSString* text, NSFont* font, double maxWidth, int maxLine
   NSTextContainer* container = [[NSTextContainer alloc] initWithSize:NSMakeSize(maxWidth, CGFLOAT_MAX)];
   container.lineFragmentPadding = 0;
   container.maximumNumberOfLines = static_cast<NSUInteger>(maxLines);
-  container.lineBreakMode = NSLineBreakByTruncatingTail;
+  container.lineBreakMode = mode;
   [layout addTextContainer:container];
   [storage addLayoutManager:layout];
   [layout ensureLayoutForTextContainer:container];
@@ -143,6 +145,11 @@ double truncatedWidth(NSString* text, NSFont* font, double maxWidth, int maxLine
 } // namespace
 
 TextMeasurement CoreTextMeasurer::measureText(const std::string& text, const FontSpec& spec, double maxWidth, int maxLines) {
+  return measureTextTruncated(text, spec, maxWidth, maxLines, "tail");
+}
+
+TextMeasurement CoreTextMeasurer::measureTextTruncated(const std::string& text, const FontSpec& spec, double maxWidth,
+                                                       int maxLines, const std::string& truncationMode) {
   @autoreleasepool {
     NSFont* font = resolve(spec, useTextStyles_);
     NSString* s = [NSString stringWithUTF8String:text.c_str()] ?: @"";
@@ -156,8 +163,14 @@ TextMeasurement CoreTextMeasurer::measureText(const std::string& text, const Fon
     m.height = full.height;
     if (maxLines > 0 && lines > maxLines) {
       double w = std::isfinite(maxWidth) ? maxWidth : CGFLOAT_MAX;
-      m.width = maxLines == 1 ? truncatedWidth(s, font, w, spec.letterSpacing)
-                              : truncatedWidth(s, font, w, maxLines, spec.letterSpacing);
+      CTLineTruncationType type = truncationMode == "head"     ? kCTLineTruncationStart
+                                  : truncationMode == "middle" ? kCTLineTruncationMiddle
+                                                               : kCTLineTruncationEnd;
+      NSLineBreakMode mode = truncationMode == "head"     ? NSLineBreakByTruncatingHead
+                             : truncationMode == "middle" ? NSLineBreakByTruncatingMiddle
+                                                          : NSLineBreakByTruncatingTail;
+      m.width = maxLines == 1 ? truncatedWidth(s, font, w, spec.letterSpacing, type)
+                              : truncatedWidth(s, font, w, maxLines, spec.letterSpacing, mode);
       m.lines = maxLines;
       m.height = line * maxLines;
     }

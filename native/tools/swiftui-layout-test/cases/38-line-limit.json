@@ -1,0 +1,190 @@
+{
+ "host": {
+  "width": 240,
+  "height": 1400
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 6
+  },
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "limit": 1
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "limit": 2
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "limit": 2
+     },
+     {
+      "$type": "truncationMode",
+      "mode": "middle"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "limit": 2
+     },
+     {
+      "$type": "truncationMode",
+      "mode": "head"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Short"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "limit": 3,
+      "reservesSpace": true
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Short"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "min": 2,
+      "max": 4
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "min": 2,
+      "max": 3
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "multilineTextAlignment",
+      "alignment": "center"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "multilineTextAlignment",
+      "alignment": "trailing"
+     },
+     {
+      "$type": "frame",
+      "width": 200
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "limit": 1
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "inherits the limit"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running through the field"
+    },
+    "modifiers": [
+     {
+      "$type": "lineLimit",
+      "limit": 1
+     },
+     {
+      "$type": "font",
+      "textStyle": "title"
+     }
+    ]
+   }
+  ]
+ }
+}

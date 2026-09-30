@@ -1,0 +1,257 @@
+{
+ "host": {
+  "width": 390,
+  "height": 700
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 12
+  },
+  "modifiers": [
+   {
+    "$type": "padding"
+   }
+  ],
+  "children": [
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "leading"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Leading"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Indented by 20"
+      },
+      "modifiers": [
+       {
+        "$type": "alignmentGuide",
+        "guide": "leading",
+        "value": -20
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "center"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Center"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Shifted"
+      },
+      "modifiers": [
+       {
+        "$type": "alignmentGuide",
+        "guide": "center",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Centered text"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "trailing"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Trailing"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Guide 10"
+      },
+      "modifiers": [
+       {
+        "$type": "alignmentGuide",
+        "guide": "trailing",
+        "value": 10
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "leading"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Padded guide"
+      },
+      "modifiers": [
+       {
+        "$type": "padding",
+        "leading": 12
+       },
+       {
+        "$type": "alignmentGuide",
+        "guide": "leading",
+        "value": -8
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Other"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "leading"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "HStack",
+      "props": {
+       "alignment": "firstTextBaseline"
+      },
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Label"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Value"
+        },
+        "modifiers": [
+         {
+          "$type": "font",
+          "textStyle": "caption"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "HStack",
+      "props": {
+       "alignment": "lastTextBaseline"
+      },
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Two"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "VStack",
+        "props": {},
+        "modifiers": [],
+        "children": [
+         {
+          "type": "Text",
+          "props": {
+           "text": "lines"
+          },
+          "modifiers": []
+         },
+         {
+          "type": "Text",
+          "props": {
+           "text": "here"
+          },
+          "modifiers": []
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "leading"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Not this axis"
+      },
+      "modifiers": [
+       {
+        "$type": "alignmentGuide",
+        "guide": "center",
+        "value": 100
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Leading stack"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -39,11 +39,32 @@ line heights from `ControlMetrics::ios()` (UIFont metrics). Widths still come fr
 
 ## Results
 
-macOS: 37/37 trees within 0.5 pt. iOS: 28/37 within 0.5 pt, 33/37 within 1 pt. The iOS
-differences:
+| Platform | Trees | Within 0.5 pt | Within 1 pt |
+|---|---|---|---|
+| macOS (swiftui-ref) | 43 | 42 | 42 |
+| iOS 26.5 simulator (`--platform ios`) | 43 | 41 | 41 |
 
-| Trees | Difference | Why |
-|---|---|---|
-| 05, 07, 18, 25, 26, 29 | SF Symbol sizes 0.3-1.3 pt | iOS symbol sizes are rounded to 1/3 pt and differ from the macOS `NSImage` sizes the measurer reads |
-| 10, 13 | Text proposed 13-26 pt wide: one line more | Character-level breaking of a word that does not fit differs between the macOS and iOS fonts |
-| 16 | A titled Section after a footer: 22 pt | The header gap after a footer is not consistent between two observed Forms |
+The remaining differences:
+
+| Tree | Platform | Difference | Why |
+|---|---|---|---|
+| 41 | macOS | a Label with a symbol taller than its `largeTitle` text: 0.84 pt taller | macOS aligns the symbol on the text's cap height; the engine takes the taller of the two |
+| 10, 13 | iOS | Text proposed 13-26 pt wide: one line more | Character-level breaking of a word that does not fit differs between the macOS and iOS fonts (the test measures iOS text with macOS fonts) |
+
+## SF Symbols on iOS
+
+`ControlMetrics::ios()` takes symbol sizes from `Symbols.cpp` (108 names: the symbols used in the
+`@expo/ui` docs and examples plus common ones), generated from `UIImage(systemName:)` sizes on the
+simulator, which equal SwiftUI's `Image(systemName:)` frames. To add names:
+
+```sh
+SWIFTUI_REF_SYMBOLS=star,heart,... native/tools/swiftui-ref/scripts/run-ios.sh out.json any-tree.json
+```
+
+`out.json` then has `_symbols`: `{name: {"<pt> regular" | "<pt> semibold": [w, h]}}` at 11, 12,
+13, 15, 16, 17, 20, 22, 28, 34, 48, 64 and 100 pt; `Symbols.cpp` stores them in pixels at scale 3.
+
+## Notes
+
+- List and Form rows outside the viewport are laid out lazily on iOS; their reference frames are
+  estimates. Trees keep all rows on screen (case 16 uses a 1100 pt tall host).

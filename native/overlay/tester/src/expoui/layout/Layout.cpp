@@ -17,6 +17,7 @@
 // descendants) but not the node's own `frame`.
 
 #include "Layout.h"
+#include "Symbols.h"
 
 #include <algorithm>
 #include <cmath>
@@ -205,6 +206,9 @@ struct Env {
   FontSpec font;
   Axis axis = Axis::none; // the enclosing stack's axis (Spacer and Divider direction)
   bool fontExplicit = false; // a `font` modifier is set above
+  int lineLimit = 0; // lineLimit(n) / lineLimit(min...max).max; 0 = none
+  int minLines = 0; // lineLimit(n, reservesSpace: true) / lineLimit(min...max).min
+  std::string truncationMode = "tail";
   std::string buttonStyle = "automatic";
   const SectionListMetrics* row = nullptr; // set for the content of a List / Form row
   bool nestedInRow = false; // inside a container in a row, where row styling does not apply
@@ -240,6 +244,9 @@ class View {
     double h = size(p).height;
     return {h, h};
   }
+  /// An explicit horizontal alignment guide set with `alignmentGuide` (x from the view's leading
+  /// edge), or nullopt for the default (0, width / 2, width).
+  virtual std::optional<double> explicitGuide(HAlign, const Proposal&) { return std::nullopt; }
 
  protected:
   virtual Size compute(const Proposal& p) = 0;
@@ -274,7 +281,14 @@ class LeafView : public View {
 
 class TextView : public View {
  public:
-  TextView(Context& ctx, std::string text, FontSpec font) : ctx_(ctx), text_(std::move(text)), font_(std::move(font)) {}
+  TextView(Context& ctx, std::string text, FontSpec font, int lineLimit = 0, int minLines = 0,
+           std::string truncationMode = "tail")
+      : ctx_(ctx),
+        text_(std::move(text)),
+        font_(std::move(font)),
+        lineLimit_(lineLimit),
+        minLines_(minLines),
+        truncationMode_(std::move(truncationMode)) {}
 
   void place(const Rect&, const Proposal&, double, double) override {}
 
@@ -311,11 +325,19 @@ class TextView : public View {
  protected:
   Size compute(const Proposal& p) override {
     double maxWidth = p.width.value_or(kInf);
-    int maxLines = 0;
+    int maxLines = lineLimit_;
     if (p.height && std::isfinite(*p.height)) {
-      maxLines = std::max(1, static_cast<int>(std::floor(*p.height / singleLine() + 1e-9)));
+      int fit = std::max(1, static_cast<int>(std::floor(*p.height / singleLine() + 1e-9)));
+      maxLines = maxLines > 0 ? std::min(maxLines, fit) : fit;
     }
-    auto m = ctx_.measurer.measureText(text_, font_, maxWidth, maxLines);
+    auto m = ctx_.measurer.measureTextTruncated(text_, font_, maxWidth, maxLines, truncationMode_);
+    if (minLines_ > m.lines) {
+      // lineLimit(n, reservesSpace: true) / lineLimit(min...max): the height of at least n lines.
+      if (!(ctx_.m.textHeightFromMetrics && font_.lineHeight > 0)) {
+        m.height += (minLines_ - m.lines) * singleLine();
+      }
+      m.lines = minLines_;
+    }
     double scale = ctx_.m.pixelScale;
     double width = ceilTo(m.width, scale);
     if (std::isfinite(maxWidth)) {
@@ -340,6 +362,9 @@ class TextView : public View {
   Context& ctx_;
   std::string text_;
   FontSpec font_;
+  int lineLimit_;
+  int minLines_;
+  std::string truncationMode_;
 };
 
 class SpacerView : public View {
@@ -378,6 +403,7 @@ class WrapperView : public View {
   bool isSpacer() const override { return child_->isSpacer(); }
   void place(const Rect& rect, const Proposal& p, double tx, double ty) override { child_->place(rect, p, tx, ty); }
   std::pair<double, double> baselines(const Proposal& p) override { return child_->baselines(p); }
+  std::optional<double> explicitGuide(HAlign a, const Proposal& p) override { return child_->explicitGuide(a, p); }
 
  protected:
   Size compute(const Proposal& p) override { return child_->size(p); }
@@ -422,6 +448,19 @@ class PriorityView : public WrapperView {
   double priority_;
 };
 
+/// `alignmentGuide(guide, value)`: the view's `guide` alignment is at x = value.
+class AlignmentGuideView : public WrapperView {
+ public:
+  AlignmentGuideView(ViewPtr child, HAlign guide, double value) : WrapperView(std::move(child)), guide_(guide), value_(value) {}
+  std::optional<double> explicitGuide(HAlign a, const Proposal& p) override {
+    return a == guide_ ? std::optional<double>(value_) : child_->explicitGuide(a, p);
+  }
+
+ private:
+  HAlign guide_;
+  double value_;
+};
+
 /// `frame` and other views that replace the child's spacing preferences with the control ones.
 class SpacingOverrideView : public WrapperView {
  public:
@@ -464,6 +503,11 @@ class PaddingView : public WrapperView {
     return {b.first + top_, b.second + top_};
   }
 
+  std::optional<double> explicitGuide(HAlign a, const Proposal& p) override {
+    auto g = child_->explicitGuide(a, inner(p));
+    return g ? std::optional<double>(*g + leading_) : std::nullopt;
+  }
+
  protected:
   Size compute(const Proposal& p) override {
     Size s = child_->size(inner(p));
@@ -494,6 +538,15 @@ class FixedFrameView : public WrapperView {
     return shiftedBaselines(*child_, inner(p), size(p).height, alignment_.v);
   }
 
+  std::optional<double> explicitGuide(HAlign a, const Proposal& p) override {
+    Proposal q = inner(p);
+    auto g = child_->explicitGuide(a, q);
+    if (!g) {
+      return std::nullopt;
+    }
+    return *g + (size(p).width - child_->size(q).width) * alignFactor(alignment_.h);
+  }
+
  protected:
   Size compute(const Proposal& p) override {
     Size s = child_->size(inner(p));
@@ -522,6 +575,15 @@ class FlexFrameView : public WrapperView {
 
   std::pair<double, double> baselines(const Proposal& p) override {
     return shiftedBaselines(*child_, inner(p), size(p).height, alignment_.v);
+  }
+
+  std::optional<double> explicitGuide(HAlign a, const Proposal& p) override {
+    Proposal q = inner(p);
+    auto g = child_->explicitGuide(a, q);
+    if (!g) {
+      return std::nullopt;
+    }
+    return *g + (size(p).width - child_->size(q).width) * alignFactor(alignment_.h);
   }
 
  protected:
@@ -667,6 +729,16 @@ class StackView : public View {
         cross = std::max(cross, offsets[i].second + layout.sizes[i].height);
       }
     }
+    if (axis_ == Axis::vertical && !children_.empty()) {
+      // Width of the lined-up guides (equals the widest child without explicit guides).
+      auto offsets = positions(layout, 0);
+      double lo = 0, hi = 0;
+      for (size_t i = 0; i < layout.sizes.size(); i++) {
+        lo = i == 0 ? offsets[i].first : std::min(lo, offsets[i].first);
+        hi = i == 0 ? offsets[i].first + layout.sizes[i].width : std::max(hi, offsets[i].first + layout.sizes[i].width);
+      }
+      cross = hi - lo;
+    }
     return axis_ == Axis::vertical ? Size{cross, main} : Size{main, cross};
   }
 
@@ -691,11 +763,26 @@ class StackView : public View {
         maxBaseline = std::max(maxBaseline, baseline[i]);
       }
     }
+    std::vector<double> guide(n, 0);
+    double lead = 0;
+    double contentWidth = 0;
+    if (axis_ == Axis::vertical) {
+      // Horizontal alignment guides: the children's guides line up (default guide: 0, width / 2
+      // or width; `alignmentGuide` sets it).
+      double trail = 0;
+      for (size_t i = 0; i < n; i++) {
+        auto g = children_[i]->explicitGuide(hAlign_, layout.proposals[i]);
+        guide[i] = g ? *g : layout.sizes[i].width * alignFactor(hAlign_);
+        lead = std::max(lead, guide[i]);
+        trail = std::max(trail, layout.sizes[i].width - guide[i]);
+      }
+      contentWidth = lead + trail;
+    }
     double cursor = 0;
     for (size_t i = 0; i < n; i++) {
       Size s = layout.sizes[i];
       if (axis_ == Axis::vertical) {
-        out[i] = {(crossSize - s.width) * alignFactor(hAlign_), cursor};
+        out[i] = {(crossSize - contentWidth) * alignFactor(hAlign_) + lead - guide[i], cursor};
         cursor += s.height;
       } else {
         double y = isBaseline() ? maxBaseline - baseline[i] : (crossSize - s.height) * alignFactor(vAlign_);
@@ -729,11 +816,12 @@ class StackView : public View {
       return out;
     }
     double remaining = *main - std::accumulate(gaps_.begin(), gaps_.end(), 0.0);
-    std::vector<double> minSize(n), flex(n);
+    std::vector<double> minSize(n), distMin(n), flex(n);
     for (size_t i = 0; i < n; i++) {
       double lo = mainOf(children_[i]->size(make(0.0, cross)));
       double hi = mainOf(children_[i]->size(make(kInf, cross)));
       minSize[i] = lo;
+      distMin[i] = children_[i]->isSpacer() ? 0 : lo;
       flex[i] = std::isinf(hi) ? kInf : hi - lo;
     }
     // Spacers are sized after the other views of the same priority (observed: a Spacer next to a
@@ -758,8 +846,18 @@ class StackView : public View {
       std::stable_sort(group.begin(), group.end(), [&](size_t a, size_t b) { return flex[a] < flex[b]; });
       double groupRemaining = remaining - lowerMin;
       size_t left = group.size();
+      double groupMin = 0;
       for (size_t i : group) {
-        double offer = std::max(0.0, groupRemaining / static_cast<double>(left));
+        groupMin += distMin[i];
+      }
+      for (size_t i : group) {
+        // Each child gets its minimum plus an equal share of what is left above the minimums of
+        // the children not sized yet. A Spacer counts as minimum 0 here (its minLength still
+        // applies to its size). Observed: a stack placed at exactly its own size keeps its
+        // children's sizes; two Spacers share the free space equally whatever their minLength.
+        double extra = std::max(0.0, groupRemaining - groupMin) / static_cast<double>(left);
+        double offer = std::max(0.0, distMin[i] + extra);
+        groupMin -= distMin[i];
         out.proposals[i] = make(offer, cross);
         out.sizes[i] = children_[i]->size(out.proposals[i]);
         groupRemaining -= mainOf(out.sizes[i]);
@@ -1135,6 +1233,19 @@ class Builder {
         env.fontExplicit = true;
       } else if (type == "buttonStyle") {
         env.buttonStyle = paramString(*it, "style");
+      } else if (type == "truncationMode") {
+        env.truncationMode = paramString(*it, "mode");
+      } else if (type == "lineLimit") {
+        // LineLimitModifier.swift: {min, max} | {limit, reservesSpace} | {} (no limit).
+        OptD min = paramOpt(*it, "min"), max = paramOpt(*it, "max"), limit = paramOpt(*it, "limit");
+        auto reserves = it->find("reservesSpace");
+        if (min && max) {
+          env.lineLimit = static_cast<int>(*max);
+          env.minLines = static_cast<int>(*min);
+        } else {
+          env.lineLimit = limit ? static_cast<int>(*limit) : 0;
+          env.minLines = limit && reserves != it->end() && reserves->second.asBool() ? static_cast<int>(*limit) : 0;
+        }
       }
     }
     return env;
@@ -1179,11 +1290,20 @@ class Builder {
         }
       } else if (type == "layoutPriority") {
         v = std::make_shared<PriorityView>(v, paramLength(params, "priority", 0));
+      } else if (type == "alignmentGuide") {
+        // Horizontal guides (leading/center/trailing); the list row separator guides change no frame.
+        std::string guide = paramString(params, "guide");
+        if (guide == "leading" || guide == "center" || guide == "trailing") {
+          v = std::make_shared<AlignmentGuideView>(v, parseHAlign(guide, HAlign::leading), paramLength(params, "value", 0));
+        }
       } else if (type == "offset") {
         v = std::make_shared<OffsetView>(v, paramLength(params, "x", 0), paramLength(params, "y", 0));
       } else if (type == "background" || type == "cornerRadius" || type == "hidden" || type == "font" ||
                  type == "accessibilityLabel" || type == "toggleStyle" || type == "buttonStyle" ||
-                 type == "pickerStyle" || type == "tag") {
+                 type == "pickerStyle" || type == "tag" || type == "lineLimit" || type == "truncationMode" ||
+                 type == "multilineTextAlignment") {
+        // lineLimit and truncationMode are read into the environment; multilineTextAlignment
+        // aligns lines inside the Text's frame and changes no frame.
         // No layout effect (font and styles are read into the environment and by the builders).
       } else {
         ctx_.store.noteUnsupported("modifier:" + type, path);
@@ -1240,7 +1360,7 @@ class Builder {
   }
 
   ViewPtr text(const std::string& s, const Env& env) {
-    return std::make_shared<TextView>(ctx_, s, env.font);
+    return std::make_shared<TextView>(ctx_, s, env.font, env.lineLimit, env.minLines, env.truncationMode);
   }
 
   Size textSize(const std::string& s, const Env& env, const Proposal& p = {}) {
@@ -1248,6 +1368,11 @@ class Builder {
   }
 
   Size symbolSize(const std::string& name, const Env& env) {
+    if (ctx_.m.iosSymbolTable) {
+      if (auto size = iosSymbolSize(name, env.font.pointSize, env.font.weight)) {
+        return *size;
+      }
+    }
     Size s = ctx_.measurer.measureSymbol(name, env.font);
     double k = ctx_.m.pixelScale;
     return {ceilTo(s.width, k), ceilTo(s.height, k)};
@@ -1402,6 +1527,9 @@ class Builder {
     if (env.row && env.row->labelIconSlot > 0) {
       // Rows put the icon in a fixed-width column (observed on iOS).
       gap = std::max(0.0, env.row->labelIconSlot - icon.width);
+    } else if (env.row && env.row->labelIconMinWidth > icon.width) {
+      // macOS rows: the icon column is at least labelIconMinWidth wide.
+      gap += env.row->labelIconMinWidth - icon.width;
     }
     auto spacing = titleView->spacing();
     return std::make_shared<LeafView>(
@@ -1655,6 +1783,10 @@ class Builder {
       // The title is drawn in the header style; a header slot keeps the section's font (observed).
       Env headerEnv = sectionEnv;
       headerEnv.row = nullptr;
+      if (!lm.headerSlotTextStyle.empty()) {
+        headerEnv.font = fontFor(lm.headerSlotTextStyle);
+        headerEnv.fontExplicit = true;
+      }
       if (!lm.headerSlotWeight.empty()) {
         headerEnv.font.weight = lm.headerSlotWeight;
       }
@@ -1663,6 +1795,10 @@ class Builder {
       titleEnv.fontExplicit = true;
       Env footerEnv = sectionEnv;
       footerEnv.font = fontFor(lm.footerTextStyle);
+      footerEnv.fontExplicit = true;
+      if (!lm.footerWeight.empty()) {
+        footerEnv.font.weight = lm.footerWeight;
+      }
       footerEnv.row = nullptr;
       if (!title.empty()) {
         block.hasHeader = true;
@@ -1818,6 +1954,7 @@ ControlMetrics ControlMetrics::macos() {
   m.form.headerSlotWeight = "semibold";
   m.form.footerTextStyle = "subheadline";
   m.form.labelIconGap = 10;
+  m.form.labelIconMinWidth = 16;
   m.form.looseRowsFormSection = true;
   m.form.nestedControlsUseRowStyle = true;
   m.form.controlsFillRow = true;
@@ -1832,18 +1969,21 @@ ControlMetrics ControlMetrics::macos() {
   m.list.rowMinHeight = 0;
   m.list.untitledFirst = 10;
   m.list.headerFirst = 10;
-  m.list.untitledAfterRows = 0;
-  m.list.untitledAfterFooter = 4;
-  m.list.headerAfterRows = 24;
-  m.list.headerAfterFooter = 24;
-  m.list.headerToRows = 8;
-  m.list.rowsToFooter = 4;
-  m.list.headerTextStyle = "headline";
+  m.list.untitledAfterRows = 20;
+  m.list.untitledAfterFooter = 20;
+  m.list.headerAfterRows = 27;
+  m.list.headerAfterFooter = 34;
+  m.list.headerToRows = 7;
+  m.list.rowsToFooter = 7;
+  m.list.headerTextStyle = "subheadline";
+  m.list.headerSlotTextStyle = "subheadline";
   m.list.headerSlotWeight = "semibold";
   m.list.footerTextStyle = "subheadline";
+  m.list.footerWeight = "semibold";
+  m.list.labelIconGap = 7;
   m.list.looseRowsFormSection = false;
   m.list.nestedControlsUseRowStyle = true;
-  m.list.controlsFillRow = false;
+  m.list.controlsFillRow = true; // a Toggle row fills the row width (own height)
   return m;
 }
 
@@ -1918,6 +2058,7 @@ ControlMetrics ControlMetrics::ios() {
   m.labelIconGap = 8;
   m.dividerThickness = 1.0 / 3;
   m.scrollerWidth = 0; // overlay indicators
+  m.iosSymbolTable = true;
 
   // Form (inset grouped); List's default style on iOS is the same.
   SectionListMetrics f;

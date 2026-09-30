@@ -63,7 +63,10 @@ PLIST
 codesign --force --sign - "$app" >/dev/null 2>&1
 xcrun simctl install "$udid" "$app"
 rm -f "$out"
-xcrun simctl launch --terminate-running-process "$udid" "$bundle_id" --out "$out" "${inputs[@]}" >/dev/null
+extra=()
+# SWIFTUI_REF_SYMBOLS=name,name,...: also report those symbols' UIImage sizes ("_symbols").
+[ -n "${SWIFTUI_REF_SYMBOLS:-}" ] && extra=(--symbols "$SWIFTUI_REF_SYMBOLS")
+xcrun simctl launch --terminate-running-process "$udid" "$bundle_id" --out "$out" ${extra[@]+"${extra[@]}"} "${inputs[@]}" >/dev/null
 for _ in $(seq 1 600); do
   [ -s "$out" ] && break
   sleep 0.1

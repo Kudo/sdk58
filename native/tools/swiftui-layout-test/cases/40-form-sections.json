@@ -1,0 +1,222 @@
+{
+ "host": {
+  "width": 390,
+  "height": 1000
+ },
+ "root": {
+  "type": "Form",
+  "children": [
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "First"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Slot",
+      "props": {
+       "name": "footer"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "A footer under the first section."
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Toggle",
+        "props": {
+         "label": "Airplane mode",
+         "isOn": true
+        }
+       },
+       {
+        "type": "Label",
+        "props": {
+         "title": "Wi-Fi",
+         "systemImage": "wifi"
+        }
+       }
+      ]
+     }
+    ],
+    "props": {
+     "title": "Titled after footer"
+    }
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "header"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Header slot"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Picker",
+        "props": {
+         "label": "Theme",
+         "selection": "a"
+        },
+        "modifiers": [
+         {
+          "$type": "pickerStyle",
+          "style": "menu"
+         }
+        ],
+        "children": [
+         {
+          "type": "Slot",
+          "props": {
+           "name": "content"
+          },
+          "children": [
+           {
+            "type": "Text",
+            "props": {
+             "text": "Auto"
+            },
+            "modifiers": [
+             {
+              "$type": "tag",
+              "tag": "a"
+             }
+            ]
+           },
+           {
+            "type": "Text",
+            "props": {
+             "text": "Dark"
+            },
+            "modifiers": [
+             {
+              "$type": "tag",
+              "tag": "b"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "TextField",
+        "props": {
+         "placeholder": "Name"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Slot",
+      "props": {
+       "name": "footer"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Footer two"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Label",
+        "props": {
+         "title": "Notifications",
+         "systemImage": "bell.fill"
+        }
+       },
+       {
+        "type": "Label",
+        "props": {
+         "title": "Privacy",
+         "systemImage": "lock"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "End"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ],
+    "props": {
+     "title": "Last"
+    }
+   }
+  ]
+ }
+}

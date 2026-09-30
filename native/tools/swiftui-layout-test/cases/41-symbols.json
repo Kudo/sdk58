@@ -1,0 +1,176 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 6
+  },
+  "children": [
+   {
+    "type": "HStack",
+    "children": [
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "star.fill"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "heart"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "gear"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "trash"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "bell.fill"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "magnifyingglass"
+      }
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title"
+     }
+    ],
+    "children": [
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "chevron.right"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "plus.circle.fill"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "person.crop.circle"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "house.fill"
+      }
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "caption"
+     }
+    ],
+    "children": [
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "xmark"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "checkmark"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "info.circle"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "exclamationmark.triangle.fill"
+      }
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "headline"
+     }
+    ],
+    "children": [
+     {
+      "type": "Label",
+      "props": {
+       "title": "Headline",
+       "systemImage": "sparkles"
+      }
+     },
+     {
+      "type": "Label",
+      "props": {
+       "title": "Map",
+       "systemImage": "map"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Label",
+    "props": {
+     "title": "Large title",
+     "systemImage": "paperplane.fill"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "largeTitle"
+     }
+    ]
+   },
+   {
+    "type": "Image",
+    "props": {
+     "systemName": "calendar"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "size": 48
+     }
+    ]
+   }
+  ]
+ }
+}

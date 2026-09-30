@@ -1,0 +1,125 @@
+{
+ "host": {
+  "width": 390,
+  "height": 900
+ },
+ "root": {
+  "type": "List",
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "Loose row"
+    },
+    "modifiers": []
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Label",
+        "props": {
+         "title": "Profile",
+         "systemImage": "person.fill"
+        }
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Email"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ],
+    "props": {
+     "title": "Account"
+    }
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Untitled"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Slot",
+      "props": {
+       "name": "footer"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "List footer text"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "header"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Header"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Toggle",
+        "props": {
+         "label": "Enabled",
+         "isOn": true
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Trailing loose row"
+    },
+    "modifiers": []
+   }
+  ]
+ }
+}

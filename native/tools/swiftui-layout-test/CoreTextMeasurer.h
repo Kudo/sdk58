@@ -14,6 +14,8 @@ class CoreTextMeasurer : public TextMeasurer {
   explicit CoreTextMeasurer(bool useTextStyles = true) : useTextStyles_(useTextStyles) {}
 
   TextMeasurement measureText(const std::string& text, const FontSpec& font, double maxWidth, int maxLines) override;
+  TextMeasurement measureTextTruncated(const std::string& text, const FontSpec& font, double maxWidth, int maxLines,
+                                       const std::string& truncationMode) override;
   double lineHeight(const FontSpec& font) override;
   Size measureSymbol(const std::string& name, const FontSpec& font) override;
 
