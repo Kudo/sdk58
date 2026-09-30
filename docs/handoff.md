@@ -184,6 +184,11 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
   `vite` (Vitest 5's peer) is a direct devDependency.
 - Tests spawn the CLI with `'node'` explicitly (the CLI must stay on Node;
   under a Bun runner `process.execPath` would be bun) and scripts with `'bun'`.
+- Test style (user request): flat suites. One `describe` per file, no nested
+  `describe`, no `for` loop that creates test cases (use `it.for(E2E_PRESETS)`
+  / `it.for([...])`), and assertions inline in the test body, not in
+  `checkX()` helper functions. `e2ePreset(t, name)` skips a single-preset test
+  when RN_A11Y_E2E_PRESETS leaves that preset out.
 - In tests, `expect(...).toBeTruthy()` does not narrow types; use
   `if (x == null) expect.unreachable(msg)` where the code needs the value.
 - `node src/cli.ts` needs erasable TypeScript only (no enums, namespaces or

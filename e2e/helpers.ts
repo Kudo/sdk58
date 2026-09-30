@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {expect} from 'vitest';
+import {expect, type TestContext} from 'vitest';
 
 import {type PresetName, PRESETS} from '../src/presets.ts';
 import type {TreeNode} from '../src/schema.ts';
@@ -37,6 +37,13 @@ export const E2E_PRESETS: Preset[] = (process.env.RN_A11Y_E2E_PRESETS || 'androi
     if (preset == null) throw new Error(`RN_A11Y_E2E_PRESETS: unknown preset "${name}"`);
     return {name: name as PresetName, ...preset};
   });
+
+/** The E2E preset `name` for a test written for one preset; skips the test when RN_A11Y_E2E_PRESETS leaves it out. */
+export function e2ePreset(t: TestContext, name: PresetName): Preset {
+  const preset = E2E_PRESETS.find(p => p.name === name);
+  if (preset == null) t.skip(`${name} is not in RN_A11Y_E2E_PRESETS`);
+  return preset;
+}
 
 export function isIOS(preset: Preset): boolean {
   return preset.platform === 'ios';
