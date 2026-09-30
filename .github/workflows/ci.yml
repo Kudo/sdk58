@@ -70,7 +70,8 @@ jobs:
           # (native/overlay/tester/CMakeLists.txt, RN_NATIVE_LIBS_DIR).
           libs=$(node -e '
             const libs = ["react-native-screens", "react-native-safe-area-context",
-              "react-native-gesture-handler", "react-native-reanimated", "react-native-worklets"];
+              "react-native-gesture-handler", "react-native-reanimated", "react-native-worklets",
+              "expo-modules-core", "@expo/ui"];
             console.log(libs.map(l => {
               try { return l + "@" + require(l + "/package.json").version; }
               catch { return l + "@none"; }
@@ -125,7 +126,8 @@ jobs:
           libs=$(node -e '
             const libs = ["react-native-screens", "react-native-safe-area-context",
               "react-native-gesture-handler", "react-native-reanimated", "react-native-worklets",
-              "@react-navigation/native", "@react-navigation/native-stack"];
+              "@react-navigation/native", "@react-navigation/native-stack",
+              "expo", "expo-modules-core", "@expo/ui"];
             const out = [];
             for (const l of libs) {
               try { out.push(l + "@" + require(l + "/package.json").version); } catch {}
@@ -138,6 +140,9 @@ jobs:
           # (e.g. FantomNavigationStackApp.tsx).
           TESTS_DIR=$RN/packages/react-native/Libraries/Components/View/__tests__
           cp native/tests/* "$TESTS_DIR/"
+          # FantomExpoUI-itest.js: fantomExpoUIPrelude.js reads the per-view
+          # configs from fantomExpoUIViewConfigs.json next to it.
+          cp native/tools/expo-view-configs/out/viewConfigs.json "$TESTS_DIR/fantomExpoUIViewConfigs.json"
           names=$(for f in native/tests/*-itest.js; do basename "$f" -itest.js; done)
           echo "Fantom itests: $names"
           # `yarn fantom` shells out to `yarn`; it must be Yarn 1.

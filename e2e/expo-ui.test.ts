@@ -103,8 +103,15 @@ test('expo-ui: universal @expo/ui (Compose views) — tree, roles, button, switc
     assert.match(String(result.steps[2].warnings), /no dispatchExpoModifierEvent/);
   }
   if (realLayout) {
+    // Compose (M3 defaults): a 14sp Text is 16 dp high; Button and Switch
+    // get the 48 dp minimum touch target.
     assert.ok(host.box.height > 0);
-    assert.ok(Math.abs(greeting.box.height - 20) < 4, `Text height ${greeting.box.height}`);
+    assert.ok(Math.abs(greeting.box.height - 16) <= 2, `Text height ${greeting.box.height}`);
+    assert.ok(Math.abs(go.box.width - 66) <= 1 && Math.abs(go.box.height - 48) <= 1, `Button ${JSON.stringify(go.box)}`);
+    assert.ok(
+      Math.abs(remember.box.width - 52) <= 1 && Math.abs(remember.box.height - 48) <= 1,
+      `Switch ${JSON.stringify(remember.box)}`,
+    );
   }
   assert.ok(result.snapshots.after);
 });
@@ -140,7 +147,8 @@ test('expo-ui: @expo/ui/swift-ui (SwiftUI views) — tree, modifiers, button, to
     assert.match(String(result.steps[2].warnings), /no dispatchExpoModifierEvent/);
   }
   if (realLayout) {
+    // SwiftUI body text: 20.333 dp high.
     assert.ok(host.box.height > 0);
-    assert.ok(Math.abs(greeting.box.height - 20) < 4, `Text height ${greeting.box.height}`);
+    assert.ok(Math.abs(greeting.box.height - 20.333) <= 1, `Text height ${greeting.box.height}`);
   }
 });

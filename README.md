@@ -630,8 +630,11 @@ else from the view name:
 `expoModifierEvents`: `dispatchExpoModifierEvent` and Host frames written by
 the layout emulation. `expoUI.fakeLayout`: the frames are the fake layout
 (each child a full-width row, 40 high), not SwiftUI/Compose layout.
-`e2e/expo-ui.test.ts` checks modifier callbacks only with
-`expoModifierEvents` and boxes only without `expoUI.fakeLayout`.
+`expoUI.swiftUILayout` / `expoUI.composeLayout`: that engine lays out the
+Hosts of its kind. `e2e/expo-ui.test.ts` checks modifier callbacks only with
+`expoModifierEvents`, and boxes only with the engine of the screen's kind
+(Compose: 14sp Text 16 dp high, Button 66x48, Switch 52x48; SwiftUI: body
+Text 20.333 dp high).
 
 ## react-native-gesture-handler
 
@@ -941,14 +944,18 @@ JDK 17 (temurin), Node 24 and Android SDK CMake 3.30.5. `native/dist` is
 cached. The key has the Xcode version, the submodule commit, the versions of
 the npm libraries compiled into the host (`react-native-screens`,
 `react-native-safe-area-context`, `react-native-gesture-handler`,
-`react-native-reanimated`, `react-native-worklets`) and the hash of
+`react-native-reanimated`, `react-native-worklets`, `expo-modules-core`,
+`@expo/ui`) and the hash of
 `native/overlay/**`, `native/scripts/**` and `scripts/build-host.sh`. On a
 cache miss it runs `yarn build:host`. Then: `yarn tsc --noEmit`,
 `yarn test`, `yarn test:e2e` (every `e2e/*.test.ts`), and every
 `native/tests/*-itest.js` Fantom test (copied with its helper files into the
 submodule, with the npm libraries installed there too, and run with
 `yarn fantom`, with `GITHUB_ACTIONS` unset because Fantom treats it as Meta
-CI).
+CI). The installed libraries include `expo`, `expo-modules-core` and
+`@expo/ui` (for `FantomExpoUI-itest.js`), and
+`native/tools/expo-view-configs/out/viewConfigs.json` is copied next to the
+tests as `fantomExpoUIViewConfigs.json` (read by `fantomExpoUIPrelude.js`).
 
 `.github/workflows/release-host.yml` packages and publishes the host on
 tags (see [Prebuilt host](#prebuilt-host)).
