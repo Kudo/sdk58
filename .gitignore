@@ -12,3 +12,4 @@ packages/rn-a11y-host/linux64-bin/
 packages/rn-a11y-host/win64-bin/
 packages/rn-a11y-host/host-version.json
 *.tgz
+/release/

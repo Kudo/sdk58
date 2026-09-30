@@ -917,7 +917,7 @@ AppKit, CoreText, Foundation, libc++, libSystem).
 
 ### Prebuilt host
 
-`node scripts/release-host.mjs [--out dist/release] [--pin]` packages
+`node scripts/release-host.mjs [--out release] [--pin]` packages
 `native/dist/<arch>/rn-a11y-host`:
 
 - `rn-a11y-host-<version>-<platform>-<arch>.tar.gz` (the binary and

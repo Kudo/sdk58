@@ -79,7 +79,7 @@ jobs:
           bun run test:e2e
 
       - name: Package host
-        run: node scripts/release-host.mjs --out dist/release
+        run: node scripts/release-host.mjs --out release
 
       # npm packages (not published yet): rn-a11y-host with osx-bin/ filled
       # by --pack, and the CLI with its tsc build in dist/.
@@ -87,14 +87,14 @@ jobs:
         run: |
           node scripts/release-host.mjs --pack
           bun run build
-          npm pack --pack-destination dist/release
-          (cd packages/rn-a11y-host && npm pack --pack-destination ../../dist/release)
-          ls -la dist/release
+          npm pack --pack-destination release
+          (cd packages/rn-a11y-host && npm pack --pack-destination ../../release)
+          ls -la release
 
       - name: Test the packaged host (download from file://)
         run: |
-          RN_A11Y_HOST_BASE_URL="file://$PWD/dist/release" \
-          RN_A11Y_HOST_MANIFEST="$PWD/dist/release/host-version.json" \
+          RN_A11Y_HOST_BASE_URL="file://$PWD/release" \
+          RN_A11Y_HOST_MANIFEST="$PWD/release/host-version.json" \
           RN_A11Y_HOST_CACHE_DIR="$RUNNER_TEMP/host-cache" \
           RN_A11Y_HOST_BIN='' \
           RN_A11Y_HOST_SKIP_PACKAGE=1 \
@@ -111,12 +111,12 @@ jobs:
         run: |
           tag="${GITHUB_REF_NAME}"
           gh release view "$tag" > /dev/null 2>&1 || gh release create "$tag" --title "$tag" --notes "Prebuilt rn-a11y-host (see host-version.json)."
-          gh release upload "$tag" dist/release/* --clobber
+          gh release upload "$tag" release/* --clobber
 
       - uses: actions/upload-artifact@v7
         with:
           name: rn-a11y-host-release
-          path: dist/release/
+          path: release/
 
   # Later: publish both packages to npm from the release tarballs. Needs the
   # NPM_TOKEN secret (the user publishes 0.1.0 manually from these tarballs).

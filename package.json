@@ -30,12 +30,15 @@
   },
   "files": [
     "bin/",
-    "dist/",
+    "dist/*.js",
     "runtime/",
     "schema/",
     "tools/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "!dist/release",
+    "!**/*.tgz",
+    "!**/*.tar.gz"
   ],
   "engines": {
     "node": ">=22"

@@ -2,9 +2,9 @@
 /**
  * Packages the built host (native/dist/<arch>/rn-a11y-host) for download:
  *
- *   dist/release/rn-a11y-host-<version>-<platform>-<arch>.tar.gz
- *   dist/release/rn-a11y-host-<version>-<platform>-<arch>.tar.gz.sha256
- *   dist/release/host-version.json
+ *   release/rn-a11y-host-<version>-<platform>-<arch>.tar.gz
+ *   release/rn-a11y-host-<version>-<platform>-<arch>.tar.gz.sha256
+ *   release/host-version.json
  *
  * host-version.json records what the host was built from: the
  * react-native submodule commit, a hash of native/overlay, and the versions
@@ -175,7 +175,7 @@ function main() {
   }
   const arch = arg('--arch', os.arch() === 'x64' ? 'x86_64' : os.arch());
   const platform = process.platform;
-  const outDir = path.resolve(arg('--out', path.join(ROOT, 'dist', 'release')));
+  const outDir = path.resolve(arg('--out', path.join(ROOT, 'release')));
   const bin = path.resolve(arg('--bin', path.join(ROOT, 'native', 'dist', arch, 'rn-a11y-host')));
   if (!fs.existsSync(bin)) {
     console.error(`release-host: ${path.relative(ROOT, bin)} not found; run \`bun run build:host\` first`);
