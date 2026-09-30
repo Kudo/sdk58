@@ -1488,6 +1488,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo/ui@npm:~58.0.9":
+  version: 58.0.9
+  resolution: "@expo/ui@npm:58.0.9"
+  dependencies:
+    sf-symbols-typescript: "npm:^2.1.0"
+  peerDependencies:
+    "@babel/core": "*"
+    expo: "*"
+    react: "*"
+    react-dom: "*"
+    react-native: "*"
+    react-native-worklets: "*"
+  peerDependenciesMeta:
+    "@babel/core":
+      optional: true
+    react-dom:
+      optional: true
+    react-native-worklets:
+      optional: true
+  checksum: 10c0/ff9518bee4b05ea7a5a395352a3f050e81efa1b757dfbd89c13a29566baed31a9d621c141b7791654179b3ce7a40624414312426f24289bd44641be2b395e4b1
+  languageName: node
+  linkType: hard
+
 "@expo/ws-tunnel@npm:^2.0.0":
   version: 2.0.0
   resolution: "@expo/ws-tunnel@npm:2.0.0"
@@ -4530,6 +4553,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "react-native-a11y-tree@workspace:."
   dependencies:
+    "@expo/ui": "npm:~58.0.9"
     "@react-navigation/native": "npm:^7.5.0"
     "@react-navigation/native-stack": "npm:^7.20.0"
     "@types/node": "npm:^26.0.0"
