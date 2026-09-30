@@ -9,6 +9,7 @@
 
 #ifdef FANTOM_WITH_EXPOMODULESCORE
 #include <ExpoViewComponentDescriptor.h>
+#include <react/debug/react_native_assert.h>
 #include <jsi/JSIDynamic.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
@@ -115,6 +116,10 @@ void writeFrames(
       writeFrames(*target, frames);
     }
     if (clone) {
+#ifndef NDEBUG
+      // Only nodes the previous revision still owns may be replaced (see above).
+      react_native_assert(child->getSealed() && "writeFrames must not replace an unsealed child");
+#endif
       parent.replaceChild(*child, clone, index);
     }
   }

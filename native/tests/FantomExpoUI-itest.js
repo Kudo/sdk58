@@ -334,4 +334,60 @@ describe('@expo/ui', () => {
     // $FlowFixMe[incompatible-use]
     expect(results.title.height).toBeGreaterThan(results.body.height);
   });
+  // Regression for the heap-use-after-free in writeFrames (e309315): the
+  // frame writing replaced the nodes the Yoga pass had laid out, and
+  // LayoutEventEmitter::shadowTreeDidCommit then read their freed props. A
+  // Host with onLayout next to an RN View with onLayout, re-rendered with
+  // changed props twice, must deliver sane layout events (run it under the
+  // sanitizer host, RN_A11Y_HOST_SANITIZE=1, to catch a regression reliably).
+  for (const variant of ['compose', 'swiftui']) {
+    it(`keeps onLayout working when a ${variant} Host is re-laid out`, () => {
+      let UI: $FlowFixMe;
+      Fantom.runTask(() => {
+        // $FlowFixMe[cannot-resolve-module]
+        UI = variant === 'compose' ? require('@expo/ui') : require('@expo/ui/swift-ui');
+      });
+      const {View} = require('react-native');
+      const {Host, Text} = UI;
+      const Stack = variant === 'compose' ? UI.Column : UI.VStack;
+      const probeLayouts: Array<$FlowFixMe> = [];
+      const hostLayouts: Array<$FlowFixMe> = [];
+      const root = Fantom.createRoot({viewportWidth: 390, viewportHeight: 844});
+      const render = (label: string, probeHeight: number) =>
+        Fantom.runTask(() => {
+          root.render(
+            <View>
+              <View
+                style={{height: probeHeight}}
+                onLayout={(e: $FlowFixMe) => probeLayouts.push(e.nativeEvent.layout)}
+              />
+              <Host matchContents onLayout={(e: $FlowFixMe) => hostLayouts.push(e.nativeEvent.layout)}>
+                <Stack>
+                  <Text>{label}</Text>
+                  <Text>{label + ' again'}</Text>
+                </Stack>
+              </Host>
+            </View>,
+          );
+        });
+      render('One', 10);
+      settle();
+      render('A longer label', 20);
+      settle();
+      render('Three', 30);
+      settle();
+      console.log('ONLAYOUT ' + JSON.stringify({variant, probeLayouts, hostLayouts}));
+      expect(probeLayouts.map(l => l.height)).toEqual([10, 20, 30]);
+      for (const l of probeLayouts) {
+        expect(l.width).toBe(390);
+      }
+      expect(hostLayouts.length).toBeGreaterThan(0);
+      const host = findAll(tree(root), n => n.type === 'ExpoUI.HostView')[0];
+      const last = hostLayouts[hostLayouts.length - 1];
+      expect(last.y).toBe(30);
+      expect(last.height).toBeGreaterThan(0);
+      expect(last.width).toBeCloseTo(host.frame.width, 2);
+      expect(last.height).toBeCloseTo(host.frame.height, 2);
+    });
+  }
 });
