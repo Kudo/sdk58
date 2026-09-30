@@ -68,9 +68,9 @@ test('parses a shadowTree payload (fake host)', {timeout: 120_000}, () => {
 
 test('--debug-props is passed to the entry', {timeout: 120_000}, () => {
   for (const [flag, expected] of [[[], 'false'], [['--debug-props'], 'true']] as const) {
-    const proc = run(['render', APP, '--platform', 'android', '--bundle-only', ...flag], {});
+    const proc = run(['render', APP, '--platform', 'android', '--bundle-only', '--no-cache', ...flag], {});
     assert.equal(proc.status, 0, proc.stderr);
-    const bundlePath = /Bundle: (.+) \(\d+ bytes\)/.exec(proc.stderr)![1];
+    const bundlePath = /Bundle: (.+) \(\d+ bytes/.exec(proc.stderr)![1];
     const code = fs.readFileSync(bundlePath, 'utf8');
     fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
     assert.match(code, new RegExp(`includeDebugProps = ${expected}`));
@@ -148,12 +148,12 @@ test('run: reports steps, snapshots and the final tree (fake host)', {timeout: 1
 test('run: the script and tap mode are embedded in the bundle', {timeout: 120_000}, () => {
   const file = writeScript([{wait: 5}]);
   const proc = run(
-    ['run', APP, '--platform', 'android', '--script', file, '--tap-mode', 'both', '--bundle-only'],
+    ['run', APP, '--platform', 'android', '--script', file, '--tap-mode', 'both', '--bundle-only', '--no-cache'],
     {},
   );
   fs.rmSync(path.dirname(file), {recursive: true, force: true});
   assert.equal(proc.status, 0, proc.stderr);
-  const bundlePath = /Bundle: (.+) \(\d+ bytes\)/.exec(proc.stderr)![1];
+  const bundlePath = /Bundle: (.+) \(\d+ bytes/.exec(proc.stderr)![1];
   const code = fs.readFileSync(bundlePath, 'utf8');
   fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
   assert.match(code, /script = \[\{\s*"wait": 5\s*\}\]/);

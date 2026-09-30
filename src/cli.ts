@@ -2,7 +2,8 @@ import fs from 'node:fs';
 
 import {Command, InvalidArgumentError} from 'commander';
 
-import {bundle, type HostConfig, type TapMode} from './bundle.ts';
+import {bundle, type BundleResult, type HostConfig, type TapMode} from './bundle.ts';
+import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
 import {getHostBin, HostError, type HostTiming, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
@@ -32,6 +33,9 @@ type HostConfigOptions = {
 type RenderOptions = HostConfigOptions & {
   timing?: boolean;
   resetCache?: boolean;
+  /** --no-cache sets false. */
+  cache?: boolean;
+  bytecode?: string;
   width: number;
   height: number;
   platform?: string;
@@ -124,6 +128,8 @@ function readScript(scriptPath: string | undefined) {
  */
 /** Phase timings for `--timing` (ms, performance.now() in the CLI). */
 type Timing = {
+  bundleCache?: 'hit' | 'miss' | 'off';
+  bytecode?: boolean;
   metroMs?: number;
   bundleBytes?: number;
   hostSpawnToResultMs?: number;
@@ -136,6 +142,24 @@ type Timing = {
 };
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
+
+const BYTECODE_MODES: BytecodeMode[] = ['auto', 'on', 'off'];
+
+function bytecodeMode(value: string | undefined): BytecodeMode {
+  const mode = (value ?? 'auto') as BytecodeMode;
+  if (!BYTECODE_MODES.includes(mode)) {
+    throw new Error(`--bytecode must be one of: ${BYTECODE_MODES.join(', ')}`);
+  }
+  return mode;
+}
+
+function describeBundle(result: BundleResult): string {
+  const notes = [
+    result.cache === 'hit' ? 'cached' : result.cache === 'miss' ? 'built' : 'not cached',
+    result.bytecode ? 'bytecode' : 'js',
+  ];
+  return `Bundle: ${result.bundlePath} (${result.sizeBytes} bytes, ${notes.join(', ')})\n`;
+}
 
 function printTiming(timing: Timing) {
   // performance.now() counts from process start, so this includes Node/tsx startup.
@@ -165,36 +189,50 @@ async function execute<T>(
     verbose: options.verbose,
     hostConfig: hostConfigFor(platform, options),
     resetCache: options.resetCache,
+    cache: options.cache,
+    bytecode: bytecodeMode(options.bytecode),
     ...extra,
   });
   if (timing) {
+    timing.bundleCache = result.cache;
+    timing.bytecode = result.bytecode;
     timing.metroMs = round3(performance.now() - metroStart);
     timing.bundleBytes = result.sizeBytes;
   }
   const cleanUp = () => {
-    if (!options.keepBundle && !options.bundleOnly) {
+    if (result.workDir != null && !options.keepBundle && !options.bundleOnly) {
       fs.rmSync(result.workDir, {recursive: true, force: true});
     }
   };
 
   if (options.keepBundle || options.bundleOnly || options.verbose) {
-    process.stderr.write(
-      `Bundle: ${result.bundlePath} (${result.sizeBytes} bytes)\n`,
-    );
+    process.stderr.write(describeBundle(result));
   }
   if (options.bundleOnly) {
     return undefined;
   }
 
   const hostTiming: HostTiming = {};
+  const hostOptions = {
+    windowWidth: options.width,
+    windowHeight: options.height,
+    verbose: options.verbose,
+    timing: hostTiming,
+  };
   try {
-    const payload = await runHost<T>({
-      bundlePath: result.bundlePath,
-      windowWidth: options.width,
-      windowHeight: options.height,
-      verbose: options.verbose,
-      timing: hostTiming,
-    });
+    let payload: T;
+    try {
+      payload = await runHost<T>({...hostOptions, bundlePath: result.bundlePath});
+    } catch (error) {
+      // A bytecode file the host cannot load (e.g. a Hermes bytecode version
+      // mismatch) makes the host fail before any JS runs: drop it and use JS.
+      const jsError = error instanceof HostError && error.message.startsWith('Render failed in JS');
+      if (!result.bytecode || jsError || result.cacheDir == null) throw error;
+      discardBytecode(result.cacheDir);
+      process.stderr.write('rn-a11y-tree: warning: the host could not load the bytecode bundle; using JS\n');
+      if (timing) timing.bytecode = false;
+      payload = await runHost<T>({...hostOptions, bundlePath: result.jsBundlePath});
+    }
     if (timing && hostTiming.spawn != null) {
       const js = (payload as {timings?: Record<string, number | undefined>}).timings;
       if (hostTiming.result != null) {
@@ -282,9 +320,11 @@ async function session(file: string, options: RunOptions) {
     session: true,
     hostConfig: hostConfigFor(platform, options),
     resetCache: options.resetCache,
+    cache: options.cache,
+    bytecode: bytecodeMode(options.bytecode),
   });
   if (options.keepBundle || options.verbose) {
-    process.stderr.write(`Bundle: ${result.bundlePath} (${result.sizeBytes} bytes)\n`);
+    process.stderr.write(describeBundle(result));
   }
   try {
     process.exitCode = await runSession({
@@ -301,7 +341,7 @@ async function session(file: string, options: RunOptions) {
       },
     });
   } finally {
-    if (!options.keepBundle) {
+    if (result.workDir != null && !options.keepBundle) {
       fs.rmSync(result.workDir, {recursive: true, force: true});
     }
   }
@@ -341,7 +381,9 @@ function addCommonOptions(command: Command): Command {
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
     .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
     .option('--timing', 'print phase timings as JSON on stderr', false)
-    .option('--reset-cache', 'ignore the Metro transform cache (cold bundle)', false)
+    .option('--reset-cache', 'ignore the Metro transform cache and the bundle cache (cold bundle)', false)
+    .option('--no-cache', 'do not use the bundle cache (always run Metro)')
+    .option('--bytecode <mode>', 'Hermes bytecode: auto (use when cached), on, off', 'auto')
     .option(
       '--header-height <dp>',
       'react-native-screens native header height (default: 44 for --platform ios, else the host default 56)',
@@ -393,7 +435,9 @@ program
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
   .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
   .option('--timing', 'print phase timings as JSON on stderr', false)
-  .option('--reset-cache', 'ignore the Metro transform cache (cold bundle)', false)
+  .option('--reset-cache', 'ignore the Metro transform cache and the bundle cache (cold bundle)', false)
+  .option('--no-cache', 'do not use the bundle cache (always run Metro)')
+  .option('--bytecode <mode>', 'Hermes bytecode: auto (use when cached), on, off', 'auto')
   .option(
     '--header-height <dp>',
     'react-native-screens native header height (default: 44 for --platform ios, else the host default 56)',

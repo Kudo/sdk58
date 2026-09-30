@@ -5,6 +5,19 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import type {ConfigT, InputConfigT} from 'metro-config';
+
+import {
+  BUNDLE_FILE,
+  BYTECODE_FILE,
+  type BytecodeMode,
+  bundleKey,
+  cacheRoot,
+  compileBytecode,
+  compileBytecodeInBackground,
+  entryDir,
+  isEntryValid,
+  writeEntry,
+} from './bundleCache.ts';
 import type {CustomResolutionContext, Resolution} from 'metro-resolver';
 
 const require = createRequire(import.meta.url);
@@ -56,16 +69,27 @@ export type BundleOptions = {
   minify?: boolean;
   /** Print Metro progress to stderr. */
   verbose?: boolean;
-  /** Ignore Metro's transform cache (cold build). */
+  /** Ignore Metro's transform cache and the bundle cache (cold build). */
   resetCache?: boolean;
+  /** Use the bundle cache (default true; always off with `out`). */
+  cache?: boolean;
+  /** Hermes bytecode: auto (use when cached, compile in the background), on, off. */
+  bytecode?: BytecodeMode;
 };
 
 export type BundleResult = {
+  /** File to pass to the host: bytecode (`.hbc`) or JS. */
   bundlePath: string;
-  /** Temp dir holding the generated entry (and the bundle, if `out` was not set). */
-  workDir: string;
+  /** The JS bundle (fallback when the host cannot load the bytecode). */
+  jsBundlePath: string;
+  /** Temp dir to delete after the run (null when nothing to delete). */
+  workDir: string | null;
+  /** Cache entry dir (null with --out). */
+  cacheDir: string | null;
   projectRoot: string;
   sizeBytes: number;
+  cache: 'hit' | 'miss' | 'off';
+  bytecode: boolean;
 };
 
 /** Directory of the nearest `package.json` above `file`, or the file's dir. */
@@ -278,57 +302,129 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   // Metro's file map uses real paths (e.g. /tmp -> /private/tmp on macOS).
   const appPath = fs.realpathSync(options.appPath);
   const projectRoot = findProjectRoot(appPath);
+  const dev = options.dev ?? false;
+  const minify = options.minify ?? false;
+  const bytecodeMode = options.bytecode ?? 'auto';
+  const useCache = options.out == null && options.cache !== false;
 
-  const workDir = fs.realpathSync(
-    fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-')),
-  );
-  const entryPath = path.join(workDir, 'index.js');
-  fs.writeFileSync(
-    entryPath,
-    renderEntry({
-      appPath,
-      viewportWidth: options.viewportWidth,
-      viewportHeight: options.viewportHeight,
-      includeDebugProps: options.includeDebugProps,
-      script: options.script,
-      tapMode: options.tapMode,
-      session: options.session,
-      hostConfig: options.hostConfig,
-    }),
-  );
-  const bundlePath = path.resolve(
-    options.out ?? path.join(workDir, 'index.bundle.js'),
-  );
+  const entry = renderEntry({
+    appPath,
+    viewportWidth: options.viewportWidth,
+    viewportHeight: options.viewportHeight,
+    includeDebugProps: options.includeDebugProps,
+    script: options.script,
+    tapMode: options.tapMode,
+    session: options.session,
+    hostConfig: options.hostConfig,
+  });
+  const root = cacheRoot(projectRoot);
+  const key = bundleKey({entry, platform, dev, minify, projectRoot});
+  const dir = entryDir(root, key);
 
-  const config = createMetroConfig({projectRoot, workDir, platform});
+  const result = (cache: BundleResult['cache'], jsPath: string, workDir: string | null): BundleResult => {
+    let bundlePath = jsPath;
+    let bytecode = false;
+    if (useCache && bytecodeMode !== 'off') {
+      const hbc = path.join(dir, BYTECODE_FILE);
+      if (!fs.existsSync(hbc) && bytecodeMode === 'on') compileBytecode(dir);
+      if (fs.existsSync(hbc)) {
+        bundlePath = hbc;
+        bytecode = true;
+      } else if (bytecodeMode === 'auto') {
+        compileBytecodeInBackground(dir);
+      }
+    }
+    return {
+      bundlePath,
+      jsBundlePath: jsPath,
+      workDir,
+      cacheDir: useCache ? dir : null,
+      projectRoot,
+      sizeBytes: fs.statSync(bundlePath).size,
+      cache,
+      bytecode,
+    };
+  };
+
+  if (useCache && !options.resetCache && isEntryValid(dir, key)) {
+    return result('hit', path.join(dir, BUNDLE_FILE), null);
+  }
+
+  // A fixed work dir keeps Metro's roots, and so its file map cache key,
+  // the same across runs. Entries are named by their key.
+  const workDir = path.join(root, 'work');
+  fs.mkdirSync(workDir, {recursive: true});
+  const entryPath = path.join(fs.realpathSync(workDir), `${key}.js`);
+  if (!fs.existsSync(entryPath) || fs.readFileSync(entryPath, 'utf8') !== entry) {
+    fs.writeFileSync(entryPath, entry);
+  }
+  const outDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-')));
+  const bundlePath = path.resolve(options.out ?? path.join(outDir, 'index.bundle.js'));
+
+  const config = createMetroConfig({projectRoot, workDir: fs.realpathSync(workDir), platform});
+  // Persistent Metro caches (transforms, file map) next to the bundle cache.
+  const StoreClass = (config.cacheStores[0] as unknown as {constructor: new (o: {root: string}) => unknown})
+    .constructor;
+  (config as unknown as {cacheStores: unknown[]}).cacheStores = [
+    new StoreClass({root: path.join(root, 'metro')}),
+  ];
+  // Metro ignores write errors of this cache, so the directory must exist.
+  const fileMapDir = path.join(root, 'metro-file-map');
+  fs.mkdirSync(fileMapDir, {recursive: true});
+  (config as {fileMapCacheDirectory?: string}).fileMapCacheDirectory = fileMapDir;
   if (options.resetCache) {
     // Metro reads resetCache from the config: it clears the cache stores
     // before building.
     (config as {resetCache: boolean}).resetCache = true;
   }
   const Metro = require('metro') as typeof import('metro');
+  const outputBundle = require('metro/private/shared/output/bundle') as {
+    build: (server: unknown, requestOptions: unknown, buildOptions?: unknown) => Promise<{code: string; map: string}>;
+    save: (...args: unknown[]) => Promise<unknown>;
+  };
 
   const showProgress = options.verbose === true && process.stderr.isTTY;
+  let dependencyPaths: string[] = [];
 
   // The user's metro.config.js is intentionally not loaded: it could re-add
   // InitializeCore or change platforms.
   await Metro.runBuild(config, {
     entry: entryPath,
     platform,
-    dev: options.dev ?? false,
-    minify: options.minify ?? false,
+    dev,
+    minify,
     out: bundlePath,
     sourceMap: false,
     onProgress: showProgress
       ? (done, total) => process.stderr.write(`\rMetro: ${done}/${total} files`)
       : undefined,
     onComplete: showProgress ? () => process.stderr.write('\n') : undefined,
+    // Same as Metro's default output, plus the list of module files for the
+    // bundle cache (the graph is already built, so this is cheap).
+    output: {
+      build: async (server: unknown, requestOptions: unknown, buildOptions?: unknown) => {
+        const built = await outputBundle.build(server, requestOptions, buildOptions);
+        if (useCache) {
+          dependencyPaths = await (
+            server as {getOrderedDependencyPaths: (o: unknown) => Promise<string[]>}
+          ).getOrderedDependencyPaths(requestOptions);
+        }
+        return built;
+      },
+      save: outputBundle.save,
+    } as never,
   });
 
-  return {
-    bundlePath,
-    workDir,
-    projectRoot,
-    sizeBytes: fs.statSync(bundlePath).size,
-  };
+  if (!useCache) {
+    return result('off', bundlePath, outDir);
+  }
+  writeEntry({
+    root,
+    key,
+    bundleFile: bundlePath,
+    files: dependencyPaths,
+    excludeDir: fs.realpathSync(workDir),
+  });
+  fs.rmSync(outDir, {recursive: true, force: true});
+  return result('miss', path.join(dir, BUNDLE_FILE), null);
 }

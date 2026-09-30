@@ -69,7 +69,9 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--safe-area-insets <t,l,r,b>` | all | `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
 | `--no-mounted` | all | mounted on | Do not read mounted-view values (`getA11yTree` `includeMountedProps`; used for `visualBox`, `effectiveOpacity`) |
 | `--timing` | all | off | Print phase timings as JSON on stderr (see [`docs/perf-analysis.md`](docs/perf-analysis.md)) |
-| `--reset-cache` | all | off | Ignore Metro's transform cache (cold bundle) |
+| `--reset-cache` | all | off | Ignore Metro's caches and the bundle cache (cold bundle) |
+| `--no-cache` | all | cache on | Do not use the bundle cache (always run Metro) |
+| `--bytecode <mode>` | all | `auto` | Hermes bytecode: `auto` (use it when cached; compile in the background after a build), `on` (compile now), `off` |
 | `--dev` | all | off | Development bundle (`__DEV__ = true`) |
 | `--keep-bundle` | all | off | Keep the bundle and print its path to stderr |
 | `-v, --verbose` | all | off | Metro progress, host glog and console output on stderr |
@@ -79,6 +81,39 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--script <json>` | `run` | required | JSON file with an array of actions |
 | `--tap-mode <mode>` | `run`, `session` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
 | `--timeout <ms>` | `session` | `30000` | Per-request timeout; on timeout the host is killed and the exit code is 1 |
+
+## Caching
+
+The CLI is one-shot (no daemon). To make repeated runs fast:
+
+- **Bundle cache.** A finished bundle is stored under a key made of the
+  generated entry (app path, options, script) and the tool versions. It is
+  valid while every module file in Metro's dependency graph, and every
+  directory that holds one, keeps its mtime and size (a new file in a module
+  directory could change resolution). A valid entry skips Metro completely.
+- **Hermes bytecode.** After a build, `hermesc` from `hermes-compiler`
+  compiles the bundle in the background (about 2 s for the medium example);
+  the next run of the unchanged app loads the bytecode. If the host cannot
+  load it, the CLI deletes it and uses the JS bundle.
+- **Metro caches.** Transforms and the file map are kept in the same cache
+  directory, with a fixed entry directory so the file map cache key stays
+  the same.
+- **Location:** `<project>/node_modules/.cache/rn-a11y-tree` when the
+  project has `node_modules`, else `~/.cache/rn-a11y-tree`
+  (`RN_A11Y_TREE_CACHE_DIR` overrides).
+
+Medium example, Release host, median of 5 (`render --timing`):
+
+| Case | Wall | Metro | Host |
+| --- | --- | --- | --- |
+| Unchanged app, cache hit, bytecode | 191 ms | 5 ms | 119 ms |
+| Unchanged app, cache hit, JS (`--bytecode off`) | 437 ms | 5 ms | 358 ms |
+| One-line change (Metro with warm caches) | 1453 ms | 1013 ms | 359 ms |
+| Bundle cache off (`--no-cache`), warm Metro | 1146 ms | 708 ms | 356 ms |
+| Cold (`--reset-cache`) | 5440 ms | 4882 ms | 396 ms |
+
+(Before caching: 1.3 s warm, Metro 0.86 s, bundle eval 150 ms; with bytecode
+bundle eval is 13 ms.)
 
 ## Output schema
 
