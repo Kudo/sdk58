@@ -94,5 +94,14 @@ test(
     );
     assert.equal(text.status, 0, text.stderr);
     assert.match(text.stdout.trim(), /^submit View #submit role=button "Submit" \{24,[\d.]+,342x48\}$/);
+
+    // --preset sets the platform and viewport (no --platform).
+    const tablet = spawnSync(
+      process.execPath,
+      [CLI, 'render', APP, '--preset', 'android-tablet', '--format', 'text', '--select', 'role=button'],
+      {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: hostBin}},
+    );
+    assert.equal(tablet.status, 0, tablet.stderr);
+    assert.match(tablet.stdout.trim(), /^submit View #submit role=button "Submit" \{24,[\d.]+,752x48\}$/);
   },
 );

@@ -62,11 +62,12 @@ failure, with the message on stderr; stdout has only the JSON.
 
 | Option | Commands | Default | Description |
 | --- | --- | --- | --- |
-| `--platform <name>` | all | required | Metro platform: `android`, `ios`, `a11ytree`, or any Metro platform name (see [Platform](#platform)) |
-| `--width <dp>` | all | `390` | Viewport width |
-| `--height <dp>` | all | `844` | Viewport height |
-| `--header-height <dp>` | all | 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
-| `--safe-area-insets <t,l,r,b>` | all | `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
+| `--preset <name>` | all | none | Device preset: `android-phone`, `ios-phone`, `android-tablet`, `ios-tablet` (see [Presets](#presets-and-a11y-treejson)) |
+| `--platform <name>` | all | required unless a preset or `a11y-tree.json` sets it | Metro platform: `android`, `ios`, `a11ytree`, or any Metro platform name (see [Platform](#platform)) |
+| `--width <dp>` | all | preset, else `390` | Viewport width |
+| `--height <dp>` | all | preset, else `844` | Viewport height |
+| `--header-height <dp>` | all | preset, else 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
+| `--safe-area-insets <t,l,r,b>` | all | preset, else `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
 | `--no-mounted` | all | mounted on | Do not read mounted-view values (`getA11yTree` `includeMountedProps`; used for `visualBox`, `effectiveOpacity`) |
 | `--timing` | all | off | Print phase timings as JSON on stderr (see [`docs/perf-analysis.md`](docs/perf-analysis.md)) |
 | `--reset-cache` | all | off | Ignore Metro's caches and the bundle cache (cold bundle) |
@@ -88,6 +89,38 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--tap-mode <mode>` | `run`, `session` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
 | `--diff` | `run` | off | Add `diff: {added, removed, changed}` (by `key`) to each step |
 | `--timeout <ms>` | `session` | `30000` | Per-request timeout; on timeout the host is killed and the exit code is 1 |
+
+## Presets and a11y-tree.json
+
+A preset sets the platform, viewport, safe area insets and header height:
+
+| Preset | Platform | Viewport | Insets (t,l,r,b) | Header |
+| --- | --- | --- | --- | --- |
+| `android-phone` | `android` | 412x915 (Pixel 8) | 24,0,0,0 | 56 |
+| `ios-phone` | `ios` | 393x852 (iPhone 15/16) | 59,0,0,34 | 44 |
+| `android-tablet` | `android` | 800x1280 (Pixel Tablet, portrait) | 24,0,0,0 | 64 |
+| `ios-tablet` | `ios` | 834x1194 (iPad 11", portrait) | 24,0,0,20 | 50 |
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone
+rn-a11y-tree render App.tsx --preset ios-phone --platform android   # iPhone size, Android components
+```
+
+An optional `a11y-tree.json` in the project root (the directory of the app
+file's nearest `package.json`) holds defaults for the project. Allowed keys:
+`preset`, `platform`, `width`, `height`, `safeAreaInsets`
+(`{top, left, right, bottom}`), `headerHeight`, `tapMode`, `format`. Unknown
+keys and wrong types are usage errors (exit 1).
+
+```json
+{"preset": "android-phone", "format": "text"}
+```
+
+For each setting the first value found wins: command-line flag,
+`a11y-tree.json`, preset (from `--preset`, else the config's `preset`),
+built-in default. `--platform` therefore overrides the preset's platform.
+Note that the config's own values also override a `--preset` given on the
+command line.
 
 ## Caching
 
@@ -552,7 +585,7 @@ Base: `getDefaultConfig(projectRoot)` from `expo/metro-config`. Overrides:
 
 ### Platform
 
-`--platform` is required; the CLI does not pick one. Known values:
+`--platform` (or a preset or `a11y-tree.json` that sets it) is required; the CLI does not pick one. Known values:
 
 - `android`: the platform Fantom bundles for. The host implements the
   Android native components (`AndroidTextInput`, `AndroidSwitch`), so this

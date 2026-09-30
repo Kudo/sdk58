@@ -2,7 +2,8 @@ import fs from 'node:fs';
 
 import {Command, CommanderError, InvalidArgumentError} from 'commander';
 
-import {bundle, type BundleResult, type HostConfig, type TapMode} from './bundle.ts';
+import {bundle, type BundleResult, findProjectRoot, type HostConfig, type TapMode} from './bundle.ts';
+import {loadProjectConfig, PRESET_NAMES, resolveSettings} from './presets.ts';
 import {type Format, type FormatOptions, FORMATS, formatRender, formatRun} from './format.ts';
 import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
 import {CliError, EXIT_CODES, type LogEntry, usage} from './errors.ts';
@@ -85,7 +86,7 @@ function write(text: string, out: string | undefined) {
   }
 }
 
-const PLATFORM_REQUIRED_MESSAGE = `--platform <name> is required. Known values: android, ios, a11ytree. Any Metro platform name is accepted.
+const PLATFORM_REQUIRED_MESSAGE = `--platform <name> is required (or --preset, or "platform"/"preset" in a11y-tree.json). Known values: android, ios, a11ytree. Any Metro platform name is accepted.
 Note: React Native core components branch on Platform.OS (e.g. TextInput, Switch), so use android or ios for them to render.`;
 
 type RunOptions = RenderOptions & {script?: string; tapMode: string; timeout?: number; diff?: boolean};
@@ -299,7 +300,36 @@ async function execute<T>(
   }
 }
 
+/**
+ * Fills platform, viewport, insets, header height, tap mode and format from
+ * the command line, a11y-tree.json and the preset, then built-in defaults.
+ */
+function applySettings(file: string, options: RenderOptions & {tapMode?: string; preset?: string}) {
+  const config = loadProjectConfig(findProjectRoot(file));
+  const resolved = resolveSettings(
+    {
+      preset: options.preset,
+      platform: options.platform,
+      width: options.width,
+      height: options.height,
+      safeAreaInsets: options.safeAreaInsets,
+      headerHeight: options.headerHeight,
+      tapMode: options.tapMode,
+      format: options.format,
+    },
+    config,
+  );
+  options.platform = resolved.platform;
+  options.width = resolved.width ?? 390;
+  options.height = resolved.height ?? 844;
+  options.safeAreaInsets = resolved.safeAreaInsets;
+  options.headerHeight = resolved.headerHeight;
+  options.tapMode = resolved.tapMode ?? 'touch';
+  options.format = resolved.format ?? 'json';
+}
+
 async function render(file: string, options: RenderOptions) {
+  applySettings(file, options);
   const output = formatOptions(options);
   const timing: Timing | undefined = options.timing ? {} : undefined;
   const logs: LogEntry[] = [];
@@ -319,6 +349,7 @@ async function render(file: string, options: RenderOptions) {
 }
 
 async function run(file: string, options: RunOptions) {
+  applySettings(file, options);
   requirePlatform(options.platform);
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
     throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
@@ -358,6 +389,7 @@ async function run(file: string, options: RunOptions) {
 }
 
 async function session(file: string, options: RunOptions) {
+  applySettings(file, options);
   const platform = requirePlatform(options.platform);
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
     throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
@@ -427,11 +459,12 @@ const program = new Command()
 function addCommonOptions(command: Command): Command {
   return command
     .argument('<file>', 'component file (default export or `App` named export)')
-    .option('--width <dp>', 'viewport width', positiveNumber, 390)
-    .option('--height <dp>', 'viewport height', positiveNumber, 844)
+    .option('--width <dp>', 'viewport width (default 390)', positiveNumber)
+    .option('--height <dp>', 'viewport height (default 844)', positiveNumber)
+    .option('--preset <name>', `device preset: ${PRESET_NAMES.join(', ')} (platform, viewport, insets, header height)`)
     .option(
       '--platform <name>',
-      'Metro platform (required): android, ios, a11ytree, or any Metro platform name',
+      'Metro platform (required unless --preset or a11y-tree.json sets it): android, ios, a11ytree, or any Metro platform name',
     )
     .option('--out <file>', 'write JSON to a file instead of stdout')
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
@@ -469,7 +502,7 @@ function nonNegativeInt(value: string): number {
 
 function addOutputOptions(command: Command): Command {
   return command
-    .option('--format <format>', 'json, compact (no defaults/empties/style), text (one line per node), ndjson', 'json')
+    .option('--format <format>', 'json (default), compact (no defaults/empties/style), text (one line per node), ndjson')
     .option(
       '--select <selector>',
       'only nodes matching field=value or field~text (testID, role, name, type, key, ref, sel, text); repeat to AND',
@@ -493,7 +526,7 @@ addCommonOptions(addOutputOptions(program.command('render')))
 addCommonOptions(addOutputOptions(program.command('run')))
   .description('render the component, run a script of actions, print steps and trees')
   .option('--script <json>', 'JSON file with an array of actions (required)')
-  .option('--tap-mode <mode>', 'events for taps: touch, click or both', 'touch')
+  .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option('--diff', 'add to each step the changes it made ({added, removed, changed} by key)', false)
   .action(run);
 
@@ -503,13 +536,14 @@ program
     'render the component and serve JSON-line requests on stdin (actions, tree, quit)',
   )
   .argument('<file>', 'component file (default export or `App` named export)')
-  .option('--width <dp>', 'viewport width', positiveNumber, 390)
-  .option('--height <dp>', 'viewport height', positiveNumber, 844)
+  .option('--width <dp>', 'viewport width (default 390)', positiveNumber)
+  .option('--height <dp>', 'viewport height (default 844)', positiveNumber)
+  .option('--preset <name>', `device preset: ${PRESET_NAMES.join(', ')} (platform, viewport, insets, header height)`)
   .option(
     '--platform <name>',
-    'Metro platform (required): android, ios, a11ytree, or any Metro platform name',
+    'Metro platform (required unless --preset or a11y-tree.json sets it): android, ios, a11ytree, or any Metro platform name',
   )
-  .option('--tap-mode <mode>', 'events for taps: touch, click or both', 'touch')
+  .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option(
     '--timeout <ms>',
     'per-request timeout; on timeout the host is killed and the exit code is 1',

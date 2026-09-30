@@ -18,6 +18,7 @@ there is no host binary. Unit and CLI tests against a fake host are in
   - `email` (TextInput): role `textbox`, height > 18, `style.placeholder === 'Email'`;
   - `remember` (Switch): role `switch`, name "Remember me", `a11y.state.checked === true`, box 51x31.
 - `render --format text --select role=button` prints exactly one line: `submit View #submit role=button "Submit" {24,…,342x48}`.
+- `render --preset android-tablet` (no `--platform`) gives the same line with width 752 (800 - 2 x 24).
 
 ## `e2e/run.test.ts` — `examples/basic/actions.json`, `run`
 
