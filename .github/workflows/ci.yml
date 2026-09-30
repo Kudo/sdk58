@@ -151,7 +151,10 @@ jobs:
           if [ ! -x "$FANTOM/build/tester/fantom_tester" ]; then
             mkdir -p "$FANTOM/build/tester"
             cp native/dist/"$(uname -m)"/rn-a11y-host "$FANTOM/build/tester/fantom_tester"
-            cp -R native/dist/"$(uname -m)"/lib "$FANTOM/build/tester/lib"
+            # The static host (default) has no lib/.
+            if [ -d native/dist/"$(uname -m)"/lib ]; then
+              cp -R native/dist/"$(uname -m)"/lib "$FANTOM/build/tester/lib"
+            fi
           fi
           # JS deps of the submodule (skipped by build-host.sh on a cache hit).
           if [ ! -d "$RN/node_modules" ]; then
