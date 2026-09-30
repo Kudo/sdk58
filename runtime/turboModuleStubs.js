@@ -6,18 +6,36 @@
  * before `react-native/Libraries/TurboModule/TurboModuleRegistry` is first
  * loaded (it captures `global.__turboModuleProxy` once).
  *
- * - StatusBarManager (Android spec): required by
+ * - StatusBarManager (Android and iOS spec): required by
  *   Libraries/Components/StatusBar/StatusBar, which DrawerLayoutAndroid
  *   imports; react-native-gesture-handler imports DrawerLayoutAndroid.
+ * - iOS-only modules that react-native uses at import time with
+ *   `Platform.OS === 'ios'` (bundles for `--platform ios`):
+ *   KeyboardObserver (Keyboard: `new NativeEventEmitter(...)` needs it),
+ *   LinkingManager (Linking: nullthrows; React Navigation imports Linking).
  */
+
+const eventEmitterMethods = () => ({addListener: () => {}, removeListeners: () => {}});
 
 const STUBS = {
   StatusBarManager: () => ({
-    getConstants: () => ({HEIGHT: 0}),
+    getConstants: () => ({HEIGHT: 0, DEFAULT_BACKGROUND_COLOR: 0}),
     setColor: () => {},
     setTranslucent: () => {},
     setStyle: () => {},
     setHidden: () => {},
+    // iOS spec
+    getHeight: callback => callback({height: 0}),
+    setNetworkActivityIndicatorVisible: () => {},
+    ...eventEmitterMethods(),
+  }),
+  KeyboardObserver: () => eventEmitterMethods(),
+  LinkingManager: () => ({
+    getInitialURL: async () => null,
+    canOpenURL: async () => false,
+    openURL: async () => {},
+    openSettings: async () => {},
+    ...eventEmitterMethods(),
   }),
 };
 
