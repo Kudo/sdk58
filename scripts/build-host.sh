@@ -55,6 +55,42 @@ fi
 
 [[ -f "$RN_DIR/package.json" ]] || die "submodule missing; run: git submodule update --init --depth 1"
 
+# NDK: nothing is compiled for Android, but Gradle configures ReactAndroid,
+# which checks that android.ndkPath (the ANDROID_NDK env var, root
+# build.gradle.kts) is the NDK of android.ndkVersion (ANDROID_NDK_VERSION, else
+# libs.versions.toml). CI images set ANDROID_NDK* to their own NDK (e.g. 27.3
+# on macos-15) while React Native pins another (27.1): use the pinned NDK when
+# it is installed, else the NDK from the environment or the newest installed
+# one, and pass its version so the check passes without downloading an NDK.
+PINNED_NDK="$(sed -n 's/^ndkVersion = "\(.*\)"/\1/p' "$RN_DIR/packages/react-native/gradle/libs.versions.toml")"
+ndk_revision() { sed -n 's/^Pkg.Revision *= *//p' "$1/source.properties" 2>/dev/null; }
+NDK_DIR=""
+if [[ -n "$PINNED_NDK" && -f "$ANDROID_HOME/ndk/$PINNED_NDK/source.properties" ]]; then
+  NDK_DIR="$ANDROID_HOME/ndk/$PINNED_NDK"
+else
+  for candidate in "${ANDROID_NDK:-}" "${ANDROID_NDK_HOME:-}" "${ANDROID_NDK_ROOT:-}" \
+    $(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -r); do
+    if [[ -n "$candidate" && -f "$candidate/source.properties" ]]; then
+      NDK_DIR="$candidate"
+      break
+    fi
+  done
+fi
+unset ANDROID_NDK ANDROID_NDK_HOME ANDROID_NDK_ROOT ANDROID_NDK_VERSION
+NDK_VERSION=""
+if [[ -n "$NDK_DIR" ]]; then
+  NDK_VERSION="$(ndk_revision "$NDK_DIR")"
+  export ANDROID_NDK="$NDK_DIR" ANDROID_NDK_VERSION="$NDK_VERSION"
+fi
+
+# Versions, for CI logs.
+log "JDK:    $(java -version 2>&1 | head -n 1) ($JAVA_HOME)"
+log "CMake:  $("$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake" --version | head -n 1)"
+log "Ninja:  $(ninja --version 2>/dev/null || echo 'not on PATH (the SDK CMake bundles one)')"
+log "NDK:    ${NDK_VERSION:-none} ${NDK_DIR:+($NDK_DIR)}; React Native pins ${PINNED_NDK:-?}"
+log "Gradle: $(sed -n 's/^distributionUrl=.*gradle-\([0-9.]*\)-.*/\1/p' "$RN_DIR/gradle/wrapper/gradle-wrapper.properties")"
+log "Node:   $(node --version)"
+
 # RN's codegen shells out to `yarn`. It must be Yarn 1: put a shim first on PATH.
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 SHIM_DIR="$(mktemp -d)"
