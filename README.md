@@ -1083,8 +1083,11 @@ Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,
 `node_modules`, `peer = false` so peer dependencies that nothing depends on
 are not installed). All sources are TypeScript (erasable syntax only,
 `erasableSyntaxOnly`). The CLI runs on Node (`node src/cli.ts` in a checkout,
-`dist/rn-a11y-tree.js` when installed); scripts run with `bun`, unit tests
-with `bun test` (they spawn the CLI with `node`), e2e tests with Vitest.
+`dist/rn-a11y-tree.js` when installed); scripts run with `bun`. Tests use
+Vitest 5 (`describe` / `it` / `expect`; `vitest.config.ts` has two
+projects: `unit` = `test/*.test.ts` with the fake host, `e2e` =
+`e2e/*.test.ts` with the real host). They spawn the CLI with `node` and
+scripts with `bun`.
 The React Native submodule keeps its own Yarn 1 (`build-host.sh`,
 `yarn fantom`).
 

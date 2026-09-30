@@ -1,8 +1,7 @@
-import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import {test} from 'node:test';
+import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
 import os from 'node:os';
@@ -24,175 +23,174 @@ function run(args: string[], env: Record<string, string | undefined>) {
   });
 }
 
-test('requires --platform and lists the known values', {timeout: 120_000}, () => {
-  for (const extra of [[], ['--bundle-only']]) {
-    const proc = spawnSync('node', [CLI, 'render', APP, ...extra], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST},
-    });
-    assert.equal(proc.status, 1);
-    assert.equal(proc.stdout, '');
-    assert.match(proc.stderr, /--platform <name> is required/);
-    assert.match(proc.stderr, /android, ios, a11ytree/);
-    assert.match(proc.stderr, /Any Metro platform name is accepted/);
-    assert.match(proc.stderr, /Platform\.OS/);
-  }
-});
-
-test('fails with a clear message when the host binary is missing', {timeout: 120_000}, () => {
-  const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: '/nonexistent/rn-a11y-host'});
-  assert.equal(proc.status, 5);
-  const {error} = JSON.parse(proc.stderr.trim().split('\n').pop()!);
-  assert.equal(error.code, 'HOST_MISSING');
-  assert.match(error.message, /RN_A11Y_HOST_BIN points to a missing file/);
-  assert.match(error.hint, /bun run build:host/);
-  assert.equal(proc.stdout, '');
-});
-
-test('bundles with Metro and parses host stdout (fake host)', {timeout: 120_000}, () => {
-  const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST});
-  assert.equal(proc.status, 0, proc.stderr);
-  const result = JSON.parse(proc.stdout) as RenderResult;
-  assert.equal(result.root.box.width, 390);
-  assert.equal(result.root.type, 'RootView');
-  assert.equal(result.source, 'mounted');
-});
-
-test('parses a shadowTree payload (fake host)', {timeout: 120_000}, () => {
-  const proc = run(['render', APP, '--platform', 'android', '--debug-props'], {
-    RN_A11Y_HOST_BIN: FAKE_HOST,
-    FAKE_HOST_MODE: 'shadow-tree',
+describe('cli', () => {
+  it('requires --platform and lists the known values', {timeout: 120_000}, () => {
+    for (const extra of [[], ['--bundle-only']]) {
+      const proc = spawnSync('node', [CLI, 'render', APP, ...extra], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST},
+      });
+      expect(proc.status).toBe(1);
+      expect(proc.stdout).toBe('');
+      expect(proc.stderr).toMatch(/--platform <name> is required/);
+      expect(proc.stderr).toMatch(/android, ios, a11ytree/);
+      expect(proc.stderr).toMatch(/Any Metro platform name is accepted/);
+      expect(proc.stderr).toMatch(/Platform\.OS/);
+    }
   });
-  assert.equal(proc.status, 0, proc.stderr);
-  const result = JSON.parse(proc.stdout) as RenderResult;
-  assert.equal(result.source, 'shadowTree');
-  assert.equal(result.root.children[0].children.length, 6);
-});
 
-test('--debug-props is passed to the entry', {timeout: 120_000}, () => {
-  for (const [flag, expected] of [[[], 'false'], [['--debug-props'], 'true']] as const) {
-    const proc = run(['render', APP, '--platform', 'android', '--bundle-only', '--no-cache', ...flag], {});
-    assert.equal(proc.status, 0, proc.stderr);
+  it('fails with a clear message when the host binary is missing', {timeout: 120_000}, () => {
+    const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: '/nonexistent/rn-a11y-host'});
+    expect(proc.status).toBe(5);
+    const {error} = JSON.parse(proc.stderr.trim().split('\n').pop()!);
+    expect(error.code).toBe('HOST_MISSING');
+    expect(error.message).toMatch(/RN_A11Y_HOST_BIN points to a missing file/);
+    expect(error.hint).toMatch(/bun run build:host/);
+    expect(proc.stdout).toBe('');
+  });
+
+  it('bundles with Metro and parses host stdout (fake host)', {timeout: 120_000}, () => {
+    const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST});
+    expect(proc.status, proc.stderr).toBe(0);
+    const result = JSON.parse(proc.stdout) as RenderResult;
+    expect(result.root.box.width).toBe(390);
+    expect(result.root.type).toBe('RootView');
+    expect(result.source).toBe('mounted');
+  });
+
+  it('parses a shadowTree payload (fake host)', {timeout: 120_000}, () => {
+    const proc = run(['render', APP, '--platform', 'android', '--debug-props'], {
+      RN_A11Y_HOST_BIN: FAKE_HOST,
+      FAKE_HOST_MODE: 'shadow-tree',
+    });
+    expect(proc.status, proc.stderr).toBe(0);
+    const result = JSON.parse(proc.stdout) as RenderResult;
+    expect(result.source).toBe('shadowTree');
+    expect(result.root.children[0].children.length).toBe(6);
+  });
+
+  it('--debug-props is passed to the entry', {timeout: 120_000}, () => {
+    for (const [flag, expected] of [[[], 'false'], [['--debug-props'], 'true']] as const) {
+      const proc = run(['render', APP, '--platform', 'android', '--bundle-only', '--no-cache', ...flag], {});
+      expect(proc.status, proc.stderr).toBe(0);
+      const bundlePath = /Bundle: (.+) \(\d+ bytes/.exec(proc.stderr)![1];
+      const code = fs.readFileSync(bundlePath, 'utf8');
+      fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
+      expect(code).toMatch(new RegExp(`includeDebugProps = ${expected}`));
+      expect(code).toContain('getA11yTree');
+    }
+  });
+
+  it('reports JS errors from the host', {timeout: 120_000}, () => {
+    const proc = run(['render', APP, '--platform', 'android'], {
+      RN_A11Y_HOST_BIN: FAKE_HOST,
+      FAKE_HOST_MODE: 'js-error',
+    });
+    expect(proc.status).toBe(4);
+    const {error} = JSON.parse(proc.stderr.trim().split('\n').pop()!);
+    expect(error.code).toBe('APP_THREW');
+    expect(error.message).toMatch(/Render failed in JS: boom/);
+    expect(error.details.stack).toMatch(/at App/);
+  });
+
+  function writeScript(script: unknown): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-test-'));
+    const file = path.join(dir, 'actions.json');
+    fs.writeFileSync(file, typeof script === 'string' ? script : JSON.stringify(script));
+    return file;
+  }
+
+  it('run: validates the script before bundling', {timeout: 120_000}, () => {
+    const cases: Array<[unknown, RegExp]> = [
+      [[{tap: {testID: 'submit'}}, {wait: 'soon'}], /step 1: wait: must be a number/],
+      [{$schema: 'x', actions: [{wait: 'soon'}]}, /step 0: wait: must be a number/],
+      ['[not json', /is not valid JSON/],
+    ];
+    for (const [script, pattern] of cases) {
+      const file = writeScript(script);
+      const proc = run(['run', APP, '--platform', 'android', '--script', file], {
+        RN_A11Y_HOST_BIN: FAKE_HOST,
+      });
+      fs.rmSync(path.dirname(file), {recursive: true, force: true});
+      expect(proc.status).toBe(1);
+      expect(proc.stderr).toMatch(pattern);
+      expect(proc.stderr).not.toMatch(/Bundle:/);
+      expect(proc.stdout).toBe('');
+    }
+    const missing = run(['run', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST});
+    expect(missing.status).toBe(1);
+    expect(missing.stderr).toMatch(/--script <json> is required/);
+    const badMode = run(
+      ['run', APP, '--platform', 'android', '--script', 'x.json', '--tap-mode', 'swipe'],
+      {RN_A11Y_HOST_BIN: FAKE_HOST},
+    );
+    expect(badMode.status).toBe(1);
+    expect(badMode.stderr).toMatch(/--tap-mode must be one of: touch, click, both/);
+  });
+
+  it('run: reports steps, snapshots and the final tree (fake host)', {timeout: 120_000}, () => {
+    const file = writeScript([{tap: {testID: 'submit'}}, {tap: {testID: 'missing'}}, {snapshot: 'after'}]);
+    const proc = run(['run', APP, '--platform', 'android', '--script', file, '--no-quiet'], {
+      RN_A11Y_HOST_BIN: FAKE_HOST,
+      FAKE_HOST_MODE: 'run',
+    });
+    fs.rmSync(path.dirname(file), {recursive: true, force: true});
+    expect(proc.status, proc.stderr).toBe(0);
+    const result = JSON.parse(proc.stdout) as RunResult;
+    expect(result.source).toBe('shadowTree');
+    expect(result.steps.length).toBe(3);
+    expect(result.steps[0].target?.box?.y).toBe(154); // rounded
+    expect(result.steps[0].hit?.type).toBe('Paragraph');
+    expect(result.steps[1].error).toStrictEqual({code: 'TARGET_NOT_FOUND', message: 'Target not found: {"testID":"missing"}'});
+    expect(proc.stderr).toMatch(/warning: JS fallbacks used because the host lacks native methods: events: js, hitTest: js/);
+    expect(proc.stderr.match(/warning: JS fallbacks/g)?.length).toBe(1);
+    // Snapshots and final are converted with the same converter as `render`.
+    expect(result.snapshots.after.ref).toBe('n0');
+    expect(result.final.children[0].children[0].name).toBe('Sign in now');
+  });
+
+  it('run: the script and tap mode are embedded in the bundle', {timeout: 120_000}, () => {
+    const file = writeScript([{wait: 5}]);
+    const proc = run(
+      ['run', APP, '--platform', 'android', '--script', file, '--tap-mode', 'both', '--bundle-only', '--no-cache'],
+      {},
+    );
+    fs.rmSync(path.dirname(file), {recursive: true, force: true});
+    expect(proc.status, proc.stderr).toBe(0);
     const bundlePath = /Bundle: (.+) \(\d+ bytes/.exec(proc.stderr)![1];
     const code = fs.readFileSync(bundlePath, 'utf8');
     fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
-    assert.match(code, new RegExp(`includeDebugProps = ${expected}`));
-    assert.ok(code.includes('getA11yTree'));
-  }
-});
-
-test('reports JS errors from the host', {timeout: 120_000}, () => {
-  const proc = run(['render', APP, '--platform', 'android'], {
-    RN_A11Y_HOST_BIN: FAKE_HOST,
-    FAKE_HOST_MODE: 'js-error',
+    expect(code).toMatch(/script = \[\{\s*"wait": 5\s*\}\]/);
+    expect(code).toMatch(/tapMode = "both"/);
   });
-  assert.equal(proc.status, 4);
-  const {error} = JSON.parse(proc.stderr.trim().split('\n').pop()!);
-  assert.equal(error.code, 'APP_THREW');
-  assert.match(error.message, /Render failed in JS: boom/);
-  assert.match(error.details.stack, /at App/);
-});
 
-function writeScript(script: unknown): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-test-'));
-  const file = path.join(dir, 'actions.json');
-  fs.writeFileSync(file, typeof script === 'string' ? script : JSON.stringify(script));
-  return file;
-}
-
-test('run: validates the script before bundling', {timeout: 120_000}, () => {
-  const cases: Array<[unknown, RegExp]> = [
-    [[{tap: {testID: 'submit'}}, {wait: 'soon'}], /step 1: wait: must be a number/],
-    [{$schema: 'x', actions: [{wait: 'soon'}]}, /step 0: wait: must be a number/],
-    ['[not json', /is not valid JSON/],
-  ];
-  for (const [script, pattern] of cases) {
-    const file = writeScript(script);
-    const proc = run(['run', APP, '--platform', 'android', '--script', file], {
-      RN_A11Y_HOST_BIN: FAKE_HOST,
-    });
-    fs.rmSync(path.dirname(file), {recursive: true, force: true});
-    assert.equal(proc.status, 1);
-    assert.match(proc.stderr, pattern);
-    assert.doesNotMatch(proc.stderr, /Bundle:/);
-    assert.equal(proc.stdout, '');
-  }
-  const missing = run(['run', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST});
-  assert.equal(missing.status, 1);
-  assert.match(missing.stderr, /--script <json> is required/);
-  const badMode = run(
-    ['run', APP, '--platform', 'android', '--script', 'x.json', '--tap-mode', 'swipe'],
-    {RN_A11Y_HOST_BIN: FAKE_HOST},
-  );
-  assert.equal(badMode.status, 1);
-  assert.match(badMode.stderr, /--tap-mode must be one of: touch, click, both/);
-});
-
-test('run: reports steps, snapshots and the final tree (fake host)', {timeout: 120_000}, () => {
-  const file = writeScript([{tap: {testID: 'submit'}}, {tap: {testID: 'missing'}}, {snapshot: 'after'}]);
-  const proc = run(['run', APP, '--platform', 'android', '--script', file, '--no-quiet'], {
-    RN_A11Y_HOST_BIN: FAKE_HOST,
-    FAKE_HOST_MODE: 'run',
+  it('run: inline object-form script with $schema', {timeout: 120_000}, () => {
+    const script = JSON.stringify({$schema: 'schema/script.json', actions: [{wait: 5}]});
+    const proc = run(['run', APP, '--platform', 'android', '--script', script, '--bundle-only', '--no-cache'], {});
+    expect(proc.status, proc.stderr).toBe(0);
+    const bundlePath = /Bundle: (.+) \(\d+ bytes/.exec(proc.stderr)![1];
+    const code = fs.readFileSync(bundlePath, 'utf8');
+    fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
+    expect(code).toMatch(/script = \[\{\s*"wait": 5\s*\}\]/);
   });
-  fs.rmSync(path.dirname(file), {recursive: true, force: true});
-  assert.equal(proc.status, 0, proc.stderr);
-  const result = JSON.parse(proc.stdout) as RunResult;
-  assert.equal(result.source, 'shadowTree');
-  assert.equal(result.steps.length, 3);
-  assert.equal(result.steps[0].target?.box?.y, 154); // rounded
-  assert.equal(result.steps[0].hit?.type, 'Paragraph');
-  assert.deepEqual(result.steps[1].error, {code: 'TARGET_NOT_FOUND', message: 'Target not found: {"testID":"missing"}'});
-  assert.match(
-    proc.stderr,
-    /warning: JS fallbacks used because the host lacks native methods: events: js, hitTest: js/,
-  );
-  assert.equal(proc.stderr.match(/warning: JS fallbacks/g)?.length, 1);
-  // Snapshots and final are converted with the same converter as `render`.
-  assert.equal(result.snapshots.after.ref, 'n0');
-  assert.equal(result.final.children[0].children[0].name, 'Sign in now');
-});
 
-test('run: the script and tap mode are embedded in the bundle', {timeout: 120_000}, () => {
-  const file = writeScript([{wait: 5}]);
-  const proc = run(
-    ['run', APP, '--platform', 'android', '--script', file, '--tap-mode', 'both', '--bundle-only', '--no-cache'],
-    {},
-  );
-  fs.rmSync(path.dirname(file), {recursive: true, force: true});
-  assert.equal(proc.status, 0, proc.stderr);
-  const bundlePath = /Bundle: (.+) \(\d+ bytes/.exec(proc.stderr)![1];
-  const code = fs.readFileSync(bundlePath, 'utf8');
-  fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
-  assert.match(code, /script = \[\{\s*"wait": 5\s*\}\]/);
-  assert.match(code, /tapMode = "both"/);
-});
-
-test('run: inline object-form script with $schema', {timeout: 120_000}, () => {
-  const script = JSON.stringify({$schema: 'schema/script.json', actions: [{wait: 5}]});
-  const proc = run(['run', APP, '--platform', 'android', '--script', script, '--bundle-only', '--no-cache'], {});
-  assert.equal(proc.status, 0, proc.stderr);
-  const bundlePath = /Bundle: (.+) \(\d+ bytes/.exec(proc.stderr)![1];
-  const code = fs.readFileSync(bundlePath, 'utf8');
-  fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
-  assert.match(code, /script = \[\{\s*"wait": 5\s*\}\]/);
-});
-
-test('--help lists the actions; schema prints and lists the schemas', () => {
-  for (const command of ['run', 'check', 'session']) {
-    const help = run([command, '--help'], {});
-    assert.equal(help.status, 0, help.stderr);
-    for (const name of ACTION_NAMES) assert.match(help.stdout, new RegExp(`^  ${name} +\\{"${name}"`, 'm'), `${command} --help: ${name}`);
-  }
-  assert.match(run(['run', '--help'], {}).stdout, /rn-a11y-tree schema script/);
-  const list = run(['schema'], {});
-  assert.equal(list.status, 0, list.stderr);
-  assert.match(list.stdout, /^script\t/m);
-  assert.match(list.stdout, /^session-request\t/m);
-  const schema = run(['schema', 'script'], {});
-  assert.equal(schema.status, 0, schema.stderr);
-  assert.equal(schema.stdout, fs.readFileSync(path.join(ROOT, 'schema', 'script.json'), 'utf8'));
-  const unknown = run(['schema', 'nope'], {});
-  assert.equal(unknown.status, 1);
-  assert.match(JSON.parse(unknown.stderr).error.message, /unknown schema "nope" \(one of: .*script/);
+  it('--help lists the actions; schema prints and lists the schemas', () => {
+    for (const command of ['run', 'check', 'session']) {
+      const help = run([command, '--help'], {});
+      expect(help.status, help.stderr).toBe(0);
+      for (const name of ACTION_NAMES) expect(help.stdout, `${command} --help: ${name}`).toMatch(new RegExp(`^  ${name} +\\{"${name}"`, 'm'));
+    }
+    expect(run(['run', '--help'], {}).stdout).toMatch(/rn-a11y-tree schema script/);
+    const list = run(['schema'], {});
+    expect(list.status, list.stderr).toBe(0);
+    expect(list.stdout).toMatch(/^script\t/m);
+    expect(list.stdout).toMatch(/^session-request\t/m);
+    const schema = run(['schema', 'script'], {});
+    expect(schema.status, schema.stderr).toBe(0);
+    expect(schema.stdout).toBe(fs.readFileSync(path.join(ROOT, 'schema', 'script.json'), 'utf8'));
+    const unknown = run(['schema', 'nope'], {});
+    expect(unknown.status).toBe(1);
+    expect(JSON.parse(unknown.stderr).error.message).toMatch(/unknown schema "nope" \(one of: .*script/);
+  });
 });

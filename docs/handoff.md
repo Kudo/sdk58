@@ -59,8 +59,9 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
     checked by `tsc -p runtime` (strict, no DOM/Node types; see
     `runtime/fantom/VENDORED.md`). `NativeEventCategory` is a `const` object.
   - Scripts (`scripts/*.ts`, `native/tools/*/*.ts`) run with `bun`. Unit tests:
-    `bun test ./test` (node:test API). E2E: Vitest 5 (`vitest.config.ts`,
-    `bun run test:e2e`).
+    Vitest 5 for all tests (`describe`/`it`/`expect`, no `node:test` or
+    `node:assert`): `vitest.config.ts` projects `unit` (`bun run test`) and
+    `e2e` (`bun run test:e2e`).
   - Still JS on purpose: `native/tests/*-itest.js` (Fantom's Jest `testRegex`
     needs `-itest.js`, Flow) and `native/overlay/config/metro-babel-transformer.flow.js`.
 - Script files (2026-09-30): `--script` accepts `{"$schema": ..., "actions":
@@ -93,7 +94,7 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
 3. Check GitHub Actions: `gh run list --repo Kudo/react-native-a11y-tree --limit 3`.
    If runs start (not "job was not started"), re-run CI on `main`
    (`gh workflow run ci.yml --ref main` or push an empty commit), wait for
-   green (the first CI run of the tooling migration: Vitest, `bun test`, Node 24
+   green (the first CI run of the tooling migration: Vitest, Node 24
    type stripping on the runner, the sanitizer step's `bun run test:e2e <files>`),
    then tag `v0.1.1`:
    `git tag -a v0.1.1 -m "v0.1.1" && git push origin v0.1.1`.
@@ -119,7 +120,7 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
 bun install
 bun run build:host            # Release, arm64; ~5 min first time, ~10-60 s incremental
 bun run check                 # tsc (root + runtime) + schema check + unit tests + e2e (both presets)
-bun run test | bun run test:e2e   # bun test ./test | vitest run
+bun run test | bun run test:e2e   # vitest run --project unit | --project e2e
 bun run build                 # dist/rn-a11y-tree.js (bun build)
 bun run rn-a11y-tree schema script   # print a schema; no name: list them
 bun run rn-a11y-tree render examples/basic/App.tsx --preset android-phone --format text
@@ -181,8 +182,10 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 - Rosetta is not installed on the dev Mac (decided not to install it).
 - `bunfig.toml` has `peer = false`: peer dependencies are not installed, so
   `vite` (Vitest 5's peer) is a direct devDependency.
-- Under `bun test`, `process.execPath` is bun. Tests spawn the CLI with
-  `'node'` explicitly (the CLI must stay on Node) and scripts with `'bun'`.
+- Tests spawn the CLI with `'node'` explicitly (the CLI must stay on Node;
+  under a Bun runner `process.execPath` would be bun) and scripts with `'bun'`.
+- In tests, `expect(...).toBeTruthy()` does not narrow types; use
+  `if (x == null) expect.unreachable(msg)` where the code needs the value.
 - `node src/cli.ts` needs erasable TypeScript only (no enums, namespaces or
   constructor parameter properties); `erasableSyntaxOnly` makes tsc enforce it.
 - A new worktree needs `bun install`, `git submodule update --init --depth 1
@@ -203,7 +206,7 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 | Fantom itests | `native/tests/` |
 | Reference harnesses | `native/tools/swiftui-ref/` (real SwiftUI, macOS + iOS sim), `native/tools/compose-ref/` (Compose Desktop), `native/tools/*-layout-test/` (engine vs reference) |
 | Host build script | `scripts/build-host.sh`; release packaging `scripts/release-host.ts`; other scripts `scripts/*.ts` (bun) |
-| Tests | `test/` (bun test, fake host `test/fixtures/fake-host.ts`), `e2e/` (Vitest, real host) |
+| Tests | Vitest: `test/` (project `unit`, fake host `test/fixtures/fake-host.ts`), `e2e/` (project `e2e`, real host) |
 | Packages | root = CLI (`bin` = `dist/rn-a11y-tree.js`); `packages/rn-a11y-host/` (`index.ts`; hermesc-style `osx-bin/`, `linux64-bin/`, `win64-bin/`) |
 | Docs | `docs/agent-friendliness.md`, `docs/build-analysis.md`, `docs/perf-analysis.md`, `docs/expo-ui-status.md`, `docs/e2e-coverage.md`, `docs/research/*` |
 | Schemas / tool descriptors | `schema/*.json`, `tools/*.json` (regenerate with `bun run schema`) |

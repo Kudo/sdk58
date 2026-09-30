@@ -1,9 +1,8 @@
-import assert from 'node:assert/strict';
 import {execFileSync, spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {test} from 'node:test';
+import {describe, expect, it} from 'vitest';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 import {assetKey, downloadHost, type HostManifest} from '../src/hostDownload.ts';
@@ -41,100 +40,102 @@ function withEnv<T>(env: Record<string, string>, fn: () => Promise<T>): Promise<
   });
 }
 
-test('release-host.ts writes a tarball, its sha256 and host-version.json', () => {
-  const release = makeRelease();
-  const {manifest} = release;
-  assert.match(manifest.version, /^\d+\.\d+\.\d+(-rc\.\d+)?-[0-9a-f]{12}$/);
-  assert.match(String(manifest.submoduleCommit), /^[0-9a-f]{40}$/);
-  assert.match(String(manifest.overlayHash), /^[0-9a-f]{64}$/);
-  assert.equal(typeof (manifest.nativeLibs as Record<string, string>)['react-native-screens'], 'string');
-  const asset = manifest.assets[assetKey()];
-  assert.equal(asset.file, `rn-a11y-host-${manifest.version}-${assetKey()}.tar.gz`);
-  const tar = path.join(release.out, asset.file);
-  assert.equal(fs.readFileSync(`${tar}.sha256`, 'utf8'), `${asset.sha256}  ${asset.file}\n`);
-  assert.deepEqual(execFileSync('tar', ['-tzf', tar], {encoding: 'utf8'}).trim().split('\n').sort(), [
-    'host-version.json',
-    'rn-a11y-host',
-  ]);
-  assert.deepEqual(JSON.parse(fs.readFileSync(release.manifestFile, 'utf8')), manifest);
-  fs.rmSync(release.dir, {recursive: true, force: true});
-});
-
-test('downloadHost: file:// download, sha256 check, cache reuse, errors', async () => {
-  const release = makeRelease();
-  const baseUrl = pathToFileURL(release.out).href;
-  await withEnv({RN_A11Y_HOST_MANIFEST: release.manifestFile, RN_A11Y_HOST_CACHE_DIR: release.cache}, async () => {
-    const logs: string[] = [];
-    const bin = await downloadHost({baseUrl, log: l => logs.push(l)});
-    assert.equal(bin, path.join(release.cache, release.manifest.version, 'rn-a11y-host'));
-    assert.ok(fs.statSync(bin).mode & 0o100);
-    assert.match(logs[0], /downloading host .* from file:/);
-    assert.deepEqual(fs.readdirSync(release.cache), [release.manifest.version]); // no temp dirs left
-
-    // Cached: no download (the archive is gone).
-    const asset = release.manifest.assets[assetKey()];
-    fs.renameSync(path.join(release.out, asset.file), path.join(release.dir, 'moved.tar.gz'));
-    logs.length = 0;
-    assert.equal(await downloadHost({baseUrl, log: l => logs.push(l)}), bin);
-    assert.deepEqual(logs, []);
-
-    // A wrong checksum in the manifest: the cache does not match and the download is rejected.
-    fs.renameSync(path.join(release.dir, 'moved.tar.gz'), path.join(release.out, asset.file));
-    const bad = {...release.manifest, assets: {[assetKey()]: {...asset, sha256: '0'.repeat(64)}}};
-    const badFile = path.join(release.dir, 'bad.json');
-    fs.writeFileSync(badFile, JSON.stringify(bad));
-    await withEnv({RN_A11Y_HOST_MANIFEST: badFile}, () =>
-      assert.rejects(downloadHost({baseUrl}), /sha256 mismatch .* expected 0{64}/),
-    );
-    const other = {...release.manifest, assets: {'plan9-mips': asset}};
-    fs.writeFileSync(badFile, JSON.stringify(other));
-    await withEnv({RN_A11Y_HOST_MANIFEST: badFile}, () =>
-      assert.rejects(downloadHost({baseUrl}), new RegExp(`has no host for ${assetKey()} \\(has: plan9-mips\\)`)),
-    );
-    await withEnv({RN_A11Y_HOST_MANIFEST: path.join(release.dir, 'missing.json')}, () =>
-      assert.rejects(downloadHost({baseUrl}), /no host-version\.json/),
-    );
-    await withEnv({RN_A11Y_HOST_CACHE_DIR: path.join(release.dir, 'cache2')}, () =>
-      assert.rejects(downloadHost({baseUrl: pathToFileURL(release.dir).href}), /ENOENT/),
-    );
+describe('host-download', () => {
+  it('release-host.ts writes a tarball, its sha256 and host-version.json', () => {
+    const release = makeRelease();
+    const {manifest} = release;
+    expect(manifest.version).toMatch(/^\d+\.\d+\.\d+(-rc\.\d+)?-[0-9a-f]{12}$/);
+    expect(String(manifest.submoduleCommit)).toMatch(/^[0-9a-f]{40}$/);
+    expect(String(manifest.overlayHash)).toMatch(/^[0-9a-f]{64}$/);
+    expect(typeof (manifest.nativeLibs as Record<string, string>)['react-native-screens']).toBe('string');
+    const asset = manifest.assets[assetKey()];
+    expect(asset.file).toBe(`rn-a11y-host-${manifest.version}-${assetKey()}.tar.gz`);
+    const tar = path.join(release.out, asset.file);
+    expect(fs.readFileSync(`${tar}.sha256`, 'utf8')).toBe(`${asset.sha256}  ${asset.file}\n`);
+    expect(execFileSync('tar', ['-tzf', tar], {encoding: 'utf8'}).trim().split('\n').sort()).toStrictEqual([
+      'host-version.json',
+      'rn-a11y-host',
+    ]);
+    expect(JSON.parse(fs.readFileSync(release.manifestFile, 'utf8'))).toStrictEqual(manifest);
+    fs.rmSync(release.dir, {recursive: true, force: true});
   });
-  fs.rmSync(release.dir, {recursive: true, force: true});
-});
 
-test('CLI uses the downloaded host (RN_A11Y_HOST_BASE_URL, fake host)', {timeout: 180_000}, () => {
-  const release = makeRelease();
-  const env = {
-    ...process.env,
-    RN_A11Y_HOST_BIN: '',
-    RN_A11Y_HOST_SKIP_PACKAGE: '1',
-    RN_A11Y_HOST_BASE_URL: pathToFileURL(release.out).href,
-    RN_A11Y_HOST_MANIFEST: release.manifestFile,
-    RN_A11Y_HOST_CACHE_DIR: release.cache,
-  };
-  const proc = spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--no-quiet'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    env,
-  });
-  assert.equal(proc.status, 0, proc.stderr);
-  assert.match(proc.stderr, /downloading host/);
-  assert.equal(JSON.parse(proc.stdout).source, 'mounted'); // the fake host's default payload
-  assert.ok(fs.existsSync(path.join(release.cache, release.manifest.version, 'rn-a11y-host')));
+  it('downloadHost: file:// download, sha256 check, cache reuse, errors', async () => {
+    const release = makeRelease();
+    const baseUrl = pathToFileURL(release.out).href;
+    await withEnv({RN_A11Y_HOST_MANIFEST: release.manifestFile, RN_A11Y_HOST_CACHE_DIR: release.cache}, async () => {
+      const logs: string[] = [];
+      const bin = await downloadHost({baseUrl, log: l => logs.push(l)});
+      expect(bin).toBe(path.join(release.cache, release.manifest.version, 'rn-a11y-host'));
+      expect(fs.statSync(bin).mode & 0o100).toBeTruthy();
+      expect(logs[0]).toMatch(/downloading host .* from file:/);
+      expect(fs.readdirSync(release.cache)).toStrictEqual([release.manifest.version]); // no temp dirs left
 
-  // A failed download falls back to native/dist (with a warning), else HOST_MISSING.
-  const failed = spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--no-quiet', '--format', 'text'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    env: {...env, RN_A11Y_HOST_BASE_URL: 'file:///nonexistent', RN_A11Y_HOST_CACHE_DIR: path.join(release.dir, 'c2')},
+      // Cached: no download (the archive is gone).
+      const asset = release.manifest.assets[assetKey()];
+      fs.renameSync(path.join(release.out, asset.file), path.join(release.dir, 'moved.tar.gz'));
+      logs.length = 0;
+      expect(await downloadHost({baseUrl, log: l => logs.push(l)})).toBe(bin);
+      expect(logs).toStrictEqual([]);
+
+      // A wrong checksum in the manifest: the cache does not match and the download is rejected.
+      fs.renameSync(path.join(release.dir, 'moved.tar.gz'), path.join(release.out, asset.file));
+      const bad = {...release.manifest, assets: {[assetKey()]: {...asset, sha256: '0'.repeat(64)}}};
+      const badFile = path.join(release.dir, 'bad.json');
+      fs.writeFileSync(badFile, JSON.stringify(bad));
+      await withEnv({RN_A11Y_HOST_MANIFEST: badFile}, () =>
+        expect(downloadHost({baseUrl})).rejects.toThrow(/sha256 mismatch .* expected 0{64}/),
+      );
+      const other = {...release.manifest, assets: {'plan9-mips': asset}};
+      fs.writeFileSync(badFile, JSON.stringify(other));
+      await withEnv({RN_A11Y_HOST_MANIFEST: badFile}, () =>
+        expect(downloadHost({baseUrl})).rejects.toThrow(new RegExp(`has no host for ${assetKey()} \\(has: plan9-mips\\)`)),
+      );
+      await withEnv({RN_A11Y_HOST_MANIFEST: path.join(release.dir, 'missing.json')}, () =>
+        expect(downloadHost({baseUrl})).rejects.toThrow(/no host-version\.json/),
+      );
+      await withEnv({RN_A11Y_HOST_CACHE_DIR: path.join(release.dir, 'cache2')}, () =>
+        expect(downloadHost({baseUrl: pathToFileURL(release.dir).href})).rejects.toThrow(/ENOENT/),
+      );
+    });
+    fs.rmSync(release.dir, {recursive: true, force: true});
   });
-  if (fs.existsSync(DEFAULT_HOST_BIN)) {
-    assert.equal(failed.status, 0, failed.stderr);
-    assert.match(failed.stderr, /warning: prebuilt host download failed \(.*ENOENT.*\); using .*native\/dist/);
-  } else {
-    assert.equal(failed.status, 5);
-    const {error} = JSON.parse(failed.stderr.trim().split('\n').pop()!);
-    assert.equal(error.code, 'HOST_MISSING');
-    assert.match(error.message, /Prebuilt host download failed/);
-  }
-  fs.rmSync(release.dir, {recursive: true, force: true});
+
+  it('CLI uses the downloaded host (RN_A11Y_HOST_BASE_URL, fake host)', {timeout: 180_000}, () => {
+    const release = makeRelease();
+    const env = {
+      ...process.env,
+      RN_A11Y_HOST_BIN: '',
+      RN_A11Y_HOST_SKIP_PACKAGE: '1',
+      RN_A11Y_HOST_BASE_URL: pathToFileURL(release.out).href,
+      RN_A11Y_HOST_MANIFEST: release.manifestFile,
+      RN_A11Y_HOST_CACHE_DIR: release.cache,
+    };
+    const proc = spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--no-quiet'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env,
+    });
+    expect(proc.status, proc.stderr).toBe(0);
+    expect(proc.stderr).toMatch(/downloading host/);
+    expect(JSON.parse(proc.stdout).source).toBe('mounted'); // the fake host's default payload
+    expect(fs.existsSync(path.join(release.cache, release.manifest.version, 'rn-a11y-host'))).toBeTruthy();
+
+    // A failed download falls back to native/dist (with a warning), else HOST_MISSING.
+    const failed = spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--no-quiet', '--format', 'text'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {...env, RN_A11Y_HOST_BASE_URL: 'file:///nonexistent', RN_A11Y_HOST_CACHE_DIR: path.join(release.dir, 'c2')},
+    });
+    if (fs.existsSync(DEFAULT_HOST_BIN)) {
+      expect(failed.status, failed.stderr).toBe(0);
+      expect(failed.stderr).toMatch(/warning: prebuilt host download failed \(.*ENOENT.*\); using .*native\/dist/);
+    } else {
+      expect(failed.status).toBe(5);
+      const {error} = JSON.parse(failed.stderr.trim().split('\n').pop()!);
+      expect(error.code).toBe('HOST_MISSING');
+      expect(error.message).toMatch(/Prebuilt host download failed/);
+    }
+    fs.rmSync(release.dir, {recursive: true, force: true});
+  });
 });

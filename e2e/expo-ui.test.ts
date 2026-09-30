@@ -1,6 +1,5 @@
-import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test, type TestContext} from 'vitest';
+import {describe, expect, it, type TestContext} from 'vitest';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
 import {cliJson, E2E_PRESETS, findAll, hostSkip, isIOS, type Preset, ROOT} from './helpers.ts';
@@ -43,13 +42,13 @@ function gates(result: RunResult, t: TestContext, kind: 'swiftUI' | 'compose') {
  * older ones label descendants `placeholder`. Both are accepted.
  */
 function checkLayoutLabels(host: TreeNode, engine: 'swiftui' | 'compose', realLayout: boolean) {
-  assert.equal(host.layout, 'emulated');
+  expect(host.layout).toBe('emulated');
   const descendants = findAll(host, n => n !== host && n.type.startsWith('ExpoUI.'));
-  for (const n of descendants) assert.ok(n.layout === 'emulated' || n.layout === 'placeholder', `${n.key}: ${n.layout}`);
+  for (const n of descendants) expect(n.layout === 'emulated' || n.layout === 'placeholder', `${n.key}: ${n.layout}`).toBeTruthy();
   if (host.emulatedBy != null) {
-    assert.equal(host.emulatedBy, engine);
+    expect(host.emulatedBy).toBe(engine);
     if (realLayout) {
-      assert.deepEqual(descendants.filter(n => n.layout !== 'emulated').map(n => n.key), []);
+      expect(descendants.filter(n => n.layout !== 'emulated').map(n => n.key)).toStrictEqual([]);
     }
   }
 }
@@ -58,7 +57,7 @@ function checkLayoutLabels(host: TreeNode, engine: 'swiftui' | 'compose', realLa
 function checkCompose(result: RunResult, t: TestContext) {
   const {modifierEvents, realLayout} = gates(result, t, 'compose');
   const host = findAll(result.final, n => n.type === 'ExpoUI.HostView')[0];
-  assert.deepEqual(shape(host), {
+  expect(shape(host)).toStrictEqual({
     'ExpoUI.HostView': [
       {
         'ExpoUI.ColumnView': [
@@ -72,94 +71,93 @@ function checkCompose(result: RunResult, t: TestContext) {
   checkLayoutLabels(host, 'compose', realLayout);
 
   const go = byKey(result.final, 'go');
-  assert.deepEqual([go.role, go.name], ['button', 'Go']);
-  assert.deepEqual(go.expo?.modifiers, [{$type: 'testID', testID: 'go'}]);
+  expect([go.role, go.name]).toStrictEqual(['button', 'Go']);
+  expect(go.expo?.modifiers).toStrictEqual([{$type: 'testID', testID: 'go'}]);
   const greeting = byKey(result.final, 'greeting');
-  assert.deepEqual([greeting.role, greeting.name, greeting.text], ['text', 'Hello', 'Hello']);
-  assert.ok((greeting.expo?.modifiers as Array<{$type: string}>).some(m => m.$type === 'clickable'));
+  expect([greeting.role, greeting.name, greeting.text]).toStrictEqual(['text', 'Hello', 'Hello']);
+  expect((greeting.expo?.modifiers as Array<{$type: string}>).some(m => m.$type === 'clickable')).toBeTruthy();
   const remember = byKey(result.final, 'remember');
-  assert.equal(remember.role, 'switch');
+  expect(remember.role).toBe('switch');
 
   // Steps: Compose events chosen from the JS props.
-  assert.deepEqual(result.steps[0].events, ['buttonPressed']);
-  assert.deepEqual(result.steps[1].events, ['checkedChange']);
-  assert.equal(byKey(result.final, 'status').text, 'Pressed');
-  assert.equal(byKey(result.final, 'remember-state').text, 'Remember: off');
-  assert.deepEqual(remember.a11y.state, {checked: false});
+  expect(result.steps[0].events).toStrictEqual(['buttonPressed']);
+  expect(result.steps[1].events).toStrictEqual(['checkedChange']);
+  expect(byKey(result.final, 'status').text).toBe('Pressed');
+  expect(byKey(result.final, 'remember-state').text).toBe('Remember: off');
+  expect(remember.a11y.state).toStrictEqual({checked: false});
   if (modifierEvents) {
-    assert.deepEqual(result.steps[2].events, ['modifier:clickable']);
-    assert.equal(byKey(result.final, 'taps').text, 'Taps: 1');
+    expect(result.steps[2].events).toStrictEqual(['modifier:clickable']);
+    expect(byKey(result.final, 'taps').text).toBe('Taps: 1');
   } else {
-    assert.match(String(result.steps[2].warnings), /no dispatchExpoModifierEvent/);
+    expect(String(result.steps[2].warnings)).toMatch(/no dispatchExpoModifierEvent/);
   }
   if (realLayout) {
     // Compose (M3 defaults): a 14sp Text is 16 dp high; Button and Switch
     // get the 48 dp minimum touch target.
-    assert.ok(host.box.height > 0);
-    assert.ok(Math.abs(greeting.box.height - 16) <= 2, `Text height ${greeting.box.height}`);
-    assert.ok(Math.abs(go.box.width - 66) <= 1 && Math.abs(go.box.height - 48) <= 1, `Button ${JSON.stringify(go.box)}`);
-    assert.ok(
-      Math.abs(remember.box.width - 52) <= 1 && Math.abs(remember.box.height - 48) <= 1,
-      `Switch ${JSON.stringify(remember.box)}`,
-    );
+    expect(host.box.height).toBeGreaterThan(0);
+    expect(Math.abs(greeting.box.height - 16) <= 2, `Text height ${greeting.box.height}`).toBeTruthy();
+    expect(Math.abs(go.box.width - 66) <= 1 && Math.abs(go.box.height - 48) <= 1, `Button ${JSON.stringify(go.box)}`).toBeTruthy();
+    expect(Math.abs(remember.box.width - 52) <= 1 && Math.abs(remember.box.height - 48) <= 1, `Switch ${JSON.stringify(remember.box)}`).toBeTruthy();
   }
-  assert.ok(result.snapshots.after);
+  expect(result.snapshots.after).toBeTruthy();
 }
 
 /** @expo/ui/swift-ui with SwiftUI views: tree, modifiers, button, toggle, onTapGesture. */
 function checkSwiftUI(result: RunResult, t: TestContext) {
   const {modifierEvents, realLayout} = gates(result, t, 'swiftUI');
   const host = findAll(result.final, n => n.type === 'ExpoUI.HostView')[0];
-  assert.deepEqual(shape(host), {
+  expect(shape(host)).toStrictEqual({
     'ExpoUI.HostView': [{'ExpoUI.VStackView': ['ExpoUI.TextView', 'ExpoUI.Button', 'ExpoUI.ToggleView']}],
   });
   checkLayoutLabels(host, 'swiftui', realLayout);
-  assert.deepEqual(host.children[0].expo?.modifiers, [{$type: 'padding', all: 8}]);
+  expect(host.children[0].expo?.modifiers).toStrictEqual([{$type: 'padding', all: 8}]);
   const greeting = byKey(result.final, 'greeting');
-  assert.deepEqual([greeting.role, greeting.name, greeting.text], ['text', 'Greeting', 'Hello']);
+  expect([greeting.role, greeting.name, greeting.text]).toStrictEqual(['text', 'Greeting', 'Hello']);
   const go = byKey(result.final, 'go');
-  assert.deepEqual([go.role, go.name], ['button', 'Go']);
-  assert.deepEqual(go.expo?.modifiers, [{$type: 'frame', height: 44}]);
+  expect([go.role, go.name]).toStrictEqual(['button', 'Go']);
+  expect(go.expo?.modifiers).toStrictEqual([{$type: 'frame', height: 44}]);
   const remember = byKey(result.final, 'remember');
-  assert.deepEqual([remember.role, remember.name, remember.a11y.state], ['switch', 'Remember', {checked: false}]);
+  expect([remember.role, remember.name, remember.a11y.state]).toStrictEqual(['switch', 'Remember', {checked: false}]);
 
-  assert.deepEqual(result.steps[0].events, ['buttonPress']);
-  assert.deepEqual(result.steps[1].events, ['isOnChange']);
-  assert.equal(byKey(result.final, 'status').text, 'Pressed');
-  assert.equal(byKey(result.final, 'remember-state').text, 'Remember: off');
+  expect(result.steps[0].events).toStrictEqual(['buttonPress']);
+  expect(result.steps[1].events).toStrictEqual(['isOnChange']);
+  expect(byKey(result.final, 'status').text).toBe('Pressed');
+  expect(byKey(result.final, 'remember-state').text).toBe('Remember: off');
   if (modifierEvents) {
-    assert.deepEqual(result.steps[2].events, ['modifier:onTapGesture']);
-    assert.equal(byKey(result.final, 'taps').text, 'Taps: 1');
+    expect(result.steps[2].events).toStrictEqual(['modifier:onTapGesture']);
+    expect(byKey(result.final, 'taps').text).toBe('Taps: 1');
   } else {
-    assert.match(String(result.steps[2].warnings), /no dispatchExpoModifierEvent/);
+    expect(String(result.steps[2].warnings)).toMatch(/no dispatchExpoModifierEvent/);
   }
   if (realLayout) {
     // SwiftUI body text: 20.333 dp high.
-    assert.ok(host.box.height > 0);
-    assert.ok(Math.abs(greeting.box.height - 20.333) <= 1, `Text height ${greeting.box.height}`);
+    expect(host.box.height).toBeGreaterThan(0);
+    expect(Math.abs(greeting.box.height - 20.333) <= 1, `Text height ${greeting.box.height}`).toBeTruthy();
   }
 }
 
-// App.tsx picks the screen by platform: universal (Compose views) on
-// android, the SwiftUI screen on ios. SwiftUIScreen.tsx renders SwiftUI views
-// on any platform (checked once, under android).
-for (const preset of E2E_PRESETS) {
-  const cases: Array<[string, 'compose' | 'swiftUI']> = isIOS(preset)
-    ? [['App.tsx', 'swiftUI']]
-    : [
-        ['App.tsx', 'compose'],
-        ['SwiftUIScreen.tsx', 'swiftUI'],
-      ];
-  for (const [file, kind] of cases) {
-    const title = kind === 'compose' ? 'universal @expo/ui (Compose views)' : '@expo/ui/swift-ui (SwiftUI views)';
-    test(`[${preset.name}] expo-ui ${file}: ${title}`, {timeout: 180_000}, t => {
-      if (hostSkip) t.skip(hostSkip);
-      const result = run(file, preset);
-      if (!result.capabilities.includes('expoUI')) {
-        t.skip('host has no expoUI capability');
-      }
-      if (kind === 'compose') checkCompose(result, t);
-      else checkSwiftUI(result, t);
-    });
+describe('expo-ui', () => {
+  // App.tsx picks the screen by platform: universal (Compose views) on
+  // android, the SwiftUI screen on ios. SwiftUIScreen.tsx renders SwiftUI views
+  // on any platform (checked once, under android).
+  for (const preset of E2E_PRESETS) {
+    const cases: Array<[string, 'compose' | 'swiftUI']> = isIOS(preset)
+      ? [['App.tsx', 'swiftUI']]
+      : [
+          ['App.tsx', 'compose'],
+          ['SwiftUIScreen.tsx', 'swiftUI'],
+        ];
+    for (const [file, kind] of cases) {
+      const title = kind === 'compose' ? 'universal @expo/ui (Compose views)' : '@expo/ui/swift-ui (SwiftUI views)';
+      it(`[${preset.name}] expo-ui ${file}: ${title}`, {timeout: 180_000}, t => {
+        if (hostSkip) t.skip(hostSkip);
+        const result = run(file, preset);
+        if (!result.capabilities.includes('expoUI')) {
+          t.skip('host has no expoUI capability');
+        }
+        if (kind === 'compose') checkCompose(result, t);
+        else checkSwiftUI(result, t);
+      });
+    }
   }
-}
+});

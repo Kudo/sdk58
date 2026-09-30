@@ -5,11 +5,12 @@
  * presets every suite runs under; each test name starts with `[<preset>]`.
  */
 
-import assert from 'node:assert/strict';
 import {spawnSync, type SpawnSyncReturns} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+
+import {expect} from 'vitest';
 
 import {type PresetName, PRESETS} from '../src/presets.ts';
 import type {TreeNode} from '../src/schema.ts';
@@ -54,7 +55,7 @@ export function cli(args: string[], preset: Preset, input?: string): SpawnSyncRe
 
 export function cliJson<T>(args: string[], preset: Preset, expectedStatus = 0): T {
   const proc = cli(args, preset);
-  assert.equal(proc.status, expectedStatus, `rn-a11y-tree ${args.join(' ')} --preset ${preset.name}:\n${proc.stderr}`);
+  expect(proc.status, `rn-a11y-tree ${args.join(' ')} --preset ${preset.name}:\n${proc.stderr}`).toBe(expectedStatus);
   return JSON.parse(proc.stdout) as T;
 }
 
@@ -84,6 +85,6 @@ export function find(node: TreeNode, testID: string): TreeNode | undefined {
 
 export function get(node: TreeNode, testID: string): TreeNode {
   const found = find(node, testID);
-  assert.ok(found, `${testID} not found`);
+  if (found == null) expect.unreachable(`${testID} not found`);
   return found;
 }
