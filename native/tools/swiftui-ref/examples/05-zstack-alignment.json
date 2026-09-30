@@ -1,0 +1,21 @@
+{
+  "host": {"width": 390, "height": 400},
+  "root": {
+    "type": "VStack",
+    "props": {"spacing": 16},
+    "children": [
+      {"type": "ZStack", "props": {"alignment": "bottomTrailing"}, "modifiers": [{"$type": "frame", "width": 200, "height": 100}, {"$type": "background", "style": {"type": "color", "color": "gray"}}], "children": [
+        {"type": "Text", "props": {"text": "Back"}, "modifiers": [{"$type": "frame", "width": 150, "height": 80}]},
+        {"type": "Text", "props": {"text": "Front"}}
+      ]},
+      {"type": "ZStack", "children": [
+        {"type": "Image", "props": {"systemName": "star.fill"}, "modifiers": [{"$type": "font", "size": 60}]},
+        {"type": "Text", "props": {"text": "1"}, "modifiers": [{"$type": "font", "textStyle": "headline"}]}
+      ]},
+      {"type": "ZStack", "props": {"alignment": "topLeading"}, "children": [
+        {"type": "Divider"},
+        {"type": "Text", "props": {"text": "Over a divider"}}
+      ]}
+    ]
+  }
+}

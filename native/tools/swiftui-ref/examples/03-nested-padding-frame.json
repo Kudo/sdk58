@@ -1,0 +1,20 @@
+{
+  "host": {"width": 390, "height": 844, "matchContents": true},
+  "root": {
+    "type": "VStack",
+    "props": {"alignment": "leading", "spacing": 4},
+    "modifiers": [
+      {"$type": "padding", "top": 10, "leading": 20, "bottom": 30, "trailing": 40},
+      {"$type": "background", "style": {"type": "color", "color": "#EEEEEE"}},
+      {"$type": "padding"}
+    ],
+    "children": [
+      {"type": "Text", "props": {"text": "Fixed 200x44"}, "modifiers": [{"$type": "frame", "width": 200, "height": 44, "alignment": "bottomTrailing"}]},
+      {"type": "Text", "props": {"text": "Min/max width"}, "modifiers": [{"$type": "frame", "minWidth": 50, "maxWidth": 300, "alignment": "leading"}, {"$type": "padding", "vertical": "default"}]},
+      {"type": "Text", "props": {"text": "Ideal width, fixedSize"}, "modifiers": [{"$type": "frame", "idealWidth": 250, "alignment": "trailing"}, {"$type": "fixedSize", "horizontal": true}]},
+      {"type": "Text", "props": {"text": "Offset (layout unchanged)"}, "modifiers": [{"$type": "offset", "x": 10, "y": 5}]},
+      {"type": "Text", "props": {"text": "Hidden still takes space"}, "modifiers": [{"$type": "hidden"}]},
+      {"type": "Text", "props": {"text": "Rounded"}, "modifiers": [{"$type": "padding", "all": 8}, {"$type": "background", "style": {"type": "color", "color": "blue"}}, {"$type": "cornerRadius", "radius": 8}, {"$type": "accessibilityLabel", "label": "Rounded label"}]}
+    ]
+  }
+}

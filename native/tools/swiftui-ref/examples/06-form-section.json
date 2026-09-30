@@ -1,0 +1,26 @@
+{
+  "host": {"width": 390, "height": 600},
+  "root": {
+    "type": "Form",
+    "children": [
+      {"type": "Section", "props": {"title": "Account"}, "children": [
+        {"type": "TextField", "props": {"placeholder": "Name"}},
+        {"type": "Toggle", "props": {"label": "Notifications", "isOn": true}},
+        {"type": "Picker", "props": {"label": "Theme", "selection": "dark"}, "modifiers": [{"$type": "pickerStyle", "style": "menu"}], "children": [
+          {"type": "Slot", "props": {"name": "content"}, "children": [
+            {"type": "Text", "props": {"text": "Light"}, "modifiers": [{"$type": "tag", "tag": "light"}]},
+            {"type": "Text", "props": {"text": "Dark"}, "modifiers": [{"$type": "tag", "tag": "dark"}]}
+          ]}
+        ]}
+      ]},
+      {"type": "Section", "children": [
+        {"type": "Slot", "props": {"name": "header"}, "children": [{"type": "Text", "props": {"text": "Volume"}}]},
+        {"type": "Slot", "props": {"name": "content"}, "children": [
+          {"type": "Slider", "props": {"value": 0.5}},
+          {"type": "Label", "props": {"title": "Speaker", "systemImage": "speaker.wave.2"}}
+        ]},
+        {"type": "Slot", "props": {"name": "footer"}, "children": [{"type": "Text", "props": {"text": "Applies to all outputs."}}]}
+      ]}
+    ]
+  }
+}

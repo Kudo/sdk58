@@ -1,0 +1,21 @@
+{
+  "host": {"width": 300, "height": 200},
+  "root": {
+    "type": "VStack",
+    "props": {"alignment": "leading", "spacing": 10},
+    "children": [
+      {"type": "HStack", "children": [
+        {"type": "Text", "props": {"text": "A fairly long first label that wraps"}},
+        {"type": "Text", "props": {"text": "Second label that also wants space"}}
+      ]},
+      {"type": "HStack", "children": [
+        {"type": "Text", "props": {"text": "A fairly long first label that wraps"}},
+        {"type": "Text", "props": {"text": "Second label, priority 1"}, "modifiers": [{"$type": "layoutPriority", "priority": 1}]}
+      ]},
+      {"type": "HStack", "children": [
+        {"type": "Text", "props": {"text": "Truncated to one line maybe"}, "modifiers": [{"$type": "fixedSize", "horizontal": false, "vertical": true}]},
+        {"type": "Text", "props": {"text": "Fixed"}, "modifiers": [{"$type": "fixedSize"}]}
+      ]}
+    ]
+  }
+}

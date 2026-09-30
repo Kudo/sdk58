@@ -1,0 +1,31 @@
+{
+  "host": {"width": 390, "height": 844, "matchContents": {"vertical": true}},
+  "root": {
+    "type": "VStack",
+    "props": {"alignment": "leading", "spacing": 0},
+    "children": [
+      {"type": "Toggle", "props": {"isOn": true}},
+      {"type": "Toggle", "props": {"isOn": true}, "modifiers": [{"$type": "toggleStyle", "style": "automatic"}]},
+      {"type": "Toggle", "props": {"label": "Wifi", "isOn": false}},
+      {"type": "Button", "props": {"label": "Go"}},
+      {"type": "Button", "props": {"label": "Go"}, "modifiers": [{"$type": "buttonStyle", "style": "borderedProminent"}]},
+      {"type": "Button", "props": {"label": "Go"}, "modifiers": [{"$type": "buttonStyle", "style": "borderless"}]},
+      {"type": "Slider", "props": {"value": 0.3}},
+      {"type": "Slider", "props": {"value": 0.3}, "modifiers": [{"$type": "fixedSize"}]},
+      {"type": "Picker", "props": {"label": "Size", "selection": "m"}, "modifiers": [{"$type": "pickerStyle", "style": "segmented"}], "children": [
+        {"type": "Text", "props": {"text": "S"}, "modifiers": [{"$type": "tag", "tag": "s"}]},
+        {"type": "Text", "props": {"text": "M"}, "modifiers": [{"$type": "tag", "tag": "m"}]},
+        {"type": "Text", "props": {"text": "L"}, "modifiers": [{"$type": "tag", "tag": "l"}]}
+      ]},
+      {"type": "Picker", "props": {"label": "Size", "selection": "m"}, "modifiers": [{"$type": "pickerStyle", "style": "menu"}], "children": [
+        {"type": "Text", "props": {"text": "Medium"}, "modifiers": [{"$type": "tag", "tag": "m"}]}
+      ]},
+      {"type": "TextField", "props": {"placeholder": "Email"}},
+      {"type": "Divider"},
+      {"type": "Image", "props": {"systemName": "heart"}},
+      {"type": "Label", "props": {"title": "Favorites", "systemImage": "heart"}},
+      {"type": "Text", "props": {"text": "Body text"}},
+      {"type": "Unknown", "modifiers": [{"$type": "glassEffect"}]}
+    ]
+  }
+}

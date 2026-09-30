@@ -1,0 +1,23 @@
+{
+  "host": {"width": 390, "height": 400},
+  "root": {
+    "type": "VStack",
+    "props": {"spacing": 0},
+    "children": [
+      {"type": "ScrollView", "props": {"axes": "horizontal"}, "modifiers": [{"$type": "frame", "height": 60}], "children": [
+        {"type": "HStack", "props": {"spacing": 8}, "children": [
+          {"type": "Text", "props": {"text": "Chip one"}, "modifiers": [{"$type": "padding", "all": 8}]},
+          {"type": "Text", "props": {"text": "Chip two"}, "modifiers": [{"$type": "padding", "all": 8}]},
+          {"type": "Text", "props": {"text": "Chip three"}, "modifiers": [{"$type": "padding", "all": 8}]}
+        ]}
+      ]},
+      {"type": "List", "children": [
+        {"type": "Text", "props": {"text": "Row 1"}},
+        {"type": "Text", "props": {"text": "Row 2"}},
+        {"type": "Section", "props": {"title": "More"}, "children": [
+          {"type": "Button", "props": {"label": "Row button"}}
+        ]}
+      ]}
+    ]
+  }
+}

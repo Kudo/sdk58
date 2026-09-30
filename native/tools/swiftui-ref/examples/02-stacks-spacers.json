@@ -1,0 +1,21 @@
+{
+  "host": {"width": 390, "height": 300},
+  "root": {
+    "type": "VStack",
+    "props": {"spacing": 0},
+    "modifiers": [{"$type": "frame", "maxWidth": "infinity", "maxHeight": "infinity"}],
+    "children": [
+      {"type": "HStack", "children": [
+        {"type": "Text", "props": {"text": "Leading"}},
+        {"type": "Spacer"},
+        {"type": "Text", "props": {"text": "Trailing"}}
+      ], "modifiers": [{"$type": "padding", "horizontal": 20}]},
+      {"type": "Spacer", "props": {"minLength": 40}},
+      {"type": "HStack", "props": {"spacing": 12, "alignment": "bottom"}, "children": [
+        {"type": "Text", "props": {"text": "Big"}, "modifiers": [{"$type": "font", "textStyle": "largeTitle"}]},
+        {"type": "Text", "props": {"text": "small"}, "modifiers": [{"$type": "font", "textStyle": "caption"}]},
+        {"type": "Spacer", "props": {"minLength": 0}}
+      ]}
+    ]
+  }
+}

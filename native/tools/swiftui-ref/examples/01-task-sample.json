@@ -1,0 +1,14 @@
+{
+  "host": {"width": 390, "height": 844, "matchContents": {"horizontal": false, "vertical": true}},
+  "root": {
+    "type": "VStack",
+    "props": {"spacing": 8, "alignment": "leading"},
+    "modifiers": [{"$type": "padding", "all": 16}],
+    "children": [
+      {"type": "Text", "props": {"text": "Hello"}, "modifiers": [{"$type": "frame", "minWidth": 100}]},
+      {"type": "Button", "props": {"label": "Go"}},
+      {"type": "Toggle", "props": {"isOn": true}},
+      {"type": "Spacer"}
+    ]
+  }
+}
