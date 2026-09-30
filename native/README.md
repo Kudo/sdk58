@@ -693,7 +693,7 @@ Known differences from a device:
 
 ## Build
 
-`yarn build:host` (`scripts/build-host.sh`) builds the host into
+`bun run build:host` (`scripts/build-host.sh`) builds the host into
 `native/dist/<arch>/rn-a11y-host`, a single executable that only links
 system libraries (`FANTOM_STATIC_HOST`). `RN_A11Y_HOST_BUILD_TYPE` selects the tester build type:
 `Release` (default; ThinLTO, `-dead_strip`, `strip -x`), `MinSizeRel` (same with

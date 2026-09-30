@@ -8,7 +8,7 @@ worklets, reanimated all built in).
 
 ## Build types
 
-`scripts/build-host.sh` (`yarn build:host`) takes `RN_A11Y_HOST_BUILD_TYPE`:
+`scripts/build-host.sh` (`bun run build:host`) takes `RN_A11Y_HOST_BUILD_TYPE`:
 
 | Type | Tester flags | `native/dist` |
 |---|---|---|
@@ -27,7 +27,7 @@ Ninja works with the gradle prerequisites (they are plain directories).
 `libhermesvm.dylib` is always the gradle build: `CMAKE_BUILD_TYPE=Release`,
 `HERMES_ENABLE_DEBUGGER=True`. `libjsi.dylib` is built with the tester's type.
 
-`yarn check` (typecheck, 25 unit/CLI tests, 7 e2e tests against
+`bun run check` (typecheck, 25 unit/CLI tests, 7 e2e tests against
 `native/dist`) passes with all three types (0 failures, 0 skipped). Because
 Release passes, it is now the default.
 
@@ -91,7 +91,7 @@ After `touch` of one tester source file, `cmake --build` only:
 | MinSizeRel | 10.5 s | - |
 
 Release/MinSizeRel pay the ThinLTO link (6 to 8 s) on every change.
-`yarn build:host` with nothing to rebuild takes about 10 s (the gradle
+`bun run build:host` with nothing to rebuild takes about 10 s (the gradle
 up-to-date check, the Ninja no-op, the dist copy, `install_name_tool`,
 `strip`, `codesign`).
 
@@ -236,7 +236,7 @@ same sources as a static library). Back-to-back clean Release tester builds
 8.3 s). The difference is the final link (+1.7 s, the Hermes objects go
 through the linker) plus noise.
 
-`yarn check` passes with the single Release executable (25 unit/CLI tests,
+`bun run check` passes with the single Release executable (25 unit/CLI tests,
 7 e2e tests, 0 failures), and a copy of `rn-a11y-host` in `/tmp` runs a
 render (`RN_A11Y_HOST_BIN=/tmp/rn-a11y-host-copy`).
 
@@ -244,9 +244,9 @@ render (`RN_A11Y_HOST_BIN=/tmp/rn-a11y-host-copy`).
 
 ```sh
 # Build types (default Release)
-yarn build:host
-RN_A11Y_HOST_BUILD_TYPE=MinSizeRel yarn build:host
-RN_A11Y_HOST_BUILD_TYPE=Debug yarn build:host
+bun run build:host
+RN_A11Y_HOST_BUILD_TYPE=MinSizeRel bun run build:host
+RN_A11Y_HOST_BUILD_TYPE=Debug bun run build:host
 
 # Configure used by the script (Release shown), from
 # third_party/react-native/private/react-native-fantom/tester
@@ -294,9 +294,9 @@ cmake --build /tmp/hermes-nodebug --target hermesvm
 
 ## Recommendations
 
-1. Ship `Release` (now the default of `yarn build:host`): a single 9.3 MB
+1. Ship `Release` (now the default of `bun run build:host`): a single 9.3 MB
    executable (see Single executable; 9.8 MB with the dylibs) instead of
-   70 MB, same behavior (`yarn check` passes), a CLI render of
+   70 MB, same behavior (`bun run check` passes), a CLI render of
    `examples/basic` is about 0.85 s warm instead of 0.95 s (mostly Node and
    Metro). `MinSizeRel` saves another 1.1 MB (8.2 MB single file) with the same test
    results; use it if the package size matters more than CPU speed in long

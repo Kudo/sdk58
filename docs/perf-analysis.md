@@ -4,7 +4,7 @@ Measured on 2026-09-29 with `scripts/perf.mjs` on the medium example
 (`examples/medium/App.tsx`).
 
 - Machine: Apple M4, 10 cores, 16 GB, macOS 26.5.2, Node v26.5.0.
-- Host binaries: single static executables from `yarn build:host`:
+- Host binaries: single static executables from `bun run build:host`:
   - Release (default): 9,251,344 bytes.
   - Debug (`RN_A11Y_HOST_BUILD_TYPE=Debug`): 73,617,424 bytes.
 - App: native stack with 2 screens, safe area, gesture handler root, a

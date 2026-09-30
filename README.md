@@ -16,7 +16,7 @@ on-screen layout boxes. The native side is documented in
 
 ## Status
 
-macOS arm64 only (the host is built by `yarn build:host`).
+macOS arm64 only (the host is built by `bun run build:host`).
 
 | Feature | How it is real | E2E | Known gaps |
 | --- | --- | --- | --- |
@@ -37,10 +37,10 @@ macOS arm64 only (the host is built by `yarn build:host`).
 
 ```sh
 git clone --recurse-submodules --shallow-submodules <this repo>
-yarn install
-yarn build:host        # builds native/dist/<arch>/rn-a11y-host
-yarn rn-a11y-tree render examples/basic/App.tsx --platform android
-yarn check             # tsc --noEmit, yarn schema --check, yarn test, yarn test:e2e
+bun install
+bun run build:host        # builds native/dist/<arch>/rn-a11y-host
+bun run rn-a11y-tree render examples/basic/App.tsx --platform android
+bun run check             # tsc --noEmit, bun run schema --check, bun run test, bun run test:e2e
 ```
 
 The CLI uses `native/dist/<arch>/rn-a11y-host`. Set `RN_A11Y_HOST_BIN` to use
@@ -213,7 +213,7 @@ adds a violation with `rule: "step"` and `key: "step:<index>"`.
 
 - `schema/*.json`: JSON Schema (draft-07) for the outputs and input files.
   They are generated from the types in `src/schema.ts` with
-  `ts-json-schema-generator` (`yarn schema`; `yarn check` fails when they
+  `ts-json-schema-generator` (`bun run schema`; `bun run check` fails when they
   are out of date). Objects do not allow unknown keys.
 
   | File | Type |
@@ -387,7 +387,7 @@ TypeScript types: [`src/schema.ts`](src/schema.ts).
 The entry uses `NativeFantom.getA11yTree(surfaceId, includeDebugProps)` when
 the host implements it, else `NativeFantom.getRenderedOutput`.
 
-- `shadowTree` (`getA11yTree`, in the host built by `yarn build:host`): the
+- `shadowTree` (`getA11yTree`, in the host built by `bun run build:host`): the
   committed ShadowTree. The hierarchy is complete (no view flattening),
   values are typed (numbers, booleans), and `role`, `accessibilityValue` and
   text fragments are available. Mapping tables are at the top of the
@@ -444,7 +444,7 @@ the host implements it, else `NativeFantom.getRenderedOutput`.
 ## Interactions
 
 ```sh
-yarn rn-a11y-tree run examples/basic/App.tsx --platform android --script examples/basic/actions.json
+bun run rn-a11y-tree run examples/basic/App.tsx --platform android --script examples/basic/actions.json
 ```
 
 `run <file> --platform <p> --script <json> [--tap-mode touch|click|both]`
@@ -701,7 +701,7 @@ imports `DrawerLayoutAndroid`, which imports `StatusBar`).
 ## Session mode
 
 ```sh
-yarn rn-a11y-tree session examples/basic/App.tsx --platform android [--tap-mode touch|click|both]
+bun run rn-a11y-tree session examples/basic/App.tsx --platform android [--tap-mode touch|click|both]
 ```
 
 Bundles once, renders the app, and then serves requests: one JSON object per
@@ -853,7 +853,7 @@ From Fantom's `tester/src` (`main.cpp`, `AppSettings.cpp`,
 
 ## Building the host
 
-`yarn build:host` runs [`scripts/build-host.sh`](scripts/build-host.sh):
+`bun run build:host` runs [`scripts/build-host.sh`](scripts/build-host.sh):
 
 1. Checks `JAVA_HOME` (default `/opt/homebrew/opt/openjdk@17`, JDK 17) and
    `ANDROID_HOME` (default `~/Library/Android/sdk`). Installs
@@ -861,8 +861,8 @@ From Fantom's `tester/src` (`main.cpp`, `AppSettings.cpp`,
    used for its CMake; nothing is built for Android.
 2. Runs `yarn install` (Yarn 1.22.22 through corepack) in
    `third_party/react-native`. A `yarn` shim that runs Yarn 1 is put first on
-   `PATH`, because React Native's codegen calls `yarn` and does not work with
-   Yarn 4.
+   `PATH`, because React Native's codegen calls `yarn` and needs Yarn 1 (this
+   repo itself uses Bun).
 3. Copies `native/overlay/` over `third_party/react-native/private/react-native-fantom/`.
    This changes files in the submodule's working tree; do not commit them
    there. Put patches in `native/overlay/` instead.
@@ -933,15 +933,20 @@ and that release's `host-version.json` (commit it to the repo root, or set
 ## Development
 
 ```sh
-yarn check            # all of the below: typecheck, unit tests, e2e
-yarn typecheck        # tsc --noEmit
-yarn test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.js)
-yarn test:e2e         # real host; skipped if there is no native/dist binary and no RN_A11Y_HOST_BIN
-yarn rn-a11y-tree render examples/basic/App.tsx --platform android --bundle-only
+bun run check            # all of the below: typecheck, unit tests, e2e
+bun run typecheck        # tsc --noEmit
+bun run test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.js)
+bun run test:e2e         # real host; skipped if there is no native/dist binary and no RN_A11Y_HOST_BIN
+bun run rn-a11y-tree render examples/basic/App.tsx --platform android --bundle-only
 ```
 
 Versions: Expo SDK 58 (`expo@58.0.0`), `react-native@0.88.0-rc.2`,
-`react@19.3.0`, Metro 0.87.1. Yarn 4 with `nodeLinker: node-modules`.
+`react@19.3.0`, Metro 0.87.1. Package manager and script runner: Bun
+1.3.14 (`bun.lock`; `bunfig.toml`: `linker = "hoisted"` for a flat
+`node_modules`, `peer = false` so peer dependencies that nothing depends on
+are not installed). The CLI and the tests run on Node (`node --import tsx`).
+The React Native submodule keeps its own Yarn 1 (`build-host.sh`,
+`yarn fantom`).
 
 ## CI
 
@@ -953,8 +958,8 @@ the npm libraries compiled into the host (`react-native-screens`,
 `react-native-reanimated`, `react-native-worklets`, `expo-modules-core`,
 `@expo/ui`) and the hash of
 `native/overlay/**`, `native/scripts/**` and `scripts/build-host.sh`. On a
-cache miss it runs `yarn build:host`. Then: `yarn tsc --noEmit`,
-`yarn test`, `yarn test:e2e` (every `e2e/*.test.ts`), and every
+cache miss it runs `bun run build:host`. Then: `bun x tsc --noEmit`,
+`bun run test`, `bun run test:e2e` (every `e2e/*.test.ts`), and every
 `native/tests/*-itest.js` Fantom test (copied with its helper files into the
 submodule, with the npm libraries installed there too, and run with
 `yarn fantom`, with `GITHUB_ACTIONS` unset because Fantom treats it as Meta
@@ -969,7 +974,7 @@ tags (see [Prebuilt host](#prebuilt-host)).
 ## Milestones
 
 Done: JS/CLI and Metro bundling; host build from this repo
-(`yarn build:host`); CoreText text measurement; typed ShadowTree dump;
+(`bun run build:host`); CoreText text measurement; typed ShadowTree dump;
 interactions (`run`, `session`); react-native-screens and
 react-native-safe-area-context in the host; react-native-gesture-handler
 (JS module on its web handlers + host descriptors); CI workflow (not yet run

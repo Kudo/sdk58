@@ -12,7 +12,7 @@ machine-readable results.
 
 ## 1. Friction an agent hits today
 
-- **F1 First run is expensive.** `yarn build:host` needs Java 17, the
+- **F1 First run is expensive.** `bun run build:host` needs Java 17, the
   Android SDK's CMake, Xcode and about 5 minutes for the first build
   (Hermes from source). The host is macOS arm64 only. A cold Metro build
   takes about 5.4 s, 33 s of CPU and 1.7 GB of RAM.

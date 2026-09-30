@@ -139,7 +139,7 @@ Commands: `native/tools/swiftui-layout-test/build.sh && node native/tools/swiftu
    `native/tools/compose-layout-test/cases/` and run `compare.mjs` (for SwiftUI also
    `--platform ios`).
 5. Host test: extend `native/tests/FantomExpoUI-itest.js` with frames from the engine, then
-   `yarn build:host` and `yarn check`.
+   `bun run build:host` and `bun run check`.
 
 ## Re-measuring iOS metrics
 

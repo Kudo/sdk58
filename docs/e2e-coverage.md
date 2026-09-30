@@ -3,7 +3,7 @@
 Each e2e test runs the CLI against the real host (`native/dist/<arch>/rn-a11y-host`
 or `RN_A11Y_HOST_BIN`) with `--platform android`, and skips with a reason when
 there is no host binary. Unit and CLI tests against a fake host are in
-`test/` (`yarn test`); the native Fantom itests are in `native/tests/` (see
+`test/` (`bun run test`); the native Fantom itests are in `native/tests/` (see
 [`native/README.md`](../native/README.md)).
 
 ## `e2e/render.test.ts` — `examples/basic/App.tsx`, `render`
