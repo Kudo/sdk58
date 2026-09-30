@@ -74,22 +74,26 @@ std::unordered_map<Tag, std::string> gEmulated;
 /*
  * Writes the emulated frames into the Expo views under `parent`.
  *
- * A child that is not sealed was cloned by this layout pass (the Yoga pass
- * clones the children it lays out) and is owned by `parent` only: its layout
- * metrics are set in place. It must not be replaced: the commit keeps raw
- * pointers to the nodes the Yoga pass laid out (the affected layoutable
- * nodes, read by LayoutEventEmitter::shadowTreeDidCommit), and replacing
- * would free them (a heap-use-after-free that crashed the host on CI).
- * A sealed child is shared with the previous revision: it is cloned
+ * `laidOut` holds the nodes this commit's layout pass has laid out
+ * (LayoutContext::affectedNodes). The Yoga pass clones a node before it
+ * mutates it, so such a node is owned by its parent only, and the commit
+ * keeps raw pointers to these nodes (read by
+ * LayoutEventEmitter::shadowTreeDidCommit after layout). They get their frame
+ * in place and must never be replaced: replacing would free them (a
+ * heap-use-after-free that crashed the host on CI).
+ * Any other node may be shared with the previous revision: it is cloned
  * (`clone({})`), gets the frame, and replaces the child in `parent`
  * (YogaLayoutableShadowNode::replaceChild keeps the Yoga tree in sync); the
- * original stays alive in the previous revision. displayType,
- * layoutDirection and pointScaleFactor stay the Yoga pass's. The children of
- * an RNHostView (RN content) keep their Yoga layout.
+ * original stays alive in the previous revision and no raw pointer refers to
+ * it. (ShadowNode::getSealed() cannot tell the two apart: it is always true
+ * in release builds.)
+ * displayType, layoutDirection and pointScaleFactor stay the Yoga pass's. The
+ * children of an RNHostView (RN content) keep their Yoga layout.
  */
 void writeFrames(
     ShadowNode& parent,
-    const std::unordered_map<Tag, Rect>& frames) {
+    const std::unordered_map<Tag, Rect>& frames,
+    const std::unordered_set<const ShadowNode*>& laidOut) {
   auto children = parent.getChildren();
   for (size_t index = 0; index < children.size(); index++) {
     const auto& child = children[index];
@@ -99,7 +103,7 @@ void writeFrames(
     }
     std::shared_ptr<ShadowNode> clone;
     ShadowNode* target;
-    if (!child->getSealed()) {
+    if (laidOut.count(child.get()) != 0) {
       target = const_cast<ShadowNode*>(child.get());
     } else {
       clone = child->clone({});
@@ -113,12 +117,12 @@ void writeFrames(
     metrics.frame = it->second;
     layoutable->setLayoutMetrics(metrics);
     if (target->getComponentName() != kExpoUIRNHostViewName) {
-      writeFrames(*target, frames);
+      writeFrames(*target, frames, laidOut);
     }
     if (clone) {
 #ifndef NDEBUG
-      // Only nodes the previous revision still owns may be replaced (see above).
-      react_native_assert(child->getSealed() && "writeFrames must not replace an unsealed child");
+      // Only nodes that no layout-pass pointer refers to may be replaced.
+      react_native_assert(laidOut.count(child.get()) == 0 && "writeFrames must not replace a laid-out node");
 #endif
       parent.replaceChild(*child, clone, index);
     }
@@ -138,7 +142,13 @@ class FantomExpoHostShadowNode final : public ExpoShadowNode {
     ExpoShadowNode::layout(layoutContext);
     auto result =
         layoutExpoHostSubtree(*this, getLayoutMetrics().frame.size);
-    writeFrames(*this, result.frames);
+    std::unordered_set<const ShadowNode*> laidOut;
+    if (layoutContext.affectedNodes != nullptr) {
+      for (const auto* node : *layoutContext.affectedNodes) {
+        laidOut.insert(node);
+      }
+    }
+    writeFrames(*this, result.frames, laidOut);
   }
 };
 

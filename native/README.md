@@ -704,10 +704,18 @@ sources, codegen), because its `configureFantomTester` task hardcodes
 arguments into `private/react-native-fantom/build/tester-<type>` with Ninja.
 Times and sizes: `docs/build-analysis.md`.
 
-`RN_A11Y_HOST_SANITIZE=1 bun run build:host` builds a Debug host with
+Release and MinSizeRel compile with `-g`; the script writes
+`native/dist/<arch>/rn-a11y-host.dSYM` (about 170 MB) before stripping the
+binary, so crash reports can be symbolicated with `atos -o
+rn-a11y-host.dSYM/Contents/Resources/DWARF/rn-a11y-host -arch arm64 -l <load
+address> <addresses>`. CMake is re-configured when the script's arguments change.
+
+`RN_A11Y_HOST_SANITIZE=1 bun run build:host` builds a host with
 AddressSanitizer and UndefinedBehaviorSanitizer into
-`private/react-native-fantom/build/tester-debug-sanitize/fantom_tester` (not
-copied to `native/dist`; with `-DFANTOM_SANITIZE=ON` folly's
+`private/react-native-fantom/build/tester-<type>-sanitize/fantom_tester`
+(Debug by default; `RN_A11Y_HOST_BUILD_TYPE=Release` keeps `NDEBUG`, which
+matters: React Native's release code paths differ, for example
+`ShadowNode::getSealed()` is always true; not copied to `native/dist`; with `-DFANTOM_SANITIZE=ON` folly's
 `SanitizeLeak.cpp` is compiled in). Run it through the CLI with
 `RN_A11Y_HOST_BIN=<that path> ASAN_OPTIONS=detect_leaks=0:detect_container_overflow=0`
 (container-overflow reports are false positives: Hermes' static libraries are

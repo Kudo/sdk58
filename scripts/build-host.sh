@@ -128,14 +128,17 @@ rsync -a "$OVERLAY_DIR/" "$FANTOM_DIR/"
 # the prerequisites (Hermes, third-party sources, codegen) and the tester is
 # configured here with the same arguments into build/tester-<type> (Ninja).
 #
-# RN_A11Y_HOST_SANITIZE=1: a Debug build with AddressSanitizer and
-# UndefinedBehaviorSanitizer in build/tester-debug-sanitize. It is not copied
-# to native/dist (the dist binary stays as it is); run it with
+# RN_A11Y_HOST_SANITIZE=1: a build with AddressSanitizer and
+# UndefinedBehaviorSanitizer in build/tester-<type>-sanitize (Debug unless
+# RN_A11Y_HOST_BUILD_TYPE is set: Release keeps NDEBUG, which changes React
+# Native's code paths, e.g. ShadowNode sealing is off). It is not copied to
+# native/dist (the dist binary stays as it is); run it with
 # RN_A11Y_HOST_BIN=<printed path>.
 SANITIZE="${RN_A11Y_HOST_SANITIZE:-0}"
-BUILD_TYPE="${RN_A11Y_HOST_BUILD_TYPE:-Release}"
 if [[ "$SANITIZE" == "1" ]]; then
-  BUILD_TYPE=Debug
+  BUILD_TYPE="${RN_A11Y_HOST_BUILD_TYPE:-Debug}"
+else
+  BUILD_TYPE="${RN_A11Y_HOST_BUILD_TYPE:-Release}"
 fi
 case "$BUILD_TYPE" in
   Debug|Release|MinSizeRel) ;;
@@ -151,7 +154,7 @@ FANTOM_BUILD_DIR="$FANTOM_DIR/build"
 REACT_NATIVE_DIR="$RN_DIR/packages/react-native"
 TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER"
 if [[ "$SANITIZE" == "1" ]]; then
-  TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-debug-sanitize"
+  TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER-sanitize"
 fi
 
 # Same arguments as configureFantomTester in private/react-native-fantom/build.gradle.kts.
@@ -167,7 +170,7 @@ CMAKE_ARGS=(
   -DHERMES_V1_ENABLED=1
 )
 if [[ "$SANITIZE" == "1" ]]; then
-  SANITIZE_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
+  SANITIZE_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -g"
   CMAKE_ARGS+=(
     "-DCMAKE_C_FLAGS=$SANITIZE_FLAGS"
     "-DCMAKE_CXX_FLAGS=$SANITIZE_FLAGS"
@@ -177,21 +180,32 @@ if [[ "$SANITIZE" == "1" ]]; then
     -DFANTOM_SANITIZE=ON
   )
 elif [[ "$BUILD_TYPE" != "Debug" ]]; then
-  # ThinLTO and dead code stripping (docs/build-analysis.md).
+  # ThinLTO and dead code stripping (docs/build-analysis.md). Debug info (-g)
+  # for native/dist/<arch>/rn-a11y-host.dSYM: ThinLTO keeps its objects in
+  # lto-objects/ so that dsymutil can read them; the binary is stripped.
   CMAKE_ARGS+=(
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
-    "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-dead_strip"
+    -DCMAKE_C_FLAGS=-g
+    -DCMAKE_CXX_FLAGS=-g
+    -DCMAKE_OBJC_FLAGS=-g
+    -DCMAKE_OBJCXX_FLAGS=-g
+    "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-dead_strip -Wl,-object_path_lto,$TESTER_BUILD_DIR/lto-objects"
     "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-dead_strip"
   )
 fi
 
 # Configure once per build directory; Ninja re-runs CMake itself when a
 # CMakeLists.txt or a CONFIGURE_DEPENDS glob changes.
-if [[ ! -f "$TESTER_BUILD_DIR/build.ninja" ]]; then
+# Re-configure when the arguments change (the cache keeps the old values).
+ARGS_STAMP="$TESTER_BUILD_DIR/.rn-a11y-cmake-args"
+ARGS_HASH="$(printf '%s\n' "${CMAKE_ARGS[@]}" | shasum | cut -d' ' -f1)"
+if [[ ! -f "$TESTER_BUILD_DIR/build.ninja" || "$(cat "$ARGS_STAMP" 2>/dev/null)" != "$ARGS_HASH" ]]; then
+  mkdir -p "$TESTER_BUILD_DIR/lto-objects"
   log "cmake configure ($BUILD_TYPE, Ninja) -> ${TESTER_BUILD_DIR#"$ROOT"/}"
   "$CMAKE_BIN_DIR/cmake" --log-level=ERROR -G Ninja \
     -DCMAKE_MAKE_PROGRAM="$CMAKE_BIN_DIR/ninja" \
     -S "$FANTOM_DIR/tester" -B "$TESTER_BUILD_DIR" "${CMAKE_ARGS[@]}"
+  echo "$ARGS_HASH" >"$ARGS_STAMP"
 fi
 
 log "cmake --build ($BUILD_TYPE)"
@@ -269,9 +283,13 @@ else
   done
 fi
 
-# Release/MinSizeRel: remove local symbols (strip -x; exported symbols stay,
-# dylibs need them).
+# Release/MinSizeRel: debug symbols into rn-a11y-host.dSYM (for crash
+# reports: `atos -o rn-a11y-host.dSYM/Contents/Resources/DWARF/rn-a11y-host
+# -arch arm64 -l <load address> <addresses>`), then remove local symbols
+# (strip -x; exported symbols stay, dylibs need them).
 if [[ "$BUILD_TYPE" != "Debug" ]]; then
+  log "dsymutil -> ${DIST_DIR#"$ROOT"/}/rn-a11y-host.dSYM"
+  dsymutil "$DIST_DIR/rn-a11y-host" -o "$DIST_DIR/rn-a11y-host.dSYM"
   for f in "$DIST_DIR/rn-a11y-host" ${DIST_DYLIBS[@]+"${DIST_DYLIBS[@]}"}; do
     strip -x "$f"
   done
