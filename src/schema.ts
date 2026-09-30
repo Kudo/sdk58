@@ -1,6 +1,6 @@
 /**
  * Output schema of `rn-a11y-tree` (render, run, check, session, errors).
- * Keep in sync with README.md. `yarn schema` generates `schema/*.json` from
+ * Keep in sync with README.md. `bun run schema` generates `schema/*.json` from
  * the exported types listed in scripts/gen-schema.ts.
  */
 

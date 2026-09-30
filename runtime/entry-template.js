@@ -89,7 +89,7 @@ registerRender(() => {
     if (script != null) {
       if (typeof NativeFantom.getA11yTree !== 'function') {
         throw new Error(
-          'rn-a11y-tree run: the host has no NativeFantom.getA11yTree; rebuild it with `yarn build:host`',
+          'rn-a11y-tree run: the host has no NativeFantom.getA11yTree; rebuild it with `bun run build:host`',
         );
       }
       const {runActions} = require('__RUNTIME_DIR__/actions');

@@ -74,7 +74,7 @@ function checkLayoutLabels(host: TreeNode, engine: 'swiftui' | 'compose', realLa
   }
 }
 
-const skip = hostBin ? false : `no host binary: run \`yarn build:host\` or set RN_A11Y_HOST_BIN`;
+const skip = hostBin ? false : `no host binary: run \`bun run build:host\` or set RN_A11Y_HOST_BIN`;
 
 test('expo-ui: universal @expo/ui (Compose views) — tree, roles, button, switch, clickable Text', {skip, timeout: 180_000}, t => {
   const result = run('App.tsx');

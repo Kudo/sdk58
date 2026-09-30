@@ -2,8 +2,8 @@
  * Generates `schema/*.json` (JSON Schema draft-07, from the types in
  * src/schema.ts) and `tools/*.json` (tool descriptors, from src/tools.ts).
  *
- *   yarn schema          write the files
- *   yarn schema --check  exit 1 if a file is out of date
+ *   bun run schema          write the files
+ *   bun run schema --check  exit 1 if a file is out of date
  */
 
 import fs from 'node:fs';
@@ -136,7 +136,7 @@ function main() {
     }
   }
   if (stale.length > 0) {
-    process.stderr.write(`out of date (run \`yarn schema\`): ${stale.join(', ')}\n`);
+    process.stderr.write(`out of date (run \`bun run schema\`): ${stale.join(', ')}\n`);
     process.exitCode = 1;
   }
 }

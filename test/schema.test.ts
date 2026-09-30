@@ -42,11 +42,11 @@ function cli(args: string[], env: Record<string, string> = {}, input?: string) {
   });
 }
 
-test('schema/*.json and tools/*.json are up to date (yarn schema)', {timeout: 120_000}, () => {
+test('schema/*.json and tools/*.json are up to date (bun run schema)', {timeout: 120_000}, () => {
   const files = generate();
   assert.equal(files.size, Object.keys(SCHEMAS).length + TOOLS.length);
   for (const [file, content] of files) {
-    assert.equal(fs.readFileSync(path.join(ROOT, file), 'utf8'), content, `${file} is out of date: run yarn schema`);
+    assert.equal(fs.readFileSync(path.join(ROOT, file), 'utf8'), content, `${file} is out of date: run bun run schema`);
   }
 });
 

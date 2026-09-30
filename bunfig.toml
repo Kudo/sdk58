@@ -1,0 +1,9 @@
+[install]
+# A flat, hoisted node_modules (like Yarn's node-modules linker): Metro,
+# @expo/metro-config and the host build (native libraries compiled from
+# node_modules, RN_NATIVE_LIBS_DIR) expect packages at node_modules/<name>.
+linker = "hoisted"
+# Do not install peer dependencies that no package depends on directly
+# (Yarn did not either; e.g. @react-native/metro-config@0.87.1, an optional
+# peer of @react-native/community-cli-plugin).
+peer = false

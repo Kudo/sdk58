@@ -1,6 +1,6 @@
 /**
  * Tool descriptors (MCP-style) for agents: one tool per CLI use case, with
- * an input schema, the output schema and an example. `yarn schema` writes
+ * an input schema, the output schema and an example. `bun run schema` writes
  * them to `tools/*.json`; `toolArgv()` maps a tool input to CLI arguments.
  *
  * The input types below are the source of the `inputSchema`s.

@@ -45,7 +45,7 @@ test('fails with a clear message when the host binary is missing', {timeout: 120
   const {error} = JSON.parse(proc.stderr.trim().split('\n').pop()!);
   assert.equal(error.code, 'HOST_MISSING');
   assert.match(error.message, /RN_A11Y_HOST_BIN points to a missing file/);
-  assert.match(error.hint, /yarn build:host/);
+  assert.match(error.hint, /bun run build:host/);
   assert.equal(proc.stdout, '');
 });
 

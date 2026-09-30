@@ -50,7 +50,7 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
     if (request.start) {
       if (typeof NativeFantom.getA11yTree !== 'function') {
         throw new Error(
-          'the host has no NativeFantom.getA11yTree; rebuild it with `yarn build:host`',
+          'the host has no NativeFantom.getA11yTree; rebuild it with `bun run build:host`',
         );
       }
       if (runner != null) throw new Error('Session is already started');

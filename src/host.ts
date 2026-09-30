@@ -52,9 +52,9 @@ export class HostError extends CliError {
 }
 
 const BUILD_HINT =
-  'Run `yarn build:host`, set RN_A11Y_HOST_BIN to the path of a host binary, or set RN_A11Y_HOST_BASE_URL to download a prebuilt host.';
+  'Run `bun run build:host`, set RN_A11Y_HOST_BIN to the path of a host binary, or set RN_A11Y_HOST_BASE_URL to download a prebuilt host.';
 
-/** `native/dist/<arch>/rn-a11y-host`, produced by `yarn build:host`. */
+/** `native/dist/<arch>/rn-a11y-host`, produced by `bun run build:host`. */
 export const DEFAULT_HOST_BIN = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',

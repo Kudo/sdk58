@@ -26,7 +26,7 @@ test(
   {
     skip: hostBin
       ? false
-      : `no host binary: run \`yarn build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
+      : `no host binary: run \`bun run build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
     timeout: 180_000,
   },
   t => {
@@ -41,7 +41,7 @@ test(
       },
     );
     if (proc.status !== 0 && /no NativeFantom\.getA11yTree/.test(proc.stderr)) {
-      t.skip('host has no getA11yTree; rebuild it with `yarn build:host`');
+      t.skip('host has no getA11yTree; rebuild it with `bun run build:host`');
       return;
     }
     assert.equal(proc.status, 0, `CLI failed:\n${proc.stderr}`);

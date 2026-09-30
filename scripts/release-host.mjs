@@ -91,7 +91,7 @@ function main() {
   const outDir = path.resolve(arg('--out', path.join(ROOT, 'dist', 'release')));
   const bin = path.resolve(arg('--bin', path.join(ROOT, 'native', 'dist', arch, 'rn-a11y-host')));
   if (!fs.existsSync(bin)) {
-    console.error(`release-host: ${path.relative(ROOT, bin)} not found; run \`yarn build:host\` first`);
+    console.error(`release-host: ${path.relative(ROOT, bin)} not found; run \`bun run build:host\` first`);
     process.exit(1);
   }
 
@@ -106,7 +106,7 @@ function main() {
   const libs = nativeLibVersions();
   const binStat = fs.statSync(bin);
   if (overlay.newestMtimeMs > binStat.mtimeMs) {
-    console.error('release-host: warning: native/overlay has files newer than the host binary; rebuild with `yarn build:host`');
+    console.error('release-host: warning: native/overlay has files newer than the host binary; rebuild with `bun run build:host`');
   }
   if (overlayGitStatus !== '') {
     console.error(`release-host: warning: native/overlay has uncommitted changes:\n${overlayGitStatus}`);

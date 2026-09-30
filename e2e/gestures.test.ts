@@ -36,7 +36,7 @@ test(
   {
     skip: hostBin
       ? false
-      : `no host binary: run \`yarn build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
+      : `no host binary: run \`bun run build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
     timeout: 180_000,
   },
   t => {
