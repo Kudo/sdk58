@@ -25,6 +25,10 @@ export type CommonInput = {
   safeAreaInsets?: Insets;
   /** react-native-screens native header height in dp. */
   headerHeight?: number;
+  /** Device pixel ratio (Dimensions/PixelRatio); default: preset, else 3. */
+  scale?: number;
+  /** Font scale (Dimensions/PixelRatio); default 1. */
+  fontScale?: number;
   /** Development bundle (`__DEV__ = true`). */
   dev?: boolean;
   /** Set false to skip mounted-view values (`visualBox`, `effectiveOpacity`). */

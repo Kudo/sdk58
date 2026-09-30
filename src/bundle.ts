@@ -59,6 +59,11 @@ export type TapMode = 'touch' | 'click' | 'both';
 export type HostConfig = {
   /** getA11yTree includeMountedProps (default true). */
   mounted?: boolean;
+  /**
+   * NativeFantom.setDeviceMetrics before the app module loads: Dimensions
+   * (window and screen) and PixelRatio. Hosts without it keep their defaults.
+   */
+  deviceMetrics?: {width: number; height: number; scale: number; fontScale: number};
   headerHeight?: number;
   safeAreaInsets?: {top: number; left: number; right: number; bottom: number};
 };

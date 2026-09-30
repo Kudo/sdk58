@@ -43,6 +43,14 @@
         "react-native": "0.88.0-rc.2",
       },
     },
+    "examples/dimensions": {
+      "name": "@react-native-a11y-tree/example-dimensions",
+      "version": "0.0.0",
+      "dependencies": {
+        "react": "19.3.0",
+        "react-native": "0.88.0-rc.2",
+      },
+    },
     "examples/expo-ui": {
       "name": "@react-native-a11y-tree/example-expo-ui",
       "version": "0.0.0",
@@ -412,6 +420,8 @@
     "@oxc-project/types": ["@oxc-project/types@0.141.0", "", {}, "sha512-S4as7z0j0xQkXcJlyY5ehntwK8/wRkQb9Cyqw+J/N2rkWGQGK0SxD6X6DhQTc7qsxVTBxXbxZtBJh3mr3PtIzQ=="],
 
     "@react-native-a11y-tree/example-basic": ["@react-native-a11y-tree/example-basic@workspace:examples/basic"],
+
+    "@react-native-a11y-tree/example-dimensions": ["@react-native-a11y-tree/example-dimensions@workspace:examples/dimensions"],
 
     "@react-native-a11y-tree/example-expo-ui": ["@react-native-a11y-tree/example-expo-ui@workspace:examples/expo-ui"],
 

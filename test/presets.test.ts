@@ -40,6 +40,9 @@ test('loadProjectConfig validates keys and types', () => {
   assert.deepEqual(loadProjectConfig(tmpProject({preset: 'ios-phone', headerHeight: 50})), {preset: 'ios-phone', headerHeight: 50});
   assert.throws(() => loadProjectConfig(tmpProject({colour: 'red'})), /unknown key "colour"/);
   assert.throws(() => loadProjectConfig(tmpProject({width: 'wide'})), /"width" must be a number/);
+  assert.throws(() => loadProjectConfig(tmpProject({scale: 0})), /"scale" must be a number > 0/);
+  assert.equal(resolveSettings({preset: 'ios-tablet'}, null).scale, 2);
+  assert.equal(resolveSettings({preset: 'android-phone', scale: 2.625}, null).scale, 2.625);
   assert.throws(() => loadProjectConfig(tmpProject({safeAreaInsets: {top: 1}})), /safeAreaInsets/);
   assert.throws(() => loadProjectConfig(tmpProject('{nope')), /not valid JSON/);
   assert.throws(() => loadProjectConfig(tmpProject({preset: 'watch'})), /unknown preset/);
@@ -65,7 +68,10 @@ test('CLI: a11y-tree.json supplies the platform and viewport; flags override', {
   assert.match(code, /viewportHeight = 1000/);
   assert.match(code, /headerHeight": 64/);
   assert.match(code, /"top": 24/);
-  const overridden = read(bundleOnly(['--width', '320', '--header-height', '40']));
+  // Dimensions/PixelRatio: viewport, the preset's scale (tablet 2), font scale 1.
+  assert.match(code, /"deviceMetrics": \{\s*"width": 800,\s*"height": 1000,\s*"scale": 2,\s*"fontScale": 1\s*\}/);
+  const overridden = read(bundleOnly(['--width', '320', '--header-height', '40', '--scale', '1.5', '--font-scale', '1.3']));
+  assert.match(overridden, /"deviceMetrics": \{\s*"width": 320,\s*"height": 1000,\s*"scale": 1.5,\s*"fontScale": 1.3\s*\}/);
   assert.match(overridden, /viewportWidth = 320/);
   assert.match(overridden, /headerHeight": 40/);
   fs.rmSync(dir, {recursive: true, force: true});

@@ -103,6 +103,8 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--height <dp>` | all | preset, else `844` | Viewport height |
 | `--header-height <dp>` | all | preset, else 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
 | `--safe-area-insets <t,l,r,b>` | all | preset, else `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
+| `--scale <n>` | all | preset, else 3 | Device pixel ratio: `PixelRatio.get()` and the `scale` of `Dimensions` / `useWindowDimensions()` |
+| `--font-scale <n>` | all | preset (1), else 1 | `PixelRatio.getFontScale()` and `fontScale` of `Dimensions` |
 | `--no-mounted` | all | mounted on | Do not read mounted-view values (`getA11yTree` `includeMountedProps`; used for `visualBox`, `effectiveOpacity`) |
 | `--timing` | all | off | Print phase timings as JSON on stderr (see [`docs/perf-analysis.md`](docs/perf-analysis.md)) |
 | `--reset-cache` | all | off | Ignore Metro's caches and the bundle cache (cold bundle) |
@@ -128,24 +130,31 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 
 ## Presets and a11y-tree.json
 
-A preset sets the platform, viewport, safe area insets and header height:
+A preset sets the platform, viewport, safe area insets, header height and
+device scale:
 
-| Preset | Platform | Viewport | Insets (t,l,r,b) | Header |
-| --- | --- | --- | --- | --- |
-| `android-phone` | `android` | 412x915 (Pixel 8) | 24,0,0,0 | 56 |
-| `ios-phone` | `ios` | 393x852 (iPhone 15/16) | 59,0,0,34 | 44 |
-| `android-tablet` | `android` | 800x1280 (Pixel Tablet, portrait) | 24,0,0,0 | 64 |
-| `ios-tablet` | `ios` | 834x1194 (iPad 11", portrait) | 24,0,0,20 | 50 |
+| Preset | Platform | Viewport | Insets (t,l,r,b) | Header | Scale |
+| --- | --- | --- | --- | --- | --- |
+| `android-phone` | `android` | 412x915 (Pixel 8) | 24,0,0,0 | 56 | 3 |
+| `ios-phone` | `ios` | 393x852 (iPhone 15/16) | 59,0,0,34 | 44 | 3 |
+| `android-tablet` | `android` | 800x1280 (Pixel Tablet, portrait) | 24,0,0,0 | 64 | 2 |
+| `ios-tablet` | `ios` | 834x1194 (iPad 11", portrait) | 24,0,0,20 | 50 | 2 |
 
 ```sh
 rn-a11y-tree render App.tsx --preset android-phone
 rn-a11y-tree render App.tsx --preset ios-phone --platform android   # iPhone size, Android components
 ```
 
+`Dimensions` (window and screen) and `PixelRatio` follow the viewport,
+`scale` and `fontScale`: the bundle calls `NativeFantom.setDeviceMetrics`
+before the app module loads (apps often read `Dimensions` at import time).
+Hosts without it (no `deviceMetrics` capability) report 1280x720, scale 0.
+
 An optional `a11y-tree.json` in the project root (the directory of the app
 file's nearest `package.json`) holds defaults for the project. Allowed keys:
 `preset`, `platform`, `width`, `height`, `safeAreaInsets`
-(`{top, left, right, bottom}`), `headerHeight`, `tapMode`, `format`. Unknown
+(`{top, left, right, bottom}`), `headerHeight`, `scale`, `fontScale`,
+`tapMode`, `format`, `rules`. Unknown
 keys and wrong types are usage errors (exit 1).
 
 ```json

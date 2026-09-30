@@ -28,6 +28,14 @@
     "headerHeight": {
       "type": "number"
     },
+    "scale": {
+      "type": "number",
+      "description": "Device pixel ratio (PixelRatio.get(), Dimensions scale)."
+    },
+    "fontScale": {
+      "type": "number",
+      "description": "Font scale (PixelRatio.getFontScale())."
+    },
     "tapMode": {
       "type": "string"
     },

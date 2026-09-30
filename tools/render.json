@@ -67,6 +67,14 @@
         "type": "number",
         "description": "react-native-screens native header height in dp."
       },
+      "scale": {
+        "type": "number",
+        "description": "Device pixel ratio (Dimensions/PixelRatio); default: preset, else 3."
+      },
+      "fontScale": {
+        "type": "number",
+        "description": "Font scale (Dimensions/PixelRatio); default 1."
+      },
       "dev": {
         "type": "boolean",
         "description": "Development bundle (`__DEV__ = true`)."

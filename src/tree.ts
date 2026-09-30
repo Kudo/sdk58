@@ -386,8 +386,9 @@ const SPAN_A11Y_KEYS = [
   'testID',
 ] as const;
 
-const TEXT_INPUT_TYPES = new Set(['TextInput', 'AndroidTextInput']);
-const SWITCH_TYPES = new Set(['Switch', 'AndroidSwitch']);
+/** TextInput host components: iOS name, Android name. */
+export const TEXT_INPUT_TYPES = new Set(['TextInput', 'AndroidTextInput']);
+export const SWITCH_TYPES = new Set(['Switch', 'AndroidSwitch']);
 
 /**
  * Offset of a node's content relative to its frame. Uses the host's

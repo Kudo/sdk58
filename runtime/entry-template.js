@@ -33,6 +33,11 @@ registerRender(() => {
   // imports expo, expo-modules-core or @expo/ui.
   /* __EXPO_PRELUDE__ */
 
+  // Host settings applied before the first render (runtime/hostConfig.js).
+  const hostConfig = __HOST_CONFIG__;
+  // Dimensions/PixelRatio before the app module: apps read them at import.
+  require('__RUNTIME_DIR__/hostConfig').applyDeviceMetrics(hostConfig.deviceMetrics);
+
   const appModule = require('__APP_PATH__');
   const App = appModule.default ?? appModule.App;
   if (typeof App !== 'function' && (typeof App !== 'object' || App == null)) {
@@ -49,8 +54,6 @@ registerRender(() => {
   const tapMode = __TAP_MODE__;
   // `run` options, e.g. {diff: true} (send the tree after every step).
   const runOptions = __RUN_OPTIONS__;
-  // Host settings applied before the first render (runtime/hostConfig.js).
-  const hostConfig = __HOST_CONFIG__;
   // `session`: install globalThis.__rnA11y for the host's --interactive mode
   // (see runtime/session.js). The host never calls $$RunTests$$ then.
   const session = __SESSION__;

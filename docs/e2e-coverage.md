@@ -22,6 +22,7 @@ them in the table. Unit and CLI tests against a fake host are in `test/`
 | `e2e/gestures.test.ts` | gestures | android-phone, ios-phone | root `RNGestureHandlerRootView` / `View` |
 | `e2e/reanimated.test.ts` | reanimated | android-phone, ios-phone | none |
 | `e2e/expo-ui.test.ts` | expo-ui | android-phone (App.tsx Compose + SwiftUIScreen.tsx), ios-phone (App.tsx SwiftUI) | Compose screen on android, SwiftUI screen on ios |
+| `e2e/dimensions.test.ts` | dimensions | android-phone, ios-phone | window/screen = preset viewport, scale 3, fontScale 1 (needs `deviceMetrics`) |
 | `e2e/package.test.ts` | basic (scratch project) | android-phone | none |
 
 ## `e2e/render.test.ts` — `examples/basic/App.tsx`, `render`
@@ -85,6 +86,15 @@ Skipped off macOS, without `npm`, or without a `native/dist` host.
 - The CLI tarball has `dist/cli.js` and no `src/`, `native/`, `test/`, `e2e/`, `examples/`, `third_party/`.
 - `npm install expo@58.0.0 react-native@0.88.0-rc.2 react@19.3.0 <both tarballs>` in a scratch project; `npx rn-a11y-tree render App.tsx --preset android-phone --format text` (examples/basic) prints `RootView RootView {0,0,412x915}` and the `submit` line (364x48).
 - `npx rn-a11y-tree session` ready line: `host.source === "package"`, `host.protocolVersion === 1`.
+
+## `e2e/dimensions.test.ts` — `examples/dimensions/App.tsx`, `render`
+
+Skipped without the `deviceMetrics` capability.
+
+- `useWindowDimensions()` gives `window <width>x<height> scale <scale> fontScale <fontScale>` of the preset (412x915 / 393x852, scale 3, font scale 1).
+- `Dimensions.get('screen')` read at import time gives the viewport too (set before the app module loads).
+- `PixelRatio.get()` / `getFontScale()` match.
+- `--scale 2 --font-scale 1.5` override the preset in all three.
 
 ## `e2e/scrolling.test.ts` — `examples/scrolling/actions.json`, `run`
 

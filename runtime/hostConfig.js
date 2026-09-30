@@ -6,6 +6,11 @@
  *   (NativeFantom.setSafeAreaInsets; host default 0).
  * - includeMountedProps: ask getA11yTree for mounted-view values (default
  *   true; `--no-mounted` turns it off). Read with `readA11yTree`.
+ * - deviceMetrics (applyDeviceMetrics, before the app module loads, since
+ *   apps read Dimensions at import time): NativeFantom.setDeviceMetrics
+ *   ({width, height, scale, fontScale}) sets Dimensions (window and screen)
+ *   and PixelRatio. Hosts without it (no `deviceMetrics` capability) keep
+ *   their defaults, silently.
  * Settings the host does not support are reported with console.warn.
  */
 
@@ -34,4 +39,9 @@ export function applyHostConfig({headerHeight, safeAreaInsets, mounted}) {
       console.warn('rn-a11y-tree: the host has no setSafeAreaInsets; safe area insets not applied');
     }
   }
+}
+
+export function applyDeviceMetrics(deviceMetrics) {
+  if (deviceMetrics == null || typeof NativeFantom.setDeviceMetrics !== 'function') return;
+  NativeFantom.setDeviceMetrics(deviceMetrics);
 }

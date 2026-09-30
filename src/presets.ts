@@ -20,6 +20,10 @@ export type Settings = {
   height?: number;
   safeAreaInsets?: Insets;
   headerHeight?: number;
+  /** Device pixel ratio (PixelRatio.get(), Dimensions scale). */
+  scale?: number;
+  /** Font scale (PixelRatio.getFontScale()). */
+  fontScale?: number;
   tapMode?: string;
   format?: string;
 };
@@ -30,7 +34,8 @@ export type PresetName = 'android-phone' | 'ios-phone' | 'android-tablet' | 'ios
  * Viewports in dp. Android: Pixel 8 (412x915, status bar 24 dp, 56 dp
  * toolbar) and Pixel Tablet portrait (800x1280, 64 dp toolbar). iOS: iPhone
  * 15/16 (393x852, safe area 59/34, 44 dp navigation bar) and iPad 11"
- * portrait (834x1194, safe area 24/20, 50 dp navigation bar).
+ * portrait (834x1194, safe area 24/20, 50 dp navigation bar). Scale: 3 for
+ * phones, 2 for tablets; font scale 1.
  */
 export const PRESETS: Record<PresetName, Required<Omit<Settings, 'tapMode' | 'format'>>> = {
   'android-phone': {
@@ -39,6 +44,8 @@ export const PRESETS: Record<PresetName, Required<Omit<Settings, 'tapMode' | 'fo
     height: 915,
     safeAreaInsets: {top: 24, left: 0, right: 0, bottom: 0},
     headerHeight: 56,
+    scale: 3,
+    fontScale: 1,
   },
   'ios-phone': {
     platform: 'ios',
@@ -46,6 +53,8 @@ export const PRESETS: Record<PresetName, Required<Omit<Settings, 'tapMode' | 'fo
     height: 852,
     safeAreaInsets: {top: 59, left: 0, right: 0, bottom: 34},
     headerHeight: 44,
+    scale: 3,
+    fontScale: 1,
   },
   'android-tablet': {
     platform: 'android',
@@ -53,6 +62,8 @@ export const PRESETS: Record<PresetName, Required<Omit<Settings, 'tapMode' | 'fo
     height: 1280,
     safeAreaInsets: {top: 24, left: 0, right: 0, bottom: 0},
     headerHeight: 64,
+    scale: 2,
+    fontScale: 1,
   },
   'ios-tablet': {
     platform: 'ios',
@@ -60,6 +71,8 @@ export const PRESETS: Record<PresetName, Required<Omit<Settings, 'tapMode' | 'fo
     height: 1194,
     safeAreaInsets: {top: 24, left: 0, right: 0, bottom: 20},
     headerHeight: 50,
+    scale: 2,
+    fontScale: 1,
   },
 };
 
@@ -74,6 +87,8 @@ const CONFIG_KEYS = [
   'height',
   'safeAreaInsets',
   'headerHeight',
+  'scale',
+  'fontScale',
   'tapMode',
   'format',
   'rules',
@@ -112,6 +127,11 @@ export function loadProjectConfig(projectRoot: string): ProjectConfig | null {
   for (const key of ['width', 'height', 'headerHeight']) {
     if (key in config && !(typeof config[key] === 'number' && (config[key] as number) >= 0)) {
       throw usage(`${file}: "${key}" must be a number >= 0`);
+    }
+  }
+  for (const key of ['scale', 'fontScale']) {
+    if (key in config && !(typeof config[key] === 'number' && (config[key] as number) > 0)) {
+      throw usage(`${file}: "${key}" must be a number > 0`);
     }
   }
   if ('safeAreaInsets' in config) {
@@ -154,6 +174,8 @@ export function resolveSettings(
     height: pick('height'),
     safeAreaInsets: pick('safeAreaInsets'),
     headerHeight: pick('headerHeight'),
+    scale: pick('scale'),
+    fontScale: pick('fontScale'),
     tapMode: pick('tapMode'),
     format: pick('format'),
   };

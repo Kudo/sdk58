@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import {type LogEntry, usage} from './errors.ts';
 import {parseSelector} from './format.ts';
 import type {TreeNode} from './schema.ts';
+import {TEXT_INPUT_TYPES} from './tree.ts';
 
 type Ignore = {ignore?: string[]};
 
@@ -423,7 +424,7 @@ export function checkTree(
     }
 
     const fg = parseColor(node.style.color);
-    const hasText = node.text != null && node.text.trim() !== '' && node.type !== 'AndroidTextInput';
+    const hasText = node.text != null && node.text.trim() !== '' && !TEXT_INPUT_TYPES.has(node.type);
     if (contrast && hasText && fg && !ctx.hidden && !ignored.contrast(node)) {
       const large = isLargeText(node.style);
       const min = large && contrast.minLarge != null ? contrast.minLarge : (contrast.min ?? 4.5);

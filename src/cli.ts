@@ -30,6 +30,10 @@ function positiveNumber(value: string): number {
 
 type HostConfigOptions = {
   mounted?: boolean;
+  width?: number;
+  height?: number;
+  scale?: number;
+  fontScale?: number;
   headerHeight?: number;
   safeAreaInsets?: HostConfig['safeAreaInsets'];
 };
@@ -121,8 +125,19 @@ function hostConfigFor(platform: string, options: HostConfigOptions): HostConfig
   const headerHeight = options.headerHeight ?? (platform === 'ios' ? 44 : undefined);
   if (headerHeight != null) config.headerHeight = headerHeight;
   if (options.safeAreaInsets != null) config.safeAreaInsets = options.safeAreaInsets;
+  if (options.width != null && options.height != null) {
+    config.deviceMetrics = {
+      width: options.width,
+      height: options.height,
+      scale: options.scale ?? DEFAULT_SCALE,
+      fontScale: options.fontScale ?? 1,
+    };
+  }
   return config;
 }
+
+/** Device pixel ratio without a preset or --scale (phone-like). */
+const DEFAULT_SCALE = 3;
 
 function requirePlatform(platform: string | undefined): string {
   if (platform == null || platform === '') {
@@ -327,6 +342,8 @@ function applyConfig(
       height: options.height,
       safeAreaInsets: options.safeAreaInsets,
       headerHeight: options.headerHeight,
+      scale: options.scale,
+      fontScale: options.fontScale,
       tapMode: options.tapMode,
       format: options.format,
     },
@@ -337,6 +354,8 @@ function applyConfig(
   options.height = resolved.height ?? 844;
   options.safeAreaInsets = resolved.safeAreaInsets;
   options.headerHeight = resolved.headerHeight;
+  options.scale = resolved.scale;
+  options.fontScale = resolved.fontScale;
   options.tapMode = resolved.tapMode ?? 'touch';
   options.format = resolved.format ?? 'json';
 }
@@ -557,6 +576,8 @@ function addCommonOptions(command: Command): Command {
       'safe area insets for react-native-safe-area-context (default 0,0,0,0)',
       parseInsets,
     )
+    .option('--scale <n>', 'device pixel ratio for Dimensions/PixelRatio (default: preset, else 3)', positiveNumber)
+    .option('--font-scale <n>', 'font scale for Dimensions/PixelRatio (default 1)', positiveNumber)
     .option('-v, --verbose', 'print Metro progress and host logs to stderr', false);
 }
 
@@ -648,6 +669,8 @@ program
     'safe area insets for react-native-safe-area-context (default 0,0,0,0)',
     parseInsets,
   )
+  .option('--scale <n>', 'device pixel ratio for Dimensions/PixelRatio (default: preset, else 3)', positiveNumber)
+  .option('--font-scale <n>', 'font scale for Dimensions/PixelRatio (default 1)', positiveNumber)
   .option('-v, --verbose', 'print Metro progress and host logs to stderr', false)
   .action(session);
 

@@ -330,3 +330,11 @@ test('CLI check: exit 2 with violations, 0 when clean, usage errors exit 1 (fake
   assert.deepEqual(configResult.summary.byRule, {touchTarget: 2});
   fs.rmSync(dir, {recursive: true, force: true});
 });
+
+test('contrast skips text inputs under both names (AndroidTextInput, iOS TextInput)', () => {
+  for (const type of ['AndroidTextInput', 'TextInput']) {
+    const input = node({key: 'field', type, role: 'textbox', name: 'Email', text: 'typed', style: {color: 'rgba(200, 200, 200, 1)'}});
+    const result = checkTree(node({key: 'root', children: [input]}), {contrast: true}, VIEWPORT);
+    assert.equal(result.nodes.find(n => n.key === 'field')?.props.contrast, undefined, type);
+  }
+});
