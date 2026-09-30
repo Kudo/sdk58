@@ -17,7 +17,7 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | File | Change |
 |---|---|
 | `tester/third-party/nlohmann_json/CMakeLists.txt` | `SYSTEM` include directory. Apple clang 21 with `-Werror` fails on `-Wdeprecated-literal-operator` in the bundled `json.hpp`. |
-| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context, react-native-gesture-handler) when they are found (see Native libraries). With `FANTOM_STATIC_HOST` (default `ON`) Hermes (its static archives from the Hermes build), JSI (the `jsi` target defined as `STATIC` here, instead of `ReactCommon/jsi`'s `SHARED` one) and OpenSSL's `libcrypto.a` are linked statically: one executable without dylibs (see `docs/build-analysis.md`). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
+| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context, react-native-gesture-handler) when they are found (see Native libraries). With `FANTOM_STATIC_HOST` (default `ON`) Hermes (its static archives from the Hermes build), JSI (the `jsi` target defined as `STATIC` here, instead of `ReactCommon/jsi`'s `SHARED` one) are linked statically, and SHA-256 goes through a CommonCrypto shim instead of OpenSSL (`src/stubs/crypto`, `FANTOM_OPENSSL_SHIM`): one executable without dylibs and without Homebrew OpenSSL (see `docs/build-analysis.md`). `FANTOM_HERMES_BUILD_DIR` selects the Hermes build to link (the x86_64 one for `RN_A11Y_HOST_ARCH=x86_64`). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
 | `tester/src/platform/macos/TextLayoutManager.mm` (new) | Text measurement with AppKit/TextKit 1 (`NSLayoutManager`). Port of the iOS `RCTTextLayoutManager.mm`, `RCTAttributedTextUtils.mm` and `RCTFontUtils.mm`. The upstream stub returns the minimum size (height 0) for all text. |
 | `tester/src/render/A11yTree.h`, `A11yTree.cpp` (new) | Serializes the shadow tree (not the mounted tree, so views are not flattened) to typed JSON. |
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
@@ -776,6 +776,19 @@ sources, codegen), because its `configureFantomTester` task hardcodes
 `CMAKE_BUILD_TYPE=Debug`; the script configures the tester with the same
 arguments into `private/react-native-fantom/build/tester-<type>` with Ninja.
 Times and sizes: `docs/build-analysis.md`.
+
+`RN_A11Y_HOST_ARCH=arm64|x86_64|universal` (default: the build machine's
+architecture). A foreign architecture (x86_64 on an arm64 Mac) is cross-built
+with `CMAKE_OSX_ARCHITECTURES`: first Hermes for it
+(`ReactAndroid/hermes-engine/build/hermes-<arch>`, rebuilt when the Hermes
+source revision changes; its build imports the native hermesc through
+`IMPORT_HOST_COMPILERS`, so no Rosetta is needed to build), then the tester in
+`build/tester-<type>-<arch>`, into `native/dist/<arch>/rn-a11y-host` (+ dSYM).
+`universal` builds both slices and joins them (and the dSYMs) with `lipo` into
+`native/dist/universal/`. `scripts/release-host.mjs --pack` makes its own
+universal file when `native/dist/arm64` and `native/dist/x86_64` both exist.
+Running the x86_64 slice on an arm64 Mac needs Rosetta; CI checks it on an
+Intel runner.
 
 Release and MinSizeRel compile with `-g`; the script writes
 `native/dist/<arch>/rn-a11y-host.dSYM` (about 170 MB) before stripping the

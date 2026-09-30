@@ -3,11 +3,20 @@
 # third_party/react-native submodule and copies it, with its dylibs, into
 # native/dist/<arch>/ as a relocatable folder:
 #
-#   native/dist/<arch>/rn-a11y-host   (one executable: Hermes, JSI and
-#                                      libcrypto are linked statically)
+#   native/dist/<arch>/rn-a11y-host   (one executable: Hermes and JSI are
+#                                      linked statically; SHA-256 through a
+#                                      CommonCrypto shim, no OpenSSL)
 #
 # With the tester's FANTOM_STATIC_HOST=OFF the dylibs are copied to
 # native/dist/<arch>/lib/ (libhermesvm.dylib, libjsi.dylib).
+#
+# RN_A11Y_HOST_ARCH=arm64 | x86_64 | universal (default: the build machine's
+# architecture). A foreign architecture (x86_64 on an arm64 Mac) gets its own
+# Hermes build (ReactAndroid/hermes-engine/build/hermes-<arch>, with the
+# native build's hermesc through IMPORT_HOST_COMPILERS; rebuilt when the
+# Hermes source revision changes) and tester build dir (tester-<type>-<arch>),
+# and goes to native/dist/<arch>/. `universal` builds arm64 and x86_64 and
+# joins them with lipo into native/dist/universal/rn-a11y-host (+ .dSYM).
 #
 # RN_A11Y_HOST_BUILD_TYPE=Release (default) | MinSizeRel | Debug selects the
 # tester build type (build dir: .../build/tester-<type>). Release and
@@ -15,7 +24,10 @@
 # in native/dist. See docs/build-analysis.md.
 #
 # Requirements: JDK 17, Android SDK (for its CMake and Ninja), Xcode command
-# line tools, Node with corepack. First build takes ~5 min on an M4 (Hermes
+# line tools, Node with corepack. Homebrew OpenSSL is not needed (the tester's
+# FANTOM_OPENSSL_SHIM, default ON). The x86_64 slice on an arm64 Mac adds its
+# own Hermes build (~1.5 min) and tester build (~3.5 min); it cannot run here
+# without Rosetta. First build takes ~5 min on an M4 (Hermes
 # from source ~2.5 min, tester ~2.2 min); incremental builds ~10 s (Release)
 # or ~3 s (Debug) after the gradle check.
 
@@ -28,7 +40,8 @@ FANTOM_DIR="$RN_DIR/private/react-native-fantom"
 # the git index exported with `git checkout-index`, to leave out uncommitted
 # work in the tree).
 OVERLAY_DIR="${RN_A11Y_OVERLAY_DIR:-$ROOT/native/overlay}"
-ARCH="$(uname -m)"
+MACHINE_ARCH="$(uname -m)"
+ARCH="${RN_A11Y_HOST_ARCH:-$MACHINE_ARCH}"
 DIST_DIR="$ROOT/native/dist/$ARCH"
 CMAKE_VERSION="${CMAKE_VERSION:-3.30.5}"
 
@@ -36,6 +49,33 @@ log() { printf '\033[1m[build-host]\033[0m %s\n' "$*"; }
 die() { printf '[build-host] error: %s\n' "$*" >&2; exit 1; }
 
 [[ "$(uname -s)" == "Darwin" ]] || die "only macOS is supported for now"
+
+case "$ARCH" in
+  arm64|x86_64) ;;
+  universal)
+    # Both slices (each a full run of this script), then one fat binary.
+    for slice in arm64 x86_64; do
+      log "universal: building the $slice slice"
+      RN_A11Y_HOST_ARCH="$slice" "$0"
+    done
+    rm -rf "$DIST_DIR"
+    mkdir -p "$DIST_DIR"
+    lipo -create "$ROOT/native/dist/arm64/rn-a11y-host" "$ROOT/native/dist/x86_64/rn-a11y-host" \
+      -output "$DIST_DIR/rn-a11y-host"
+    codesign --force --sign - "$DIST_DIR/rn-a11y-host" 2>/dev/null
+    if [[ -d "$ROOT/native/dist/arm64/rn-a11y-host.dSYM" && -d "$ROOT/native/dist/x86_64/rn-a11y-host.dSYM" ]]; then
+      cp -R "$ROOT/native/dist/arm64/rn-a11y-host.dSYM" "$DIST_DIR/"
+      DWARF=Contents/Resources/DWARF/rn-a11y-host
+      lipo -create "$ROOT/native/dist/arm64/rn-a11y-host.dSYM/$DWARF" \
+        "$ROOT/native/dist/x86_64/rn-a11y-host.dSYM/$DWARF" -output "$DIST_DIR/rn-a11y-host.dSYM/$DWARF"
+    fi
+    log "universal: $(lipo -info "$DIST_DIR/rn-a11y-host" | sed 's/.*: //') ($(stat -f%z "$DIST_DIR/rn-a11y-host") bytes) -> ${DIST_DIR#"$ROOT"/}/rn-a11y-host"
+    exit 0
+    ;;
+  *) die "RN_A11Y_HOST_ARCH must be arm64, x86_64 or universal (got $ARCH)" ;;
+esac
+CROSS_ARCH=0
+[[ "$ARCH" != "$MACHINE_ARCH" ]] && CROSS_ARCH=1
 
 # --- (a) toolchain ---------------------------------------------------------
 
@@ -153,6 +193,9 @@ CMAKE_BIN_DIR="$ANDROID_HOME/cmake/$CMAKE_VERSION/bin"
 FANTOM_BUILD_DIR="$FANTOM_DIR/build"
 REACT_NATIVE_DIR="$RN_DIR/packages/react-native"
 TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER"
+if [[ "$CROSS_ARCH" == "1" ]]; then
+  TESTER_BUILD_DIR="$TESTER_BUILD_DIR-$ARCH"
+fi
 if [[ "$SANITIZE" == "1" ]]; then
   TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER-sanitize"
 fi
@@ -169,6 +212,38 @@ CMAKE_ARGS=(
   -DRN_ENABLE_DEBUG_STRING_CONVERTIBLE=ON
   -DHERMES_V1_ENABLED=1
 )
+CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES="$ARCH")
+
+# A foreign architecture needs Hermes built for it (gradle builds it for the
+# build machine only). Its build runs hermesc to compile Hermes' internal
+# bytecode: the native build's hermesc is imported (IMPORT_HOST_COMPILERS), as
+# for an Android cross build, so no Rosetta is needed to build.
+if [[ "$CROSS_ARCH" == "1" ]]; then
+  HERMES_SRC="$REACT_NATIVE_DIR/sdks/hermes"
+  HERMES_NATIVE_BUILD="$REACT_NATIVE_DIR/ReactAndroid/hermes-engine/build/hermes"
+  HERMES_ARCH_BUILD="$REACT_NATIVE_DIR/ReactAndroid/hermes-engine/build/hermes-$ARCH"
+  HERMES_REV="$(git -C "$HERMES_SRC" rev-parse HEAD 2>/dev/null || cat "$HERMES_SRC/.hermesv1version" 2>/dev/null || echo unknown)"
+  HERMES_STAMP="$HERMES_ARCH_BUILD/.rn-a11y-hermes-rev"
+  if [[ ! -f "$HERMES_ARCH_BUILD/lib/libhermesvm_a.a" || "$(cat "$HERMES_STAMP" 2>/dev/null)" != "$HERMES_REV" ]]; then
+    [[ -f "$HERMES_NATIVE_BUILD/ImportHostCompilers.cmake" ]] || die "no $HERMES_NATIVE_BUILD/ImportHostCompilers.cmake (gradle Hermes build)"
+    log "Hermes for $ARCH (${HERMES_REV:0:12}) -> ${HERMES_ARCH_BUILD#"$ROOT"/}"
+    HERMES_START=$SECONDS
+    "$CMAKE_BIN_DIR/cmake" --log-level=ERROR -Wno-dev -G Ninja \
+      -DCMAKE_MAKE_PROGRAM="$CMAKE_BIN_DIR/ninja" \
+      -S "$HERMES_SRC" -B "$HERMES_ARCH_BUILD" \
+      -DJSI_DIR="$REACT_NATIVE_DIR/ReactCommon/jsi" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DHERMES_ENABLE_DEBUGGER=True \
+      -DHERMESVM_HEAP_HV_MODE=HEAP_HV_PREFER32 \
+      -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
+      -DIMPORT_HOST_COMPILERS="$HERMES_NATIVE_BUILD/ImportHostCompilers.cmake"
+    "$CMAKE_BIN_DIR/cmake" --build "$HERMES_ARCH_BUILD" --target hermesvm
+    echo "$HERMES_REV" >"$HERMES_STAMP"
+    log "Hermes for $ARCH: $((SECONDS - HERMES_START)) s"
+  fi
+  CMAKE_ARGS+=(-DFANTOM_HERMES_BUILD_DIR="$HERMES_ARCH_BUILD")
+fi
+
 if [[ "$SANITIZE" == "1" ]]; then
   # vptr explicitly: clang 21 (Xcode 26.6) leaves it out of `undefined`,
   # Xcode 26.3's clang includes it; the tester CMake turns it off for

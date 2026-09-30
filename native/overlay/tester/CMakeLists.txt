@@ -33,9 +33,19 @@ include(Deps)
 #  - JSI: ReactCommon/jsi/CMakeLists.txt hardcodes a SHARED library; the same
 #    target is defined here as STATIC (see below). It is the only copy of JSI
 #    in the executable (Hermes objects resolve their JSI symbols to it).
-#  - OpenSSL: libcrypto.a (only SHA256 in ReactCxxPlatform devsupport).
+#  - OpenSSL: only SHA256 in ReactCxxPlatform devsupport. On Apple the static
+#    host uses a CommonCrypto shim (src/stubs/crypto, FANTOM_OPENSSL_SHIM)
+#    instead of libcrypto.a, which Homebrew has only for the build machine's
+#    architecture (needed for the x86_64 / universal host).
+# FANTOM_HERMES_BUILD_DIR: the Hermes build to link (default: the gradle one;
+# scripts/build-host.sh passes an x86_64 build for RN_A11Y_HOST_ARCH=x86_64).
 option(FANTOM_STATIC_HOST "Link Hermes, JSI and OpenSSL statically" ON)
-set(HERMES_BUILD_DIR ${REACT_ANDROID_DIR}/hermes-engine/build/hermes)
+option(FANTOM_OPENSSL_SHIM "SHA256 through CommonCrypto instead of OpenSSL (Apple static host)" ON)
+if(FANTOM_HERMES_BUILD_DIR)
+  set(HERMES_BUILD_DIR ${FANTOM_HERMES_BUILD_DIR})
+else()
+  set(HERMES_BUILD_DIR ${REACT_ANDROID_DIR}/hermes-engine/build/hermes)
+endif()
 add_library(hermes-engine::hermesvm INTERFACE IMPORTED)
 if(FANTOM_STATIC_HOST)
   set(hermes_static_libs)
@@ -73,7 +83,13 @@ else()
   set_target_properties(hermes-engine::hermesvm PROPERTIES
     INTERFACE_LINK_LIBRARIES ${LIB_HERMES})
 endif()
-find_package(OpenSSL REQUIRED)
+if(APPLE AND FANTOM_STATIC_HOST AND FANTOM_OPENSSL_SHIM)
+  add_library(fantom_sha256_shim STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto/Sha256Shim.cpp)
+  target_include_directories(fantom_sha256_shim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto)
+  add_library(OpenSSL::Crypto ALIAS fantom_sha256_shim)
+else()
+  find_package(OpenSSL REQUIRED)
+endif()
 
 # Boost in NDK is not compatible with desktop build
 add_third_party_subdir(boost)

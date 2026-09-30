@@ -212,10 +212,19 @@ How:
   this library. (With the dylibs, there were two copies: one inside
   `libhermesvm.dylib`, from Hermes' static `libjsi.a`, and `libjsi.dylib`.)
 - OpenSSL: only `ReactCxxPlatform/react/devsupport/DevServerHelper.cpp` uses
-  it (`SHA256` of the device name for the packager connection). It is
-  linked from Homebrew's `libcrypto.a` (`OPENSSL_USE_STATIC_LIBS`). Dropping
-  it would need a change in ReactCxxPlatform; the static link keeps the
-  behavior. `libssl` is not used.
+  it (`SHA256` of the device name for the packager connection). The Apple
+  static host links a CommonCrypto shim instead (`src/stubs/crypto`: a minimal
+  `openssl/sha.h` and `SHA256_Init/Update/Final` on `CC_SHA256_*`, exposed as
+  `OpenSSL::Crypto`; option `FANTOM_OPENSSL_SHIM`, default ON). Homebrew's
+  `libcrypto.a` was arm64-only on an arm64 Mac, which blocked the x86_64 slice,
+  and the build no longer needs Homebrew OpenSSL. `libssl` is not used.
+
+Architectures (`RN_A11Y_HOST_ARCH`): on an M4, the x86_64 slice (cross-built
+with `CMAKE_OSX_ARCHITECTURES=x86_64`: Hermes for x86_64 with the arm64
+hermesc imported through `IMPORT_HOST_COMPILERS`, then the tester) took 291 s
+from scratch (Hermes 90 s), after the arm64 gradle prerequisites. Sizes:
+arm64 10,524,560 bytes, x86_64 11,487,232, universal (`lipo -create`)
+22,042,512.
 
 Sizes (bytes, `strip -x`, single file vs. the previous total of the host and
 its two dylibs):
