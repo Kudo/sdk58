@@ -17,24 +17,55 @@
  * Trees are raw getA11yTree JSON; the CLI converts them with src/tree.ts.
  */
 
+import type * as ReactTypes from 'react';
+
 import {createRunner} from './actions';
+import type {A11yNode} from './tree-index';
+import type {Action, TapMode} from './actions';
 import {getCapabilities, getHostInfo} from './capabilities';
+import type {Root} from './fantom/index';
 import {setRootTag} from './gh/hostContext';
 import {applyHostConfig} from './hostConfig';
+import type {HostConfig} from './hostConfig';
 import {settle} from './settle';
 import {mark, summarize} from './timings';
 
-const Fantom = require('./fantom/index');
-const NativeFantom = require('./fantom/specs/NativeFantom').default;
+const Fantom = require('./fantom/index') as typeof import('./fantom/index');
+const NativeFantom = (require('./fantom/specs/NativeFantom') as typeof import('./fantom/specs/NativeFantom'))
+  .default;
 
 export const RESPONSE_TYPE = 'rn-a11y-tree-response';
 
-export function installSession({React, App, viewport, tapMode, hostConfig}) {
-  let root = null;
-  let runner = null;
+/** A request from the CLI (SessionRequest in src/schema.ts, plus `start`). */
+type SessionRequest = {
+  id?: unknown;
+  start?: boolean;
+  action?: Action | null;
+  diff?: boolean;
+  tree?: boolean;
+  quit?: boolean;
+};
+
+type Response = {id: unknown; ok: boolean; [key: string]: unknown};
+
+export function installSession({
+  React,
+  App,
+  viewport,
+  tapMode,
+  hostConfig,
+}: {
+  React: typeof ReactTypes;
+  App: ReactTypes.ComponentType;
+  viewport: {width: number; height: number};
+  tapMode: TapMode;
+  hostConfig: HostConfig | null | undefined;
+}): void {
+  let root: Root | null = null;
+  let runner: ReturnType<typeof createRunner> | null = null;
   let nextIndex = 0;
 
-  function report(response) {
+  function report(response: Response): void {
     const fallbacks = runner != null ? runner.getFallbacks() : [];
     NativeFantom.reportTestSuiteResultsJSON(
       JSON.stringify({type: RESPONSE_TYPE, ...response, fallbacks}),
@@ -45,7 +76,7 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
     if (runner == null) throw new Error('Session is not started');
   }
 
-  function handle(request) {
+  function handle(request: SessionRequest): void {
     const {id} = request;
     if (request.start) {
       if (typeof NativeFantom.getA11yTree !== 'function') {
@@ -62,7 +93,7 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
       setRootTag(root.getRootTag());
       mark('renderStart');
       Fantom.runTask(() => {
-        root.render(React.createElement(App));
+        root!.render(React.createElement(App));
       });
       mark('rendered');
       settle(root.getRootTag());
@@ -74,20 +105,20 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
       report({id, ok: true, ready: true, tree, capabilities: getCapabilities(), hostInfo: getHostInfo(), timings: summarize()});
     } else if (request.action != null) {
       requireStarted();
-      const before = request.diff === true ? runner.readTree() : undefined;
-      const {step, snapshot} = runner.runStep(request.action, nextIndex++);
-      const response = {id, ok: step.error == null, step};
-      if (before !== undefined) response.diffTrees = [before, runner.readTree()];
+      const before: A11yNode | undefined = request.diff === true ? runner!.readTree() : undefined;
+      const {step, snapshot} = runner!.runStep(request.action, nextIndex++);
+      const response: Response = {id, ok: step.error == null, step};
+      if (before !== undefined) response.diffTrees = [before, runner!.readTree()];
       if (step.error != null) response.error = step.error;
       if (snapshot !== undefined) response.tree = snapshot;
       report(response);
     } else if (request.tree) {
       requireStarted();
-      report({id, ok: true, tree: runner.readTree()});
+      report({id, ok: true, tree: runner!.readTree()});
     } else if (request.quit) {
       if (runner != null) {
         runner.dispose();
-        root.destroy();
+        root!.destroy();
         NativeFantom.flushMessageQueue();
       }
       runner = null;
@@ -99,10 +130,10 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
   }
 
   globalThis.__rnA11y = {
-    request(json) {
-      let request;
+    request(json: string) {
+      let request: SessionRequest | undefined;
       try {
-        request = JSON.parse(json);
+        request = JSON.parse(json) as SessionRequest;
         handle(request);
       } catch (error) {
         report({

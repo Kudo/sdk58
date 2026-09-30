@@ -8,10 +8,13 @@
  * its viewport and content sizes).
  */
 
-const Fantom = require('./fantom/index');
+import type {RootTag} from 'react-native';
+
+const Fantom = require('./fantom/index') as typeof import('./fantom/index');
 import {readA11yTree} from './hostConfig';
 
-const NativeFantom = require('./fantom/specs/NativeFantom').default;
+const NativeFantom = (require('./fantom/specs/NativeFantom') as typeof import('./fantom/specs/NativeFantom'))
+  .default;
 
 const MAX_ROUNDS = 10;
 
@@ -20,7 +23,7 @@ const MAX_ROUNDS = 10;
  * commit (state updates included), and they are equal when everything
  * committed is mounted. Null when the host lacks them.
  */
-function revisions(surfaceId) {
+function revisions(surfaceId: RootTag): string | null {
   if (
     typeof NativeFantom.getShadowTreeRevision !== 'function' ||
     typeof NativeFantom.getMountedRevision !== 'function'
@@ -32,7 +35,7 @@ function revisions(surfaceId) {
   );
 }
 
-function step(surfaceId) {
+function step(surfaceId: RootTag): void {
   // Host-emulated native state (react-native-screens, safe area); the
   // host also does this after every mount.
   if (typeof NativeFantom.updateNativeStates === 'function') {
@@ -42,7 +45,7 @@ function step(surfaceId) {
 }
 
 /** Returns the number of rounds. */
-export function settle(surfaceId) {
+export function settle(surfaceId: RootTag): number {
   let previousRevisions = revisions(surfaceId);
   if (previousRevisions != null) {
     for (let round = 0; round < MAX_ROUNDS; round++) {

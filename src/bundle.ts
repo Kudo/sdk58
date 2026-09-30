@@ -82,7 +82,7 @@ export type BundleOptions = {
   session?: boolean;
   /** `run` options embedded in the bundle. */
   runOptions?: {diff?: boolean};
-  /** Host settings applied before the first render (runtime/hostConfig.js). */
+  /** Host settings applied before the first render (runtime/hostConfig.ts). */
   hostConfig?: HostConfig;
   /** Metro platform (required): `android`, `ios`, or an out-of-tree name such as `a11ytree`. */
   platform: string;
@@ -144,7 +144,7 @@ export function renderEntry(options: {
   expoPolyfill?: string | null;
 }): string {
   const template = fs.readFileSync(
-    path.join(RUNTIME_DIR, 'entry-template.js'),
+    path.join(RUNTIME_DIR, 'entry-template.ts'),
     'utf8',
   );
   // JSON.stringify(...).slice(1, -1) escapes the path for use inside the
@@ -176,7 +176,7 @@ export function renderEntry(options: {
 const EXPO_PACKAGES = ['expo', 'expo-modules-core', '@expo/ui'];
 
 /**
- * The Expo prelude (runtime/expo/prelude.js) goes into the bundle when the
+ * The Expo prelude (runtime/expo/prelude.ts) goes into the bundle when the
  * project uses Expo: its package.json lists `expo`, `expo-modules-core` or
  * `@expo/ui`, and expo-modules-core resolves from the project. (Resolving
  * alone is not enough: in a hoisted monorepo every project resolves it.)
@@ -226,11 +226,11 @@ function isBareSpecifier(moduleName: string): boolean {
 const RESOLVED_ALIASES: Array<[RegExp, string]> = [
   [
     /[\\/]react-native-gesture-handler[\\/]src[\\/]specs[\\/]NativeRNGestureHandlerModule\.ts$/,
-    path.join(RUNTIME_DIR, 'gh', 'NativeRNGestureHandlerModule.js'),
+    path.join(RUNTIME_DIR, 'gh', 'NativeRNGestureHandlerModule.ts'),
   ],
   [
     /[\\/]react-native-gesture-handler[\\/]src[\\/]v3[\\/]detectors[\\/]HostGestureDetector\.tsx$/,
-    path.join(RUNTIME_DIR, 'gh', 'HostGestureDetector.js'),
+    path.join(RUNTIME_DIR, 'gh', 'HostGestureDetector.tsx'),
   ],
 ];
 
@@ -449,10 +449,11 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   }
 
   // A fixed work dir keeps Metro's roots, and so its file map cache key,
-  // the same across runs. Entries are named by their key.
+  // the same across runs. Entries are named by their key; the entry is
+  // TypeScript (runtime/entry-template.ts), so it has a `.ts` name.
   const workDir = path.join(root, 'work');
   fs.mkdirSync(workDir, {recursive: true});
-  const entryPath = path.join(fs.realpathSync(workDir), `${key}.js`);
+  const entryPath = path.join(fs.realpathSync(workDir), `${key}.ts`);
   if (!fs.existsSync(entryPath) || fs.readFileSync(entryPath, 'utf8') !== entry) {
     fs.writeFileSync(entryPath, entry);
   }

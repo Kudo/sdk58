@@ -3,9 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * @flow strict-local
- * @format
  */
 
 import NativeFantom from './specs/NativeFantom';
@@ -19,7 +16,7 @@ export interface HighResTimeStampMock {
   uninstall(): void;
 }
 
-let activeMock: ?HighResTimeStampMock;
+let activeMock: HighResTimeStampMock | null | undefined;
 
 /**
  * Installs a mock clock for `HighResTimeStamp` values and returns an object

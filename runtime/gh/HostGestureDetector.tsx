@@ -14,27 +14,32 @@ import * as React from 'react';
 import {useEffect, useImperativeHandle, useRef} from 'react';
 import {ActionType} from 'react-native-gesture-handler/src/ActionType';
 import RNGestureHandlerDetectorNativeComponent from 'react-native-gesture-handler/src/specs/RNGestureHandlerDetectorNativeComponent';
+import type {NativeProps} from 'react-native-gesture-handler/src/specs/RNGestureHandlerDetectorNativeComponent';
+import type ReactNativeElement from 'react-native/src/private/webapis/dom/nodes/ReactNativeElement';
 import NodeManager from 'react-native-gesture-handler/src/web/tools/NodeManager';
 
+import type {HostElement} from './hostContext';
 import {attachToElement} from './NativeRNGestureHandlerModule';
 
-export default function HostGestureDetector({ref, ...props}) {
-  const detectorRef = useRef(null);
-  useImperativeHandle(ref, () => detectorRef.current, []);
+type Props = NativeProps & {ref?: React.Ref<ReactNativeElement | null>};
+
+export default function HostGestureDetector({ref, ...props}: Props) {
+  const detectorRef = useRef<ReactNativeElement | null>(null);
+  useImperativeHandle<ReactNativeElement | null, ReactNativeElement | null>(ref, () => detectorRef.current, []);
   const handlerTags = props.handlerTags ?? [];
   const tagsKey = handlerTags.join(',');
 
   useEffect(() => {
     const owner = {};
-    const attached = new Set();
+    const attached = new Set<number>();
     for (const tag of handlerTags) {
       NodeManager.observeHandler(tag, owner, handler => {
         const detector = detectorRef.current;
         if (detector == null || attached.has(tag)) return;
-        let view = detector;
+        let view: HostElement = detector;
         if (handler.shouldAttachGestureToChildView()) {
           if (detector.childElementCount !== 1) return;
-          view = detector.firstElementChild;
+          view = detector.firstElementChild!;
         }
         attachToElement(tag, view, ActionType.NATIVE_DETECTOR, detector);
         attached.add(tag);

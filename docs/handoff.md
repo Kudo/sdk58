@@ -150,7 +150,7 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 | Area | Path |
 |---|---|
 | CLI (TypeScript, Node) | `src/` (`cli.ts`, `bundle.ts`, `host.ts`, `tree.ts`, `check.ts`, `session.ts`, `presets.ts`, `schema.ts`) |
-| Runtime bundled into the app entry | `runtime/` (`entry-template.js`, `actions.js`, `settle.js`, `fantom/` vendored Fantom JS, `gh/` gesture-handler JS module, `expo/` Expo prelude, `hostConfig.js`) |
+| Runtime bundled into the app entry (TypeScript, `tsc -p runtime`) | `runtime/` (`entry-template.ts`, `actions.ts`, `settle.ts`, `fantom/` vendored Fantom runtime, `gh/` gesture-handler JS module, `expo/` Expo prelude, `hostConfig.ts`) |
 | Host overlay over Fantom | `native/overlay/tester/` (`CMakeLists.txt`, `src/components/*` custom shadow nodes, `src/render/A11yTree.cpp`, `HitTest.cpp`, `src/reanimated/`, `src/expoui/layout/` SwiftUI engine, `src/expoui/compose/` Compose engine, `src/platform/macos/` CoreText text + fonts, `src/stubs/crypto/`) |
 | Fantom itests | `native/tests/` |
 | Reference harnesses | `native/tools/swiftui-ref/` (real SwiftUI, macOS + iOS sim), `native/tools/compose-ref/` (Compose Desktop), `native/tools/*-layout-test/` (engine vs reference) |

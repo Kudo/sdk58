@@ -115,7 +115,7 @@ Details:
   - Estimate: 20–50x smaller than today's JSON.
 - **F5 Query (S, CLI).** `--select 'testID=submit'`, `--select
   'role=button'`, `--select 'name~Sign'`, `--depth N`, `--subtree <sel>`.
-  The runtime already has the target lookup logic (`runtime/tree-index.js`).
+  The runtime already has the target lookup logic (`runtime/tree-index.ts`).
 - **F6 Stable refs (S, CLI).** A node's key is its `testID` when set, else
   a key made from the path of types below the nearest keyed ancestor
   (`#list>View:3>Paragraph`). Keep `ref` for one tree, add `ref@step` where

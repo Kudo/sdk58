@@ -3,9 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * @flow strict-local
- * @format
  */
 
 import type {HostPlatform} from './Constants';
@@ -13,7 +10,7 @@ import type {
   FantomRenderedOutput,
   RenderOutputConfig,
 } from './getFantomRenderedOutput';
-import type {MixedElement} from 'react';
+import type {ReactElement} from 'react';
 import type {RootTag} from 'react-native';
 import type ReactNativeDocument from 'react-native/src/private/webapis/dom/nodes/ReactNativeDocument';
 
@@ -32,14 +29,14 @@ const nativeRuntimeScheduler = global.nativeRuntimeScheduler;
 const {unstable_scheduleCallback, unstable_ImmediatePriority} =
   nativeRuntimeScheduler;
 
-type NodeOrRef = ReadOnlyNode | Readonly<{current: ?ReadOnlyNode}>;
+type NodeOrRef = ReadOnlyNode | Readonly<{current: ReadOnlyNode | null | undefined}>;
 
 export type RootConfig = {
-  viewportWidth?: number,
-  viewportHeight?: number,
-  devicePixelRatio?: number,
-  viewportOffsetX?: number,
-  viewportOffsetY?: number,
+  viewportWidth?: number;
+  viewportHeight?: number;
+  devicePixelRatio?: number;
+  viewportOffsetX?: number;
+  viewportOffsetY?: number;
 };
 
 export {getConstants} from './Constants';
@@ -66,7 +63,7 @@ class Root {
   #viewportOffsetX: number;
   #viewportOffsetY: number;
   #devicePixelRatio: number;
-  #document: ?ReactNativeDocument;
+  #document: ReactNativeDocument | null | undefined;
 
   constructor(config?: RootConfig) {
     this.#viewportWidth = config?.viewportWidth ?? DEFAULT_VIEWPORT_WIDTH;
@@ -85,7 +82,6 @@ class Root {
     );
   }
 
-  // $FlowExpectedError[unsafe-getters-setters]
   get document(): ReactNativeDocument {
     if (this.#document == null) {
       throw new Error(
@@ -96,7 +92,7 @@ class Root {
     return this.#document;
   }
 
-  render(element: MixedElement): void {
+  render(element: ReactElement): void {
     if (!flushingQueue) {
       throw new Error(
         'Unexpected call to `render` outside of the event loop. Please call `render` within a `runTask` callback.',
@@ -105,17 +101,20 @@ class Root {
 
     // Require Fabric lazily to prevent it from running InitializeCore before the test
     // has a change to do its environment setup.
-    const ReactFabric =
-      require('react-native/Libraries/Renderer/shims/ReactFabric').default;
+    const ReactFabric = (
+      require('react-native/Libraries/Renderer/shims/ReactFabric') as typeof import('react-native/Libraries/Renderer/shims/ReactFabric')
+    ).default;
 
-    // $FlowExpectedError[incompatible-type]
-    const surfaceIdIsNumber = this.#surfaceId as number;
+    // RootTag is opaque; the surface id is a number.
+    const surfaceIdIsNumber = this.#surfaceId as unknown as number;
+    // @ts-expect-error: react-native's generated type of `render` (Flow
+    // `callback: ?() => void, options?: ...`) does not allow null or omitting options.
     ReactFabric.render(element, surfaceIdIsNumber, null, true);
 
     if (this.#document == null) {
       this.#document =
-        // $FlowExpectedError[incompatible-type] We know that `getPublicInstanceFromRootTag` returns `ReactNativeDocument | null` in Fantom.
-        ReactFabric.getPublicInstanceFromRootTag(surfaceIdIsNumber);
+        // We know that `getPublicInstanceFromRootTag` returns `ReactNativeDocument | null` in Fantom.
+        ReactFabric.getPublicInstanceFromRootTag(surfaceIdIsNumber) as ReactNativeDocument | null;
     }
   }
 
@@ -252,7 +251,7 @@ export function unstable_produceFramesForDuration(milliseconds: number) {
 export function unstable_getDirectManipulationProps(
   nodeOrRef: NodeOrRef,
 ): Readonly<{
-  [string]: unknown,
+  [key: string]: unknown;
 }> {
   const node = getNode(nodeOrRef);
   const shadowNode = getNativeNodeReference(node);
@@ -260,7 +259,7 @@ export function unstable_getDirectManipulationProps(
 }
 
 export function unstable_getFabricUpdateProps(nodeOrRef: NodeOrRef): Readonly<{
-  [string]: unknown,
+  [key: string]: unknown;
 }> {
   const node = getNode(nodeOrRef);
   const shadowNode = getNativeNodeReference(node);
@@ -282,9 +281,8 @@ export function getDefinedEventHandlers(
     return [];
   }
   // WARNING: This uses React private API (fiber internals).
-  // $FlowExpectedError[incompatible-type]
   const memoizedProps = (
-    instanceHandle as {memoizedProps?: {[string]: unknown}}
+    instanceHandle as {memoizedProps?: {[key: string]: unknown}}
   ).memoizedProps;
   if (memoizedProps == null) {
     return [];
@@ -473,7 +471,7 @@ export function enqueueNativeEvent(
   nodeOrRef: NodeOrRef,
   type: string,
   payload?: Readonly<{[key: string]: unknown}>,
-  options?: Readonly<{category?: NativeEventCategory, isUnique?: boolean}>,
+  options?: Readonly<{category?: NativeEventCategory; isUnique?: boolean}>,
 ) {
   const node = getNode(nodeOrRef);
   const shadowNode = getNativeNodeReference(node);
@@ -505,7 +503,7 @@ export function dispatchNativeEvent(
   nodeOrRef: NodeOrRef,
   type: string,
   payload?: Readonly<{[key: string]: unknown}>,
-  options?: Readonly<{category?: NativeEventCategory, isUnique?: boolean}>,
+  options?: Readonly<{category?: NativeEventCategory; isUnique?: boolean}>,
 ) {
   const node = getNode(nodeOrRef);
 
@@ -519,9 +517,9 @@ export function dispatchNativeEvent(
 }
 
 export type ScrollEventOptions = {
-  x: number,
-  y: number,
-  zoomScale?: number,
+  x: number;
+  y: number;
+  zoomScale?: number;
 };
 
 /**
@@ -641,7 +639,7 @@ export function scrollTo(nodeOrRef: NodeOrRef, options: ScrollEventOptions) {
  */
 export function enqueueModalSizeUpdate(
   nodeOrRef: NodeOrRef,
-  size: Readonly<{width: number, height: number}>,
+  size: Readonly<{width: number; height: number}>,
 ) {
   const node = getNode(nodeOrRef);
   const shadowNode = getNativeNodeReference(node);
@@ -671,7 +669,7 @@ export function createShadowNodeReferenceCounter(
  */
 export function createShadowNodeRevisionGetter(
   nodeOrRef: NodeOrRef,
-): () => ?number {
+): () => number | null | undefined {
   const node = getNode(nodeOrRef);
   const shadowNode = getNativeNodeReference(node);
   return NativeFantom.createShadowNodeRevisionGetter(shadowNode);

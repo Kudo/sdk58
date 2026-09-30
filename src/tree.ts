@@ -95,7 +95,7 @@ export function convertShadowTree(tree: ShadowNodeJSON): TreeNode {
  * `:3`, ... in tree order), else `<parent key>/<type>:<n>` with `n` the
  * 1-based index among siblings of the same type; the root is its type.
  * Unlike `ref`, a key does not change when unrelated parts of the tree
- * change. Must match runtime/tree-index.js `assignKeys`.
+ * change. Must match runtime/tree-index.ts `assignKeys`.
  */
 export function withKeys(root: TreeNode): TreeNode {
   const seen = new Map<string, number>();

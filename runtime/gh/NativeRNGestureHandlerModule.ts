@@ -17,7 +17,7 @@
  *   'onGestureHandlerStateChange', like Android.
  * - v3 (NativeDetector): Fabric events 'gestureHandlerEvent' /
  *   'gestureHandlerStateChange' / 'gestureHandlerTouchEvent' on the
- *   RNGestureHandlerDetector element (see runtime/gh/HostGestureDetector.js).
+ *   RNGestureHandlerDetector element (see runtime/gh/HostGestureDetector.tsx).
  *
  * - v2 with worklet callbacks (REANIMATED_WORKLET, NATIVE_ANIMATED_EVENT):
  *   Fabric events 'gestureHandlerEvent' / 'gestureHandlerStateChange' on the
@@ -38,14 +38,46 @@ import EventManager from 'react-native-gesture-handler/src/web/tools/EventManage
 import InteractionManager from 'react-native-gesture-handler/src/web/tools/InteractionManager';
 import NodeManager from 'react-native-gesture-handler/src/web/tools/NodeManager';
 
-import {findElementByTag, getRootTag} from './hostContext';
+import type {MouseButton} from 'react-native-gesture-handler/src/handlers/gestureHandlerCommon';
+import type {Spec} from 'react-native-gesture-handler/src/specs/NativeRNGestureHandlerModule';
+import type {GestureRelations} from 'react-native-gesture-handler/src/v3/types';
+import type IGestureHandler from 'react-native-gesture-handler/src/web/handlers/IGestureHandler';
+import type {
+  AdaptedEvent,
+  Config,
+  PropsRef,
+} from 'react-native-gesture-handler/src/web/interfaces';
+import type {GestureHandlerDelegate} from 'react-native-gesture-handler/src/web/tools/GestureHandlerDelegate';
 
-const NativeFantom = require('../fantom/specs/NativeFantom').default;
-const {NativeEventCategory} = require('../fantom/specs/NativeFantom');
+import {findElementByTag, getRootTag} from './hostContext';
+import type {HostElement} from './hostContext';
+
+const NativeFantom = (require('../fantom/specs/NativeFantom') as typeof import('../fantom/specs/NativeFantom'))
+  .default;
+const {NativeEventCategory} = require('../fantom/specs/NativeFantom') as typeof import('../fantom/specs/NativeFantom');
+
+export type PointerKind = 'down' | 'move' | 'up' | 'cancel';
+
+/** One pointer sample from the action runner (`time` from the mocked clock). */
+export type PointerSample = {x: number; y: number; pointerId: number; time: number};
+
+export type FeedResult = {handlers: number; detectorEvents: number; reanimatedEvents: number};
+
+/** `globalThis.__rnA11yGestureHandler` (used by runtime/actions.ts). */
+export type GestureHandlerBridge = {
+  feed(kind: PointerKind, sample: PointerSample, path: number[]): FeedResult;
+  readonly attachedCount: number;
+  ActionType: typeof ActionType;
+};
+
+type Rect = {left: number; top: number; width: number; height: number};
+
+/** What the handlers pass to the event props (`event.nativeEvent`). */
+type HandlerEvent = {nativeEvent: unknown};
 
 // --- views -------------------------------------------------------------------
 
-function rectOf(element) {
+function rectOf(element: HostElement): Rect {
   const rect = element.getBoundingClientRect();
   return {left: rect.left, top: rect.top, width: rect.width, height: rect.height};
 }
@@ -55,11 +87,11 @@ function rectOf(element) {
  * no box of its own; like RNGH web's getEffectiveBoundingRect, use the union
  * of its children's boxes.
  */
-function effectiveRect(element) {
+function effectiveRect(element: HostElement): Rect {
   const rect = rectOf(element);
   if (rect.width > 0 || rect.height > 0) return rect;
   const children = element.children ?? [];
-  let union = null;
+  let union: Rect | null = null;
   for (let i = 0; i < children.length; i++) {
     const r = effectiveRect(children[i]);
     if (r.width === 0 && r.height === 0) continue;
@@ -83,7 +115,11 @@ function effectiveRect(element) {
  * `dispatchEvent` (lifecycle/button events, ignored here).
  */
 class HostView {
-  constructor(element) {
+  // No initializers: babel strips these declarations, the constructor sets them.
+  element: HostElement;
+  tag: number | undefined;
+  style: Record<string, unknown>;
+  constructor(element: HostElement) {
     this.element = element;
     this.tag = element.__nativeTag;
     this.style = {};
@@ -110,14 +146,16 @@ class HostView {
 
 // --- event manager ----------------------------------------------------------
 
-const managers = new Set();
+const managers = new Set<HostEventManager>();
 
 /**
  * Pointer routing modeled on RNGH web's PointerEventManager: DOWN only when
  * inside the view; MOVE becomes ENTER/LEAVE/out-of-bounds by the view's
  * bounds; UP only while pointers are down.
  */
-class HostEventManager extends EventManager {
+class HostEventManager extends EventManager<HostView> {
+  // No initializer (babel strips it): undefined until registerListeners.
+  enabled: boolean | undefined;
   registerListeners() {
     this.enabled = true;
     managers.add(this);
@@ -126,16 +164,16 @@ class HostEventManager extends EventManager {
     this.enabled = false;
     managers.delete(this);
   }
-  mapEvent(event) {
+  mapEvent(event: AdaptedEvent): AdaptedEvent {
     return event;
   }
 
-  inBounds(x, y) {
+  inBounds(x: number, y: number): boolean {
     const r = this.view.getBoundingClientRect();
     return x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height;
   }
 
-  adapt(sample, eventType) {
+  adapt(sample: PointerSample, eventType: EventTypes): AdaptedEvent {
     const r = this.view.getBoundingClientRect();
     return {
       x: sample.x,
@@ -146,12 +184,12 @@ class HostEventManager extends EventManager {
       eventType,
       pointerType: 0, // PointerType.TOUCH
       time: sample.time,
-      button: eventType === EventTypes.UP || eventType === EventTypes.ADDITIONAL_POINTER_UP ? 0 : 1,
+      button: (eventType === EventTypes.UP || eventType === EventTypes.ADDITIONAL_POINTER_UP ? 0 : 1) as MouseButton,
     };
   }
 
   /** Returns false if the manager does not take this pointer. */
-  feed(kind, sample) {
+  feed(kind: PointerKind, sample: PointerSample): boolean {
     if (!this.enabled) return false;
     if (kind === 'down') {
       if (!this.inBounds(sample.x, sample.y)) return false;
@@ -202,12 +240,16 @@ class HostEventManager extends EventManager {
 // --- delegate ----------------------------------------------------------------
 
 class HostDelegate {
+  // No initializers: babel strips these declarations, the constructor sets them.
+  view: HostView | null;
+  handler: IGestureHandler | null;
+  manager: HostEventManager | null;
   constructor() {
     this.view = null;
     this.handler = null;
     this.manager = null;
   }
-  init(view, handler) {
+  init(view: HostView, handler: IGestureHandler) {
     this.view = view;
     this.handler = handler;
     this.manager = new HostEventManager(view);
@@ -220,16 +262,16 @@ class HostDelegate {
     this.view = null;
   }
   updateDOM() {}
-  isPointerInBounds({x, y}) {
+  isPointerInBounds({x, y}: {x: number; y: number}) {
     return this.manager != null && this.view != null && this.manager.inBounds(x, y);
   }
   measureView() {
-    const r = this.view.getBoundingClientRect();
+    const r = this.view!.getBoundingClientRect();
     return {pageX: r.left, pageY: r.top, width: r.width, height: r.height};
   }
   // Transforms are not applied (v1).
-  absoluteToLocal(absoluteX, absoluteY) {
-    const r = this.view.getBoundingClientRect();
+  absoluteToLocal(absoluteX: number, absoluteY: number) {
+    const r = this.view!.getBoundingClientRect();
     return {x: absoluteX - r.left, y: absoluteY - r.top};
   }
   reset() {
@@ -241,7 +283,7 @@ class HostDelegate {
   onCancel() {}
   onFail() {}
   onEnabledChange() {
-    this.manager?.setEnabled(this.handler.enabled !== false);
+    this.manager?.setEnabled(this.handler!.enabled !== false);
   }
   destroy() {
     this.manager?.unregisterListeners();
@@ -251,14 +293,14 @@ class HostDelegate {
 // --- event delivery ------------------------------------------------------------
 
 /** v2: flat payloads on DeviceEventEmitter, like Android. */
-function deviceEventProps() {
+function deviceEventProps(): {current: PropsRef} {
   return {
     current: {
-      onGestureHandlerEvent: event =>
+      onGestureHandlerEvent: (event: HandlerEvent) =>
         DeviceEventEmitter.emit('onGestureHandlerEvent', event.nativeEvent),
-      onGestureHandlerStateChange: event =>
+      onGestureHandlerStateChange: (event: HandlerEvent) =>
         DeviceEventEmitter.emit('onGestureHandlerStateChange', event.nativeEvent),
-      onGestureHandlerTouchEvent: event =>
+      onGestureHandlerTouchEvent: (event: HandlerEvent) =>
         DeviceEventEmitter.emit('onGestureHandlerEvent', event.nativeEvent),
     },
   };
@@ -269,13 +311,15 @@ let pendingDetectorEvents = 0;
 /** Of those, events for Reanimated (applied on the next UI tick). */
 let pendingReanimatedEvents = 0;
 
-function enqueueOnElement(element, type, payload) {
-  const tag = element.__nativeTag;
+function enqueueOnElement(element: HostElement, type: string, payload: unknown): void {
+  const tag = element.__nativeTag!;
   if (typeof NativeFantom.enqueueNativeEventByTag === 'function' && getRootTag() != null) {
-    NativeFantom.enqueueNativeEventByTag(getRootTag(), tag, type, payload, NativeEventCategory.Discrete, false);
+    NativeFantom.enqueueNativeEventByTag(getRootTag()!, tag, type, payload, NativeEventCategory.Discrete, false);
   } else {
     NativeFantom.enqueueNativeEvent(
-      require('react-native/src/private/webapis/dom/nodes/internals/NodeInternals').getNativeNodeReference(element),
+      (
+        require('react-native/src/private/webapis/dom/nodes/internals/NodeInternals') as typeof import('react-native/src/private/webapis/dom/nodes/internals/NodeInternals')
+      ).getNativeNodeReference(element),
       type,
       payload,
       NativeEventCategory.Discrete,
@@ -304,7 +348,7 @@ let reanimatedEventTypesRegistered = false;
 function registerReanimatedEventTypes() {
   if (reanimatedEventTypesRegistered) return;
   reanimatedEventTypesRegistered = true;
-  const {customDirectEventTypes} = require('react-native/Libraries/Renderer/shims/ReactNativeViewConfigRegistry');
+  const {customDirectEventTypes} = require('react-native/Libraries/Renderer/shims/ReactNativeViewConfigRegistry') as typeof import('react-native/Libraries/Renderer/shims/ReactNativeViewConfigRegistry');
   for (const [top, registrationName] of [
     ['topGestureHandlerEvent', 'onGestureHandlerEvent'],
     ['topGestureHandlerStateChange', 'onGestureHandlerStateChange'],
@@ -315,9 +359,9 @@ function registerReanimatedEventTypes() {
   }
 }
 
-function viewEventProps(element) {
+function viewEventProps(element: HostElement): {current: PropsRef} {
   registerReanimatedEventTypes();
-  const send = type => event => {
+  const send = (type: string) => (event: HandlerEvent) => {
     enqueueOnElement(element, type, event.nativeEvent);
     pendingReanimatedEvents++;
   };
@@ -332,8 +376,8 @@ function viewEventProps(element) {
 }
 
 /** v3: Fabric events on the RNGestureHandlerDetector element. */
-function detectorEventProps(detectorElement) {
-  const send = type => event => {
+function detectorEventProps(detectorElement: HostElement): {current: PropsRef} {
+  const send = (type: string) => (event: HandlerEvent) => {
     enqueueOnElement(detectorElement, type, event.nativeEvent);
   };
   return {
@@ -345,7 +389,7 @@ function detectorEventProps(detectorElement) {
   };
 }
 
-function isButtonElement(element) {
+function isButtonElement(element: HostElement): boolean {
   return String(element.tagName ?? '').endsWith('RNGestureHandlerButton');
 }
 
@@ -353,7 +397,12 @@ function isButtonElement(element) {
  * Attaches a handler to an element. `detectorElement` is set for v3
  * (NATIVE_DETECTOR); the handler then reports through the detector.
  */
-export function attachToElement(handlerTag, element, actionType, detectorElement) {
+export function attachToElement(
+  handlerTag: number,
+  element: HostElement,
+  actionType: ActionType,
+  detectorElement: HostElement | null | undefined,
+): void {
   const handler = NodeManager.getHandler(handlerTag);
   const propsRef =
     detectorElement != null
@@ -363,7 +412,8 @@ export function attachToElement(handlerTag, element, actionType, detectorElement
         ? viewEventProps(element)
         : deviceEventProps();
   handler.init(
-    new HostView(element),
+    // The web handlers pass this to the delegate (HostDelegate.init), which takes a HostView.
+    new HostView(element) as unknown as number,
     propsRef,
     actionType,
     detectorElement != null ? {current: detectorElement} : null,
@@ -372,55 +422,66 @@ export function attachToElement(handlerTag, element, actionType, detectorElement
   // Android an RNGestureHandlerButton activates on release like a button;
   // give the web handler the same role.
   if (handler.shouldAttachGestureToChildView() && isButtonElement(element)) {
-    handler.role = NativeGestureRole.Button;
+    // `role` is private to NativeViewGestureHandler.
+    (handler as unknown as {role: NativeGestureRole}).role = NativeGestureRole.Button;
   }
 }
 
 // --- the module -----------------------------------------------------------------
 
 const Module = {
-  createGestureHandler(handlerName, handlerTag, config) {
-    const GestureClass = Gestures[handlerName];
+  createGestureHandler(handlerName: string, handlerTag: number, config: object | null | undefined) {
+    const GestureClass = Gestures[handlerName as keyof typeof Gestures] as (typeof Gestures)[keyof typeof Gestures] | undefined;
     if (GestureClass == null) {
       throw new Error(`react-native-gesture-handler: ${handlerName} is not supported by the headless host`);
     }
-    NodeManager.createGestureHandler(handlerTag, new GestureClass(new HostDelegate()));
+    // HostDelegate.init takes a HostView where the web delegate takes a view tag.
+    NodeManager.createGestureHandler(
+      handlerTag,
+      new GestureClass(new HostDelegate() as unknown as GestureHandlerDelegate<unknown, IGestureHandler>),
+    );
     Module.setGestureHandlerConfig(handlerTag, config ?? {});
   },
   // Native (v2) signature: the view is a React tag.
-  attachGestureHandler(handlerTag, viewTag, actionType) {
+  attachGestureHandler(handlerTag: number, viewTag: number, actionType: number) {
     const element = findElementByTag(viewTag);
     if (element == null) {
       throw new Error(`react-native-gesture-handler: no view with tag ${viewTag}`);
     }
-    attachToElement(handlerTag, element, actionType, null);
+    attachToElement(handlerTag, element, actionType as ActionType, null);
   },
-  setGestureHandlerConfig(handlerTag, newConfig) {
-    NodeManager.getHandler(handlerTag).setGestureConfig(newConfig);
+  setGestureHandlerConfig(handlerTag: number, newConfig: object) {
+    NodeManager.getHandler(handlerTag).setGestureConfig(newConfig as Config);
   },
-  updateGestureHandlerConfig(handlerTag, newConfig) {
+  updateGestureHandlerConfig(handlerTag: number, newConfig: object) {
     if (NodeManager.hasHandler(handlerTag)) {
-      NodeManager.getHandler(handlerTag).updateGestureConfig(newConfig);
+      NodeManager.getHandler(handlerTag).updateGestureConfig(newConfig as Partial<Config>);
     }
   },
-  configureRelations(handlerTag, relations) {
+  configureRelations(handlerTag: number, relations: object) {
     if (!NodeManager.hasHandler(handlerTag)) return;
-    InteractionManager.instance.configureInteractions(NodeManager.getHandler(handlerTag), relations);
+    InteractionManager.instance.configureInteractions(
+      NodeManager.getHandler(handlerTag),
+      relations as GestureRelations | Config,
+    );
   },
-  dropGestureHandler(handlerTag) {
+  dropGestureHandler(handlerTag: number) {
     NodeManager.dropGestureHandler(handlerTag);
   },
   flushOperations() {},
   installUIRuntimeBindings() {
     return true;
   },
-};
+} satisfies Spec;
 
 export default Module;
 
 // --- input from the action runner ------------------------------------------------
 
-const captured = new Map(); // pointerId -> HostEventManager[]
+const captured = new Map<number, HostEventManager[]>(); // pointerId -> HostEventManager[]
+
+/** A manager's `view` (protected in EventManager). */
+type WithView = {view: HostView};
 
 /**
  * Feeds one pointer sample. `path` is the list of view tags from the root to
@@ -430,15 +491,18 @@ const captured = new Map(); // pointerId -> HostEventManager[]
  * Returns the number of handlers that received the sample and whether
  * detector events were queued.
  */
-function feed(kind, sample, path) {
+function feed(kind: PointerKind, sample: PointerSample, path: number[]): FeedResult {
   pendingDetectorEvents = 0;
   pendingReanimatedEvents = 0;
-  let targets;
+  let targets: HostEventManager[];
   if (kind === 'down') {
     const order = new Map(path.map((tag, index) => [tag, index]));
     targets = [...managers]
-      .filter(m => order.has(m.view.tag))
-      .sort((a, b) => order.get(b.view.tag) - order.get(a.view.tag));
+      .filter(m => order.has((m as unknown as WithView).view.tag!))
+      .sort(
+        (a, b) =>
+          order.get((b as unknown as WithView).view.tag!)! - order.get((a as unknown as WithView).view.tag!)!,
+      );
     const taken = targets.filter(m => m.feed('down', sample));
     captured.set(sample.pointerId, taken);
     return {

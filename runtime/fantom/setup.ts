@@ -10,27 +10,26 @@
  * contract with the Fantom tester binary: the host loads the bundle and then
  * calls `global.$$RunTests$$()`, and the JS side reports results as a single
  * JSON line on stdout via `NativeFantom.reportTestSuiteResultsJSON`.
- *
- * @flow strict-local
- * @format
  */
 
 export type FailureDetail = {
-  message: string,
-  stack?: string,
-  cause?: FailureDetail,
+  message: string;
+  stack?: string;
+  cause?: FailureDetail;
 };
 
 // `type` values printed on stdout. The CLI looks for these.
 export const RESULT_TYPE = 'rn-a11y-tree-result';
 export const ERROR_TYPE = 'rn-a11y-tree-error';
 
-let setupError: ?Error;
-let renderFn: ?() => string;
+let setupError: Error | null | undefined;
+let renderFn: (() => string) | null | undefined;
 
 function report(json: string): void {
   // Force the import of the native module to be lazy
-  const NativeFantom = require('./specs/NativeFantom').default;
+  const NativeFantom = (
+    require('./specs/NativeFantom') as typeof import('./specs/NativeFantom')
+  ).default;
   NativeFantom.reportTestSuiteResultsJSON(json);
 }
 
@@ -61,7 +60,7 @@ global.$$RunTests$$ = () => {
     reportError(new Error('No render function was registered'));
     return;
   }
-  let payload;
+  let payload: string;
   try {
     payload = renderFn();
   } catch (error) {

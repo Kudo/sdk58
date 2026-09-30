@@ -18,26 +18,47 @@
  * need it.
  */
 
-function toViewConfig(entry) {
-  const validAttributes = {};
+/** An entry of viewConfigs.json: prop and event (`on...`) names. */
+type ViewConfigEntry = {attributes: string[]; events: string[]};
+
+type ViewConfigsFile = {
+  views: Record<string, ViewConfigEntry | undefined>;
+  union: ViewConfigEntry;
+};
+
+type ViewConfig = {
+  validAttributes: Record<string, true>;
+  directEventTypes: Record<string, {registrationName: string}>;
+};
+
+/** The parts of Expo's `globalThis.expo` used here. */
+export type ExpoGlobal = {
+  getViewConfig?: (moduleName: string, viewName?: string | null) => ViewConfig;
+  SharedObject: new () => object;
+  NativeModule: new () => object;
+  modules: Record<string, object | undefined>;
+};
+
+function toViewConfig(entry: ViewConfigEntry): ViewConfig {
+  const validAttributes: ViewConfig['validAttributes'] = {};
   for (const name of entry.attributes) validAttributes[name] = true;
-  const directEventTypes = {};
+  const directEventTypes: ViewConfig['directEventTypes'] = {};
   for (const name of entry.events) {
     directEventTypes['top' + name.slice(2)] = {registrationName: name};
   }
   return {validAttributes, directEventTypes};
 }
 
-export function installExpoPrelude() {
+export function installExpoPrelude(): void {
   const expo = globalThis.expo;
   if (expo == null) {
     throw new Error('rn-a11y-tree: globalThis.expo is not installed (installExpoGlobalPolyfill)');
   }
 
-  let configs = null;
-  const cache = new Map();
+  let configs: ViewConfigsFile | null = null;
+  const cache = new Map<string, ViewConfig>();
   expo.getViewConfig = (moduleName, viewName) => {
-    configs ??= require('./viewConfigs.json');
+    configs ??= require('./viewConfigs.json') as ViewConfigsFile;
     const name = `${moduleName}${viewName != null ? '_' + viewName : ''}`;
     let config = cache.get(name);
     if (config == null) {
@@ -50,14 +71,16 @@ export function installExpoPrelude() {
   const {SharedObject, NativeModule} = expo;
 
   class ObservableState extends SharedObject {
-    constructor(value) {
+    // No initializer: babel strips it, the constructor sets it.
+    value: unknown;
+    constructor(value: unknown) {
       super();
       this.value = value;
     }
     getValue() {
       return this.value;
     }
-    setValue(value) {
+    setValue(value: unknown) {
       this.value = value;
     }
     setOnChange() {}
@@ -79,7 +102,7 @@ export function installExpoPrelude() {
     ToggleButtonIconSpacing: 8,
   });
   expo.modules.ExpoAsset ??= Object.assign(new NativeModule(), {
-    downloadAsync: async url => url,
+    downloadAsync: async (url: string) => url,
   });
   expo.modules.ExponentConstants ??= Object.assign(new NativeModule(), {
     manifest: null,

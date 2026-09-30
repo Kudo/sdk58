@@ -8,7 +8,7 @@
  * - After each frame it prints `{"type":"repl-eval-complete","id":n}` on
  *   stdout. A thrown JS error prints `{"type":"repl-error","message","stack"}`
  *   before that. Console output is `{"type":"console-log",...}`.
- * - Our snippet calls `globalThis.__rnA11y.request(json)` (runtime/session.js),
+ * - Our snippet calls `globalThis.__rnA11y.request(json)` (runtime/session.ts),
  *   which prints one `{"type":"rn-a11y-tree-response",...}` line.
  * - The host exits (code 0) when stdin is closed.
  */

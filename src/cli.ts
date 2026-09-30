@@ -523,7 +523,7 @@ async function check(file: string, options: CheckOptions) {
   if (timing) printTiming(timing);
 }
 
-/** Which JS fallbacks a run used (see runtime/actions.js). */
+/** Which JS fallbacks a run used (see runtime/actions.ts). */
 function describeFallbacks(steps: Step[]): string[] {
   const used = new Set<string>();
   for (const step of steps) {

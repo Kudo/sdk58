@@ -4,27 +4,37 @@
  * No react-native-gesture-handler imports here: the entry always loads it.
  */
 
-let rootTag = null;
+import type {RootTag} from 'react-native';
+import type ReactNativeDocument from 'react-native/src/private/webapis/dom/nodes/ReactNativeDocument';
+import type ReadOnlyElement from 'react-native/src/private/webapis/dom/nodes/ReadOnlyElement';
 
-export function setRootTag(tag) {
+/** An element of the rendered document with its React tag (a private field). */
+export type HostElement = ReadOnlyElement & {readonly __nativeTag?: number};
+
+let rootTag: RootTag | null = null;
+
+export function setRootTag(tag: RootTag): void {
   rootTag = tag;
 }
 
-export function getRootTag() {
+export function getRootTag(): RootTag | null {
   return rootTag;
 }
 
-function getDocument() {
+function getDocument(): ReactNativeDocument | null {
   if (rootTag == null) return null;
-  const ReactFabric = require('react-native/Libraries/Renderer/shims/ReactFabric').default;
-  return ReactFabric.getPublicInstanceFromRootTag(rootTag);
+  const ReactFabric = (
+    require('react-native/Libraries/Renderer/shims/ReactFabric') as typeof import('react-native/Libraries/Renderer/shims/ReactFabric')
+  ).default;
+  // In Fantom the public root instance is the ReactNativeDocument.
+  return ReactFabric.getPublicInstanceFromRootTag(rootTag as unknown as number) as ReactNativeDocument | null;
 }
 
 /** The ReactNativeElement with this tag in the rendered document, or null. */
-export function findElementByTag(tag) {
+export function findElementByTag(tag: number): HostElement | null {
   const document = getDocument();
   if (document == null) return null;
-  const stack = [document.documentElement];
+  const stack: Array<HostElement | null | undefined> = [document.documentElement];
   while (stack.length > 0) {
     const node = stack.pop();
     if (node == null) continue;

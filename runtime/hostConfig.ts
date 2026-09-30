@@ -14,16 +14,29 @@
  * Settings the host does not support are reported with console.warn.
  */
 
-const NativeFantom = require('./fantom/specs/NativeFantom').default;
+import type {RootTag} from 'react-native';
+
+import type {DeviceMetrics, EdgeInsets} from './fantom/specs/NativeFantom';
+
+const NativeFantom = (require('./fantom/specs/NativeFantom') as typeof import('./fantom/specs/NativeFantom'))
+  .default;
+
+/** Host settings (`hostConfig` in src/bundle.ts). */
+export type HostConfig = {
+  mounted?: boolean;
+  deviceMetrics?: DeviceMetrics;
+  headerHeight?: number;
+  safeAreaInsets?: EdgeInsets;
+};
 
 let includeMountedProps = true;
 
 /** NativeFantom.getA11yTree with the configured includeMountedProps. */
-export function readA11yTree(surfaceId, includeDebugProps = false) {
-  return NativeFantom.getA11yTree(surfaceId, includeDebugProps, includeMountedProps);
+export function readA11yTree(surfaceId: RootTag, includeDebugProps = false): string {
+  return NativeFantom.getA11yTree!(surfaceId, includeDebugProps, includeMountedProps);
 }
 
-export function applyHostConfig({headerHeight, safeAreaInsets, mounted}) {
+export function applyHostConfig({headerHeight, safeAreaInsets, mounted}: HostConfig): void {
   includeMountedProps = mounted !== false;
   if (headerHeight != null) {
     if (typeof NativeFantom.setScreensHeaderHeight === 'function') {
@@ -41,7 +54,7 @@ export function applyHostConfig({headerHeight, safeAreaInsets, mounted}) {
   }
 }
 
-export function applyDeviceMetrics(deviceMetrics) {
+export function applyDeviceMetrics(deviceMetrics: DeviceMetrics | null | undefined): void {
   if (deviceMetrics == null || typeof NativeFantom.setDeviceMetrics !== 'function') return;
   NativeFantom.setDeviceMetrics(deviceMetrics);
 }

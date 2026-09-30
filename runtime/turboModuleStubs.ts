@@ -17,7 +17,7 @@
 
 const eventEmitterMethods = () => ({addListener: () => {}, removeListeners: () => {}});
 
-const STUBS = {
+const STUBS: Record<string, (() => object) | undefined> = {
   StatusBarManager: () => ({
     getConstants: () => ({HEIGHT: 0, DEFAULT_BACKGROUND_COLOR: 0}),
     setColor: () => {},
@@ -25,7 +25,7 @@ const STUBS = {
     setStyle: () => {},
     setHidden: () => {},
     // iOS spec
-    getHeight: callback => callback({height: 0}),
+    getHeight: (callback: (result: {height: number}) => void) => callback({height: 0}),
     setNetworkActivityIndicatorVisible: () => {},
     ...eventEmitterMethods(),
   }),
@@ -41,12 +41,12 @@ const STUBS = {
 
 let installed = false;
 
-export function installTurboModuleStubs() {
+export function installTurboModuleStubs(): void {
   if (installed) return;
   installed = true;
   const original = global.__turboModuleProxy;
-  const cache = new Map();
-  global.__turboModuleProxy = name => {
+  const cache = new Map<string, object>();
+  global.__turboModuleProxy = (name: string) => {
     const module = original != null ? original(name) : null;
     if (module != null) return module;
     const stub = STUBS[name];

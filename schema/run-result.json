@@ -234,7 +234,7 @@
         "box"
       ],
       "additionalProperties": false,
-      "description": "One executed action of `run --script` (built in runtime/actions.js)."
+      "description": "One executed action of `run --script` (built in runtime/actions.ts)."
     },
     "Box": {
       "type": "object",

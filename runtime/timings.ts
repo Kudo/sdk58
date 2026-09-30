@@ -3,27 +3,27 @@
  * __BUNDLE_START_TIME__ (nativePerformanceNow when the host has it).
  */
 
-export function now() {
+export function now(): number {
   return typeof global.nativePerformanceNow === 'function'
     ? global.nativePerformanceNow()
     : performance.now();
 }
 
-const marks = {};
-const counters = {};
+const marks: Record<string, number | undefined> = {};
+const counters: Record<string, number> = {};
 
-export function count(name, value) {
+export function count(name: string, value: number): void {
   counters[name] = value;
 }
 
-export function mark(name) {
+export function mark(name: string): void {
   marks[name] = now();
 }
 
 /** Durations between the marks that exist. */
-export function summarize() {
+export function summarize(): Record<string, number | undefined> {
   const start = global.__BUNDLE_START_TIME__;
-  const d = (a, b) =>
+  const d = (a: number | undefined, b: number | undefined): number | undefined =>
     a != null && b != null ? Math.round((b - a) * 1000) / 1000 : undefined;
   return {
     // Bundle evaluation up to the end of the app's module setup.

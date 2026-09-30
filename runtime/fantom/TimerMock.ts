@@ -3,9 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * @flow strict-local
- * @format
  */
 
 import {runWorkLoop} from './index';
@@ -27,7 +24,7 @@ export interface TimerMock {
   uninstall(): void;
 }
 
-let activeMock: ?TimerMock;
+let activeMock: TimerMock | null | undefined;
 
 /**
  * Installs a deterministic timer mock. While installed, `setTimeout` and

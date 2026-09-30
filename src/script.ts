@@ -1,7 +1,7 @@
 /**
  * Validation of `run --script` files. Runs in the CLI before bundling so
  * errors are reported with the step index. Keep in sync with
- * runtime/actions.js and the README "Interactions" section.
+ * runtime/actions.ts and the README "Interactions" section.
  */
 
 export type Target = {testID: string} | {ref: string} | {key: string} | {sel: string};

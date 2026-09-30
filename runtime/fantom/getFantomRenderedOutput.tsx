@@ -3,9 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * @flow strict-local
- * @format
  */
 
 import type {RootTag} from 'react-native';
@@ -13,24 +10,28 @@ import type {RootTag} from 'react-native';
 import * as React from 'react';
 import NativeFantom from './specs/NativeFantom';
 
-export type RenderOutputConfig = {
-  ...FantomRenderedOutputConfig,
-  includeRoot?: boolean,
-  includeLayoutMetrics?: boolean,
+export type RenderOutputConfig = FantomRenderedOutputConfig & {
+  includeRoot?: boolean;
+  includeLayoutMetrics?: boolean;
 };
 
 type FantomJsonObject = {
-  type: string,
-  props: {[key: string]: string},
-  children: ReadonlyArray<FantomJsonObject | string>,
+  type: string;
+  props: {[key: string]: string};
+  children: ReadonlyArray<FantomJsonObject | string>;
 };
 
 type FantomJson = FantomJsonObject | ReadonlyArray<FantomJsonObject>;
 
 type FantomRenderedOutputConfig = {
   // RegExp patterns to match prop names
-  props?: ReadonlyArray<string>,
+  props?: ReadonlyArray<string>;
 };
+
+// `Array.isArray` does not narrow a ReadonlyArray union in TypeScript.
+function isArray<T>(value: T | ReadonlyArray<T>): value is ReadonlyArray<T> {
+  return Array.isArray(value);
+}
 
 class FantomRenderedOutput {
   #json: FantomJson;
@@ -44,14 +45,14 @@ class FantomRenderedOutput {
   }
 
   toJSONObject(): FantomJsonObject {
-    if (Array.isArray(this.#json)) {
+    if (isArray(this.#json)) {
       throw new Error('Cannot convert array to JSON object');
     }
 
     return {...this.#json};
   }
 
-  toJSX(): React.Node {
+  toJSX(): React.ReactNode {
     return convertRawJsonToJSX(this.#json);
   }
 
@@ -59,7 +60,7 @@ class FantomRenderedOutput {
     json: FantomJson,
     config: FantomRenderedOutputConfig,
   ): FantomJson {
-    if (Array.isArray(json)) {
+    if (isArray(json)) {
       return json.map(child => this.#filterJsonObject(child, config));
     } else {
       return this.#filterJsonObject(json, config);
@@ -134,13 +135,13 @@ export default function getFantomRenderedOutput(
 
 function convertRawJsonToJSX(
   actualJSON: FantomJsonObject | ReadonlyArray<FantomJsonObject>,
-): React.Node {
-  let actualJSX;
-  /* $FlowFixMe[invalid-compare] Error discovered during Constant Condition
+): React.ReactNode {
+  let actualJSX: React.ReactNode;
+  /* Upstream: $FlowFixMe[invalid-compare] Error discovered during Constant Condition
    * roll out. See https://fburl.com/workplace/5whu3i34. */
   if (actualJSON === null || typeof actualJSON === 'string') {
     actualJSX = actualJSON;
-  } else if (Array.isArray(actualJSON)) {
+  } else if (isArray(actualJSON)) {
     if (actualJSON.length === 0) {
       actualJSX = null;
     } else if (actualJSON.length === 1) {
@@ -163,10 +164,11 @@ function convertRawJsonToJSX(
 function createJSXElementForTestComparison(
   type: string,
   props: unknown,
-  key?: ?string,
-): React.Node {
-  const Tag = type;
-  return <Tag key={key} {...props} />;
+  key?: string | null,
+): React.ReactNode {
+  // An intrinsic element named after the host component (e.g. `rn-view`).
+  const Tag = type as unknown as React.ElementType;
+  return <Tag key={key} {...(props as object)} />;
 }
 
 function rnTypeToTestType(type: string): string {
@@ -175,8 +177,8 @@ function rnTypeToTestType(type: string): string {
 
 function jsonChildToJSXChild(
   jsonChild: FantomJsonObject | string,
-  index?: ?number,
-): React.Node {
+  index?: number | null,
+): React.ReactNode {
   if (typeof jsonChild === 'string') {
     return jsonChild;
   } else {
@@ -192,11 +194,13 @@ function jsonChildToJSXChild(
   }
 }
 
-function jsonChildrenToJSXChildren(jsonChildren: FantomJsonObject['children']) {
+function jsonChildrenToJSXChildren(
+  jsonChildren: FantomJsonObject['children'],
+): React.ReactNode {
   if (jsonChildren.length === 1) {
     return jsonChildToJSXChild(jsonChildren[0]);
   } else if (jsonChildren.length > 1) {
-    const jsxChildren = [];
+    const jsxChildren: Array<React.ReactNode> = [];
     let allJSXChildrenAreStrings = true;
     let jsxChildrenString = '';
     for (let i = 0; i < jsonChildren.length; i++) {

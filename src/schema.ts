@@ -284,7 +284,7 @@ export type ShadowNodeJSON = {
   children?: ShadowNodeJSON[];
 };
 
-/** One executed action of `run --script` (built in runtime/actions.js). */
+/** One executed action of `run --script` (built in runtime/actions.ts). */
 export type StepNode = {
   tag: number | null;
   ref: string | null;

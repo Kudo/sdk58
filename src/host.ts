@@ -14,7 +14,7 @@ import type {HostPayload, HostRuntimeInfo} from './schema.ts';
 
 export const HOST_BIN_ENV = 'RN_A11Y_HOST_BIN';
 
-// Must match `RESULT_TYPE` / `ERROR_TYPE` in runtime/fantom/setup.js.
+// Must match `RESULT_TYPE` / `ERROR_TYPE` in runtime/fantom/setup.ts.
 const RESULT_TYPE = 'rn-a11y-tree-result';
 const ERROR_TYPE = 'rn-a11y-tree-error';
 

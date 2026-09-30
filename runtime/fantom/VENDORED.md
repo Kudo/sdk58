@@ -12,30 +12,44 @@ private package, and `react-native/src/private/testing` is excluded from the
 
 | File here | Source |
 | --- | --- |
-| `index.js` | `private/react-native-fantom/src/index.js` |
-| `Constants.js` | `private/react-native-fantom/src/Constants.js` |
-| `HighResTimeStampMock.js` | `private/react-native-fantom/src/HighResTimeStampMock.js` |
-| `TimerMock.js` | `private/react-native-fantom/src/TimerMock.js` |
-| `getFantomRenderedOutput.js` | `private/react-native-fantom/src/getFantomRenderedOutput.js` |
-| `setUpDefaultReactNativeEnvironment.js` | `private/react-native-fantom/src/setUpDefaultReactNativeEnvironment.js` |
-| `setup.js` | `private/react-native-fantom/runtime/setup.js` (rewritten, see below) |
-| `mocks/ReactNativeInternalFeatureFlags.js` | `private/react-native-fantom/runtime/mocks/ReactNativeInternalFeatureFlags.js` |
-| `specs/NativeFantom.js` | `packages/react-native/src/private/testing/fantom/specs/NativeFantom.js` |
+| `index.ts` | `private/react-native-fantom/src/index.js` |
+| `Constants.ts` | `private/react-native-fantom/src/Constants.js` |
+| `HighResTimeStampMock.ts` | `private/react-native-fantom/src/HighResTimeStampMock.js` |
+| `TimerMock.ts` | `private/react-native-fantom/src/TimerMock.js` |
+| `getFantomRenderedOutput.tsx` | `private/react-native-fantom/src/getFantomRenderedOutput.js` |
+| `setUpDefaultReactNativeEnvironment.ts` | `private/react-native-fantom/src/setUpDefaultReactNativeEnvironment.js` |
+| `setup.ts` | `private/react-native-fantom/runtime/setup.js` (rewritten, see below) |
+| `mocks/ReactNativeInternalFeatureFlags.ts` | `private/react-native-fantom/runtime/mocks/ReactNativeInternalFeatureFlags.js` |
+| `specs/NativeFantom.ts` | `packages/react-native/src/private/testing/fantom/specs/NativeFantom.js` |
 
 ## Changes
 
 The first commit that adds this directory has the unmodified files, so
 `git diff` against it shows every change. Summary:
 
+- Converted from Flow to TypeScript (`.js` -> `.ts`, `.tsx` for the file
+  with JSX): `@flow` / `@format` pragmas and `$FlowExpectedError` comments
+  removed, Flow types written as TypeScript types (`?T` -> `T | null |
+  undefined`, `React.Node` -> `React.ReactNode`, `MixedElement` ->
+  `ReactElement`, object spread types -> intersections), typed `require`
+  casts (`require(...) as typeof import(...)`). The Flow enum
+  `NativeEventCategory` is a TypeScript enum with the same values. Runtime
+  behavior is unchanged. Where TypeScript needs help: an `isArray` guard in
+  `getFantomRenderedOutput.tsx` (`Array.isArray` does not narrow a
+  `ReadonlyArray` union) and one `@ts-expect-error` on `ReactFabric.render`
+  in `index.ts` (react-native's generated type rejects the null callback).
+  `tsc -p runtime` type-checks the files.
 - Haste / relative imports changed to npm paths:
   - `react-native/src/private/testing/fantom/specs/NativeFantom` ->
-    `./specs/NativeFantom` (in `index.js`, `TimerMock.js`,
-    `HighResTimeStampMock.js`, `getFantomRenderedOutput.js`).
-  - In `specs/NativeFantom.js`: `../../../../../Libraries/TurboModule/*` ->
+    `./specs/NativeFantom` (in `index.ts`, `TimerMock.ts`,
+    `HighResTimeStampMock.ts`, `getFantomRenderedOutput.tsx`).
+  - In `specs/NativeFantom.ts`: `../../../../../Libraries/TurboModule/*` ->
     `react-native/Libraries/TurboModule/*`.
-- `index.js`: removed the `Benchmark` import, `unstable_benchmark` export and
+- `specs/NativeFantom.ts`: added the optional methods of react-native-a11y-tree's
+  host (`getA11yTree`, `hitTest`, `enqueueNativeEventByTag`, ...).
+- `index.ts`: removed the `Benchmark` import, `unstable_benchmark` export and
   benchmark types. Updated the LogBox error message path.
-- `setup.js`: removed the Jest-like framework (`describe`/`it`/hooks,
+- `setup.ts`: removed the Jest-like framework (`describe`/`it`/hooks,
   `expect`, `jest.fn` mocks, snapshots, coverage, JS profiler, benchmark
   reporting). Kept the host contract: `global.$$RunTests$$` and reporting one
   JSON line through `NativeFantom.reportTestSuiteResultsJSON`. Added
@@ -45,7 +59,7 @@ The first commit that adds this directory has the unmodified files, so
   `runtime/patchWeakRef.js` (a test-only assertion that throws when a
   `WeakRef` is created or dereferenced outside `Fantom.runTask`; it would
   turn normal app code into errors).
-- `mocks/ReactNativeInternalFeatureFlags.js` is kept for reference but is not
+- `mocks/ReactNativeInternalFeatureFlags.ts` is kept for reference but is not
   imported. Fantom maps it to the Haste name `ReactNativeInternalFeatureFlags`
   for Meta's internal renderer build; the OSS renderer in
   `react-native/Libraries/Renderer/implementations` does not require it.

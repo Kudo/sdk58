@@ -75,7 +75,7 @@ git clone --recurse-submodules --shallow-submodules <this repo>
 bun install
 bun run build:host        # builds native/dist/<arch>/rn-a11y-host
 bun run rn-a11y-tree render examples/basic/App.tsx --platform android
-bun run check             # tsc --noEmit, bun run schema --check, bun run test, bun run test:e2e
+bun run check             # bun run typecheck, bun run schema --check, bun run test, bun run test:e2e
 ```
 
 The CLI uses `native/dist/<arch>/rn-a11y-host`. Set `RN_A11Y_HOST_BIN` to use
@@ -612,7 +612,7 @@ project, the entry runs, before the app module:
 1. `installExpoGlobalPolyfill()` from `expo-modules-core/src/polyfill/dangerous-internal`
    (the project's copy): `globalThis.expo` with `EventEmitter`,
    `NativeModule`, `SharedObject`, `modules`.
-2. `runtime/expo/prelude.js`: `globalThis.expo.getViewConfig(module, view)`
+2. `runtime/expo/prelude.ts`: `globalThis.expo.getViewConfig(module, view)`
    from `runtime/expo/viewConfigs.json` (152 views, iOS and Android
    attributes and events merged; views not in the table get the union of all
    `@expo/ui` prop and event names; `children`, `key`, `ref`, `style` are
@@ -652,7 +652,7 @@ may need it.
 - `a11y.state.checked` from `value`/`isOn`/`checked`, `disabled` from
   `enabled: false`/`disabled`.
 
-**Actions** (`runtime/expo/actions.js`). The event is chosen from the `on…`
+**Actions** (`runtime/expo/actions.ts`). The event is chosen from the `on…`
 callbacks that the JS component passed to the native view (its React props),
 else from the view name:
 
@@ -694,8 +694,8 @@ and native v3 detector are replaced in the bundle (`src/bundle.ts`
 
 | RNGH file | Replaced by |
 | --- | --- |
-| `src/specs/NativeRNGestureHandlerModule.ts` | `runtime/gh/NativeRNGestureHandlerModule.js` |
-| `src/v3/detectors/HostGestureDetector.tsx` | `runtime/gh/HostGestureDetector.js` |
+| `src/specs/NativeRNGestureHandlerModule.ts` | `runtime/gh/NativeRNGestureHandlerModule.ts` |
+| `src/v3/detectors/HostGestureDetector.tsx` | `runtime/gh/HostGestureDetector.tsx` |
 
 - The module implements the 8 spec methods with RNGH's own web classes
   (`src/web/`: handlers, `GestureHandlerOrchestrator`, `InteractionManager`,
@@ -715,7 +715,7 @@ and native v3 detector are replaced in the bundle (`src/bundle.ts`
   `RectButton`) as Fabric events `gestureHandlerEvent` /
   `gestureHandlerStateChange` / `gestureHandlerTouchEvent` on the
   `RNGestureHandlerDetector` element.
-- `HostGestureDetector.js` renders the real `RNGestureHandlerDetector` and
+- `HostGestureDetector.tsx` renders the real `RNGestureHandlerDetector` and
   attaches each handler to the detector, or, for Native gestures, to its only
   child (like the Android detector view). A Native handler attached to an
   `RNGestureHandlerButton` gets the button role, so it activates on release
@@ -738,7 +738,7 @@ and native v3 detector are replaced in the bundle (`src/bundle.ts`
 - RNGH resets the pan start point on activation, so `translationX` after a
   `pan` of `dx: 100` is `100` minus the distance moved before activation.
 
-`runtime/turboModuleStubs.js` adds JS stand-ins for core TurboModules the
+`runtime/turboModuleStubs.ts` adds JS stand-ins for core TurboModules the
 host lacks but libraries require at import time: `StatusBarManager` (RNGH
 imports `DrawerLayoutAndroid`, which imports `StatusBar`), and for
 `--platform ios` `KeyboardObserver` (`Keyboard` creates a
@@ -784,7 +784,7 @@ bundle, then reads frames from stdin (a line with the byte length, then that
 many bytes of JS), evaluates each one, and prints
 `{"type":"repl-eval-complete","id":n}` (and `{"type":"repl-error",...}` for a
 thrown error) on stdout. The session bundle installs
-`globalThis.__rnA11y.request(json)` (`runtime/session.js`, which uses the
+`globalThis.__rnA11y.request(json)` (`runtime/session.ts`, which uses the
 same action runner as `run`). Each request is sent as one line of JS that
 calls it; it prints one `{"type":"rn-a11y-tree-response",...}` line through
 `NativeFantom.reportTestSuiteResultsJSON`. The host exits when its stdin is
@@ -792,7 +792,7 @@ closed.
 
 ## How it works
 
-1. **Metro**: `src/bundle.ts` writes an entry (`runtime/entry-template.js`
+1. **Metro**: `src/bundle.ts` writes an entry (`runtime/entry-template.ts`
    with the app path, viewport, script and host settings filled in) and
    bundles it with Metro and Expo's config into one file for the chosen
    platform. Some native-only library files are replaced by runtime files
@@ -812,7 +812,7 @@ closed.
 ```
 rn-a11y-tree render App.tsx --platform android
   │
-  ├─ src/bundle.ts   write runtime/entry-template.js (placeholders filled) to a temp dir
+  ├─ src/bundle.ts   write runtime/entry-template.ts (placeholders filled) to a temp dir
   │                  Metro.runBuild with expo/metro-config getDefaultConfig + overrides
   │                  -> single-file bundle (--platform, dev=false, minify=false)
   │
@@ -830,12 +830,20 @@ rn-a11y-tree render App.tsx --platform android
 
 rn-a11y-tree run App.tsx --script actions.json
   same, plus: src/script.ts validates the script; the entry embeds it and
-  runtime/actions.js runs it after the render; snapshots and the final tree
+  runtime/actions.ts runs it after the render; snapshots and the final tree
   are converted by src/tree.ts
 ```
 
 `runtime/fantom/` is the Fantom JS runtime vendored from React Native (not on
-npm). See [`runtime/fantom/VENDORED.md`](runtime/fantom/VENDORED.md).
+npm), converted from Flow to TypeScript. See
+[`runtime/fantom/VENDORED.md`](runtime/fantom/VENDORED.md).
+
+`runtime/` is TypeScript. Metro compiles it with Babel like the app's own
+files (the published package ships the `.ts` files). `tsc -p runtime` type-checks
+it for Hermes (no DOM or Node types): `runtime/globals.d.ts` declares the
+globals it uses, `runtime/modules.d.ts` the react-native modules without
+declarations, and `runtime/tsconfig.json` maps react-native deep imports to
+react-native's generated declarations (`types_generated/`).
 
 ### Metro config
 
@@ -871,7 +879,7 @@ Base: `getDefaultConfig(projectRoot)` from `expo/metro-config`. Overrides:
 - `ios`: resolves `.ios.*` files. react-native then uses the iOS native
   components (`Switch`, `TextInput`) and iOS-only core native modules
   (`KeyboardObserver`, `LinkingManager`; JS stand-ins in
-  `runtime/turboModuleStubs.js`). Every example renders and runs with
+  `runtime/turboModuleStubs.ts`). Every example renders and runs with
   `--preset ios-phone` (the e2e suites run under it). The host registers
   ReactCommon's iOS `TextInput` (CoreText measured) and a 51x31 `Switch`.
 - `a11ytree`: out-of-tree platform mode. Files named `.a11ytree.*` are used
@@ -1028,7 +1036,7 @@ and that release's `host-version.json` (commit it to the repo root, or set
 
 ```sh
 bun run check            # all of the below: typecheck, unit tests, e2e
-bun run typecheck        # tsc --noEmit
+bun run typecheck        # tsc --noEmit && tsc -p runtime --noEmit (the bundle runtime)
 bun run test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.js)
 bun run test:e2e         # real host; skipped if there is no native/dist binary and no RN_A11Y_HOST_BIN
 RN_A11Y_E2E_PRESETS=android-phone bun run test:e2e   # presets to run the e2e suites under (default android-phone,ios-phone)
@@ -1053,7 +1061,7 @@ the npm libraries compiled into the host (`react-native-screens`,
 `react-native-reanimated`, `react-native-worklets`, `expo-modules-core`,
 `@expo/ui`) and the hash of
 `native/overlay/**`, `native/scripts/**` and `scripts/build-host.sh`. On a
-cache miss it runs `bun run build:host`. Then: `bun x tsc --noEmit`,
+cache miss it runs `bun run build:host`. Then: `bun run typecheck`,
 `bun run test`, `bun run test:e2e` (every `e2e/*.test.ts`), and every
 `native/tests/*-itest.js` Fantom test (copied with its helper files into the
 submodule, with the npm libraries installed there too, and run with

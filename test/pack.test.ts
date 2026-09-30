@@ -17,7 +17,7 @@ function packFiles(dir: string): Array<{path: string; size: number}> {
   return json[0].files;
 }
 
-test('npm pack of the CLI: exactly the whitelisted 62 files, no release archives', {skip: !hasNpm && 'npm is not available', timeout: 300_000}, () => {
+test('npm pack of the CLI: exactly the whitelisted 65 files, no release archives', {skip: !hasNpm && 'npm is not available', timeout: 300_000}, () => {
   // Release archives next to the package must never be packed (v0.1.0 shipped
   // dist/release/*.tar.gz inside the CLI tarball).
   const planted = [
@@ -43,11 +43,11 @@ test('npm pack of the CLI: exactly the whitelisted 62 files, no release archives
       bin: 1,
       dist: 16,
       'package.json': 1,
-      runtime: 26,
+      runtime: 29,
       schema: 10,
       tools: 6,
     });
-    assert.equal(files.length, 62);
+    assert.equal(files.length, 65);
     assert.ok(files.includes('dist/cli.js'));
     assert.ok(files.every(f => !f.startsWith('dist/') || /^dist\/[^/]+\.js$/.test(f)));
   } finally {

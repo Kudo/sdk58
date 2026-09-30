@@ -1,0 +1,30 @@
+{
+  // Type-checks the bundle runtime (`tsc -p runtime`). Metro compiles these
+  // files with babel-preset-expo for Hermes: no DOM, no Node. The globals it
+  // uses are declared in globals.d.ts, untyped modules in modules.d.ts.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "types": [],
+    "paths": {
+      // Placeholders of entry-template.ts (src/bundle.ts replaces them).
+      "__RUNTIME_DIR__/*": ["./*"],
+      // react-native ships generated declarations for its deep imports.
+      "react-native/Libraries/*": ["../node_modules/react-native/types_generated/Libraries/*"],
+      "react-native/src/*": ["../node_modules/react-native/types_generated/src/*"],
+      // react-native-gesture-handler: its declarations, not its sources.
+      "react-native-gesture-handler/src/*": ["../node_modules/react-native-gesture-handler/lib/typescript/*"]
+    }
+  },
+  "include": ["."]
+}

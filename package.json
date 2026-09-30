@@ -55,11 +55,11 @@
     "rn-a11y-tree": "node ./bin/rn-a11y-tree.js",
     "build:host": "bash ./scripts/build-host.sh",
     "perf": "node scripts/perf.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p runtime --noEmit",
     "schema": "node --import tsx src/genSchema.ts",
     "test": "node --import tsx --test test/*.test.ts",
     "test:e2e": "vitest run",
-    "check": "tsc --noEmit && bun run schema --check && bun run test && bun run test:e2e",
+    "check": "bun run typecheck && bun run schema --check && bun run test && bun run test:e2e",
     "build": "tsc -p tsconfig.build.json",
     "prepack": "bun run build && bun run schema --check"
   },

@@ -765,7 +765,7 @@
           "box"
         ],
         "additionalProperties": false,
-        "description": "One executed action of `run --script` (built in runtime/actions.js)."
+        "description": "One executed action of `run --script` (built in runtime/actions.ts)."
       },
       "StepError": {
         "type": "object",
@@ -1488,7 +1488,7 @@
               "additionalProperties": false
             }
           ],
-          "description": "Validation of `run --script` files. Runs in the CLI before bundling so errors are reported with the step index. Keep in sync with runtime/actions.js and the README \"Interactions\" section."
+          "description": "Validation of `run --script` files. Runs in the CLI before bundling so errors are reported with the step index. Keep in sync with runtime/actions.ts and the README \"Interactions\" section."
         },
         "Point": {
           "type": "object",

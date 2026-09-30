@@ -17,28 +17,38 @@
 
 import {registerRender} from '__RUNTIME_DIR__/fantom/setup';
 import {count, mark, summarize} from '__RUNTIME_DIR__/timings';
+// Types of the modules required below (type-only: erased, loads nothing).
+import type * as ActionsModule from '__RUNTIME_DIR__/actions';
+import type * as CapabilitiesModule from '__RUNTIME_DIR__/capabilities';
+import type * as FantomModule from '__RUNTIME_DIR__/fantom/index';
+import type * as NativeFantomModule from '__RUNTIME_DIR__/fantom/specs/NativeFantom';
+import type * as HostContextModule from '__RUNTIME_DIR__/gh/hostContext';
+import type * as HostConfigModule from '__RUNTIME_DIR__/hostConfig';
+import type * as SessionModule from '__RUNTIME_DIR__/session';
+import type * as SettleModule from '__RUNTIME_DIR__/settle';
+import type * as TurboModuleStubs from '__RUNTIME_DIR__/turboModuleStubs';
 
 registerRender(() => {
-  // Before anything loads TurboModuleRegistry (see runtime/turboModuleStubs.js).
-  require('__RUNTIME_DIR__/turboModuleStubs').installTurboModuleStubs();
+  // Before anything loads TurboModuleRegistry (see runtime/turboModuleStubs.ts).
+  (require('__RUNTIME_DIR__/turboModuleStubs') as typeof TurboModuleStubs).installTurboModuleStubs();
   // Environment setup must run before anything else from react-native.
   require('__RUNTIME_DIR__/fantom/setUpDefaultReactNativeEnvironment');
 
-  const React = require('react');
-  const Fantom = require('__RUNTIME_DIR__/fantom/index');
-  const NativeFantom = require('__RUNTIME_DIR__/fantom/specs/NativeFantom').default;
+  const React = require('react') as typeof import('react');
+  const Fantom = require('__RUNTIME_DIR__/fantom/index') as typeof FantomModule;
+  const NativeFantom = (require('__RUNTIME_DIR__/fantom/specs/NativeFantom') as typeof NativeFantomModule).default;
 
   // Expo projects only (src/bundle.ts expoPolyfillPath): the JS
   // `globalThis.expo`, Expo view configs and module stubs, before anything
   // imports expo, expo-modules-core or @expo/ui.
   /* __EXPO_PRELUDE__ */
 
-  // Host settings applied before the first render (runtime/hostConfig.js).
+  // Host settings applied before the first render (runtime/hostConfig.ts).
   const hostConfig = __HOST_CONFIG__;
   // Dimensions/PixelRatio before the app module: apps read them at import.
-  require('__RUNTIME_DIR__/hostConfig').applyDeviceMetrics(hostConfig.deviceMetrics);
+  (require('__RUNTIME_DIR__/hostConfig') as typeof HostConfigModule).applyDeviceMetrics(hostConfig.deviceMetrics);
 
-  const appModule = require('__APP_PATH__');
+  const appModule = require('__APP_PATH__') as {default?: unknown; App?: unknown};
   const App = appModule.default ?? appModule.App;
   if (typeof App !== 'function' && (typeof App !== 'object' || App == null)) {
     throw new Error(
@@ -49,21 +59,21 @@ registerRender(() => {
   const viewportWidth = __VIEWPORT_WIDTH__;
   const viewportHeight = __VIEWPORT_HEIGHT__;
   const includeDebugProps = __INCLUDE_DEBUG_PROPS__;
-  // `run --script`: array of actions (see runtime/actions.js), else null.
+  // `run --script`: array of actions (see runtime/actions.ts), else null.
   const script = __SCRIPT__;
   const tapMode = __TAP_MODE__;
   // `run` options, e.g. {diff: true} (send the tree after every step).
   const runOptions = __RUN_OPTIONS__;
   // `session`: install globalThis.__rnA11y for the host's --interactive mode
-  // (see runtime/session.js). The host never calls $$RunTests$$ then.
+  // (see runtime/session.ts). The host never calls $$RunTests$$ then.
   const session = __SESSION__;
 
   mark('setupEnd');
 
   if (session) {
-    require('__RUNTIME_DIR__/session').installSession({
+    (require('__RUNTIME_DIR__/session') as typeof SessionModule).installSession({
       React,
-      App,
+      App: App as React.ComponentType,
       viewport: {width: viewportWidth, height: viewportHeight},
       tapMode,
       hostConfig,
@@ -74,18 +84,18 @@ registerRender(() => {
   }
 
   return () => {
-    require('__RUNTIME_DIR__/hostConfig').applyHostConfig(hostConfig);
+    (require('__RUNTIME_DIR__/hostConfig') as typeof HostConfigModule).applyHostConfig(hostConfig);
     mark('renderStart');
     const root = Fantom.createRoot({viewportWidth, viewportHeight});
-    require('__RUNTIME_DIR__/gh/hostContext').setRootTag(root.getRootTag());
+    (require('__RUNTIME_DIR__/gh/hostContext') as typeof HostContextModule).setRootTag(root.getRootTag());
     Fantom.runTask(() => {
-      root.render(React.createElement(App));
+      root.render(React.createElement(App as React.ComponentType));
     });
     mark('rendered');
 
     const rootTag = root.getRootTag();
     // Deliver onLayout and other queued events until the UI is stable.
-    count('settleRounds', require('__RUNTIME_DIR__/settle').settle(rootTag));
+    count('settleRounds', (require('__RUNTIME_DIR__/settle') as typeof SettleModule).settle(rootTag));
     mark('settled');
     const viewport = {width: viewportWidth, height: viewportHeight};
 
@@ -95,7 +105,7 @@ registerRender(() => {
           'rn-a11y-tree run: the host has no NativeFantom.getA11yTree; rebuild it with `bun run build:host`',
         );
       }
-      const {runActions} = require('__RUNTIME_DIR__/actions');
+      const {runActions} = require('__RUNTIME_DIR__/actions') as typeof ActionsModule;
       const {steps, snapshots, final, fallbacks, stepTrees} = runActions({
         root,
         script,
@@ -113,20 +123,20 @@ registerRender(() => {
         final,
         fallbacks,
         stepTrees,
-        capabilities: require('__RUNTIME_DIR__/capabilities').getCapabilities(),
-        hostInfo: require('__RUNTIME_DIR__/capabilities').getHostInfo(),
+        capabilities: (require('__RUNTIME_DIR__/capabilities') as typeof CapabilitiesModule).getCapabilities(),
+        hostInfo: (require('__RUNTIME_DIR__/capabilities') as typeof CapabilitiesModule).getHostInfo(),
         timings: summarize(),
       });
     }
 
-    let source;
-    let tree;
+    let source: string;
+    let tree: string;
     mark('dumpStart');
     if (typeof NativeFantom.getA11yTree === 'function') {
       // Typed JSON dump of the committed ShadowTree (hierarchy before view
       // flattening, numbers/booleans instead of debug strings).
       source = 'shadowTree';
-      tree = require('__RUNTIME_DIR__/hostConfig').readA11yTree(rootTag, includeDebugProps);
+      tree = (require('__RUNTIME_DIR__/hostConfig') as typeof HostConfigModule).readA11yTree(rootTag, includeDebugProps);
     } else {
       // Fallback for hosts without getA11yTree: the mounted view tree from
       // Fantom's RenderOutput (type/props/children, debug-string props with
@@ -141,7 +151,7 @@ registerRender(() => {
     root.destroy();
 
     // `tree` is already a JSON string; splice it in as-is.
-    const hostInfo = require('__RUNTIME_DIR__/capabilities').getHostInfo();
+    const hostInfo = (require('__RUNTIME_DIR__/capabilities') as typeof CapabilitiesModule).getHostInfo();
     return `{"viewport":${JSON.stringify(viewport)},"source":${JSON.stringify(
       source,
     )},"hostInfo":${JSON.stringify(hostInfo)},"timings":${JSON.stringify(summarize())},"tree":${tree}}`;

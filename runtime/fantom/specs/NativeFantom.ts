@@ -3,9 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * @flow strict
- * @format
  */
 
 import type {
@@ -17,8 +14,8 @@ import * as TurboModuleRegistry from 'react-native/Libraries/TurboModule/TurboMo
 
 // match RenderFormatOptions.h
 export type RenderFormatOptions = {
-  includeRoot: boolean,
-  includeLayoutMetrics: boolean,
+  includeRoot: boolean;
+  includeLayoutMetrics: boolean;
 };
 
 // match RawEvent.h
@@ -61,16 +58,27 @@ export enum NativeEventCategory {
 }
 
 export type ScrollOptions = {
-  x: number,
-  y: number,
-  zoomScale?: number,
+  x: number;
+  y: number;
+  zoomScale?: number;
 };
 
 export type ImageResponse = {
-  width: number,
-  height: number,
-  cacheStatus?: 'memory' | 'disk' | 'disk/memory',
-  errorMessage?: string,
+  width: number;
+  height: number;
+  cacheStatus?: 'memory' | 'disk' | 'disk/memory';
+  errorMessage?: string;
+};
+
+// Added by react-native-a11y-tree (not in upstream Fantom).
+export type EdgeInsets = {top: number; left: number; right: number; bottom: number};
+
+// Added by react-native-a11y-tree: NativeFantom.setDeviceMetrics argument.
+export type DeviceMetrics = {
+  width: number;
+  height: number;
+  scale?: number;
+  fontScale?: number;
 };
 
 interface Spec extends TurboModule {
@@ -102,10 +110,10 @@ interface Spec extends TurboModule {
   getDirectManipulationProps: (
     shadowNode: unknown /* ShadowNode */,
   ) => Readonly<{
-    [string]: unknown,
+    [key: string]: unknown;
   }>;
   getFabricUpdateProps: (shadowNode: unknown /* ShadowNode */) => Readonly<{
-    [string]: unknown,
+    [key: string]: unknown;
   }>;
   flushMessageQueue: () => void;
   flushEventQueue: () => void;
@@ -121,17 +129,46 @@ interface Spec extends TurboModule {
   // implement it, so check `typeof NativeFantom.getA11yTree === 'function'`.
   getA11yTree?: (
     surfaceId: RootTag,
-    includeDebugProps?: ?boolean,
-    includeMountedProps?: ?boolean,
+    includeDebugProps?: boolean | null,
+    includeMountedProps?: boolean | null,
   ) => string;
+  // Also added by react-native-a11y-tree and optional (check with `typeof`).
+  // JSON `{"tag", "type", "path", "viaHitSlop"}` or `null`.
+  hitTest?: (surfaceId: RootTag, x: number, y: number) => string;
+  enqueueNativeEventByTag?: (
+    surfaceId: RootTag,
+    tag: number,
+    type: string,
+    payload?: unknown,
+    category?: NativeEventCategory,
+    isUnique?: boolean,
+  ) => void;
+  enqueueScrollEventByTag?: (
+    surfaceId: RootTag,
+    tag: number,
+    options: ScrollOptions,
+  ) => void;
+  setTextInputTextByTag?: (surfaceId: RootTag, tag: number, text: string) => void;
+  // Returns the number of state updates.
+  updateNativeStates?: (surfaceId: RootTag) => number;
+  getShadowTreeRevision?: (surfaceId: RootTag) => number;
+  getMountedRevision?: (surfaceId: RootTag) => number;
+  setScreensHeaderHeight?: (headerHeight: number) => void;
+  setSafeAreaInsets?: (insets: EdgeInsets) => void;
+  setDeviceMetrics?: (metrics: DeviceMetrics) => void;
+  dispatchExpoModifierEvent?: (tag: number, type: string, params?: unknown) => void;
+  // JSON array of the host's feature strings.
+  getCapabilities?: () => string;
+  // JSON {protocolVersion, rnVersion, buildType, sanitize, engines, fonts}.
+  getHostInfo?: () => string;
   createShadowNodeReferenceCounter(
     shadowNode: unknown /* ShadowNode */,
   ): () => number;
   createShadowNodeRevisionGetter(
     shadowNode: unknown /* ShadowNode */,
-  ): () => ?number;
+  ): () => number | null | undefined;
   saveJSMemoryHeapSnapshot: (filePath: string) => void;
-  forceHighResTimeStamp: (timeStamp: ?number) => void;
+  forceHighResTimeStamp: (timeStamp: number | null | undefined) => void;
   setTimerMockEnabled: (enabled: boolean) => void;
   advanceTimers: (deltaMs: number) => void;
   runAllTimers: () => void;

@@ -7,6 +7,65 @@
  * (`convertShadowNode` / `isKeptChild`); `test/tree-index.test.ts` checks it.
  */
 
+export type Point = {x: number; y: number};
+export type Box = {x: number; y: number; width: number; height: number};
+/** 4x4, column-major (the host's `transform` format). */
+type Matrix = number[];
+
+/**
+ * A node of the `NativeFantom.getA11yTree` JSON: the fields the runtime
+ * reads (the full shape is `ShadowNodeJSON` in src/schema.ts).
+ */
+export type A11yNode = {
+  type: string;
+  tag?: number;
+  frame?: Box;
+  contentOriginOffset?: Point;
+  contentOffset?: {x?: number; y?: number};
+  contentSize?: {width: number; height: number};
+  transform?: unknown;
+  mounted?: {frame?: Box; transform?: unknown};
+  pointerEvents?: string;
+  testID?: string;
+  accessibilityLabel?: string;
+  role?: string;
+  accessibilityRole?: string;
+  accessible?: boolean;
+  text?: unknown;
+  value?: unknown;
+  expo?: Record<string, unknown>;
+  layout?: string;
+  children?: A11yNode[];
+};
+
+export type IndexEntry = {
+  node: A11yNode;
+  ref: string;
+  visualBox: Box;
+  tag: number | null;
+  type: string;
+  testID: string | null;
+  box: Box;
+  virtual: boolean;
+  parent: IndexEntry | null;
+  children: IndexEntry[];
+  /** Set by assignKeysAndSelectors. */
+  key?: string;
+  sel?: string;
+};
+
+/** An entry, or anything with a tag and a parent chain (hit test results). */
+export type Linked = {tag: number | null; parent: Linked | null};
+
+/** How an action names its target (the first key that is set wins). */
+export type TargetSpec = {
+  key?: string | null;
+  sel?: string | null;
+  ref?: string | null;
+  testID?: string | null;
+  tag?: number | null;
+};
+
 // Nested `<Text>` spans are kept only if they carry one of these.
 const SPAN_A11Y_KEYS = [
   'accessibilityLabel',
@@ -14,9 +73,9 @@ const SPAN_A11Y_KEYS = [
   'accessibilityRole',
   'accessible',
   'testID',
-];
+] as const;
 
-export function isKeptChild(child) {
+export function isKeptChild(child: A11yNode): boolean {
   if (child.type === 'RawText') return false;
   if (child.type === 'Text') {
     return SPAN_A11Y_KEYS.some(key => child[key] !== undefined);
@@ -35,8 +94,8 @@ export function isKeptChild(child) {
 
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
-function multiply(a, b) {
-  const out = new Array(16);
+function multiply(a: Matrix, b: Matrix): Matrix {
+  const out: Matrix = new Array(16);
   for (let col = 0; col < 4; col++) {
     for (let row = 0; row < 4; row++) {
       let sum = 0;
@@ -47,20 +106,20 @@ function multiply(a, b) {
   return out;
 }
 
-function translation(x, y) {
+function translation(x: number, y: number): Matrix {
   return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1];
 }
 
-function isIdentity(m) {
+function isIdentity(m: Matrix): boolean {
   return m.every((v, i) => Math.abs(v - IDENTITY[i]) < 1e-9);
 }
 
-function applyMatrix(m, x, y) {
+function applyMatrix(m: Matrix, x: number, y: number): Point {
   const w = m[3] * x + m[7] * y + m[15] || 1;
   return {x: (m[0] * x + m[4] * y + m[12]) / w, y: (m[1] * x + m[5] * y + m[13]) / w};
 }
 
-function boundsAfter(m, rect) {
+function boundsAfter(m: Matrix, rect: Box): Box {
   const corners = [
     applyMatrix(m, rect.x, rect.y),
     applyMatrix(m, rect.x + rect.width, rect.y),
@@ -74,12 +133,18 @@ function boundsAfter(m, rect) {
   return {x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y};
 }
 
-function asMatrix(value) {
-  return Array.isArray(value) && value.length === 16 ? value : null;
+function asMatrix(value: unknown): Matrix | null {
+  return Array.isArray(value) && value.length === 16 ? (value as Matrix) : null;
 }
 
 /** Returns {visualBox, childMatrix} for a node with layout box `box`. */
-function visualOf(node, origin, box, virtual, parentMatrix) {
+function visualOf(
+  node: A11yNode,
+  origin: Point,
+  box: Box,
+  virtual: boolean,
+  parentMatrix: Matrix | null,
+): {visualBox: Box; childMatrix: Matrix | null} {
   if (virtual) {
     return {
       visualBox: parentMatrix != null ? boundsAfter(parentMatrix, box) : box,
@@ -97,13 +162,13 @@ function visualOf(node, origin, box, virtual, parentMatrix) {
         }
       : box;
   const transform = asMatrix(mounted?.transform) ?? asMatrix(node.transform);
-  let about = null;
+  let about: Matrix | null = null;
   if (transform != null && !isIdentity(transform)) {
     const cx = drawn.x + drawn.width / 2;
     const cy = drawn.y + drawn.height / 2;
     about = multiply(translation(cx, cy), multiply(transform, translation(-cx, -cy)));
   }
-  let local = null;
+  let local: Matrix | null = null;
   if (drawn.x !== box.x || drawn.y !== box.y) local = translation(drawn.x - box.x, drawn.y - box.y);
   if (about != null) local = local != null ? multiply(about, local) : about;
   const childMatrix =
@@ -112,22 +177,28 @@ function visualOf(node, origin, box, virtual, parentMatrix) {
   return {visualBox: own != null ? boundsAfter(own, drawn) : drawn, childMatrix};
 }
 
-export function indexTree(root) {
-  const entries = [];
+export function indexTree(root: A11yNode): IndexEntry[] {
+  const entries: IndexEntry[] = [];
   let counter = 0;
 
-  function visit(node, origin, parentBox, parent, parentMatrix) {
+  function visit(
+    node: A11yNode,
+    origin: Point,
+    parentBox: Box | null,
+    parent: IndexEntry | null,
+    parentMatrix: Matrix | null,
+  ): IndexEntry {
     const virtual = node.frame == null;
-    const box = virtual
+    const box: Box = virtual
       ? {...(parentBox ?? {x: origin.x, y: origin.y, width: 0, height: 0})}
       : {
-          x: origin.x + node.frame.x,
-          y: origin.y + node.frame.y,
-          width: node.frame.width,
-          height: node.frame.height,
+          x: origin.x + node.frame!.x,
+          y: origin.y + node.frame!.y,
+          width: node.frame!.width,
+          height: node.frame!.height,
         };
     const {visualBox, childMatrix} = visualOf(node, origin, box, virtual, parentMatrix);
-    const entry = {
+    const entry: IndexEntry = {
       node,
       ref: `n${counter++}`,
       // Where the node is drawn (transforms, mounted frame); equals `box`
@@ -145,7 +216,7 @@ export function indexTree(root) {
     // Children are at parent position + contentOriginOffset + child frame
     // (ScrollView: -contentOffset, RNSScreen: header height). Must match
     // src/tree.ts contentOrigin().
-    const offset =
+    const offset: Point =
       node.contentOriginOffset ??
       (node.contentOffset != null
         ? {x: -(node.contentOffset.x ?? 0), y: -(node.contentOffset.y ?? 0)}
@@ -170,9 +241,15 @@ export function indexTree(root) {
  * Adds `key` and `sel` to every entry, with the same rules as src/tree.ts
  * (`withKeys`, `selectors`).
  */
-function assignKeysAndSelectors(root) {
-  const seen = new Map();
-  const visit = (entry, parentKey, parentPath, index, siblingCount) => {
+function assignKeysAndSelectors(root: IndexEntry | undefined): void {
+  const seen = new Map<string, number>();
+  const visit = (
+    entry: IndexEntry,
+    parentKey: string | null,
+    parentPath: string,
+    index: number,
+    siblingCount: number,
+  ): void => {
     if (entry.testID) {
       const count = (seen.get(entry.testID) ?? 0) + 1;
       seen.set(entry.testID, count);
@@ -183,19 +260,19 @@ function assignKeysAndSelectors(root) {
     const typeSel = siblingCount > 1 ? `${entry.type}:${index}` : entry.type;
     const pathSel = parentPath ? `${parentPath}>${typeSel}` : typeSel;
     entry.sel = entry.testID ? `#${entry.testID}` : pathSel;
-    const counts = new Map();
+    const counts = new Map<string, number>();
     for (const c of entry.children) counts.set(c.type, (counts.get(c.type) ?? 0) + 1);
-    const seenType = new Map();
+    const seenType = new Map<string, number>();
     for (const c of entry.children) {
       const n = (seenType.get(c.type) ?? 0) + 1;
       seenType.set(c.type, n);
-      visit(c, entry.key, pathSel, n, counts.get(c.type));
+      visit(c, entry.key, pathSel, n, counts.get(c.type)!);
     }
   };
   if (root != null) visit(root, null, '', 1, 1);
 }
 
-export function findEntry(entries, target) {
+export function findEntry(entries: IndexEntry[], target: TargetSpec): IndexEntry | null {
   if (target.key != null) {
     return entries.find(e => e.key === target.key) ?? null;
   }
@@ -214,11 +291,11 @@ export function findEntry(entries, target) {
   return null;
 }
 
-export function center(box) {
+export function center(box: Box): Point {
   return {x: box.x + box.width / 2, y: box.y + box.height / 2};
 }
 
-function contains(box, x, y) {
+function contains(box: Box, x: number, y: number): boolean {
   return (
     x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height
   );
@@ -230,8 +307,8 @@ function contains(box, x, y) {
  * `pointerEvents` (`none`, `box-none`, `box-only`). Ignores zIndex,
  * transforms and overflow clipping.
  */
-export function hitTestEntries(entries, x, y) {
-  function hit(entry) {
+export function hitTestEntries(entries: IndexEntry[], x: number, y: number): IndexEntry | null {
+  function hit(entry: IndexEntry): IndexEntry | null {
     if (entry.virtual) return null;
     const pointerEvents = entry.node.pointerEvents ?? 'auto';
     if (pointerEvents === 'none') return null;
@@ -248,7 +325,7 @@ export function hitTestEntries(entries, x, y) {
 }
 
 /** True if `entry` is `ancestor` or one of its descendants. */
-export function isWithin(entry, ancestor) {
+export function isWithin(entry: Linked | null, ancestor: Linked | null): boolean {
   if (ancestor == null) return false;
   for (let e = entry; e != null; e = e.parent) {
     // Compare by tag too: the host hit test returns a copy of the entry.
