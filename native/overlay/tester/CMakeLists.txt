@@ -24,12 +24,55 @@ include_directories(${REACT_ANDROID_DIR}/hermes-engine/build/prefab-headers)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 include(Deps)
 
-find_library(LIB_HERMES hermesvm
-  HINTS ${REACT_ANDROID_DIR}/hermes-engine/build/hermes/lib
-  REQUIRED)
+# FANTOM_STATIC_HOST (default ON): one executable without dylibs. Hermes,
+# JSI and OpenSSL's libcrypto are linked statically:
+#  - Hermes: the static archives that the Hermes build produces as the input
+#    of libhermesvm.dylib (libhermesvm_a.a and the libraries it needs, the
+#    same list as the link of libhermesvm.dylib, without Hermes' own copy of
+#    JSI), so no separate Hermes build is needed.
+#  - JSI: ReactCommon/jsi/CMakeLists.txt hardcodes a SHARED library; the same
+#    target is defined here as STATIC (see below). It is the only copy of JSI
+#    in the executable (Hermes objects resolve their JSI symbols to it).
+#  - OpenSSL: libcrypto.a (only SHA256 in ReactCxxPlatform devsupport).
+option(FANTOM_STATIC_HOST "Link Hermes, JSI and OpenSSL statically" ON)
+set(HERMES_BUILD_DIR ${REACT_ANDROID_DIR}/hermes-engine/build/hermes)
 add_library(hermes-engine::hermesvm INTERFACE IMPORTED)
-set_target_properties(hermes-engine::hermesvm PROPERTIES
-  INTERFACE_LINK_LIBRARIES ${LIB_HERMES})
+if(FANTOM_STATIC_HOST)
+  set(hermes_static_libs)
+  foreach(archive
+      lib/libhermesvm_a.a
+      lib/Parser/libhermesParser.a
+      lib/AST/libhermesAST.a
+      lib/Support/libhermesSupport.a
+      lib/Regex/libhermesRegex.a
+      lib/Platform/Unicode/libhermesPlatformUnicode.a
+      external/dtoa/libdtoa.a
+      external/llvh/lib/Support/libLLVHSupport.a
+      external/llvh/lib/Demangle/libLLVHDemangle.a)
+    if(NOT EXISTS "${HERMES_BUILD_DIR}/${archive}")
+      message(FATAL_ERROR "Hermes static library not found: ${HERMES_BUILD_DIR}/${archive}")
+    endif()
+    list(APPEND hermes_static_libs "${HERMES_BUILD_DIR}/${archive}")
+  endforeach()
+  file(GLOB boost_context_lib
+    "${HERMES_BUILD_DIR}/external/boost/*/libs/context/libboost_context.a")
+  list(APPEND hermes_static_libs ${boost_context_lib} "-framework CoreFoundation")
+  set_target_properties(hermes-engine::hermesvm PROPERTIES
+    INTERFACE_LINK_LIBRARIES "${hermes_static_libs}")
+  set(OPENSSL_USE_STATIC_LIBS TRUE)
+  # A build directory configured before may have cached the dylibs.
+  foreach(openssl_library OPENSSL_CRYPTO_LIBRARY OPENSSL_SSL_LIBRARY)
+    if(${openssl_library} MATCHES "\\.dylib$")
+      unset(${openssl_library} CACHE)
+    endif()
+  endforeach()
+else()
+  find_library(LIB_HERMES hermesvm
+    HINTS ${HERMES_BUILD_DIR}/lib
+    REQUIRED)
+  set_target_properties(hermes-engine::hermesvm PROPERTIES
+    INTERFACE_LINK_LIBRARIES ${LIB_HERMES})
+endif()
 find_package(OpenSSL REQUIRED)
 
 # Boost in NDK is not compatible with desktop build
@@ -54,7 +97,18 @@ add_react_common_subdir(devtoolsruntimesettings)
 add_react_common_subdir(hermes/executor)
 add_react_common_subdir(hermes/inspector-modern)
 add_react_common_subdir(jserrorhandler)
-add_react_common_subdir(jsi)
+if(FANTOM_STATIC_HOST)
+  # Same as ReactCommon/jsi/CMakeLists.txt, but STATIC instead of SHARED.
+  include(${REACT_COMMON_DIR}/cmake-utils/react-native-flags.cmake)
+  file(GLOB jsi_SRC CONFIGURE_DEPENDS ${REACT_COMMON_DIR}/jsi/jsi/*.cpp)
+  add_library(jsi STATIC ${jsi_SRC})
+  target_include_directories(jsi PUBLIC ${REACT_COMMON_DIR}/jsi)
+  target_link_libraries(jsi folly_runtime glog)
+  target_compile_reactnative_options(jsi PRIVATE)
+  target_compile_options(jsi PRIVATE -O3 -Wno-unused-lambda-capture)
+else()
+  add_react_common_subdir(jsi)
+endif()
 add_react_common_subdir(jsiexecutor)
 add_react_common_subdir(jsinspector-modern)
 add_react_common_subdir(jsinspector-modern/cdp)

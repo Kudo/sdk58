@@ -171,6 +171,75 @@ against the tester's `hermes_inspector_modern` link (not tried).
 the host evaluates JS source bundles, so it would need bundles precompiled
 with `hermesc` (not supported by the host today).
 
+## Single executable
+
+With `FANTOM_STATIC_HOST` (default), `native/dist/<arch>/` contains only `rn-a11y-host`
+(no `lib/` directory). `otool -L` (Release, MinSizeRel and Debug):
+
+```
+/usr/lib/libobjc.A.dylib
+/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation
+/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit
+/System/Library/Frameworks/CoreText.framework/Versions/A/CoreText
+/System/Library/Frameworks/Foundation.framework/Versions/A/Foundation
+/usr/lib/libc++.1.dylib
+/usr/lib/libSystem.B.dylib
+```
+
+No `LC_RPATH`. `build-host.sh` warns if the host links anything outside
+`/usr/lib` and `/System/Library`. The CMake option is `FANTOM_STATIC_HOST`
+(tester `CMakeLists.txt`, default `ON`; `OFF` gives the previous layout with
+`lib/libhermesvm.dylib` and `lib/libjsi.dylib`).
+
+How:
+
+- Hermes: no separate Hermes build. The gradle Hermes build already produces
+  the static archives that `libhermesvm.dylib` is linked from
+  (`hermes/lib/libhermesvm_a.a` and `libhermesParser.a`, `libhermesAST.a`,
+  `libhermesSupport.a`, `libhermesRegex.a`, `libhermesPlatformUnicode.a`,
+  `libdtoa.a`, `libLLVHSupport.a`, `libLLVHDemangle.a`,
+  `libboost_context.a`, `-framework CoreFoundation`: the link line of
+  `hermes/lib/CMakeFiles/hermesvm.dir/link.txt`). The tester links these
+  instead of the dylib. Same Hermes configuration as before (Release,
+  debugger on). Hermes' own `jsi/libjsi.a` (on that link line too) is not
+  linked.
+- JSI: `ReactCommon/jsi/CMakeLists.txt` hardcodes `add_library(jsi SHARED ...)`
+  and honors no option. Without patching React Native, the tester
+  `CMakeLists.txt` defines the same `jsi` target (same sources, include
+  directory, links and flags) as `STATIC` instead of adding that directory.
+  It is the only JSI in the executable: Hermes is compiled against the same
+  JSI headers (`-DJSI_DIR=ReactCommon/jsi`) and its JSI references resolve to
+  this library. (With the dylibs, there were two copies: one inside
+  `libhermesvm.dylib`, from Hermes' static `libjsi.a`, and `libjsi.dylib`.)
+- OpenSSL: only `ReactCxxPlatform/react/devsupport/DevServerHelper.cpp` uses
+  it (`SHA256` of the device name for the packager connection). It is
+  linked from Homebrew's `libcrypto.a` (`OPENSSL_USE_STATIC_LIBS`). Dropping
+  it would need a change in ReactCxxPlatform; the static link keeps the
+  behavior. `libssl` is not used.
+
+Sizes (bytes, `strip -x`, single file vs. the previous total of the host and
+its two dylibs):
+
+| Type | Single `rn-a11y-host` | Before (host + libhermesvm + libjsi) |
+|---|---|---|
+| Release | 9,251,344 (unstripped 14,244,528) | 10,245,280 |
+| MinSizeRel | 8,162,848 (unstripped 13,563,248) | 9,157,824 |
+| Debug (not stripped) | 73,617,424 | 73,821,616 |
+
+The single file is about 1 MB smaller: `-dead_strip` now also removes the
+unused parts of Hermes (the dylib exported everything), and there is one JSI.
+
+Build time: the compile work is the same (Hermes is not rebuilt; `jsi` is the
+same sources as a static library). Back-to-back clean Release tester builds
+(during other load on the machine, load average about 13):
+`FANTOM_STATIC_HOST=ON` 151 s (final link 10.0 s), `OFF` 142 s (final link
+8.3 s). The difference is the final link (+1.7 s, the Hermes objects go
+through the linker) plus noise.
+
+`yarn check` passes with the single Release executable (25 unit/CLI tests,
+7 e2e tests, 0 failures), and a copy of `rn-a11y-host` in `/tmp` runs a
+render (`RN_A11Y_HOST_BIN=/tmp/rn-a11y-host-copy`).
+
 ## Commands
 
 ```sh
@@ -225,10 +294,11 @@ cmake --build /tmp/hermes-nodebug --target hermesvm
 
 ## Recommendations
 
-1. Ship `Release` (now the default of `yarn build:host`): 9.8 MB dist
-   instead of 70 MB, same behavior (`yarn check` passes), a CLI render of
+1. Ship `Release` (now the default of `yarn build:host`): a single 9.3 MB
+   executable (see Single executable; 9.8 MB with the dylibs) instead of
+   70 MB, same behavior (`yarn check` passes), a CLI render of
    `examples/basic` is about 0.85 s warm instead of 0.95 s (mostly Node and
-   Metro). `MinSizeRel` saves another 1.1 MB (8.7 MB) with the same test
+   Metro). `MinSizeRel` saves another 1.1 MB (8.2 MB single file) with the same test
    results; use it if the package size matters more than CPU speed in long
    animation runs.
 2. Use `RN_A11Y_HOST_BUILD_TYPE=Debug` for native development: 2 to 3 s per

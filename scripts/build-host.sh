@@ -3,9 +3,11 @@
 # third_party/react-native submodule and copies it, with its dylibs, into
 # native/dist/<arch>/ as a relocatable folder:
 #
-#   native/dist/<arch>/rn-a11y-host
-#   native/dist/<arch>/lib/libhermesvm.dylib
-#   native/dist/<arch>/lib/libjsi.dylib
+#   native/dist/<arch>/rn-a11y-host   (one executable: Hermes, JSI and
+#                                      libcrypto are linked statically)
+#
+# With the tester's FANTOM_STATIC_HOST=OFF the dylibs are copied to
+# native/dist/<arch>/lib/ (libhermesvm.dylib, libjsi.dylib).
 #
 # RN_A11Y_HOST_BUILD_TYPE=Release (default) | MinSizeRel | Debug selects the
 # tester build type (build dir: .../build/tester-<type>). Release and
@@ -172,32 +174,52 @@ copy_rpath_deps() {
 }
 copy_rpath_deps "$DIST_DIR/rn-a11y-host"
 
-# Replace absolute rpaths with relative ones.
+# Replace absolute rpaths with relative ones. With the static host (default,
+# FANTOM_STATIC_HOST in the tester CMake) there are no @rpath dylibs: the
+# rpaths are removed and there is no lib/ directory.
 fix_rpaths() {
   local file="$1" new="$2" rp
   for rp in $(rpaths_of "$file"); do
     install_name_tool -delete_rpath "$rp" "$file" 2>/dev/null || true
   done
-  install_name_tool -add_rpath "$new" "$file"
+  if [[ -n "$new" ]]; then
+    install_name_tool -add_rpath "$new" "$file"
+  fi
 }
-fix_rpaths "$DIST_DIR/rn-a11y-host" "@executable_path/lib"
-for lib in "$DIST_DIR"/lib/*.dylib; do
-  install_name_tool -id "@rpath/$(basename "$lib")" "$lib"
-  fix_rpaths "$lib" "@loader_path"
-done
+shopt -s nullglob
+DIST_DYLIBS=("$DIST_DIR"/lib/*.dylib)
+shopt -u nullglob
+if [[ ${#DIST_DYLIBS[@]} -eq 0 ]]; then
+  rmdir "$DIST_DIR/lib"
+  fix_rpaths "$DIST_DIR/rn-a11y-host" ""
+else
+  fix_rpaths "$DIST_DIR/rn-a11y-host" "@executable_path/lib"
+  for lib in ${DIST_DYLIBS[@]+"${DIST_DYLIBS[@]}"}; do
+    install_name_tool -id "@rpath/$(basename "$lib")" "$lib"
+    fix_rpaths "$lib" "@loader_path"
+  done
+fi
 
 # Release/MinSizeRel: remove local symbols (strip -x; exported symbols stay,
-# libjsi/libhermesvm need them).
+# dylibs need them).
 if [[ "$BUILD_TYPE" != "Debug" ]]; then
-  for f in "$DIST_DIR/rn-a11y-host" "$DIST_DIR"/lib/*.dylib; do
+  for f in "$DIST_DIR/rn-a11y-host" ${DIST_DYLIBS[@]+"${DIST_DYLIBS[@]}"}; do
     strip -x "$f"
   done
 fi
 
 # install_name_tool invalidates signatures; arm64 requires one.
-for f in "$DIST_DIR/rn-a11y-host" "$DIST_DIR"/lib/*.dylib; do
+for f in "$DIST_DIR/rn-a11y-host" ${DIST_DYLIBS[@]+"${DIST_DYLIBS[@]}"}; do
   codesign --force --sign - "$f" 2>/dev/null
 done
+
+# Anything that is not a system library would make the host non-portable.
+NON_SYSTEM_DEPS="$(otool -L "$DIST_DIR/rn-a11y-host" | awk 'NR>1{print $1}' |
+  grep -v -e '^/usr/lib/' -e '^/System/Library/' -e '^@rpath/' || true)"
+if [[ -n "$NON_SYSTEM_DEPS" ]]; then
+  log "warning: rn-a11y-host links non-system libraries:"
+  printf '  %s\n' $NON_SYSTEM_DEPS
+fi
 
 log "done: $DIST_DIR/rn-a11y-host"
 otool -L "$DIST_DIR/rn-a11y-host"
