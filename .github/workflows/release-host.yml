@@ -1,8 +1,9 @@
 name: Release host
 
 # On a tag v*: build the host, test it, package it with
-# scripts/release-host.mjs and attach the tarball, its .sha256 and
-# host-version.json to the GitHub release for the tag. The CLI downloads it
+# scripts/release-host.mjs and attach the tarball, its .sha256,
+# host-version.json and the npm tarballs of rn-a11y-host and
+# react-native-a11y-tree (npm pack; not published) to the GitHub release. The CLI downloads it
 # with RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>
 # and the host-version.json of that release (commit it to the repo root, or
 # point RN_A11Y_HOST_MANIFEST at it).
@@ -80,12 +81,23 @@ jobs:
       - name: Package host
         run: node scripts/release-host.mjs --out dist/release
 
+      # npm packages (not published yet): rn-a11y-host with osx-bin/ filled
+      # by --pack, and the CLI with its tsc build in dist/.
+      - name: npm pack
+        run: |
+          node scripts/release-host.mjs --pack
+          bun run build
+          npm pack --pack-destination dist/release
+          (cd packages/rn-a11y-host && npm pack --pack-destination ../../dist/release)
+          ls -la dist/release
+
       - name: Test the packaged host (download from file://)
         run: |
           RN_A11Y_HOST_BASE_URL="file://$PWD/dist/release" \
           RN_A11Y_HOST_MANIFEST="$PWD/dist/release/host-version.json" \
           RN_A11Y_HOST_CACHE_DIR="$RUNNER_TEMP/host-cache" \
           RN_A11Y_HOST_BIN='' \
+          RN_A11Y_HOST_SKIP_PACKAGE=1 \
             bun run rn-a11y-tree render examples/basic/App.tsx --platform android --format text --no-quiet 2> stderr.txt
           cat stderr.txt
           # Fails if the CLI fell back to native/dist.
@@ -105,3 +117,28 @@ jobs:
         with:
           name: rn-a11y-host-release
           path: dist/release/
+
+  # Later: publish both packages to npm from the release tarballs. Needs the
+  # NPM_TOKEN secret and `"private": true` removed from package.json.
+  # publish:
+  #   needs: release
+  #   runs-on: ubuntu-latest
+  #   if: startsWith(github.ref, 'refs/tags/')
+  #   permissions:
+  #     contents: read
+  #     id-token: write
+  #   steps:
+  #     - uses: actions/setup-node@v7
+  #       with:
+  #         node-version: '24'
+  #         registry-url: 'https://registry.npmjs.org'
+  #     - uses: actions/download-artifact@v7
+  #       with:
+  #         name: rn-a11y-host-release
+  #         path: release
+  #     - name: npm publish
+  #       env:
+  #         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  #       run: |
+  #         npm publish --provenance --access public release/rn-a11y-host-*.tgz
+  #         npm publish --provenance --access public release/react-native-a11y-tree-*.tgz

@@ -33,6 +33,36 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
 | `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); other Expo native modules are not emulated |
 
+## Install
+
+Not published to npm yet. The planned flow, in an Expo SDK 58 project on
+macOS:
+
+```sh
+npx react-native-a11y-tree render App.tsx --preset android-phone --format text
+# or: npm install -D react-native-a11y-tree && npx rn-a11y-tree render ...
+```
+
+Two packages:
+
+- `react-native-a11y-tree`: the CLI. `bin/rn-a11y-tree.js` runs the tsc
+  build in `dist/` (`bun run build`); in a repo checkout (with `src/`) it
+  runs the TypeScript sources through `tsx`. Files: `bin/`, `dist/`,
+  `runtime/`, `schema/`, `tools/`, `README.md`, `LICENSE`. Dependencies:
+  `commander` and `rn-a11y-host`. Peer dependencies: `expo` (>= 58),
+  `react-native`, `react`. Metro, `metro-config`, `expo/metro-config` and
+  `hermes-compiler` are loaded from the project (the copies that Expo and
+  React Native install), so the bundle uses the project's Metro.
+- `rn-a11y-host`: the prebuilt host, in hermes-compiler's layout
+  (`osx-bin/`, `linux64-bin/`, `win64-bin/`, `host-version.json`,
+  `getHostPath()`). macOS only for now.
+
+Local check of this flow: `e2e/package.test.ts` packs both packages
+(`npm pack`), installs them with `expo@58.0.0 react-native@0.88.0-rc.2
+react@19.3.0` into a scratch project and runs `npx rn-a11y-tree render
+App.tsx --preset android-phone --format text` (skipped without `npm` or a
+`native/dist` host).
+
 ## Quick start
 
 ```sh
@@ -302,7 +332,7 @@ terminal or with `--quiet`, a readable message otherwise).
 | 2 | `CHECK_FAILED` | `check` found violations |
 | 3 | `BUNDLE_FAILED` | Metro failed (syntax error, missing import) |
 | 4 | `APP_THREW` | the app threw while loading or rendering (`details.stack`) |
-| 5 | `HOST_MISSING`, `HOST_UNAVAILABLE`, `HOST_CRASHED`, `TIMEOUT` | host problems (`details.stderrTail`) |
+| 5 | `HOST_MISSING`, `HOST_UNAVAILABLE`, `HOST_INCOMPATIBLE`, `HOST_CRASHED`, `TIMEOUT` | host problems (`details.stderrTail`) |
 
 - Step errors are `{code, message}` with `TARGET_NOT_FOUND`,
   `TARGET_COVERED`, `TIMEOUT` or `APP_THREW`; session error responses use the
@@ -903,24 +933,46 @@ AppKit, CoreText, Foundation, libc++, libSystem).
 The script warns when `native/overlay` has uncommitted changes or files
 newer than the binary.
 
+`node scripts/release-host.mjs --pack [--package-dir <dir>]` fills
+`packages/rn-a11y-host` (the npm package of the host, see
+[Install](#install)): `osx-bin/rn-a11y-host` (a universal binary made
+with `lipo` when both `native/dist/arm64` and `native/dist/x86_64` exist)
+and `host-version.json` (the fields above plus `protocolVersion` and
+`binaries: {"osx-bin/rn-a11y-host": {archs, sha256, size}}`). Only macOS
+is packed for now.
+
 The CLI looks for the host in this order:
 
 1. `RN_A11Y_HOST_BIN`.
-2. With `RN_A11Y_HOST_BASE_URL` set: `~/.cache/rn-a11y-tree/host/<version>/rn-a11y-host`
+2. The `rn-a11y-host` package: `getHostPath()` (`osx-bin/rn-a11y-host` on
+   macOS, `linux64-bin/rn-a11y-host` on Linux x64,
+   `win64-bin/rn-a11y-host.exe` on Windows x64), when that file exists.
+   `RN_A11Y_HOST_SKIP_PACKAGE=1` skips this step (tests).
+3. With `RN_A11Y_HOST_BASE_URL` set: `~/.cache/rn-a11y-tree/host/<version>/rn-a11y-host`
    (`RN_A11Y_HOST_CACHE_DIR`, else `$XDG_CACHE_HOME/rn-a11y-tree/host`)
    when its `.sha256` marker matches the manifest. Else it downloads
    `<base>/<file>` (`https://` or `file://`), checks the sha256 against the
    manifest, unpacks it and writes the marker. The manifest is
    `host-version.json` in the package root, or `RN_A11Y_HOST_MANIFEST`.
-3. `native/dist/<arch>/rn-a11y-host`. If the download failed, the CLI
+4. `native/dist/<arch>/rn-a11y-host`. If the download failed, the CLI
    prints a warning (unless `--quiet`) and uses this file.
-4. Else `HOST_MISSING` (exit 5), with the download error when there was one.
+5. Else `HOST_MISSING` (exit 5), with the download error when there was one.
+
+**Protocol check.** `host-version.json` of the package or of the download
+has `protocolVersion`, the version of the CLI <-> host contract
+(`HOST_PROTOCOL_VERSION` in `scripts/release-host.mjs`). The CLI supports
+`SUPPORTED_PROTOCOL` (`src/host.ts`, now 1..1) and stops with
+`HOST_INCOMPATIBLE` (exit 5) for other versions. Hosts without a manifest
+(`RN_A11Y_HOST_BIN`, `native/dist`) are not checked. The session `ready`
+line has `host: {source, version?, protocolVersion?}`.
 
 The download adds about 200 ms to the first run (3.7 MB tarball from
 `file://`, Release host); later runs use the cache.
 
 `.github/workflows/release-host.yml` runs on tags `v*`. It builds the host,
-runs the tests, packages the host, renders `examples/basic` with the
+runs the tests, packages the host, makes the npm tarballs (`--pack`,
+`bun run build`, `npm pack` of both packages; not published: a commented
+`publish` job needs the `NPM_TOKEN` secret), renders `examples/basic` with the
 packaged host downloaded from `file://`, and uploads the files to the
 GitHub release of the tag. Use them with
 `RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>`
