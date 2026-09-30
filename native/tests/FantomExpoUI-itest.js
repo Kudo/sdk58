@@ -148,7 +148,7 @@ describe('@expo/ui', () => {
     Native.enqueueNativeEventByTag(surfaceId, button.tag, 'buttonPress', {});
     settle();
     console.log('SWIFT_EVENTS ' + JSON.stringify({presses}));
-    // Frames of the fake layout.
+    // Frames of the SwiftUI engine; the Host (flex: 1) fills the root.
     const swiftFrames = findAll(tree(root), n => String(n.type).startsWith('ExpoUI.')).map(n => [n.type, n.frame]);
     console.log('SWIFT_FRAMES ' + JSON.stringify(swiftFrames));
     expect(swiftFrames[0][1]).toEqual({x: 0, y: 0, width: 390, height: 844});
@@ -191,11 +191,98 @@ describe('@expo/ui', () => {
     const hostView = findAll(t, n => n.type === 'ExpoUI.RNHostView')[0];
     const content = findAll(t, n => n.testID === 'rn-content')[0];
     console.log('RNHOST ' + JSON.stringify({rnHostView: hostView.frame, content: content.frame, expo: hostView.expo}));
-    expect(hostView.frame).toEqual({x: 0, y: 40, width: 100, height: 30});
+    // SwiftUI engine (iOS metrics): below the Text (body, 20.333 high) by the
+    // default text-to-control spacing (10.643). The VStack hugs its widest
+    // child (the 100-point RNHostView), so x is 0.
+    expect(hostView.frame.x).toBe(0);
+    expect(hostView.frame.y).toBeCloseTo(20.333 + 10.643, 2);
+    expect(hostView.frame.width).toBe(100);
+    expect(hostView.frame.height).toBe(30);
     expect(content.frame).toEqual({x: 0, y: 0, width: 100, height: 30});
-    const hit = JSON.parse(Native.hitTest(surfaceId, 50, 40 + 15));
+    const hit = JSON.parse(Native.hitTest(surfaceId, 50, hostView.frame.y + 15));
     console.log('RNHOST_HIT ' + JSON.stringify(hit));
     expect(hit.path).toContain(content.tag);
+  });
+
+  it('lays out swift-ui Hosts with the SwiftUI engine', () => {
+    let UI: $FlowFixMe;
+    Fantom.runTask(() => {
+      // $FlowFixMe[cannot-resolve-module]
+      UI = require('@expo/ui/swift-ui');
+      // $FlowFixMe[cannot-resolve-module]
+      UI.modifiers = require('@expo/ui/swift-ui/modifiers');
+    });
+    const {Host, VStack, HStack, Text, Button, Spacer} = UI;
+    const {padding, frame} = UI.modifiers;
+    const capabilities = JSON.parse(Native.getCapabilities());
+    expect(capabilities).toContain('expoUI.swiftUILayout');
+    expect(capabilities).not.toContain('expoUI.fakeLayout');
+
+    const presses: Array<string> = [];
+    const root = Fantom.createRoot({viewportWidth: 390, viewportHeight: 844});
+    const surfaceId = root.getRootTag();
+    const render = () =>
+      Fantom.runTask(() => {
+        root.render(
+          <Host matchContents={{vertical: true}}>
+            <VStack spacing={8} alignment="leading" modifiers={[padding({all: 16})]}>
+              <Text>Hello</Text>
+              <Button label="Go" onPress={() => presses.push('go')} modifiers={[frame({width: 100})]} />
+              <HStack>
+                <Text>Left</Text>
+                <Spacer />
+                <Text>Right</Text>
+              </HStack>
+            </VStack>
+          </Host>,
+        );
+      });
+    render();
+    settle();
+    const t = tree(root);
+    const frames = findAll(t, n => String(n.type).startsWith('ExpoUI.')).map(n => [n.type, n.frame]);
+    console.log('SWIFTUI_ENGINE_FRAMES ' + JSON.stringify(frames));
+    const [host] = findAll(t, n => n.type === 'ExpoUI.HostView');
+    const [vstack] = findAll(t, n => n.type === 'ExpoUI.VStackView');
+    const [hello, left, right] = findAll(t, n => n.type === 'ExpoUI.TextView');
+    const [button] = findAll(t, n => n.type === 'ExpoUI.Button');
+    const [hstack] = findAll(t, n => n.type === 'ExpoUI.HStackView');
+    const line = 61 / 3; // one line of body text on iOS: ceil(20.287) to 1/3 pt
+    // Host: matchContents vertical -> 16 + 3 lines + 2 x 8 + 16; width from RN (390).
+    expect(host.frame.width).toBe(390);
+    expect(host.frame.height).toBeCloseTo(32 + 3 * line + 16, 2);
+    // The VStack fills the width (the HStack's Spacer), padding 16.
+    expect(vstack.frame).toEqual({x: 0, y: 0, width: 390, height: host.frame.height});
+    expect([hello.frame.x, hello.frame.y, hello.frame.width]).toEqual([16, 16, 39]);
+    expect(hello.frame.height).toBeCloseTo(line, 2);
+    // Button: plain (iOS .automatic), frame(width: 100), below the Text by 8.
+    expect(button.frame.x).toBe(16);
+    expect(button.frame.y).toBeCloseTo(16 + line + 8, 2);
+    expect(button.frame.width).toBe(100);
+    expect(button.frame.height).toBeCloseTo(line, 2);
+    // HStack: full width inside the padding, Text / Spacer / Text.
+    expect(hstack.frame.x).toBe(16);
+    expect(hstack.frame.y).toBeCloseTo(16 + 2 * line + 16, 2);
+    expect(hstack.frame.width).toBe(358);
+    expect(left.frame.x).toBe(0);
+    expect(right.frame.x + right.frame.width).toBeCloseTo(358, 2);
+
+    // Hit test at the Button's center: the Button (it has no child views).
+    const cx = host.frame.x + vstack.frame.x + button.frame.x + button.frame.width / 2;
+    const cy = host.frame.y + vstack.frame.y + button.frame.y + button.frame.height / 2;
+    const hit = JSON.parse(Native.hitTest(surfaceId, cx, cy));
+    console.log('SWIFTUI_ENGINE_HIT ' + JSON.stringify(hit));
+    expect(hit.tag).toBe(button.tag);
+
+    // macOS metrics: body text is 13 pt.
+    Native.setExpoUIPlatform('macos');
+    render();
+    Fantom.runTask(() => root.render(<Host matchContents={{vertical: true}}><Text>Hello</Text></Host>));
+    settle();
+    const [macText] = findAll(tree(root), n => n.type === 'ExpoUI.TextView');
+    console.log('SWIFTUI_ENGINE_MACOS ' + JSON.stringify(macText.frame));
+    expect(macText.frame.height).toBeLessThan(18);
+    Native.setExpoUIPlatform('ios');
   });
 
   it('measures text for the layout engine', () => {

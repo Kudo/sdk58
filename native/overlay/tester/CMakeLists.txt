@@ -427,6 +427,11 @@ if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
 endif()
 if(FANTOM_WITH_EXPO_UI)
   target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_EXPO_UI=1)
+  # The SwiftUI layout engine for @expo/ui Hosts (STL only; src/expoui/layout).
+  file(GLOB FANTOM_EXPO_UI_LAYOUT_SOURCES CONFIGURE_DEPENDS
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/expoui/layout/*.cpp)
+  target_sources(fantom_tester PRIVATE ${FANTOM_EXPO_UI_LAYOUT_SOURCES})
+  target_compile_definitions(fantom_tester PRIVATE FANTOM_EXPO_UI_LAYOUT_ENGINE=1)
 endif()
 
 foreach(library ${FANTOM_NATIVE_LIBRARIES})

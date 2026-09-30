@@ -42,15 +42,18 @@ const shape = (n: TreeNode): unknown =>
  * - `expoModifierEvents`: dispatchExpoModifierEvent (modifier callbacks) and
  *   written Host frames (host step 2);
  * - `expoUI.fakeLayout`: frames are the fake layout (rows of 40), not
- *   SwiftUI/Compose layout.
- * Box assertions need expoModifierEvents and no expoUI.fakeLayout.
+ *   SwiftUI/Compose layout;
+ * - `expoUI.swiftUILayout` / `expoUI.composeLayout`: that engine lays out its
+ *   Hosts (the other kind keeps the fake layout until its engine lands).
+ * Box assertions need the engine of the screen's kind.
  */
-function gates(result: RunResult, t: {diagnostic: (m: string) => void}) {
+function gates(result: RunResult, t: {diagnostic: (m: string) => void}, kind: 'swiftUI' | 'compose') {
   const caps = new Set(result.capabilities);
   const modifierEvents = caps.has('expoModifierEvents');
-  const realLayout = modifierEvents && !caps.has('expoUI.fakeLayout');
+  const engine = kind === 'swiftUI' ? 'expoUI.swiftUILayout' : 'expoUI.composeLayout';
+  const realLayout = modifierEvents && caps.has(engine);
   if (!modifierEvents) t.diagnostic('host without expoModifierEvents (step 1): modifier callbacks and frames not checked');
-  else if (!realLayout) t.diagnostic('fake layout (expoUI.fakeLayout): box assertions skipped');
+  else if (!realLayout) t.diagnostic(`no ${engine}: box assertions skipped`);
   return {modifierEvents, realLayout};
 }
 
@@ -62,7 +65,7 @@ test('expo-ui: universal @expo/ui (Compose views) — tree, roles, button, switc
     t.skip('host has no expoUI capability');
     return;
   }
-  const {modifierEvents, realLayout} = gates(result, t);
+  const {modifierEvents, realLayout} = gates(result, t, 'compose');
   const host = findAll(result.final, n => n.type === 'ExpoUI.HostView')[0];
   assert.deepEqual(shape(host), {
     'ExpoUI.HostView': [
@@ -112,7 +115,7 @@ test('expo-ui: @expo/ui/swift-ui (SwiftUI views) — tree, modifiers, button, to
     t.skip('host has no expoUI capability');
     return;
   }
-  const {modifierEvents, realLayout} = gates(result, t);
+  const {modifierEvents, realLayout} = gates(result, t, 'swiftUI');
   const host = findAll(result.final, n => n.type === 'ExpoUI.HostView')[0];
   assert.deepEqual(shape(host), {
     'ExpoUI.HostView': [{'ExpoUI.VStackView': ['ExpoUI.TextView', 'ExpoUI.Button', 'ExpoUI.ToggleView']}],

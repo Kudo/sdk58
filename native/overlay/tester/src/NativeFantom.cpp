@@ -293,6 +293,21 @@ jsi::Value dispatchExpoModifierEventHostFunction(
   return jsi::Value::undefined();
 }
 
+// setExpoUIPlatform('ios' | 'macos'): metrics of the SwiftUI layout engine
+// (default 'ios'). Applies to the next layout of a Host.
+jsi::Value setExpoUIPlatformHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& /*turboModule*/,
+    const jsi::Value* args,
+    size_t count) {
+  auto platform = stringArg(runtime, args, count, 0, "setExpoUIPlatform", "platform");
+  if (platform != "ios" && platform != "macos") {
+    throw jsi::JSError(runtime, "setExpoUIPlatform: expected 'ios' or 'macos'");
+  }
+  setExpoUIPlatform(platform);
+  return jsi::Value::undefined();
+}
+
 // getCapabilities(): string (JSON array of the host's feature strings)
 jsi::Value getCapabilitiesHostFunction(
     jsi::Runtime& runtime,
@@ -316,7 +331,10 @@ jsi::Value getCapabilitiesHostFunction(
 #ifdef FANTOM_WITH_EXPO_UI
   capabilities.push_back("expoUI");
   capabilities.push_back("expoModifierEvents");
-#ifndef FANTOM_EXPO_UI_LAYOUT_ENGINE
+#ifdef FANTOM_EXPO_UI_LAYOUT_ENGINE
+  capabilities.push_back("expoUI.swiftUILayout");
+  capabilities.push_back("setExpoUIPlatform");
+#else
   capabilities.push_back("expoUI.fakeLayout");
 #endif
 #endif
@@ -416,6 +434,8 @@ NativeFantom::NativeFantom(
       .argCount = 2, .invoker = measureExpoTextHostFunction};
   methodMap_["dispatchExpoModifierEvent"] = MethodMetadata{
       .argCount = 3, .invoker = dispatchExpoModifierEventHostFunction};
+  methodMap_["setExpoUIPlatform"] = MethodMetadata{
+      .argCount = 1, .invoker = setExpoUIPlatformHostFunction};
   methodMap_["getCapabilities"] = MethodMetadata{
       .argCount = 0, .invoker = getCapabilitiesHostFunction};
   methodMap_["updateNativeStates"] = MethodMetadata{

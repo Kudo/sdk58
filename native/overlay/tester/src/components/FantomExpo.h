@@ -44,13 +44,19 @@ struct ExpoLayoutResult {
 };
 
 /*
- * The hook where the layout engine goes. Until it lands
- * (FANTOM_EXPO_UI_FAKE_LAYOUT, default), a fake layout: every child is a row
- * of the proposal's width, stacked vertically; a view without Expo view
- * children is 40 high, a container is as high as its rows; an RNHostView keeps
- * its Yoga (measured) size.
+ * The layout emulation hook. With FANTOM_EXPO_UI_LAYOUT_ENGINE, a Host whose
+ * subtree has only SwiftUI view names is laid out by the SwiftUI engine
+ * (tester/src/expoui/layout, ControlMetrics::ios() unless
+ * setExpoUIPlatform("macos")). Other Hosts (Compose names), and every Host
+ * without the engine, get a fake layout: every child is a row of the
+ * proposal's width, stacked vertically; a view without Expo view children is
+ * 40 high, a container is as high as its rows; an RNHostView keeps its Yoga
+ * (measured) size.
  */
 ExpoLayoutResult layoutExpoHostSubtree(const ShadowNode &hostShadowNode, Size proposal);
+
+// Platform metrics of the SwiftUI engine: "ios" (default) or "macos".
+void setExpoUIPlatform(const std::string &platform);
 
 /*
  * `matchContents`: for every @expo/ui Host with matchContentsHorizontal or
@@ -66,7 +72,7 @@ int updateExpoHostSizes(const ShadowNode &rootShadowNode);
 /*
  * `onGlobalEvent` of an Expo view (modifier callbacks such as onTapGesture):
  * dispatches the direct event `globalEvent` with
- * `{[type]: params, payload: {[type]: params}}` (the SwiftUI JS reads the
+ * `{[type]: params, payload: [type, params]}` (the SwiftUI JS reads the
  * top-level keys, the Compose JS reads `payload`). Returns false if the node
  * is not an Expo view.
  */

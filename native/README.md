@@ -481,13 +481,39 @@ Native:
   and its measured size) and its RN children keep their Yoga layout relative
   to it. No content origin offset is needed because the frame itself is the
   emulated one.
-- `layoutExpoHostSubtree` is the hook for the SwiftUI/Compose engine
-  (`tester/src/expoui/layout/`). Until it is wired in
-  (`FANTOM_EXPO_UI_LAYOUT_ENGINE` not defined), a fake layout: every child is
-  a row of the proposal's width stacked vertically; a view without Expo view
-  children is 40 high, a container is as high as its rows; an `RNHostView`
-  keeps its measured size. `getCapabilities()` has `"expoUI.fakeLayout"`
-  while it is in use.
+- `layoutExpoHostSubtree` runs the layout engine. A Host whose subtree has
+  only SwiftUI view names (the iOS names, plus the names both platforms use:
+  `TextView`, `Button`, `SpacerView`, ...) goes through the SwiftUI engine
+  (`tester/src/expoui/layout/`, built with `FANTOM_EXPO_UI_LAYOUT_ENGINE`
+  when `FANTOM_WITH_EXPO_UI`; `getCapabilities()` has
+  `"expoUI.swiftUILayout"`):
+  - Input: each Expo view becomes an engine node: `type` from the view name
+    (`VStackView` → `VStack`, `TextView` → `Text`, `ToggleView` → `Toggle`,
+    `ScrollViewComponent` → `ScrollView`, `SlotView` → `Slot`, ...; others
+    drop the `View` suffix and are reported unsupported), `props` =
+    `propsMap` without `modifiers`, `modifiers` = `propsMap.modifiers`,
+    children in order (non-Expo children are skipped). The Host's children
+    are the root's children. An `RNHostView` becomes a leaf `RNHost` with
+    its measured Yoga size (`props.width`/`height`).
+  - Metrics: `ControlMetrics::ios()` by default,
+    `NativeFantom.setExpoUIPlatform('macos')` for `ControlMetrics::macos()`
+    (`'ios'` to go back; applies at the next layout of a Host). The pixel
+    grid is the Host's `pointScaleFactor`.
+  - Text: `measureExpoText` (CoreText TextLayoutManager) at the engine's
+    point sizes. SF Symbols: a table of sizes measured on the iOS 26.5
+    simulator at 17 pt (star, heart, gearshape, chevron.right, ...), scaled
+    by the point size; other names are 1.2 x 1.1 times the point size.
+  - Output: the engine's frames are relative to the Host; they are converted
+    to frames relative to the parent. Nodes without an engine frame (Slot
+    views, nested Text spans, Picker options, unsupported views) get the
+    union of their children's frames, or an empty frame at the parent's
+    origin. The engine's `host` size is the `matchContents` content size.
+  Compose Hosts (any Compose-only name such as `ColumnView`, `RowView`,
+  `SwitchView`) keep the fake layout until the Compose engine is wired in:
+  every child is a row of the proposal's width stacked vertically; a view
+  without Expo view children is 40 high, a container is as high as its rows;
+  an `RNHostView` keeps its measured size. Without the engine every Host
+  uses it and `getCapabilities()` has `"expoUI.fakeLayout"`.
 - Host `matchContents` (`matchContentsHorizontal`/`matchContentsVertical`
   props): after every mount (and on `updateNativeStates`) the host dispatches
   `ExpoViewState::withStyleDimensions` with the content size of
@@ -508,8 +534,8 @@ Native:
   20.33, caption 29 x 15.33.
 - Modifier callbacks (`onGlobalEvent`):
   `NativeFantom.dispatchExpoModifierEvent(tag, type, params?)` dispatches
-  the direct event `globalEvent` with `{[type]: params, payload: {[type]:
-  params}}` (the SwiftUI JS reads the top-level keys, the Compose JS reads
+  the direct event `globalEvent` with `{[type]: params, payload: [type,
+  params]}` (the SwiftUI JS reads the top-level keys, the Compose JS reads
   `payload`), for example `('onTapGesture', {})` for the `onTapGesture`
   modifier. Modifier callbacks are functions in JS; in `propsMap` they are
   `"eventListener": null`, so a runner can find them by `$type`. The tag is

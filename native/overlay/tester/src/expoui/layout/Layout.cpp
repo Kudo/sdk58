@@ -1308,7 +1308,22 @@ class Builder {
       });
     }
     if (t == "Text") {
-      return text(propString(node, "text"), env);
+      // Nested Text children are concatenated (TextView.swift `buildText`).
+      std::function<std::string(const Node&)> content = [&](const Node& n) {
+        std::string out = propString(n, "text");
+        for (const auto& child : n.children) {
+          if (child.type == "Text") {
+            out += content(child);
+          }
+        }
+        return out;
+      };
+      return text(content(node), env);
+    }
+    if (t == "RNHost") {
+      // React Native content in an RNHostView: a leaf of its measured (Yoga) size.
+      Size s{paramLength(node.props, "width", 0), paramLength(node.props, "height", 0)};
+      return leaf([s](const Proposal&) { return s; });
     }
     if (t == "Image") {
       std::string name = propString(node, "systemName");
