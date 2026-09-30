@@ -13,7 +13,8 @@ node compare.mjs --tolerance 0 --densities 1,2.75,2.625,3.5 -v 17-rtl
 
 `build/compose-layout` has compose-ref's interface (`--density`,
 `--font-scale`, `--no-touch-target`, `--fonts DIR`; JSON on stdin, the same
-output JSON). `compare.mjs` runs both tools on
+output JSON), plus `--shared-measurer` (see Text below). It links the SwiftUI
+engine's `layout/Layout.cpp` for the shared types. `compare.mjs` runs both tools on
 `../compose-ref/examples/*.json` and `cases/*.json`, compares `host`, every
 node's `frame` and `contentFrame` in px, the node set and the `unsupported`
 keys. compose-ref takes about 2.7 s per run, so its results are cached in
@@ -21,6 +22,27 @@ keys. compose-ref takes about 2.7 s per run, so its results are cached in
 A case can have a top-level `args` array, passed to both tools.
 
 ## Engine
+
+API (shared with the SwiftUI engine, `../../overlay/tester/src/expoui/layout/Layout.h`,
+so one host adapter feeds both):
+
+```cpp
+layout::LayoutResult compose::layout(const layout::HostSpec& host, const layout::Node& root,
+                                     layout::TextMeasurer& measurer, const compose::ControlMetrics& metrics);
+```
+
+`Node`, `HostSpec`, `Value`, `TextMeasurer`, `LayoutResult` are the `layout::`
+types; frames are dp (px / density). `compose::ControlMetrics` holds `density`,
+`fontScale`, `touchTarget` and the Material 3 sizes. Text: the engine calls
+`measureText(text, FontSpec, maxWidth, maxLines)` for widths and line counts
+(FontSpec: family `Roboto`, `pointSize` = px size, named weight) and
+`lineHeight(FontSpec)` for ascent + descent, and computes paragraph heights
+itself. FontSpec has no italic or letter spacing, so a measurer can also
+implement `compose::ComposeTextMeasurer` (found with `dynamic_cast`); without
+it, letter spacing is added to single-line widths by the engine and ignored for
+line breaks. `node compare.mjs --shared-measurer` runs that fallback: 54/56
+(only `18-text-wrapping`, a paragraph with 2 sp letter spacing, breaks
+differently).
 
 `ComposeLayout.h/.cpp` (STL only) copies Compose's measure / layout protocol in
 integer px:
@@ -51,13 +73,13 @@ integer px:
 - `ControlMetrics` holds the Material 3 sizes; `TextMeasurer` is the text
   interface; `materialTypography` has the CMP material3 1.10 type scale.
 
-`RobotoTextMeasurer.mm` is the test measurer: CoreText with the Roboto files
-from `compose-ref/fonts` (registered with `CTFontManagerRegisterFontsForURL`).
-Observed rules that make it equal to Skia: line height `round(ascent +
-descent)` per line; with a `lineHeight` and `LineHeightStyle.Trim.Both` (the
+`RobotoTextMeasurer.mm` is the test measurer (both interfaces): CoreText with
+the Roboto files from `compose-ref/fonts` (registered with
+`CTFontManagerRegisterFontsForURL`). Observed rules, in the engine, that make
+it equal to Skia: line height `round(ascent + descent)` per line; with a `lineHeight` and `LineHeightStyle.Trim.Both` (the
 `TextStyle.Default`): `(lines - 1) * lineHeight + ascent + descent`; with the
-Material typography (Trim.None): `lines * lineHeight`; letter spacing as
-`kCTTrackingAttributeName` (`kCTKernAttributeName = 0` would turn off the
+Material typography (Trim.None): `lines * lineHeight`. In the measurer: letter
+spacing as `kCTTrackingAttributeName` (`kCTKernAttributeName = 0` would turn off the
 font's kerning).
 
 ## Results

@@ -1,12 +1,8 @@
 // See RobotoTextMeasurer.h.
 //
-// Observed with compose-ref (Skia paragraphs, Roboto 2.138):
-// - one line without a lineHeight is round(ascent + descent) px high, and each extra line adds the
-//   same rounded amount (14 sp at density 1: 16.4 -> 16; 2 lines 32);
-// - with a lineHeight, each line is the lineHeight; with LineHeightStyle.Trim.Both (the
-//   TextStyle.Default) the first line's extra top and the last line's extra bottom are removed:
-//   (lines - 1) * lineHeight + ascent + descent, not rounded (30 sp over 2 lines at 14 sp: 46.4);
-// - the width is the advance sum with kerning, plus letterSpacing after every glyph.
+// Widths and line counts only; the engine computes paragraph heights from the line count and
+// composeFontHeight (ascent + descent). Observed with compose-ref: the width is the advance sum
+// with kerning, plus letterSpacing after every glyph (CoreText tracking does the same).
 
 #import <CoreText/CoreText.h>
 #import <Foundation/Foundation.h>
@@ -105,12 +101,23 @@ std::vector<std::string> split(const std::string& text, char sep) {
   }
 }
 
-float lineHeight(const ResolvedTextStyle& style) {
-  if (!std::isnan(style.lineHeightPx)) {
-    return std::round(style.lineHeightPx);
+ResolvedTextStyle fromFontSpec(const layout::FontSpec& spec) {
+  static const std::map<std::string, int> weights = {
+      {"thin", 100}, {"ultraLight", 200}, {"light", 300},  {"regular", 400}, {"medium", 500},
+      {"semibold", 600}, {"bold", 700},   {"heavy", 800}, {"black", 900},
+  };
+  ResolvedTextStyle style;
+  style.fontSizePx = static_cast<float>(spec.pointSize);
+  auto it = weights.find(spec.weight);
+  style.fontWeight = it == weights.end() ? 400 : it->second;
+  if (spec.design == "serif") {
+    style.fontFamily = "serif";
+  } else if (spec.design == "monospaced") {
+    style.fontFamily = "monospace";
+  } else if (spec.family == "cursive") {
+    style.fontFamily = "cursive";
   }
-  CTFontRef f = font(style);
-  return std::round(static_cast<float>(CTFontGetAscent(f) + CTFontGetDescent(f)));
+  return style;
 }
 
 }  // namespace
@@ -136,29 +143,14 @@ bool RobotoTextMeasurer::registerFonts(const std::string& fontsDir) {
   return count > 0;
 }
 
-float RobotoTextMeasurer::maxIntrinsicWidth(const std::string& text, const ResolvedTextStyle& style) {
-  float w = 0;
-  for (const auto& line : split(text, '\n')) {
-    w = std::max(w, lineWidth(line, style));
-  }
-  return w;
-}
-
-float RobotoTextMeasurer::minIntrinsicWidth(const std::string& text, const ResolvedTextStyle& style) {
-  float w = 0;
-  for (const auto& line : split(text, '\n')) {
-    for (const auto& word : split(line, ' ')) {
-      w = std::max(w, lineWidth(word, style));
-    }
-  }
-  return w;
-}
-
-TextLayoutResult RobotoTextMeasurer::layout(const std::string& text, const ResolvedTextStyle& style, float width,
-                                            int maxLines) {
+layout::TextMeasurement RobotoTextMeasurer::measureComposeText(const std::string& text, const ResolvedTextStyle& style,
+                                                               double maxWidth, int maxLines) {
+  layout::TextMeasurement m;
   int lines = 0;
+  float widest = 0;
   for (const auto& paragraph : split(text, '\n')) {
-    if (paragraph.empty() || std::isinf(width)) {
+    if (paragraph.empty() || std::isinf(maxWidth)) {
+      widest = std::max(widest, lineWidth(paragraph, style));
       lines++;
       continue;
     }
@@ -167,27 +159,47 @@ TextLayoutResult RobotoTextMeasurer::layout(const std::string& text, const Resol
     CFIndex length = CFAttributedStringGetLength(a);
     CFIndex start = 0;
     while (start < length) {
-      CFIndex count = CTTypesetterSuggestLineBreak(ts, start, width);
+      CFIndex count = CTTypesetterSuggestLineBreak(ts, start, maxWidth);
       if (count <= 0) {
         count = 1;
       }
+      CTLineRef line = CTTypesetterCreateLine(ts, CFRangeMake(start, count));
+      double w = CTLineGetTypographicBounds(line, nullptr, nullptr, nullptr) - CTLineGetTrailingWhitespaceWidth(line);
+      CFRelease(line);
+      widest = std::max(widest, static_cast<float>(w));
       start += count;
       lines++;
     }
     CFRelease(ts);
     CFRelease(a);
   }
-  lines = std::min(std::max(lines, 1), std::max(maxLines, 1));
-  TextLayoutResult r;
-  r.lineCount = lines;
-  if (!std::isnan(style.lineHeightPx) && style.trimLineHeight) {
-    CTFontRef f = font(style);
-    float fontHeight = static_cast<float>(CTFontGetAscent(f) + CTFontGetDescent(f));
-    r.height = style.lineHeightPx * static_cast<float>(lines - 1) + fontHeight;
-  } else {
-    r.height = lineHeight(style) * static_cast<float>(lines);
+  if (maxLines > 0) {
+    lines = std::min(lines, maxLines);
   }
-  return r;
+  m.lines = std::max(lines, 1);
+  m.width = widest;
+  CTFontRef f = font(style);
+  m.height = (CTFontGetAscent(f) + CTFontGetDescent(f)) * m.lines;
+  m.firstBaseline = CTFontGetAscent(f);
+  return m;
+}
+
+double RobotoTextMeasurer::composeFontHeight(const ResolvedTextStyle& style) {
+  CTFontRef f = font(style);
+  return CTFontGetAscent(f) + CTFontGetDescent(f);
+}
+
+layout::TextMeasurement RobotoTextMeasurer::measureText(const std::string& text, const layout::FontSpec& spec,
+                                                        double maxWidth, int maxLines) {
+  return measureComposeText(text, fromFontSpec(spec), maxWidth, maxLines);
+}
+
+double RobotoTextMeasurer::lineHeight(const layout::FontSpec& spec) {
+  return composeFontHeight(fromFontSpec(spec));
+}
+
+layout::Size RobotoTextMeasurer::measureSymbol(const std::string&, const layout::FontSpec&) {
+  return {};
 }
 
 }  // namespace expoui::compose

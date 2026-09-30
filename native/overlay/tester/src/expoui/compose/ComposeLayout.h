@@ -6,22 +6,29 @@
 // LayoutModifierNode chain. The ground truth is native/tools/compose-ref (real Compose Desktop);
 // native/tools/compose-layout-test compares the two.
 //
-// Input: the compose-ref JSON ({host, root: {type, props, modifiers, children}}).
-// Output: frames in px, relative to the Host.
+// The public types are the SwiftUI engine's (../layout/Layout.h): the same Node, HostSpec,
+// TextMeasurer and LayoutResult, so one host adapter feeds both engines. Only ControlMetrics is
+// Compose's own. Frames in the result are dp (px / density), relative to the Host.
 
 #pragma once
 
 #include <climits>
 #include <cmath>
-#include <map>
-#include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 
-#include "ComposeJson.h"
+#include "../layout/Layout.h"
 
 namespace expoui::compose {
+
+using layout::FontSpec;
+using layout::HostSpec;
+using layout::LayoutResult;
+using layout::Node;
+using layout::Object;
+using layout::TextMeasurement;
+using layout::TextMeasurer;
+using layout::Value;
 
 /// Constraints.Infinity.
 constexpr int kInfinity = INT_MAX;
@@ -47,12 +54,12 @@ struct Constraints {
 
 /// A text style after @expo/ui's merge (TextView.kt TextContent), in sp.
 struct TextStyle {
-  float fontSize = 14;           // TextStyle.Default resolves to 14 sp
-  float lineHeight = NAN;        // sp; NaN = the font's line height
-  float letterSpacing = 0;       // sp
+  float fontSize = 14;     // TextStyle.Default resolves to 14 sp
+  float lineHeight = NAN;  // sp; NaN = the font's line height
+  float letterSpacing = 0; // sp
   int fontWeight = 400;
   bool italic = false;
-  std::string fontFamily;        // "" = default (Roboto on Android)
+  std::string fontFamily;  // "" = default (Roboto on Android); "serif", "monospace", "cursive"
   /// LineHeightStyle.Trim.Both (TextStyle.Default) vs Trim.None (the Material 3 typography).
   /// Only matters with a lineHeight.
   bool trimLineHeight = true;
@@ -69,28 +76,30 @@ struct ResolvedTextStyle {
   bool trimLineHeight = true;
 };
 
-struct TextLayoutResult {
-  /// Paragraph height in px (not rounded up yet).
-  float height = 0;
-  int lineCount = 0;
-};
-
-/// Text measurement. Compose Desktop lays text out with Skia's paragraph engine; Android with
-/// StaticLayout. The implementation should use Roboto.
-class TextMeasurer {
+/// Optional extension of layout::TextMeasurer for what FontSpec cannot say (italic, letter
+/// spacing, numeric weight). The engine uses it when the measurer also implements it
+/// (dynamic_cast); otherwise it converts the style to a FontSpec (family "Roboto", `pointSize` =
+/// px size, named weight) and adds letter spacing to the width of each glyph itself (exact on one
+/// line; line breaks then ignore it).
+class ComposeTextMeasurer {
  public:
-  virtual ~TextMeasurer() = default;
-  /// ParagraphIntrinsics.maxIntrinsicWidth: the width of the text on one line, px.
-  virtual float maxIntrinsicWidth(const std::string& text, const ResolvedTextStyle& style) = 0;
-  /// ParagraphIntrinsics.minIntrinsicWidth: the widest unbreakable segment (word), px.
-  virtual float minIntrinsicWidth(const std::string& text, const ResolvedTextStyle& style) = 0;
-  /// Lays the text out in `width` px (may be infinite) with at most `maxLines` lines.
-  virtual TextLayoutResult layout(const std::string& text, const ResolvedTextStyle& style, float width,
-                                  int maxLines) = 0;
+  virtual ~ComposeTextMeasurer() = default;
+  /// Like TextMeasurer::measureText (px). `maxLines` 0 = unlimited. Letter spacing is added after
+  /// every glyph (Skia's behavior).
+  virtual TextMeasurement measureComposeText(const std::string& text, const ResolvedTextStyle& style,
+                                             double maxWidth, int maxLines) = 0;
+  /// ascent + descent of the font, px, not rounded.
+  virtual double composeFontHeight(const ResolvedTextStyle& style) = 0;
 };
 
-/// Material 3 sizes in dp (observed with compose-ref; material3 1.5.0-alpha / CMP 1.10).
+/// Everything platform-specific: density and the Material 3 sizes in dp (observed with
+/// compose-ref; CMP material3 1.10.0-alpha05, the desktop build of androidx material3 1.5.0-alpha).
 struct ControlMetrics {
+  float density = 1;
+  float fontScale = 1;
+  /// false = LocalMinimumInteractiveComponentSize is unspecified (compose-ref --no-touch-target).
+  bool touchTarget = true;
+
   float minimumInteractiveSize = 48;      // LocalMinimumInteractiveComponentSize
   float buttonMinWidth = 58;              // ButtonDefaults.MinWidth
   float buttonMinHeight = 40;             // ButtonDefaults.MinHeight
@@ -108,61 +117,14 @@ struct ControlMetrics {
   float textFieldMinWidth = 280;          // TextFieldDefaults.MinWidth
   float textFieldMinHeight = 56;          // TextFieldDefaults.MinHeight
   float textFieldPaddingHorizontal = 16;
-  float outlinedTextFieldTopPadding = 8;  // OutlinedTextFieldTopPadding, with a label
+  float outlinedTextFieldTopPadding = 8;  // minimizedLabelHalfHeight, with a label
   float iconSize = 24;
 };
 
-struct LayoutOptions {
-  float density = 1;
-  float fontScale = 1;
-  /// false = LocalMinimumInteractiveComponentSize is unspecified (compose-ref --no-touch-target).
-  bool touchTarget = true;
-  ControlMetrics metrics;
-};
-
-struct Rect {
-  int x = 0;
-  int y = 0;
-  int width = 0;
-  int height = 0;
-  bool operator==(const Rect& o) const {
-    return x == o.x && y == o.y && width == o.width && height == o.height;
-  }
-};
-
-struct NodeFrame {
-  std::string path;
-  std::string type;
-  /// Outside the node's modifiers, px, relative to the Host. Absent for virtual nodes without
-  /// laid-out children.
-  std::optional<Rect> frame;
-  /// Inside the node's modifiers (the box the component gets).
-  std::optional<Rect> contentFrame;
-  std::string text;
-  std::string testID;
-  bool isVirtual = false;
-};
-
-struct LayoutResult {
-  /// Host size in px: the content size on matchContents axes, else the input size.
-  int hostWidth = 0;
-  int hostHeight = 0;
-  /// The same in dp: the input size on the normal axes (as compose-ref prints it).
-  float hostWidthDp = 0;
-  float hostHeightDp = 0;
-  /// Size of the Host's content (MaybeMatchContentsLayout), px.
-  int fittingWidth = 0;
-  int fittingHeight = 0;
-  std::vector<NodeFrame> nodes;
-  /// "type:X" / "modifier:X" / "prop:X=Y" -> paths.
-  std::map<std::string, std::vector<std::string>> unsupported;
-};
-
-/// Lays out a compose-ref input ({host, root}).
-LayoutResult layout(const Json& input, TextMeasurer& text, const LayoutOptions& options);
-
-/// compose-ref's output JSON (frames in dp, `framePx` when density != 1).
-Json toJson(const LayoutResult& result, const LayoutOptions& options);
+/// Lays out `root` inside an @expo/ui `Host` (HostView.kt MaybeMatchContentsLayout in an Android
+/// ComposeView). `host` is in dp. The result has the swiftui-ref / compose-ref shape
+/// (LayoutResult::toValue()).
+LayoutResult layout(const HostSpec& host, const Node& root, TextMeasurer& measurer, const ControlMetrics& metrics);
 
 /// The Material 3 typography (TypeScaleTokens) for a TextView `typography` name.
 std::optional<TextStyle> materialTypography(const std::string& name);

@@ -7,7 +7,7 @@ engine="$here/../../overlay/tester/src/expoui/compose"
 mkdir -p "$here/build"
 clang++ -std=c++17 -O2 -Wall -Wextra -fobjc-arc \
   -I "$engine" -I "$here" \
-  "$here/main.mm" "$here/RobotoTextMeasurer.mm" "$engine/ComposeLayout.cpp" \
+  "$here/main.mm" "$here/RobotoTextMeasurer.mm" "$engine/ComposeLayout.cpp" "$engine/../layout/Layout.cpp" \
   -framework Foundation -framework CoreText -framework CoreGraphics \
   -o "$here/build/compose-layout"
 if [ ! -f "$here/../compose-ref/fonts/Roboto-Regular.ttf" ]; then

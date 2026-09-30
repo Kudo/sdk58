@@ -11,6 +11,8 @@
 
 namespace expoui::compose {
 
+using Json = layout::Value;
+
 // ---------------------------------------------------------------------------------------------
 // Constraints
 // ---------------------------------------------------------------------------------------------
@@ -205,7 +207,7 @@ void placeSpacedBy(int spacePx, int total, const std::vector<int>& size, std::ve
 }
 
 // ---------------------------------------------------------------------------------------------
-// Node model
+// CNode model
 // ---------------------------------------------------------------------------------------------
 
 enum class Direction { Horizontal, Vertical, Both };
@@ -278,7 +280,7 @@ struct Coord {
   int childWidth = 0;  // the next coordinator's placeable width, for placeRelative in RTL
 };
 
-struct Node {
+struct CNode {
   std::string type;
   std::string path;  // empty = internal node (not reported)
   std::vector<Mod> mods;
@@ -300,15 +302,15 @@ struct Node {
   bool outlined = false;
   bool hasValue = false;
   bool singleLine = false;
-  Node* labelSlot = nullptr;        // the label Box (layoutId LabelId)
-  Node* placeholderSlot = nullptr;  // the placeholder Box, when it is shown
-  Node* textBox = nullptr;          // the input Box (layoutId TextFieldId)
+  CNode* labelSlot = nullptr;        // the label Box (layoutId LabelId)
+  CNode* placeholderSlot = nullptr;  // the placeholder Box, when it is shown
+  CNode* textBox = nullptr;          // the input Box (layoutId TextFieldId)
   // Tree
   ParentData parentData;
   std::string testID;
   bool isVirtual = false;           // Slot: frame = union of the children
-  std::vector<Node*> reportedKids;  // Slot: the children to union
-  std::vector<std::unique_ptr<Node>> children;
+  std::vector<CNode*> reportedKids;  // Slot: the children to union
+  std::vector<std::unique_ptr<CNode>> children;
   // Measure results
   std::vector<Coord> coords;
   std::vector<Placement> placements;  // per child, from the policy
@@ -335,7 +337,8 @@ bool isWidth(Intrinsic k) {
 
 class Engine {
  public:
-  Engine(TextMeasurer& text, const LayoutOptions& options) : text_(text), options_(options) {}
+  Engine(TextMeasurer& text, const ControlMetrics& metrics)
+      : text_(text), compose_(dynamic_cast<ComposeTextMeasurer*>(&text)), metrics_(metrics) {}
 
   bool rtl = false;
   std::map<std::string, std::vector<std::string>> unsupported;
@@ -352,14 +355,14 @@ class Engine {
     if (std::isinf(dp)) {
       return kInfinity;
     }
-    return roundToInt(dp * options_.density);
+    return roundToInt(dp * metrics_.density);
   }
 
-  const ControlMetrics& metrics() const { return options_.metrics; }
-  bool touchTarget() const { return options_.touchTarget; }
+  const ControlMetrics& metrics() const { return metrics_; }
+  bool touchTarget() const { return metrics_.touchTarget; }
 
   ResolvedTextStyle resolve(const TextStyle& s) const {
-    float scale = options_.fontScale * options_.density;
+    float scale = metrics_.fontScale * metrics_.density;
     ResolvedTextStyle r;
     r.fontSizePx = s.fontSize * scale;
     r.lineHeightPx = std::isnan(s.lineHeight) ? NAN : s.lineHeight * scale;
@@ -371,11 +374,111 @@ class Engine {
     return r;
   }
 
+  // ----- text ---------------------------------------------------------------------------------
+
+  static const char* weightName(int weight) {
+    if (weight <= 100) return "thin";
+    if (weight <= 200) return "ultraLight";
+    if (weight <= 300) return "light";
+    if (weight <= 400) return "regular";
+    if (weight <= 500) return "medium";
+    if (weight <= 600) return "semibold";
+    if (weight <= 700) return "bold";
+    if (weight <= 800) return "heavy";
+    return "black";
+  }
+
+  static FontSpec fontSpec(const ResolvedTextStyle& style) {
+    FontSpec f;
+    f.pointSize = style.fontSizePx;
+    f.weight = weightName(style.fontWeight);
+    if (style.fontFamily == "serif") {
+      f.design = "serif";
+    } else if (style.fontFamily == "monospace") {
+      f.design = "monospaced";
+    } else {
+      f.design = "default";
+      f.family = style.fontFamily == "cursive" ? "cursive" : "Roboto";
+    }
+    return f;
+  }
+
+  static int codePoints(const std::string& text) {
+    int n = 0;
+    for (unsigned char c : text) {
+      if ((c & 0xC0) != 0x80 && c != '\n') n++;
+    }
+    return n;
+  }
+
+  TextMeasurement measureText(const std::string& text, const ResolvedTextStyle& style, double maxWidth, int maxLines) {
+    if (compose_) {
+      return compose_->measureComposeText(text, style, maxWidth, maxLines);
+    }
+    TextMeasurement m = text_.measureText(text, fontSpec(style), maxWidth, maxLines);
+    if (style.letterSpacingPx != 0 && m.lines <= 1) {
+      m.width += style.letterSpacingPx * codePoints(text);
+    }
+    return m;
+  }
+
+  double fontHeight(const ResolvedTextStyle& style) {
+    return compose_ ? compose_->composeFontHeight(style) : text_.lineHeight(fontSpec(style));
+  }
+
+  /// ParagraphIntrinsics.maxIntrinsicWidth: the widest line without wrapping.
+  float maxIntrinsicWidth(const std::string& text, const ResolvedTextStyle& style) {
+    return static_cast<float>(measureText(text, style, INFINITY, 0).width);
+  }
+
+  /// ParagraphIntrinsics.minIntrinsicWidth: the widest word.
+  float minIntrinsicWidth(const std::string& text, const ResolvedTextStyle& style) {
+    float widest = 0;
+    size_t start = 0;
+    while (start <= text.size()) {
+      size_t end = text.find_first_of(" \n", start);
+      if (end == std::string::npos) end = text.size();
+      if (end > start) {
+        widest = std::max(widest, maxIntrinsicWidth(text.substr(start, end - start), style));
+      }
+      start = end + 1;
+    }
+    return widest;
+  }
+
+  /// Paragraph height (Skia, observed with compose-ref): without a lineHeight each line is
+  /// round(ascent + descent); with a lineHeight and LineHeightStyle.Trim.Both
+  /// (TextStyle.Default) the first line's extra top and the last line's extra bottom go away:
+  /// (lines - 1) * lineHeight + ascent + descent; with Trim.None (the Material typography)
+  /// lines * lineHeight.
+  float paragraphHeight(const ResolvedTextStyle& style, int lines) {
+    float font = static_cast<float>(fontHeight(style));
+    if (std::isnan(style.lineHeightPx)) {
+      return std::round(font) * static_cast<float>(lines);
+    }
+    if (style.trimLineHeight) {
+      return style.lineHeightPx * static_cast<float>(lines - 1) + font;
+    }
+    return std::round(style.lineHeightPx) * static_cast<float>(lines);
+  }
+
+  struct Paragraph {
+    float height = 0;
+    int lines = 1;
+  };
+
+  Paragraph layoutText(const std::string& text, const ResolvedTextStyle& style, float width, int maxLines) {
+    TextMeasurement m = measureText(text, style, width, maxLines == INT_MAX ? 0 : maxLines);
+    int lines = std::max(1, m.lines);
+    if (maxLines != INT_MAX) lines = std::min(lines, std::max(1, maxLines));
+    return {paragraphHeight(style, lines), lines};
+  }
+
   // ----- measure ------------------------------------------------------------------------------
 
-  Placeable measure(Node& n, const Constraints& c) { return measureCoord(n, 0, c); }
+  Placeable measure(CNode& n, const Constraints& c) { return measureCoord(n, 0, c); }
 
-  Placeable measureCoord(Node& n, size_t k, const Constraints& c) {
+  Placeable measureCoord(CNode& n, size_t k, const Constraints& c) {
     n.coords[k].constraints = c;
     n.coords[k].child = {};
     int w = 0;
@@ -392,7 +495,7 @@ class Engine {
 
   using MeasureInner = std::function<Placeable(const Constraints&)>;
 
-  void setChild(Node& n, size_t k, int x, int y, bool relative, int childWidth) {
+  void setChild(CNode& n, size_t k, int x, int y, bool relative, int childWidth) {
     n.coords[k].child = {x, y, relative};
     n.coords[k].childWidth = childWidth;
   }
@@ -485,7 +588,7 @@ class Engine {
     return {0, 0};
   }
 
-  void measureMod(Node& n, size_t k, const Constraints& c, int& w, int& h, const MeasureInner& inner) {
+  void measureMod(CNode& n, size_t k, const Constraints& c, int& w, int& h, const MeasureInner& inner) {
     const Mod& m = n.mods[k];
     switch (m.kind) {
       case Mod::Padding: {
@@ -629,7 +732,7 @@ class Engine {
 
   /// An intrinsic of the chain from coordinator k. `other` is the height for width queries and
   /// the width for height queries.
-  int intrinsicCoord(Node& n, size_t k, Intrinsic kind, int other) {
+  int intrinsicCoord(CNode& n, size_t k, Intrinsic kind, int other) {
     if (k == n.mods.size()) {
       return intrinsicPolicy(n, kind, other);
     }
@@ -688,17 +791,17 @@ class Engine {
     }
   }
 
-  int intrinsic(Node& n, Intrinsic kind, int other) { return intrinsicCoord(n, 0, kind, other); }
+  int intrinsic(CNode& n, Intrinsic kind, int other) { return intrinsicCoord(n, 0, kind, other); }
 
   /// RowColumnImpl intrinsicMainAxisSize.
-  int intrinsicMainAxisSize(const std::vector<Node*>& kids, Intrinsic main, int crossAvailable, int spacing) {
+  int intrinsicMainAxisSize(const std::vector<CNode*>& kids, Intrinsic main, int crossAvailable, int spacing) {
     if (kids.empty()) {
       return 0;
     }
     int weightUnitSpace = 0;
     int fixedSpace = 0;
     float totalWeight = 0;
-    for (Node* kid : kids) {
+    for (CNode* kid : kids) {
       float weight = kid->parentData.weight;
       int size = intrinsic(*kid, main, crossAvailable);
       if (weight == 0) {
@@ -713,7 +816,7 @@ class Engine {
   }
 
   /// RowColumnImpl intrinsicCrossAxisSize.
-  int intrinsicCrossAxisSize(const std::vector<Node*>& kids, Intrinsic cross, Intrinsic main, int mainAvailable,
+  int intrinsicCrossAxisSize(const std::vector<CNode*>& kids, Intrinsic cross, Intrinsic main, int mainAvailable,
                              int spacing) {
     if (kids.empty()) {
       return 0;
@@ -721,7 +824,7 @@ class Engine {
     int fixedSpace = std::min((static_cast<int>(kids.size()) - 1) * spacing, mainAvailable);
     int crossMax = 0;
     float totalWeight = 0;
-    for (Node* kid : kids) {
+    for (CNode* kid : kids) {
       float weight = kid->parentData.weight;
       if (weight == 0) {
         int remaining = mainAvailable == kInfinity ? kInfinity : mainAvailable - fixedSpace;
@@ -738,7 +841,7 @@ class Engine {
                             ? kInfinity
                             : roundToInt(static_cast<float>(std::max(0, mainAvailable - fixedSpace)) / totalWeight);
     }
-    for (Node* kid : kids) {
+    for (CNode* kid : kids) {
       float weight = kid->parentData.weight;
       if (weight > 0) {
         int size = weightUnitSpace != kInfinity ? roundToInt(static_cast<float>(weightUnitSpace) * weight) : kInfinity;
@@ -748,8 +851,8 @@ class Engine {
     return crossMax;
   }
 
-  std::vector<Node*> kids(Node& n) {
-    std::vector<Node*> out;
+  std::vector<CNode*> kids(CNode& n) {
+    std::vector<CNode*> out;
     for (auto& c : n.children) {
       out.push_back(c.get());
     }
@@ -758,7 +861,7 @@ class Engine {
 
   int spacingPx(const Arrangement& a) const { return a.kind == Arrangement::SpacedBy ? px(a.space) : 0; }
 
-  int intrinsicPolicy(Node& n, Intrinsic kind, int other) {
+  int intrinsicPolicy(CNode& n, Intrinsic kind, int other) {
     switch (n.policy) {
       case Policy::Row:
       case Policy::FlowRow:
@@ -770,7 +873,7 @@ class Engine {
         if (n.policy == Policy::FlowRow && kind == Intrinsic::MinWidth) {
           // FlowRow: the widest child.
           int widest = 0;
-          for (Node* kid : list) {
+          for (CNode* kid : list) {
             widest = std::max(widest, intrinsic(*kid, kind, other));
           }
           return widest;
@@ -797,10 +900,10 @@ class Engine {
       case Policy::Text: {
         ResolvedTextStyle style = resolve(n.style);
         if (kind == Intrinsic::MinWidth) {
-          return ceilToInt(text_.minIntrinsicWidth(n.text, style));
+          return ceilToInt(minIntrinsicWidth(n.text, style));
         }
         if (kind == Intrinsic::MaxWidth) {
-          return ceilToInt(text_.maxIntrinsicWidth(n.text, style));
+          return ceilToInt(maxIntrinsicWidth(n.text, style));
         }
         int w = 0, h = 0;
         measureText(n, Constraints{0, other, 0, kInfinity}, w, h);
@@ -820,7 +923,7 @@ class Engine {
 
   // ----- policies -----------------------------------------------------------------------------
 
-  void measurePolicy(Node& n, const Constraints& c, int& w, int& h) {
+  void measurePolicy(CNode& n, const Constraints& c, int& w, int& h) {
     n.placements.assign(n.children.size(), {});
     n.placed.assign(n.children.size(), false);
     switch (n.policy) {
@@ -879,7 +982,7 @@ class Engine {
 
   /// RowColumnMeasurePolicy.measure over kids[start, end). `pre` holds children that are
   /// already measured (FlowRow).
-  LineResult rowColumnMeasure(bool row, const std::vector<Node*>& list, std::vector<std::optional<Placeable>>& pre,
+  LineResult rowColumnMeasure(bool row, const std::vector<CNode*>& list, std::vector<std::optional<Placeable>>& pre,
                               int mainMin, int crossMin, int mainMax, int crossMax, int spacing) {
     size_t count = list.size();
     std::vector<Placeable> placeables(count);
@@ -893,7 +996,7 @@ class Engine {
     auto crossOf = [&](const Placeable& p) { return row ? p.height : p.width; };
 
     for (size_t i = 0; i < count; i++) {
-      Node& kid = *list[i];
+      CNode& kid = *list[i];
       float weight = kid.parentData.weight;
       if (weight > 0) {
         totalWeight += weight;
@@ -931,7 +1034,7 @@ class Engine {
         if (done[i]) {
           continue;
         }
-        Node& kid = *list[i];
+        CNode& kid = *list[i];
         int remainderUnit = remainder > 0 ? 1 : remainder < 0 ? -1 : 0;
         remainder -= remainderUnit;
         int childMain = std::max(0, roundToInt(weightUnitSpace * kid.parentData.weight) + remainderUnit);
@@ -996,7 +1099,7 @@ class Engine {
     }
   }
 
-  void measureRowColumn(Node& n, const Constraints& c, int& w, int& h) {
+  void measureRowColumn(CNode& n, const Constraints& c, int& w, int& h) {
     bool row = n.policy == Policy::Row;
     auto list = kids(n);
     const Arrangement& mainArrangement = row ? n.horizontalArrangement : n.verticalArrangement;
@@ -1021,7 +1124,7 @@ class Engine {
     h = row ? r.crossSize : r.mainSize;
   }
 
-  void measureBox(Node& n, const Constraints& c, int& w, int& h) {
+  void measureBox(CNode& n, const Constraints& c, int& w, int& h) {
     Constraints content = n.propagateMinConstraints ? c : Constraints{0, c.maxWidth, 0, c.maxHeight};
     size_t count = n.children.size();
     std::vector<Placeable> placeables(count);
@@ -1031,7 +1134,7 @@ class Engine {
       return;
     }
     if (count == 1) {
-      Node& kid = *n.children[0];
+      CNode& kid = *n.children[0];
       if (!kid.parentData.matchParentSize) {
         placeables[0] = measure(kid, content);
         w = std::max(c.minWidth, placeables[0].width);
@@ -1046,7 +1149,7 @@ class Engine {
       w = c.minWidth;
       h = c.minHeight;
       for (size_t i = 0; i < count; i++) {
-        Node& kid = *n.children[i];
+        CNode& kid = *n.children[i];
         if (!kid.parentData.matchParentSize) {
           placeables[i] = measure(kid, content);
           w = std::max(w, placeables[i].width);
@@ -1076,7 +1179,7 @@ class Engine {
 
   /// FlowLayout.kt breakDownItems + placeHelper (no maxItemsInEachRow / maxLines / overflow,
   /// which @expo/ui does not expose).
-  void measureFlowRow(Node& n, const Constraints& c, int& w, int& h) {
+  void measureFlowRow(CNode& n, const Constraints& c, int& w, int& h) {
     auto list = kids(n);
     if (list.empty()) {
       w = 0;
@@ -1086,7 +1189,7 @@ class Engine {
     // The main-axis spacing is ceil(spacing.toPx()) here; the arrangement still places with
     // roundToPx, and the cross-axis spacing in placeHelper is roundToPx.
     int spacing = n.horizontalArrangement.kind == Arrangement::SpacedBy
-                      ? static_cast<int>(std::ceil(n.horizontalArrangement.space * options_.density))
+                      ? static_cast<int>(std::ceil(n.horizontalArrangement.space * metrics_.density))
                       : 0;
     int crossSpacing = spacingPx(n.verticalArrangement);
     int mainMax = c.maxWidth;
@@ -1094,7 +1197,7 @@ class Engine {
     std::vector<std::optional<Placeable>> pre(list.size());
     std::vector<int> mainSizes(list.size());
     for (size_t i = 0; i < list.size(); i++) {
-      Node& kid = *list[i];
+      CNode& kid = *list[i];
       if (kid.parentData.weight == 0) {
         pre[i] = measure(kid, measureConstraints);
         mainSizes[i] = pre[i]->width;
@@ -1125,7 +1228,7 @@ class Engine {
     std::vector<int> lineCross;
     int crossTotal = 0;
     for (auto& line : lines) {
-      std::vector<Node*> lineKids;
+      std::vector<CNode*> lineKids;
       std::vector<std::optional<Placeable>> linePre;
       for (size_t i : line) {
         lineKids.push_back(list[i]);
@@ -1161,22 +1264,21 @@ class Engine {
     }
   }
 
-  void measureText(Node& n, const Constraints& c, int& w, int& h) {
+  void measureText(CNode& n, const Constraints& c, int& w, int& h) {
     ResolvedTextStyle style = resolve(n.style);
     // ParagraphLayoutCache.finalMaxWidth / finalMaxLines.
-    float maxIntrinsic = text_.maxIntrinsicWidth(n.text, style);
+    float maxIntrinsic = maxIntrinsicWidth(n.text, style);
     bool widthMatters = n.softWrap || n.ellipsis;
     int maxWidth = widthMatters && c.hasBoundedWidth() ? c.maxWidth : kInfinity;
     int width = c.minWidth == maxWidth ? maxWidth : clampInt(ceilToInt(maxIntrinsic), c.minWidth, maxWidth);
     int maxLines = !n.softWrap && n.ellipsis ? 1 : std::max(1, n.maxLines);
-    TextLayoutResult r =
-        text_.layout(n.text, style, width == kInfinity ? INFINITY : static_cast<float>(width), maxLines);
+    Paragraph r = layoutText(n.text, style, width == kInfinity ? INFINITY : static_cast<float>(width), maxLines);
     int height = ceilToInt(r.height);
     Constraints cc = c;
     if (n.minLines > 1) {
       // MinLinesConstrainer: one line plus (minLines - 1) line heights.
-      float one = text_.layout("H", style, INFINITY, 1).height;
-      float two = text_.layout("H\nH", style, INFINITY, 2).height;
+      float one = paragraphHeight(style, 1);
+      float two = paragraphHeight(style, 2);
       int minHeight = ceilToInt(one + (two - one) * static_cast<float>(n.minLines - 1));
       cc.minHeight = clampInt(std::max(cc.minHeight, minHeight), 0, cc.maxHeight);
     }
@@ -1205,24 +1307,24 @@ class Engine {
   /// material3 TextFieldMeasurePolicy / OutlinedTextFieldMeasurePolicy (label position Attached),
   /// for the label, placeholder and input. No leading / trailing icons, prefix, suffix or
   /// supporting text. The field is not focused, so the label floats when the value is not empty.
-  void measureTextField(Node& n, const Constraints& c, int& w, int& h) {
+  void measureTextField(CNode& n, const Constraints& c, int& w, int& h) {
     float progress = n.labelSlot && n.hasValue ? 1.0f : 0.0f;
-    Node* label = n.labelSlot;
-    Node* placeholder = n.placeholderSlot;
-    Node* input = n.textBox;
+    CNode* label = n.labelSlot;
+    CNode* placeholder = n.placeholderSlot;
+    CNode* input = n.textBox;
     Constraints loose{0, c.maxWidth, 0, c.maxHeight};
-    auto index = [&](Node* kid) {
+    auto index = [&](CNode* kid) {
       for (size_t i = 0; i < n.children.size(); i++) {
         if (n.children[i].get() == kid) return i;
       }
       return n.children.size();
     };
-    auto placeAt = [&](Node* kid, int x, int y, bool relative) {
+    auto placeAt = [&](CNode* kid, int x, int y, bool relative) {
       size_t i = index(kid);
       n.placements[i] = {x, y, relative};
       n.placed[i] = true;
     };
-    float d = options_.density;
+    float d = metrics_.density;
     if (!n.outlined) {
       // TextFieldDefaults.contentPaddingWithLabel (16, 8, 16, 8) / WithoutLabel (16).
       float topDp = label ? 8.0f : 16.0f;
@@ -1307,7 +1409,7 @@ class Engine {
 
   /// `x` and `y` are where the parent placed the node (its first coordinator), before the
   /// apparent-to-real offset.
-  void place(Node& n, int x, int y) {
+  void place(CNode& n, int x, int y) {
     n.laidOut = true;
     n.positions.assign(n.coords.size(), {0, 0});
     auto a0 = apparent(n.coords[0]);
@@ -1327,7 +1429,7 @@ class Engine {
       if (!n.placed[i]) {
         continue;
       }
-      Node& kid = *n.children[i];
+      CNode& kid = *n.children[i];
       const Placement& p = n.placements[i];
       int cx = p.x;
       if (p.relative && rtl) {
@@ -1341,7 +1443,8 @@ class Engine {
 
  private:
   TextMeasurer& text_;
-  const LayoutOptions& options_;
+  ComposeTextMeasurer* compose_;
+  const ControlMetrics& metrics_;
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -1390,7 +1493,7 @@ float optFloat(const Json& v) {
 
 class Builder {
  public:
-  Builder(Engine& engine, const LayoutOptions& options) : engine_(engine), options_(options) {}
+  Builder(Engine& engine, const ControlMetrics& metrics) : engine_(engine), metrics_(metrics) {}
 
   Mod size(float minW, float maxW, float minH, float maxH, bool enforce = true) {
     Mod m{Mod::Size};
@@ -1421,8 +1524,9 @@ class Builder {
   }
 
   /// ModifierRegistry.applyModifiers: the layout modifiers in order, parent data by scope.
-  void applyModifiers(Node& n, const Json& modifiers, Scope scope) {
-    for (const Json& params : modifiers.asArray()) {
+  void applyModifiers(CNode& n, const std::vector<Object>& modifiers, Scope scope) {
+    for (const Object& object : modifiers) {
+      const Json params(object);
       const std::string& type = params["$type"].asString();
       auto intParam = [&](const char* key, int fallback) {
         const Json& v = params[key];
@@ -1593,7 +1697,7 @@ class Builder {
     else if (s == "spaceBetween") a.kind = Arrangement::SpaceBetween;
     else if (s == "spaceAround") a.kind = Arrangement::SpaceAround;
     else if (s == "spaceEvenly") a.kind = Arrangement::SpaceEvenly;
-    else engine_.report(std::string("prop:") + key + "=" + v.dump(), path);
+    else engine_.report(std::string("prop:") + key + "=" + v.serialize(), path);
     return a;
   }
 
@@ -1617,7 +1721,7 @@ class Builder {
     else if (s == "spaceBetween") a.kind = Arrangement::SpaceBetween;
     else if (s == "spaceAround") a.kind = Arrangement::SpaceAround;
     else if (s == "spaceEvenly") a.kind = Arrangement::SpaceEvenly;
-    else engine_.report(std::string("prop:") + key + "=" + v.dump(), path);
+    else engine_.report(std::string("prop:") + key + "=" + v.serialize(), path);
     return a;
   }
 
@@ -1654,22 +1758,22 @@ class Builder {
     return style;
   }
 
-  std::unique_ptr<Node> internal(Policy policy) {
-    auto n = std::make_unique<Node>();
+  std::unique_ptr<CNode> internal(Policy policy) {
+    auto n = std::make_unique<CNode>();
     n->policy = policy;
     return n;
   }
 
   /// Adds the children of `json` to `parent` in `scope`. Slot children are flattened (SlotView
   /// renders them in a new UIComposableScope) and the Slot becomes a virtual node.
-  void addChildren(Node& parent, const Json& json, const std::string& path, Scope scope,
-                   std::vector<std::unique_ptr<Node>>& virtuals) {
-    const auto& list = json["children"].asArray();
+  void addChildren(CNode& parent, const Node& json, const std::string& path, Scope scope,
+                   std::vector<std::unique_ptr<CNode>>& virtuals) {
+    const auto& list = json.children;
     for (size_t i = 0; i < list.size(); i++) {
       std::string childPath = path + "/" + std::to_string(i);
-      const Json& child = list[i];
-      if (child["type"].asString() == "Slot") {
-        auto slot = std::make_unique<Node>();
+      const Node& child = list[i];
+      if (child.type == "Slot") {
+        auto slot = std::make_unique<CNode>();
         slot->type = "Slot";
         slot->path = childPath;
         slot->isVirtual = true;
@@ -1687,21 +1791,21 @@ class Builder {
     }
   }
 
-  std::unique_ptr<Node> build(const Json& json, const std::string& path, Scope scope,
-                              std::vector<std::unique_ptr<Node>>& virtuals) {
-    const std::string& type = json["type"].asString();
-    const Json& props = json["props"];
-    auto n = std::make_unique<Node>();
+  std::unique_ptr<CNode> build(const Node& json, const std::string& path, Scope scope,
+                              std::vector<std::unique_ptr<CNode>>& virtuals) {
+    const std::string& type = json.type;
+    const Json props(json.props);
+    auto n = std::make_unique<CNode>();
     n->type = type;
     n->path = path;
-    const ControlMetrics& m = options_.metrics;
+    const ControlMetrics& m = metrics_;
 
     // Icon: the size modifier from `size` is outside the user modifiers.
     if (type == "Icon" && props["size"].isNumber()) {
       float s = static_cast<float>(truncToInt(props["size"].asNumber()));
       n->mods.push_back(size(s, s, s, s));
     }
-    applyModifiers(*n, json["modifiers"], scope);
+    applyModifiers(*n, json.modifiers, scope);
     n->innerIndex = n->mods.size();
 
     if (type == "Row" || type == "Column") {
@@ -1804,8 +1908,8 @@ class Builder {
     } else if (type == "TextField") {
       n->outlined = props["variant"].asString() == "outlined";
       bool hasLabel = false;
-      for (const Json& child : json["children"].asArray()) {
-        hasLabel = hasLabel || (child["type"].asString() == "Slot" && child["props"]["name"].asString() == "label");
+      for (const Node& child : json.children) {
+        hasLabel = hasLabel || (child.type == "Slot" && Json(child.props)["name"].asString() == "label");
       }
       if (n->outlined && hasLabel) {
         // OutlinedTextField: padding(top = OutlinedTextFieldTopPadding) when there is a label.
@@ -1821,24 +1925,24 @@ class Builder {
       n->singleLine = props["singleLine"].asBool(false);
       // The decoration boxes (TextFieldLayout): label, placeholder and input.
       float sidePadding = m.textFieldPaddingHorizontal;
-      auto textPadding = [&](Node& box) {
+      auto textPadding = [&](CNode& box) {
         box.mods.push_back(size(NAN, NAN, 24, NAN));  // heightIn(min = MinTextLineHeight)
         Mod wrap{Mod::WrapContent};
         wrap.direction = Direction::Vertical;
         box.mods.push_back(wrap);
         box.mods.push_back(padding(sidePadding, 0, sidePadding, 0));
       };
-      Node* labelBox = nullptr;
-      Node* placeholderBox = nullptr;
-      const auto& list = json["children"].asArray();
+      CNode* labelBox = nullptr;
+      CNode* placeholderBox = nullptr;
+      const auto& list = json.children;
       for (size_t i = 0; i < list.size(); i++) {
-        const Json& child = list[i];
-        if (child["type"].asString() != "Slot") {
+        const Node& child = list[i];
+        if (child.type != "Slot") {
           continue;
         }
-        const std::string& name = child["props"]["name"].asString();
+        const std::string name = Json(child.props)["name"].asString();
         std::string childPath = path + "/" + std::to_string(i);
-        auto slot = std::make_unique<Node>();
+        auto slot = std::make_unique<CNode>();
         slot->type = "Slot";
         slot->path = childPath;
         slot->isVirtual = true;
@@ -1913,10 +2017,10 @@ class Builder {
 
  private:
   Engine& engine_;
-  const LayoutOptions& options_;
+  const ControlMetrics& metrics_;
 };
 
-void collect(Node& n, std::map<std::string, Node*>& byPath) {
+void collect(CNode& n, std::map<std::string, CNode*>& byPath) {
   if (!n.path.empty()) {
     byPath[n.path] = &n;
   }
@@ -1971,25 +2075,16 @@ std::optional<TextStyle> materialTypography(const std::string& name) {
   return s;
 }
 
-LayoutResult layout(const Json& input, TextMeasurer& text, const LayoutOptions& options) {
-  Engine engine(text, options);
-  Builder builder(engine, options);
-  const Json& host = input["host"];
-  float hostWidth = host["width"].isNumber() ? static_cast<float>(host["width"].asNumber()) : 390;
-  float hostHeight = host["height"].isNumber() ? static_cast<float>(host["height"].asNumber()) : 844;
-  bool matchW = false, matchH = false;
-  const Json& mc = host["matchContents"];
-  if (mc.isBool()) {
-    matchW = matchH = mc.asBool();
-  } else if (mc.isObject()) {
-    matchW = mc["horizontal"].asBool(false);
-    matchH = mc["vertical"].asBool(false);
-  }
-  engine.rtl = host["layoutDirection"].asString() == "rightToLeft";
+LayoutResult layout(const HostSpec& host, const Node& rootNode, TextMeasurer& text, const ControlMetrics& metrics) {
+  Engine engine(text, metrics);
+  Builder builder(engine, metrics);
+  bool matchW = host.matchContentsHorizontal;
+  bool matchH = host.matchContentsVertical;
+  engine.rtl = host.rightToLeft;
 
   // HostView.kt MaybeMatchContentsLayout, with wrapContentWidth/Height on the matchContents axes.
-  std::vector<std::unique_ptr<Node>> virtuals;
-  Node root;
+  std::vector<std::unique_ptr<CNode>> virtuals;
+  CNode root;
   root.policy = Policy::Host;
   if (matchW) {
     Mod m{Mod::WrapContent};
@@ -2002,28 +2097,30 @@ LayoutResult layout(const Json& input, TextMeasurer& text, const LayoutOptions& 
     root.mods.push_back(m);
   }
   root.coords.resize(root.mods.size() + 1);
-  if (auto node = builder.build(input["root"], "0", Scope::None, virtuals)) {
+  if (auto node = builder.build(rootNode, "0", Scope::None, virtuals)) {
     root.children.push_back(std::move(node));
   }
 
   // The ComposeView: fixed constraints on the normal axes, 0..Infinity on matchContents axes.
-  int widthPx = roundToInt(hostWidth * options.density);
-  int heightPx = roundToInt(hostHeight * options.density);
+  // React Native converts the Host's Yoga size with PixelUtil.toPixelFromDIP + rounding.
+  float d = metrics.density;
+  int widthPx = roundToInt(static_cast<float>(host.width) * d);
+  int heightPx = roundToInt(static_cast<float>(host.height) * d);
   Constraints c{matchW ? 0 : widthPx, matchW ? kInfinity : widthPx, matchH ? 0 : heightPx,
                 matchH ? kInfinity : heightPx};
   Placeable content = engine.measure(root, c);
   engine.place(root, 0, 0);
 
   LayoutResult result;
-  result.fittingWidth = content.width;
-  result.fittingHeight = content.height;
-  result.hostWidth = matchW ? content.width : widthPx;
-  result.hostHeight = matchH ? content.height : heightPx;
-  result.hostWidthDp = matchW ? static_cast<float>(content.width) / options.density : hostWidth;
-  result.hostHeightDp = matchH ? static_cast<float>(content.height) / options.density : hostHeight;
+  result.host.width = matchW ? content.width / static_cast<double>(d) : host.width;
+  result.host.height = matchH ? content.height / static_cast<double>(d) : host.height;
   result.unsupported = engine.unsupported;
 
-  std::map<std::string, Node*> byPath;
+  auto dp = [&](int x, int y, int w, int h) {
+    return layout::Rect{x / static_cast<double>(d), y / static_cast<double>(d), w / static_cast<double>(d),
+                        h / static_cast<double>(d)};
+  };
+  std::map<std::string, CNode*> byPath;
   for (auto& c2 : root.children) {
     collect(*c2, byPath);
   }
@@ -2036,110 +2133,50 @@ LayoutResult layout(const Json& input, TextMeasurer& text, const LayoutOptions& 
   }
   std::sort(paths.begin(), paths.end(), pathLess);
   for (const auto& p : paths) {
-    Node& n = *byPath[p];
-    NodeFrame f;
+    CNode& n = *byPath[p];
+    layout::NodeLayout f;
     f.path = n.path;
     f.type = n.type;
-    f.testID = n.testID;
     if (n.type == "Text") {
       f.text = n.text;
     }
     if (n.isVirtual) {
       f.isVirtual = true;
-      std::optional<Rect> u;
-      for (Node* kid : n.reportedKids) {
+      bool any = false;
+      int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+      for (CNode* kid : n.reportedKids) {
         if (!kid->laidOut) {
           continue;
         }
-        Rect r{kid->positions[0].first, kid->positions[0].second, kid->coords[0].measuredWidth,
-               kid->coords[0].measuredHeight};
-        if (!u) {
-          u = r;
+        int kx = kid->positions[0].first, ky = kid->positions[0].second;
+        int kw = kid->coords[0].measuredWidth, kh = kid->coords[0].measuredHeight;
+        if (!any) {
+          x0 = kx, y0 = ky, x1 = kx + kw, y1 = ky + kh;
+          any = true;
         } else {
-          int x0 = std::min(u->x, r.x), y0 = std::min(u->y, r.y);
-          int x1 = std::max(u->x + u->width, r.x + r.width), y1 = std::max(u->y + u->height, r.y + r.height);
-          u = Rect{x0, y0, x1 - x0, y1 - y0};
+          x0 = std::min(x0, kx), y0 = std::min(y0, ky), x1 = std::max(x1, kx + kw), y1 = std::max(y1, ky + kh);
         }
       }
-      f.frame = u;
+      if (any) {
+        f.frame = dp(x0, y0, x1 - x0, y1 - y0);
+      }
       result.nodes.push_back(f);
       continue;
     }
     if (!n.laidOut) {
       continue;
     }
-    f.frame = Rect{n.positions[0].first, n.positions[0].second, n.coords[0].measuredWidth, n.coords[0].measuredHeight};
+    const Coord& outer = n.coords[0];
+    f.frame = dp(n.positions[0].first, n.positions[0].second, outer.measuredWidth, outer.measuredHeight);
     size_t k = n.innerIndex;
-    Rect inner{n.positions[k].first, n.positions[k].second, n.coords[k].measuredWidth, n.coords[k].measuredHeight};
-    if (!(inner == *f.frame)) {
-      f.contentFrame = inner;
+    const Coord& inner = n.coords[k];
+    if (n.positions[k] != n.positions[0] || inner.measuredWidth != outer.measuredWidth ||
+        inner.measuredHeight != outer.measuredHeight) {
+      f.contentFrame = dp(n.positions[k].first, n.positions[k].second, inner.measuredWidth, inner.measuredHeight);
     }
     result.nodes.push_back(f);
   }
   return result;
-}
-
-namespace {
-
-double round3(double v) {
-  return std::round(v * 1000.0) / 1000.0;
-}
-
-Json rectJson(const Rect& r, float scale) {
-  JsonObject o;
-  o["x"] = round3(r.x / scale);
-  o["y"] = round3(r.y / scale);
-  o["width"] = round3(r.width / scale);
-  o["height"] = round3(r.height / scale);
-  return o;
-}
-
-}  // namespace
-
-Json toJson(const LayoutResult& result, const LayoutOptions& options) {
-  float d = options.density;
-  JsonObject out;
-  out["host"] = JsonObject{{"width", round3(result.hostWidthDp)}, {"height", round3(result.hostHeightDp)}};
-  out["fittingSize"] =
-      JsonObject{{"width", round3(result.fittingWidth / d)}, {"height", round3(result.fittingHeight / d)}};
-  out["density"] = static_cast<double>(d);
-  JsonArray nodes;
-  for (const auto& n : result.nodes) {
-    JsonObject o;
-    o["path"] = n.path;
-    o["type"] = n.type;
-    o["frame"] = n.frame ? rectJson(*n.frame, d) : Json();
-    if (n.contentFrame) {
-      o["contentFrame"] = rectJson(*n.contentFrame, d);
-    }
-    if (d != 1 && n.frame) {
-      o["framePx"] = rectJson(*n.frame, 1);
-      if (n.contentFrame) {
-        o["contentFramePx"] = rectJson(*n.contentFrame, 1);
-      }
-    }
-    if (!n.text.empty()) {
-      o["text"] = n.text;
-    }
-    if (!n.testID.empty()) {
-      o["testID"] = n.testID;
-    }
-    if (n.isVirtual) {
-      o["virtual"] = true;
-    }
-    nodes.push_back(o);
-  }
-  out["nodes"] = nodes;
-  JsonObject unsupported;
-  for (const auto& [k, paths] : result.unsupported) {
-    JsonArray a;
-    for (const auto& p : paths) {
-      a.push_back(p);
-    }
-    unsupported[k] = a;
-  }
-  out["unsupported"] = unsupported;
-  return out;
 }
 
 }  // namespace expoui::compose

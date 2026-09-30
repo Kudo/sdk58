@@ -2,7 +2,11 @@
 // Runs every test tree through the reference (compose-ref: real Compose Desktop) and the C++
 // engine (build/compose-layout) at density 1 and 2.75 and compares the frames in px.
 //
-//   node native/tools/compose-layout-test/compare.mjs [--tolerance 1] [--densities 1,2.75] [--verbose] [filter]
+//   node native/tools/compose-layout-test/compare.mjs [--tolerance 1] [--densities 1,2.75] [--shared-measurer]
+//     [--verbose] [filter]
+//
+// --shared-measurer: the engine gets only the shared layout::TextMeasurer interface (its fallback
+// for italic and letter spacing).
 //
 // Trees: native/tools/compose-ref/examples/*.json and native/tools/compose-layout-test/cases/*.json.
 // Run build.sh first. compose-ref results are cached in build/ref-cache (keyed by the input, the
@@ -25,8 +29,10 @@ let tolerance = 1;
 let verbose = false;
 let filter = null;
 let densities = [1, 2.75];
+const engineExtra = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--tolerance') tolerance = Number(args[++i]);
+  else if (args[i] === '--shared-measurer') engineExtra.push('--shared-measurer');
   else if (args[i] === '--densities') densities = args[++i].split(',').map(Number);
   else if (args[i] === '--verbose' || args[i] === '-v') verbose = true;
   else filter = args[i];
@@ -55,7 +61,8 @@ function runRef(input, extra) {
   return JSON.parse(out);
 }
 
-const runEngine = (input, extra) => JSON.parse(execFileSync(engineBin, extra, { input, encoding: 'utf8' }));
+const runEngine = (input, extra) =>
+  JSON.parse(execFileSync(engineBin, [...extra, ...engineExtra], { input, encoding: 'utf8' }));
 
 function diffRect(label, a, b, density) {
   if (!a && !b) return [];
@@ -102,8 +109,8 @@ for (const file of files) {
     for (const [p, e] of engineNodes) {
       if (!refNodes.has(p)) problems.push(`${p} ${e.type}: only in engine`);
     }
-    const ru = JSON.stringify(Object.keys(ref.unsupported).sort());
-    const eu = JSON.stringify(Object.keys(engine.unsupported).sort());
+    const ru = JSON.stringify(Object.keys(ref.unsupported ?? {}).sort());
+    const eu = JSON.stringify(Object.keys(engine.unsupported ?? {}).sort());
     if (ru !== eu) problems.push(`unsupported: ref ${ru} engine ${eu}`);
     row.results[config.name] = problems;
     if (problems.length) failed++;
