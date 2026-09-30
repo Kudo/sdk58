@@ -9,6 +9,8 @@
 
 #ifdef FANTOM_WITH_EXPOMODULESCORE
 #include <ExpoViewComponentDescriptor.h>
+#include <jsi/JSIDynamic.h>
+#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 
 #include <cmath>
@@ -42,6 +44,64 @@ bool propIsTrue(const expo::ExpoViewProps& props, const char* name) {
   auto it = props.propsMap.find(name);
   return it != props.propsMap.end() && it->second.isBool() && it->second.getBool();
 }
+
+constexpr std::string_view kExpoUIRNHostViewName =
+    "ViewManagerAdapter_ExpoUI_RNHostView";
+
+bool isExpoView(const ShadowNode& shadowNode) {
+  return expoProps(shadowNode) != nullptr;
+}
+
+/*
+ * Writes the emulated frames into the Expo views under `parent`. Each child
+ * with a frame is cloned (`clone({})`: a new, unsealed node; the ones from the
+ * Yoga pass may be shared with the previous revision), its layout metrics
+ * get the frame (displayType, layoutDirection, pointScaleFactor stay the
+ * Yoga pass's), and it replaces the child in `parent`
+ * (YogaLayoutableShadowNode::replaceChild keeps the Yoga tree in sync). The
+ * children of an RNHostView (RN content) keep their Yoga layout.
+ */
+void writeFrames(
+    ShadowNode& parent,
+    const std::unordered_map<Tag, Rect>& frames) {
+  auto children = parent.getChildren();
+  for (size_t index = 0; index < children.size(); index++) {
+    const auto& child = children[index];
+    auto it = frames.find(child->getTag());
+    if (it == frames.end()) {
+      continue;
+    }
+    auto clone = child->clone({});
+    auto* layoutable = dynamic_cast<LayoutableShadowNode*>(clone.get());
+    if (layoutable == nullptr) {
+      continue;
+    }
+    auto metrics = layoutable->getLayoutMetrics();
+    metrics.frame = it->second;
+    layoutable->setLayoutMetrics(metrics);
+    if (clone->getComponentName() != kExpoUIRNHostViewName) {
+      writeFrames(*clone, frames);
+    }
+    parent.replaceChild(*child, clone, index);
+  }
+}
+
+/*
+ * @expo/ui Host: after the Yoga pass (which lays out the Host from its RN
+ * style and gives the nested Expo views placeholder frames), runs the
+ * emulated layout of the subtree for the Host's size and writes the frames.
+ */
+class FantomExpoHostShadowNode final : public ExpoShadowNode {
+ public:
+  using ExpoShadowNode::ExpoShadowNode;
+
+  void layout(LayoutContext layoutContext) override {
+    ExpoShadowNode::layout(layoutContext);
+    auto result =
+        layoutExpoHostSubtree(*this, getLayoutMetrics().frame.size);
+    writeFrames(*this, result.frames);
+  }
+};
 
 } // namespace
 
@@ -78,34 +138,56 @@ void registerExpoViewComponentDescriptors(
             reinterpret_cast<ComponentHandle>(name),
             name,
             flavor,
-            &concreteComponentDescriptorConstructor<
-                expo::ExpoViewComponentDescriptor<>>});
+            componentName == kExpoUIHostName
+                ? &concreteComponentDescriptorConstructor<
+                      expo::ExpoViewComponentDescriptor<FantomExpoHostShadowNode>>
+                : &concreteComponentDescriptorConstructor<
+                      expo::ExpoViewComponentDescriptor<>>});
       });
 }
 
-Size layoutExpoHostSubtree(const ShadowNode& hostShadowNode) {
-  Float minX = std::numeric_limits<Float>::infinity();
-  Float minY = std::numeric_limits<Float>::infinity();
-  Float maxX = -std::numeric_limits<Float>::infinity();
-  Float maxY = -std::numeric_limits<Float>::infinity();
-  bool hasChildren = false;
-  for (const auto& child : hostShadowNode.getChildren()) {
-    const auto* layoutable =
-        dynamic_cast<const LayoutableShadowNode*>(child.get());
-    if (layoutable == nullptr) {
+namespace {
+
+#ifndef FANTOM_EXPO_UI_LAYOUT_ENGINE
+// Fake layout (see FantomExpo.h). Returns the height of `node`'s rows.
+Float fakeLayoutChildren(
+    const ShadowNode& node,
+    Float width,
+    std::unordered_map<Tag, Rect>& frames) {
+  constexpr Float kRowHeight = 40;
+  Float y = 0;
+  for (const auto& child : node.getChildren()) {
+    if (!isExpoView(*child)) {
       continue;
     }
-    const auto& frame = layoutable->getLayoutMetrics().frame;
-    minX = std::min(minX, frame.origin.x);
-    minY = std::min(minY, frame.origin.y);
-    maxX = std::max(maxX, frame.origin.x + frame.size.width);
-    maxY = std::max(maxY, frame.origin.y + frame.size.height);
-    hasChildren = true;
+    Size size;
+    if (child->getComponentName() == kExpoUIRNHostViewName) {
+      const auto* layoutable =
+          dynamic_cast<const LayoutableShadowNode*>(child.get());
+      size = layoutable != nullptr ? layoutable->getLayoutMetrics().frame.size
+                                   : Size{};
+    } else {
+      auto rows = fakeLayoutChildren(*child, width, frames);
+      size = Size{width, rows > 0 ? rows : kRowHeight};
+    }
+    frames[child->getTag()] = Rect{Point{0, y}, size};
+    y += size.height;
   }
-  if (!hasChildren) {
-    return {};
-  }
-  return Size{maxX - minX, maxY - minY};
+  return y;
+}
+#endif
+
+} // namespace
+
+ExpoLayoutResult layoutExpoHostSubtree(
+    const ShadowNode& hostShadowNode,
+    Size proposal) {
+  ExpoLayoutResult result;
+#ifndef FANTOM_EXPO_UI_LAYOUT_ENGINE
+  auto height = fakeLayoutChildren(hostShadowNode, proposal.width, result.frames);
+  result.contentSize = Size{proposal.width, height};
+#endif
+  return result;
 }
 
 namespace {
@@ -127,7 +209,13 @@ int updateHostSizes(const ShadowNode& node) {
         bool horizontal = propIsTrue(*props, "matchContentsHorizontal");
         bool vertical = propIsTrue(*props, "matchContentsVertical");
         if (horizontal || vertical) {
-          auto size = layoutExpoHostSubtree(*child);
+          const auto& hostFrame = host->getLayoutMetrics().frame;
+          auto size = layoutExpoHostSubtree(
+                          *child,
+                          Size{
+                              hostFrame.size.width,
+                              std::numeric_limits<Float>::infinity()})
+                          .contentSize;
           constexpr Float kNaN = std::numeric_limits<Float>::quiet_NaN();
           Float width = horizontal ? size.width : kNaN;
           Float height = vertical ? size.height : kNaN;
@@ -153,6 +241,27 @@ int updateHostSizes(const ShadowNode& node) {
 
 int updateExpoHostSizes(const ShadowNode& rootShadowNode) {
   return updateHostSizes(rootShadowNode);
+}
+
+bool dispatchExpoModifierEvent(
+    const ShadowNode& shadowNode,
+    const std::string& type,
+    const folly::dynamic& params) {
+  if (!isExpoView(shadowNode)) {
+    return false;
+  }
+  auto eventEmitter = std::dynamic_pointer_cast<const expo::ExpoViewEventEmitter>(
+      shadowNode.getEventEmitter());
+  if (eventEmitter == nullptr) {
+    return false;
+  }
+  folly::dynamic payload = folly::dynamic::object(type, params)(
+      "payload", folly::dynamic::object(type, params));
+  eventEmitter->dispatch(
+      "globalEvent", [payload](jsi::Runtime& runtime) {
+        return jsi::valueFromDynamic(runtime, payload);
+      });
+  return true;
 }
 
 std::optional<ExpoViewInfo> getExpoViewInfo(const ShadowNode& shadowNode) {
@@ -189,8 +298,17 @@ void registerExpoViewComponentDescriptors(
     const std::shared_ptr<ComponentDescriptorProviderRegistry>&
     /*providerRegistry*/) {}
 
-Size layoutExpoHostSubtree(const ShadowNode& /*hostShadowNode*/) {
+ExpoLayoutResult layoutExpoHostSubtree(
+    const ShadowNode& /*hostShadowNode*/,
+    Size /*proposal*/) {
   return {};
+}
+
+bool dispatchExpoModifierEvent(
+    const ShadowNode& /*shadowNode*/,
+    const std::string& /*type*/,
+    const folly::dynamic& /*params*/) {
+  return false;
 }
 
 int updateExpoHostSizes(const ShadowNode& /*rootShadowNode*/) {

@@ -21,6 +21,7 @@
 
 #include <jsi/instrumentation.h>
 #include "components/FantomExpo.h"
+#include "components/FantomExpoText.h"
 #include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
 #include "components/FantomTextInput.h"
@@ -204,6 +205,94 @@ jsi::Value getMountedRevisionHostFunction(
       static_cast<NativeFantom&>(turboModule).getMountedRevision(surfaceId)));
 }
 
+// measureExpoText(text, {textStyle?, size?, weight?, italic?, design?,
+//   fontFamily?, maxWidth?, maxLines?, pointScaleFactor?}): {width, height}
+jsi::Value measureExpoTextHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& /*turboModule*/,
+    const jsi::Value* args,
+    size_t count) {
+  auto text = stringArg(runtime, args, count, 0, "measureExpoText", "text");
+  ExpoTextMeasureOptions options;
+  Float pointScaleFactor = 3;
+  if (isPresent(args, count, 1)) {
+    auto object = args[1].asObject(runtime);
+    auto get = [&](const char* name) { return object.getProperty(runtime, name); };
+    if (auto style = get("textStyle"); style.isString()) {
+      if (auto textStyle = swiftUITextStyle(style.asString(runtime).utf8(runtime))) {
+        options.size = textStyle->size;
+        options.weight = textStyle->weight;
+      }
+    }
+    if (auto value = get("size"); value.isNumber()) {
+      options.size = static_cast<Float>(value.asNumber());
+    }
+    if (auto value = get("weight"); value.isNumber()) {
+      options.weight = static_cast<int>(value.asNumber());
+    }
+    if (auto value = get("italic"); value.isBool()) {
+      options.italic = value.getBool();
+    }
+    if (auto value = get("design"); value.isString()) {
+      options.design = value.asString(runtime).utf8(runtime);
+    }
+    if (auto value = get("fontFamily"); value.isString()) {
+      options.fontFamily = value.asString(runtime).utf8(runtime);
+    }
+    if (auto value = get("maxWidth"); value.isNumber()) {
+      options.maxWidth = static_cast<Float>(value.asNumber());
+    }
+    if (auto value = get("maxLines"); value.isNumber()) {
+      options.maxLines = static_cast<int>(value.asNumber());
+    }
+    if (auto value = get("pointScaleFactor"); value.isNumber()) {
+      pointScaleFactor = static_cast<Float>(value.asNumber());
+    }
+  }
+  auto size = measureExpoText(text, options, pointScaleFactor);
+  auto result = jsi::Object(runtime);
+  result.setProperty(runtime, "width", size.width);
+  result.setProperty(runtime, "height", size.height);
+  return result;
+}
+
+// dispatchExpoModifierEvent(tag, type, params?): void
+jsi::Value dispatchExpoModifierEventHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& /*turboModule*/,
+    const jsi::Value* args,
+    size_t count) {
+  constexpr auto kMethod = "dispatchExpoModifierEvent";
+  auto tag = static_cast<Tag>(numberArg(runtime, args, count, 0, kMethod, "tag"));
+  auto type = stringArg(runtime, args, count, 1, kMethod, "type");
+  folly::dynamic params = folly::dynamic::object();
+  if (isPresent(args, count, 2)) {
+    params = jsi::dynamicFromValue(runtime, args[2]);
+  }
+  auto uiManagerBinding = UIManagerBinding::getBinding(runtime);
+  if (uiManagerBinding == nullptr) {
+    throw jsi::JSError(runtime, "UIManagerBinding is not available");
+  }
+  // The tag is unique across surfaces: search all of them.
+  std::shared_ptr<const ShadowNode> shadowNode;
+  uiManagerBinding->getUIManager().getShadowTreeRegistry().enumerate(
+      [&](const ShadowTree& shadowTree, bool& stop) {
+        shadowNode = findShadowNodeByTag(
+            shadowTree.getCurrentRevision().rootShadowNode, tag);
+        stop = shadowNode != nullptr;
+      });
+  if (shadowNode == nullptr) {
+    throw jsi::JSError(
+        runtime, std::string(kMethod) + ": no shadow node with tag " + std::to_string(tag));
+  }
+  if (!dispatchExpoModifierEvent(*shadowNode, type, params)) {
+    throw jsi::JSError(
+        runtime,
+        std::string(kMethod) + ": node " + std::to_string(tag) + " is not an Expo view");
+  }
+  return jsi::Value::undefined();
+}
+
 // getCapabilities(): string (JSON array of the host's feature strings)
 jsi::Value getCapabilitiesHostFunction(
     jsi::Runtime& runtime,
@@ -226,6 +315,10 @@ jsi::Value getCapabilitiesHostFunction(
       "effectiveBackground");
 #ifdef FANTOM_WITH_EXPO_UI
   capabilities.push_back("expoUI");
+  capabilities.push_back("expoModifierEvents");
+#ifndef FANTOM_EXPO_UI_LAYOUT_ENGINE
+  capabilities.push_back("expoUI.fakeLayout");
+#endif
 #endif
 #ifdef FANTOM_WITH_MACOS_TEXT_LAYOUT
   capabilities.push_back("textLayout");
@@ -319,6 +412,10 @@ NativeFantom::NativeFantom(
       .argCount = 1, .invoker = getShadowTreeRevisionHostFunction};
   methodMap_["getMountedRevision"] = MethodMetadata{
       .argCount = 1, .invoker = getMountedRevisionHostFunction};
+  methodMap_["measureExpoText"] = MethodMetadata{
+      .argCount = 2, .invoker = measureExpoTextHostFunction};
+  methodMap_["dispatchExpoModifierEvent"] = MethodMetadata{
+      .argCount = 3, .invoker = dispatchExpoModifierEventHostFunction};
   methodMap_["getCapabilities"] = MethodMetadata{
       .argCount = 0, .invoker = getCapabilitiesHostFunction};
   methodMap_["updateNativeStates"] = MethodMetadata{

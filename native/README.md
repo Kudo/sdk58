@@ -23,7 +23,8 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
 | `tester/src/components/FantomScreens.h`, `FantomScreens.cpp`, `FantomScreensSplitScreen.cpp` (new) | react-native-screens: descriptor registration, context entry, emulated native state updates (see Screens). |
 | `tester/src/components/FantomGestureHandler.h`, `FantomGestureHandler.cpp` (new) | react-native-gesture-handler: descriptor registration and the no-op `RNGestureHandlerModule` TurboModule (see Gesture handler). |
-| `tester/src/components/FantomExpo.h`, `FantomExpo.cpp` (new) | Expo module views (`@expo/ui`): descriptor provider request for `ViewManagerAdapter_*`, Host `matchContents` state, tree info (see Expo UI). |
+| `tester/src/components/FantomExpo.h`, `FantomExpo.cpp` (new) | Expo module views (`@expo/ui`): descriptor provider request for `ViewManagerAdapter_*`, Host shadow node that writes the emulated frames, `matchContents` state, `onGlobalEvent`, tree info (see Expo UI). |
+| `tester/src/components/FantomExpoText.h`, `FantomExpoText.cpp` (new) | Text measurement for the @expo/ui layout engine (CoreText through the TextLayoutManager) and the SwiftUI text style sizes. |
 | `tester/src/platform/oss/TesterTurboModuleProvider.cpp` | Provides `RNGestureHandlerModule`, `RNCSafeAreaContext` and `StatusBarManager`. |
 | `tester/src/components/FantomStatusBarManager.h`, `FantomStatusBarManager.cpp` (new) | `StatusBarManager` TurboModule (union of the Android and iOS specs): `getConstants()` returns `{HEIGHT, DEFAULT_BACKGROUND_COLOR: 0}` with `HEIGHT` = the safe area top inset (`setSafeAreaInsets`, default 0); `getHeight(callback)` calls `callback({height})`; `setStyle`, `setHidden`, `setColor`, `setTranslucent`, `setNetworkActivityIndicatorVisible`, `addListener`, `removeListeners` are no-ops. `StatusBar` caches the constants when it is first evaluated. |
 | `tester/src/components/FantomSafeArea.h`, `FantomSafeArea.cpp` (new) | react-native-safe-area-context: descriptor registration, `onInsetsChange` events and `RNCSafeAreaView` state (see Safe area). |
@@ -460,14 +461,59 @@ Native:
   `layout`: `"emulated"` on a Host sized by `matchContents`,
   `"placeholder"` on the other `@expo/ui` views: their frames are Yoga's
   (no SwiftUI/Compose layout yet; usually height 0), not the drawn frames.
+- Frames (layout emulation): `ViewManagerAdapter_ExpoUI_HostView` gets
+  `ExpoViewComponentDescriptor<FantomExpoHostShadowNode>`. Its `layout()`
+  override runs the Yoga pass first (the Host's own frame comes from its RN
+  style; the nested Expo views get placeholder frames), then calls
+  `layoutExpoHostSubtree(host, hostSize)`, which returns the frame of every
+  Expo view under the Host (relative to its parent) and the content size,
+  and writes them: each such child is cloned (`clone({})`, a new unsealed
+  node: the Yoga pass can leave shared, sealed nodes in the subtree), its
+  `LayoutMetrics.frame` is replaced (displayType, layoutDirection and
+  pointScaleFactor stay the Yoga ones), and it replaces the old child with
+  `YogaLayoutableShadowNode::replaceChild` (keeps the Yoga tree in sync),
+  recursively. `getA11yTree`, `hitTest` and `getBoundingClientRect` read
+  these frames. When the subtree is not dirty, the Host's `layout()` is not
+  called and the frames of the previous revision stay (the nodes are shared).
+- `RNHostView` (RN content in SwiftUI/Compose) stays a Yoga leaf that
+  measures its first child (the library's `expoInternalSizeFromChildren`
+  path); the emulated layout places it (its frame gets the emulated origin
+  and its measured size) and its RN children keep their Yoga layout relative
+  to it. No content origin offset is needed because the frame itself is the
+  emulated one.
+- `layoutExpoHostSubtree` is the hook for the SwiftUI/Compose engine
+  (`tester/src/expoui/layout/`). Until it is wired in
+  (`FANTOM_EXPO_UI_LAYOUT_ENGINE` not defined), a fake layout: every child is
+  a row of the proposal's width stacked vertically; a view without Expo view
+  children is 40 high, a container is as high as its rows; an `RNHostView`
+  keeps its measured size. `getCapabilities()` has `"expoUI.fakeLayout"`
+  while it is in use.
 - Host `matchContents` (`matchContentsHorizontal`/`matchContentsVertical`
   props): after every mount (and on `updateNativeStates`) the host dispatches
-  `ExpoViewState::withStyleDimensions` with the content size, like the
-  platform's `ShadowNodeProxy.setStyleSize`, and the library's
+  `ExpoViewState::withStyleDimensions` with the content size of
+  `layoutExpoHostSubtree` (proposal: the Host's width, unbounded height),
+  like the platform's `ShadowNodeProxy.setStyleSize`, and the library's
   `ExpoViewComponentDescriptor::adopt` writes it into the Yoga width/height.
-  The content size comes from `layoutExpoHostSubtree(ShadowNode&)`, the hook
-  for the SwiftUI/Compose layout emulation (step 2); for now it is the
-  bounding box of the Host's children's Yoga frames.
+- Text measurement for the engine: `measureExpoText(text, options)`
+  (`components/FantomExpoText.h`; `fontFamily`, `size`, `weight`, `italic`,
+  `design` rounded/serif/monospaced, `maxWidth`, `maxLines`) on the
+  CoreText TextLayoutManager, and `swiftUITextStyle(name)`: largeTitle 34,
+  title 28, title2 22, title3 20, headline 17 semibold, body 17, callout 16,
+  subheadline 15, footnote 13, caption 12, caption2 11 (iOS sizes at the
+  default Dynamic Type size). Also callable from JS:
+  `NativeFantom.measureExpoText(text, {textStyle?, size?, weight?, italic?,
+  design?, fontFamily?, maxWidth?, maxLines?, pointScaleFactor?})` →
+  `{width, height}`. "Hello" on macOS (SF, pointScaleFactor 3): body
+  39 x 20.33, title 62.33 x 33.33, largeTitle 75.33 x 40.33, headline 41 x
+  20.33, caption 29 x 15.33.
+- Modifier callbacks (`onGlobalEvent`):
+  `NativeFantom.dispatchExpoModifierEvent(tag, type, params?)` dispatches
+  the direct event `globalEvent` with `{[type]: params, payload: {[type]:
+  params}}` (the SwiftUI JS reads the top-level keys, the Compose JS reads
+  `payload`), for example `('onTapGesture', {})` for the `onTapGesture`
+  modifier. Modifier callbacks are functions in JS; in `propsMap` they are
+  `"eventListener": null`, so a runner can find them by `$type`. The tag is
+  searched in all surfaces; it throws if the node is not an Expo view.
 - Events: `onX` props are direct events `topX`; send them with
   `enqueueNativeEventByTag(surfaceId, tag, 'x', payload)`: SwiftUI Button
   `buttonPress`, Compose Button `buttonPressed`, Compose Switch
@@ -483,12 +529,19 @@ imports `expo`, `expo-modules-core` or `@expo/ui`):
    `expo-modules-core/src/polyfill/dangerous-internal` (the web
    `globalThis.expo`: `EventEmitter`, `NativeModule`, `SharedObject`,
    `SharedRef`, `modules: {}`).
-2. `globalThis.expo.getViewConfig = () => ({validAttributes,
-   directEventTypes})` for every view: the union of the @expo/ui prop names
-   (`validAttributes[name] = true`) and of the event names
+2. `globalThis.expo.getViewConfig(moduleName, viewName)`: the per-view
+   config from `native/tools/expo-view-configs/out/viewConfigs.json` (the
+   generator in that directory, 152 view names), entry
+   `views['ViewManagerAdapter_<module>_<view>']`, with the `ios` and
+   `android` `validAttributes` and `directEventTypes` merged (the JS
+   component's platform, swift-ui or jetpack-compose, is not the bundle
+   platform). Views not in the table fall back to the union of all @expo/ui
+   prop names (`validAttributes[name] = true`) and event names
    (`directEventTypes['top' + name.slice(2)] = {registrationName: name}`)
-   from `tests/fantomExpoUIViewConfig.json` (367 props, 46 events), generated
-   by `native/scripts/gen-expo-ui-view-config.py node_modules/@expo/ui`.
+   from `tests/fantomExpoUIViewConfig.json` (367 props, 46 events,
+   `native/scripts/gen-expo-ui-view-config.py node_modules/@expo/ui`). The
+   Fantom test uses a copy of `viewConfigs.json` named
+   `fantomExpoUIViewConfigs.json` next to the prelude.
    React Native (bridgeless) merges these with the base View config, so
    style props still work; a prop that is not in `validAttributes` is not
    sent to native. `children`, `key`, `ref` and `style` must not be in the
@@ -524,7 +577,13 @@ ExpoUI.TextView, ExpoUI.RowView > [ExpoUI.TextView, ExpoUI.SwitchView]]`;
 label="Go"/><Toggle isOn label="Remember"/></VStack></Host>` gives
 `ExpoUI.HostView > ExpoUI.VStackView > [ExpoUI.TextView, ExpoUI.Button,
 ExpoUI.ToggleView]` with the Text's `accessibilityLabel`/`accessibilityHint`;
-`buttonPress` calls `onPress`.
+`buttonPress` calls `onPress`. With the fake layout: the universal tree has
+Host 390x160 (`matchContents`: Text 40 + Button 40 + Row 80), Button at
+y 40; `hitTest` at the Button's center returns its Text child (path contains
+the Button); the SwiftUI Text's `onTapGesture` fires through
+`dispatchExpoModifierEvent`. An `RNHostView` with a 100x30 `Pressable`
+under a Text is placed at (0, 40), 100x30, and `hitTest` reaches the
+`Pressable`. `measureExpoText` sizes are logged.
 
 ## TextInput and Switch
 
