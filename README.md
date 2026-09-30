@@ -271,12 +271,23 @@ Medium example, Release host, median of 5 (`render --timing`):
 | --- | --- | --- | --- |
 | Unchanged app, cache hit, bytecode | 191 ms | 5 ms | 119 ms |
 | Unchanged app, cache hit, JS (`--bytecode off`) | 437 ms | 5 ms | 358 ms |
-| One-line change (Metro with warm caches) | 1453 ms | 1013 ms | 359 ms |
-| Bundle cache off (`--no-cache`), warm Metro | 1146 ms | 708 ms | 356 ms |
+| One-line change (Metro with warm caches, `--bytecode off`) | 1404 ms | 932 ms | 358 ms |
+| Bundle cache off (`--no-cache`), warm Metro, `--bytecode off` | 1269 ms | 833 ms | 344 ms |
 | Cold (`--reset-cache`) | 5440 ms | 4882 ms | 396 ms |
 
 (Before caching: 1.3 s warm, Metro 0.86 s, bundle eval 150 ms; with bytecode
-bundle eval is 13 ms.)
+bundle eval is 13 ms.) The two `--bytecode off` rows are medians of two
+alternating series of 5 on a shared machine (±80 ms between series).
+
+A one-line change costs about 100 ms more than a warm `--no-cache` build:
+the changed file is transformed, and the first Babel transform in a new
+process loads `babel-preset-expo` (about 150 ms; the next transform takes
+20 ms). With at most 8 changed inputs, Metro transforms in the CLI process
+instead of starting worker processes (saves about 85 ms of worker start and
+stop), and the bundle cache takes its file list from the serializer instead
+of `getOrderedDependencyPaths` (which builds the graph a second time,
+about 55 ms). Measure with `--bytecode off`: in `auto` mode the background
+`hermesc` after a build competes with the next run for CPU.
 
 ## Errors and exit codes
 

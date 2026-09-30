@@ -11,6 +11,7 @@ import {
   bundleKey,
   cacheRoot,
   entryDir,
+  changedInputs,
   isEntryValid,
   writeEntry,
 } from '../src/bundleCache.ts';
@@ -87,6 +88,19 @@ test('a cache entry is invalidated by file edits and by new files in module dire
   writeEntry({root, key, bundleFile: bundle, files: [a, b], excludeDir: work});
   fs.rmSync(b);
   assert.equal(isEntryValid(dir, key), false);
+
+  // changedInputs counts changed files and directories (for the small-edit path).
+  fs.writeFileSync(b, 'b');
+  writeEntry({root, key, bundleFile: bundle, files: [a, b], excludeDir: work});
+  assert.equal(changedInputs(dir, key), 0);
+  assert.equal(changedInputs(dir, 'other-key'), null);
+  assert.equal(changedInputs(path.join(root, 'none'), key), null);
+  fs.writeFileSync(a, 'a-edited');
+  assert.equal(changedInputs(dir, key), 1);
+  fs.writeFileSync(b, 'b-edited');
+  fs.writeFileSync(path.join(src, 'lib', 'new.js'), 'n'); // dir mtime of lib/
+  assert.equal(changedInputs(dir, key), 3);
+  assert.equal(changedInputs(dir, key, 2), 2);
 });
 
 test('CLI: the second --bundle-only of an unchanged app is a cache hit', {timeout: 180_000}, () => {

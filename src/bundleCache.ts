@@ -96,25 +96,39 @@ function statFile(file: string): Stat | null {
   }
 }
 
-/** True if the cached entry exists and all its inputs are unchanged. */
-export function isEntryValid(dir: string, key: string): boolean {
+/**
+ * Number of changed inputs (files and directories) of the cached entry,
+ * 0 when it is valid, or null when there is no entry for this key. Stops
+ * counting at `limit`.
+ */
+export function changedInputs(dir: string, key: string, limit = Infinity): number | null {
   let manifest: Manifest;
   try {
     manifest = JSON.parse(fs.readFileSync(path.join(dir, MANIFEST_FILE), 'utf8'));
   } catch {
-    return false;
+    return null;
   }
-  if (manifest.version !== CACHE_VERSION || manifest.key !== key) return false;
-  if (!fs.existsSync(path.join(dir, BUNDLE_FILE))) return false;
+  if (manifest.version !== CACHE_VERSION || manifest.key !== key) return null;
+  if (!fs.existsSync(path.join(dir, BUNDLE_FILE))) return null;
+  let changed = 0;
   for (const [file, mtimeMs, size] of manifest.files) {
     const s = statFile(file);
-    if (s == null || s[1] !== mtimeMs || s[2] !== size) return false;
+    if (s == null || s[1] !== mtimeMs || s[2] !== size) {
+      if (++changed >= limit) return changed;
+    }
   }
   for (const [dirPath, mtimeMs] of manifest.dirs) {
     const s = statFile(dirPath);
-    if (s == null || s[1] !== mtimeMs) return false;
+    if (s == null || s[1] !== mtimeMs) {
+      if (++changed >= limit) return changed;
+    }
   }
-  return true;
+  return changed;
+}
+
+/** True if the cached entry exists and all its inputs are unchanged. */
+export function isEntryValid(dir: string, key: string): boolean {
+  return changedInputs(dir, key, 1) === 0;
 }
 
 /**

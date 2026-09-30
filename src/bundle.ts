@@ -13,10 +13,10 @@ import {
   type BytecodeMode,
   bundleKey,
   cacheRoot,
+  changedInputs,
   compileBytecode,
   compileBytecodeInBackground,
   entryDir,
-  isEntryValid,
   writeEntry,
 } from './bundleCache.ts';
 import type {CustomResolutionContext, Resolution} from 'metro-resolver';
@@ -299,6 +299,31 @@ export function createMetroConfig(options: {
   return mergeConfig(base, overrides);
 }
 
+/** Cached bundles with at most this many changed inputs are rebuilt without Metro worker processes. */
+const SMALL_EDIT = 8;
+
+/**
+ * Files behind the module paths: real files only (not `__prelude__` or
+ * `require-<entry>`), and every scale/platform variant of image assets
+ * (as Server.getOrderedDependencyPaths lists them).
+ */
+async function moduleFiles(modulePaths: Set<string>, assetExts: readonly string[], platform: string): Promise<string[]> {
+  const {getAssetFiles} = require('metro/private/Assets') as {
+    getAssetFiles: (assetPath: string, platform: string | null) => Promise<string[]>;
+  };
+  const assetExtSet = new Set(assetExts);
+  const files: string[] = [];
+  for (const file of modulePaths) {
+    if (!path.isAbsolute(file)) continue;
+    if (assetExtSet.has(path.extname(file).slice(1))) {
+      files.push(...(await getAssetFiles(file, platform)));
+    } else {
+      files.push(file);
+    }
+  }
+  return files;
+}
+
 export async function bundle(options: BundleOptions): Promise<BundleResult> {
   const {platform} = options;
   if (!fs.existsSync(options.appPath)) {
@@ -352,7 +377,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     };
   };
 
-  if (useCache && !options.resetCache && isEntryValid(dir, key)) {
+  const changed = useCache && !options.resetCache ? changedInputs(dir, key, SMALL_EDIT + 1) : null;
+  if (changed === 0) {
     return result('hit', path.join(dir, BUNDLE_FILE), null);
   }
 
@@ -383,14 +409,25 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     // before building.
     (config as {resetCache: boolean}).resetCache = true;
   }
-  const Metro = require('metro') as typeof import('metro');
-  const outputBundle = require('metro/private/shared/output/bundle') as {
-    build: (server: unknown, requestOptions: unknown, buildOptions?: unknown) => Promise<{code: string; map: string}>;
-    save: (...args: unknown[]) => Promise<unknown>;
+  // A small edit of a cached bundle transforms a few files: do that in this
+  // process. Starting and stopping Metro's worker processes costs ~85 ms,
+  // more than the transforms.
+  if (changed != null && changed <= SMALL_EDIT) {
+    (config as {maxWorkers: number}).maxWorkers = 1;
+  }
+  // The module files of the bundle, for the bundle cache: recorded when the
+  // serializer filters the modules of the graph it already built
+  // (Server.getOrderedDependencyPaths would build the graph again, ~55 ms).
+  const modulePaths = new Set<string>();
+  const baseFilter = config.serializer.processModuleFilter as (module: {path: string}) => boolean;
+  (config.serializer as {processModuleFilter: unknown}).processModuleFilter = (module: {path: string}) => {
+    const keep = baseFilter(module);
+    if (keep && useCache) modulePaths.add(module.path);
+    return keep;
   };
+  const Metro = require('metro') as typeof import('metro');
 
   const showProgress = options.verbose === true && process.stderr.isTTY;
-  let dependencyPaths: string[] = [];
 
   // The user's metro.config.js is intentionally not loaded: it could re-add
   // InitializeCore or change platforms.
@@ -405,20 +442,6 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
       ? (done, total) => process.stderr.write(`\rMetro: ${done}/${total} files`)
       : undefined,
     onComplete: showProgress ? () => process.stderr.write('\n') : undefined,
-    // Same as Metro's default output, plus the list of module files for the
-    // bundle cache (the graph is already built, so this is cheap).
-    output: {
-      build: async (server: unknown, requestOptions: unknown, buildOptions?: unknown) => {
-        const built = await outputBundle.build(server, requestOptions, buildOptions);
-        if (useCache) {
-          dependencyPaths = await (
-            server as {getOrderedDependencyPaths: (o: unknown) => Promise<string[]>}
-          ).getOrderedDependencyPaths(requestOptions);
-        }
-        return built;
-      },
-      save: outputBundle.save,
-    } as never,
   });
 
   if (!useCache) {
@@ -428,7 +451,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     root,
     key,
     bundleFile: bundlePath,
-    files: dependencyPaths,
+    files: await moduleFiles(modulePaths, config.resolver.assetExts, platform),
     excludeDir: fs.realpathSync(workDir),
   });
   fs.rmSync(outDir, {recursive: true, force: true});
