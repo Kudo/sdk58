@@ -1,0 +1,100 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading"
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "hidden"
+    },
+    "modifiers": [
+     {
+      "$type": "hidden"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "not hidden"
+    },
+    "modifiers": [
+     {
+      "$type": "hidden",
+      "hidden": false
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "background"
+    },
+    "modifiers": [
+     {
+      "$type": "background",
+      "style": {
+       "type": "color",
+       "color": "#FF0000"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "corner"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "all": 6
+     },
+     {
+      "$type": "background",
+      "style": {
+       "type": "color",
+       "color": "blue"
+      }
+     },
+     {
+      "$type": "cornerRadius",
+      "radius": 10
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "labelled"
+    },
+    "modifiers": [
+     {
+      "$type": "accessibilityLabel",
+      "label": "A label"
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Labelled button"
+    },
+    "modifiers": [
+     {
+      "$type": "accessibilityLabel",
+      "label": "Do it"
+     }
+    ]
+   }
+  ]
+ }
+}

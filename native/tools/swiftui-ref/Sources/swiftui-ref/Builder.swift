@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 /// Frames recorded during layout, in window coordinates (SwiftUI `.global`, y down).
@@ -266,7 +265,9 @@ struct Builder {
     case "segmented": return picker.pickerStyle(.segmented).eraseToAnyView()
     case "menu": return picker.pickerStyle(.menu).eraseToAnyView()
     case "inline": return picker.pickerStyle(.inline).eraseToAnyView()
+    #if os(macOS)
     case "radioGroup": return picker.pickerStyle(.radioGroup).eraseToAnyView()
+    #endif
     default: return picker.eraseToAnyView()
     }
   }

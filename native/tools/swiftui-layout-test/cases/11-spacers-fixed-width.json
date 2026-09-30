@@ -1,0 +1,186 @@
+{
+ "host": {
+  "width": 390,
+  "height": 600
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 8
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "L"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 60
+       }
+      ]
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "R"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 80
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "L"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Spacer",
+      "props": {
+       "minLength": 100
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Middle"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "R"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Centered"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "A"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 150
+       }
+      ]
+     },
+     {
+      "type": "Spacer",
+      "props": {
+       "minLength": 50
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "B"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 150
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "C"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "frame",
+      "height": 100
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "top"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Spacer",
+      "props": {
+       "minLength": 20
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottom"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

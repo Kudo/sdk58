@@ -1,0 +1,102 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading"
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "default top"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "top": "default"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "horizontal 20"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "horizontal": 20
+     },
+     {
+      "$type": "background",
+      "style": {
+       "type": "color",
+       "color": "red"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "vertical default"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "vertical": "default"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "leading 30 only"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "leading": 30
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "mixed"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "all": 4,
+      "top": 12
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "chain"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "all": 2
+     },
+     {
+      "$type": "padding",
+      "horizontal": 6
+     },
+     {
+      "$type": "padding"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,78 @@
+{
+ "host": {
+  "width": 390,
+  "height": 500
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 6
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "Top"
+    },
+    "modifiers": []
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Fills"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxHeight": "infinity"
+     },
+     {
+      "$type": "background",
+      "style": {
+       "type": "color",
+       "color": "#EEE"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Spacer",
+    "props": {
+     "minLength": 30
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "A long paragraph of text that has to wrap onto several lines inside the stack, so it has vertical flexibility too."
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 150
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Also fills"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxHeight": "infinity"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Bottom"
+    },
+    "modifiers": []
+   }
+  ]
+ }
+}

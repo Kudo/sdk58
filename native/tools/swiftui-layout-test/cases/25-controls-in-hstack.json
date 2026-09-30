@@ -1,0 +1,196 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 10
+  },
+  "modifiers": [
+   {
+    "$type": "padding",
+    "horizontal": 16
+   }
+  ],
+  "children": [
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Volume"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Slider",
+      "props": {
+       "value": 0.5
+      }
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Toggle",
+      "props": {
+       "label": "Wi-Fi",
+       "isOn": true
+      }
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Edit"
+      }
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "TextField",
+      "props": {
+       "placeholder": "Search"
+      }
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Go"
+      }
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Label",
+      "props": {
+       "title": "Settings",
+       "systemImage": "gearshape"
+      }
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "chevron.right"
+      }
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Picker",
+      "props": {
+       "label": "",
+       "selection": "a"
+      },
+      "modifiers": [
+       {
+        "$type": "pickerStyle",
+        "style": "segmented"
+       }
+      ],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "One"
+        },
+        "modifiers": [
+         {
+          "$type": "tag",
+          "tag": "a"
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Two"
+        },
+        "modifiers": [
+         {
+          "$type": "tag",
+          "tag": "b"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Divider"
+     },
+     {
+      "type": "HStack",
+      "props": {},
+      "modifiers": [
+       {
+        "$type": "frame",
+        "height": 20
+       }
+      ],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "a"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Divider"
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "b"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

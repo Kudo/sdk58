@@ -1,0 +1,211 @@
+{
+ "host": {
+  "width": 390,
+  "height": 1000
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading"
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font largeTitle"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "largeTitle"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font title"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font title2"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title2"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font title3"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title3"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font headline"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "headline"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font subheadline"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "subheadline"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font body"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "body"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font callout"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "callout"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font footnote"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "footnote"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font caption"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "caption"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Font caption2"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "caption2"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Size 20"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "size": 20
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Size 30 bold"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "size": 30,
+      "weight": "bold"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Mono 14"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "size": 14,
+      "design": "monospaced"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Rounded title"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title",
+      "design": "rounded"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Body semibold"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "body",
+      "weight": "semibold"
+     }
+    ]
+   }
+  ]
+ }
+}

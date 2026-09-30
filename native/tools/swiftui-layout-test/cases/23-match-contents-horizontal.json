@@ -1,0 +1,44 @@
+{
+ "host": {
+  "width": 390,
+  "height": 200,
+  "matchContents": {
+   "horizontal": true,
+   "vertical": false
+  }
+ },
+ "root": {
+  "type": "HStack",
+  "props": {
+   "spacing": 4
+  },
+  "modifiers": [
+   {
+    "$type": "padding",
+    "all": 10
+   }
+  ],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "One"
+    },
+    "modifiers": []
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Two"
+    },
+    "modifiers": []
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Three"
+    }
+   }
+  ]
+ }
+}

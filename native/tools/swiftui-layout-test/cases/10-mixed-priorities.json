@@ -1,0 +1,117 @@
+{
+ "host": {
+  "width": 300,
+  "height": 400
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 10,
+   "alignment": "leading"
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Priority zero with quite a lot of text"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Priority one also long text"
+      },
+      "modifiers": [
+       {
+        "$type": "layoutPriority",
+        "priority": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Priority two long text here"
+      },
+      "modifiers": [
+       {
+        "$type": "layoutPriority",
+        "priority": 2
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Low priority text that should give way"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Fixed"
+      },
+      "modifiers": [
+       {
+        "$type": "fixedSize"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "High"
+      },
+      "modifiers": [
+       {
+        "$type": "layoutPriority",
+        "priority": 5
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Negative priority text"
+      },
+      "modifiers": [
+       {
+        "$type": "layoutPriority",
+        "priority": -1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Default priority text that wraps"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,103 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 10
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "VStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "offset",
+      "x": 20,
+      "y": 10
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "child A"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "child B"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "padded offset"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "all": 8
+     },
+     {
+      "$type": "offset",
+      "x": -5,
+      "y": 0
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "offset then padding"
+    },
+    "modifiers": [
+     {
+      "$type": "offset",
+      "x": 5,
+      "y": 5
+     },
+     {
+      "$type": "padding",
+      "all": 8
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "in hstack"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "moved"
+      },
+      "modifiers": [
+       {
+        "$type": "offset",
+        "y": 12
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

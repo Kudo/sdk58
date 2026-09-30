@@ -1,0 +1,183 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 12
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "leading"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "leading"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "longer leading text"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "trailing"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "trailing"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "longer trailing text"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {
+     "alignment": "top"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "top"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "tall"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "height": 40
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {
+     "alignment": "bottom"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottom"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "tall"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "height": 40
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Text"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Button"
+      }
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "star"
+      }
+     },
+     {
+      "type": "Divider"
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Caption"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "caption"
+       }
+      ]
+     },
+     {
+      "type": "Toggle",
+      "props": {
+       "label": "Toggle",
+       "isOn": false
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Large"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "largeTitle"
+       }
+      ]
+     },
+     {
+      "type": "Slider",
+      "props": {
+       "value": 0.2
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

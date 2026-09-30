@@ -1,0 +1,447 @@
+{
+ "host": {
+  "width": 390,
+  "height": 600
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 0
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "ScrollView",
+    "modifiers": [
+     {
+      "$type": "frame",
+      "height": 200
+     }
+    ],
+    "children": [
+     {
+      "type": "VStack",
+      "props": {
+       "alignment": "leading"
+      },
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 0"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 1"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 2"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 3"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 4"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 5"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 6"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 7"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 8"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 9"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 10"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 11"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 12"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 13"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 14"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 15"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 16"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 17"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 18"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row 19"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "vertical": 4
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "ScrollView",
+    "props": {
+     "axes": "horizontal",
+     "showsIndicators": false
+    },
+    "children": [
+     {
+      "type": "HStack",
+      "props": {},
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 0"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 1"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 2"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 3"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 4"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 5"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 6"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 7"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 8"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 9"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 10"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Item 11"
+        },
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 6
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "ScrollView",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Scroll view filling the rest"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

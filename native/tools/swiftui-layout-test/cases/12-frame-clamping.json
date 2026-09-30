@@ -1,0 +1,166 @@
+{
+ "host": {
+  "width": 390,
+  "height": 700
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 4
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "maxWidth 40 wraps"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxWidth": 40
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "min 200"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "minWidth": 200,
+      "alignment": "trailing"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "min 50 max 100"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "minWidth": 50,
+      "maxWidth": 100
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "minHeight 40"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "minHeight": 40
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "maxHeight 5"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxHeight": 5
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "idealHeight fixed"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "idealHeight": 50
+     },
+     {
+      "$type": "fixedSize",
+      "vertical": true
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "ideal both"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "idealWidth": 120,
+      "idealHeight": 30
+     },
+     {
+      "$type": "fixedSize"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "fill"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxWidth": "infinity",
+      "alignment": "leading"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "fill both"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxWidth": "infinity",
+      "maxHeight": "infinity"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "fixed height only"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "height": 30,
+      "alignment": "bottom"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "width then flexible"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 100
+     },
+     {
+      "$type": "frame",
+      "maxWidth": "infinity",
+      "alignment": "trailing"
+     }
+    ]
+   }
+  ]
+ }
+}

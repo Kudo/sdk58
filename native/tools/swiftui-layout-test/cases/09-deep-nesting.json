@@ -1,0 +1,207 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 12
+  },
+  "modifiers": [
+   {
+    "$type": "padding"
+   }
+  ],
+  "children": [
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "padding",
+      "all": 12
+     },
+     {
+      "$type": "background",
+      "style": {
+       "type": "color",
+       "color": "#EEE"
+      }
+     }
+    ],
+    "children": [
+     {
+      "type": "VStack",
+      "props": {
+       "alignment": "leading"
+      },
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Title"
+        },
+        "modifiers": [
+         {
+          "$type": "font",
+          "textStyle": "headline"
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Subtitle that is a little longer"
+        },
+        "modifiers": [
+         {
+          "$type": "font",
+          "textStyle": "caption"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "chevron.right"
+      }
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {
+     "spacing": 20
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "VStack",
+      "props": {},
+      "modifiers": [
+       {
+        "$type": "padding",
+        "horizontal": 8
+       }
+      ],
+      "children": [
+       {
+        "type": "HStack",
+        "props": {},
+        "modifiers": [],
+        "children": [
+         {
+          "type": "Text",
+          "props": {
+           "text": "A"
+          },
+          "modifiers": []
+         },
+         {
+          "type": "Text",
+          "props": {
+           "text": "B"
+          },
+          "modifiers": []
+         },
+         {
+          "type": "Text",
+          "props": {
+           "text": "C"
+          },
+          "modifiers": []
+         }
+        ]
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Nested row"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "VStack",
+      "props": {},
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Right"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Column"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "padding",
+      "all": 4
+     }
+    ],
+    "children": [
+     {
+      "type": "VStack",
+      "props": {},
+      "modifiers": [
+       {
+        "$type": "padding",
+        "all": 4
+       }
+      ],
+      "children": [
+       {
+        "type": "VStack",
+        "props": {},
+        "modifiers": [
+         {
+          "$type": "padding",
+          "all": 4
+         }
+        ],
+        "children": [
+         {
+          "type": "Text",
+          "props": {
+           "text": "Deep"
+          },
+          "modifiers": [
+           {
+            "$type": "padding",
+            "all": 4
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

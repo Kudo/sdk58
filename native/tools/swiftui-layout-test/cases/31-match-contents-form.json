@@ -1,0 +1,51 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844,
+  "matchContents": true
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 12
+  },
+  "modifiers": [
+   {
+    "$type": "padding"
+   }
+  ],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "Header"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title2"
+     }
+    ]
+   },
+   {
+    "type": "Toggle",
+    "props": {
+     "label": "Option",
+     "isOn": false
+    }
+   },
+   {
+    "type": "Slider",
+    "props": {
+     "value": 0.4
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 200
+     }
+    ]
+   }
+  ]
+ }
+}

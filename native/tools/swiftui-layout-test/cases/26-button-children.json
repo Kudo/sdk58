@@ -1,0 +1,88 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 6
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Button",
+    "children": [
+     {
+      "type": "Image",
+      "props": {
+       "systemName": "star"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Star"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Plain"
+    },
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "plain"
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Bordered"
+    },
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "bordered"
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Icon",
+     "systemImage": "trash"
+    }
+   },
+   {
+    "type": "VStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "buttonStyle",
+      "style": "borderless"
+     }
+    ],
+    "children": [
+     {
+      "type": "Button",
+      "props": {
+       "label": "Borderless in stack"
+      }
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Also"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

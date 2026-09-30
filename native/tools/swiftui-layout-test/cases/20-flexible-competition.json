@@ -1,0 +1,167 @@
+{
+ "host": {
+  "width": 320,
+  "height": 500
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 6
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "fill A"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "maxWidth": "infinity"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "fill B"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "maxWidth": "infinity"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "fill"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "maxWidth": "infinity"
+       }
+      ]
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "fixed"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "fill"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "maxWidth": "infinity"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "prio fill"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "maxWidth": "infinity"
+       },
+       {
+        "$type": "layoutPriority",
+        "priority": 1
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "min 150"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "minWidth": 150
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "fill"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "maxWidth": "infinity"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "fixedSize long label"
+      },
+      "modifiers": [
+       {
+        "$type": "fixedSize"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "wrapping neighbor that must give way"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

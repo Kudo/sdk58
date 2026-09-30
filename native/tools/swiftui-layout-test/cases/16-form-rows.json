@@ -1,0 +1,186 @@
+{
+ "host": {
+  "width": 390,
+  "height": 900
+ },
+ "root": {
+  "type": "Form",
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "Loose row"
+    },
+    "modifiers": []
+   },
+   {
+    "type": "Section",
+    "props": {
+     "title": "General"
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row A"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "A long row that wraps in the form because the text is wider than the row"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Button row"
+      }
+     },
+     {
+      "type": "Toggle",
+      "props": {
+       "label": "Toggle row",
+       "isOn": true
+      }
+     },
+     {
+      "type": "TextField",
+      "props": {
+       "placeholder": "Field"
+      }
+     },
+     {
+      "type": "Slider",
+      "props": {
+       "value": 0.5
+      }
+     },
+     {
+      "type": "HStack",
+      "props": {},
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Left"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Spacer",
+        "props": {}
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Right"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Tall"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "height": 50
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Untitled section"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "Section",
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "header"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Header slot"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Slot",
+      "props": {
+       "name": "content"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Row"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Label",
+        "props": {
+         "title": "Label row",
+         "systemImage": "gearshape"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Slot",
+      "props": {
+       "name": "footer"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Footer text"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Section",
+    "props": {
+     "title": "After footer"
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Last"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,101 @@
+{
+ "host": {
+  "width": 220,
+  "height": 400
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 8
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Alpha beta gamma"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Delta epsilon zeta"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Eta theta iota"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Short"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "A much longer piece of text in the middle"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "End"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {
+     "spacing": 30
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "x"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "y"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "z"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

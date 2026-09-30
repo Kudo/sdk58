@@ -1,0 +1,103 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading"
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Group",
+    "modifiers": [
+     {
+      "$type": "padding",
+      "all": 5
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "G1"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "G2"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Group",
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "H1"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "H2"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "H3"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "Group",
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title3"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Styled group"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Group",
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Nested group"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

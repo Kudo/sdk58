@@ -1,0 +1,97 @@
+{
+ "host": {
+  "width": 390,
+  "height": 700
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 0
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "Header above list"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title3"
+     },
+     {
+      "$type": "padding"
+     }
+    ]
+   },
+   {
+    "type": "List",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "One"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Two"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Section",
+      "props": {
+       "title": "More"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Three"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Four"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Section",
+      "props": {
+       "title": "Last"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Five"
+        },
+        "modifiers": []
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Footer button"
+    },
+    "modifiers": [
+     {
+      "$type": "padding"
+     }
+    ]
+   }
+  ]
+ }
+}

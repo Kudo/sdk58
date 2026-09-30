@@ -1,0 +1,96 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 8
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Toggle",
+    "props": {
+     "label": "Checkbox label",
+     "isOn": true
+    },
+    "modifiers": [
+     {
+      "$type": "toggleStyle",
+      "style": "automatic"
+     }
+    ]
+   },
+   {
+    "type": "Toggle",
+    "props": {
+     "isOn": false
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Child label"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "second"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "caption"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Toggle",
+    "props": {
+     "label": "Icon toggle",
+     "systemImage": "star",
+     "isOn": true
+    }
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Fill"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxWidth": "infinity"
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Fixed 200"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 200,
+      "height": 40
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "label": "Destructive",
+     "role": "destructive"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,339 @@
+{
+ "host": {
+  "width": 390,
+  "height": 700
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 4
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "topLeading"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "topLeading"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "top"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "top"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "topTrailing"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "topTrailing"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "leading"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "leading"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "center"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "center"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "trailing"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "trailing"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "bottomLeading"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottomLeading"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "bottom"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottom"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {
+     "alignment": "bottomTrailing"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Back"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "width": 120,
+        "height": 50
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "gray"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottomTrailing"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

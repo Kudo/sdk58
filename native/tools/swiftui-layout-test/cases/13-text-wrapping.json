@@ -1,0 +1,129 @@
+{
+ "host": {
+  "width": 200,
+  "height": 900
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 6
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 100
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 57
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 13
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "A title that wraps onto more lines"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "title"
+     },
+     {
+      "$type": "frame",
+      "width": 150
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Caption text wrapping at a narrow width"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "caption"
+     },
+     {
+      "$type": "frame",
+      "width": 80
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Truncated to a single line because the height is limited"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 120,
+      "height": 16
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Two lines at most because the height is thirty-five"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 120,
+      "height": 35
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Supercalifragilisticexpialidocious"
+    },
+    "modifiers": [
+     {
+      "$type": "frame",
+      "width": 90
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Wraps at the stack width in a VStack proposal of two hundred points"
+    },
+    "modifiers": []
+   }
+  ]
+ }
+}

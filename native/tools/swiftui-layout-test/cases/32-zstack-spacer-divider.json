@@ -1,0 +1,106 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "spacing": 10
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "ZStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "frame",
+      "height": 60
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Over"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     }
+    ]
+   },
+   {
+    "type": "ZStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Divider"
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "On divider"
+      },
+      "modifiers": [
+       {
+        "$type": "padding",
+        "horizontal": 8
+       },
+       {
+        "$type": "background",
+        "style": {
+         "type": "color",
+         "color": "white"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "fixedSize",
+      "vertical": true
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "A"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Divider"
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "B"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Divider"
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "C"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

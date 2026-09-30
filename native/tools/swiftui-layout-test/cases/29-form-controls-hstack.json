@@ -1,0 +1,146 @@
+{
+ "host": {
+  "width": 390,
+  "height": 700
+ },
+ "root": {
+  "type": "Form",
+  "children": [
+   {
+    "type": "Section",
+    "props": {
+     "title": "Rows"
+    },
+    "children": [
+     {
+      "type": "HStack",
+      "props": {},
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Title"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Spacer",
+        "props": {}
+       },
+       {
+        "type": "Toggle",
+        "props": {
+         "isOn": true
+        }
+       }
+      ]
+     },
+     {
+      "type": "HStack",
+      "props": {},
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Image",
+        "props": {
+         "systemName": "wifi"
+        }
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Wi-Fi"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Spacer",
+        "props": {}
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Home"
+        },
+        "modifiers": [
+         {
+          "$type": "font",
+          "textStyle": "caption"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "Picker",
+      "props": {
+       "label": "Theme",
+       "selection": "a"
+      },
+      "modifiers": [
+       {
+        "$type": "pickerStyle",
+        "style": "menu"
+       }
+      ],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Automatic"
+        },
+        "modifiers": [
+         {
+          "$type": "tag",
+          "tag": "a"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Wide"
+      },
+      "modifiers": [
+       {
+        "$type": "frame",
+        "maxWidth": "infinity"
+       }
+      ]
+     },
+     {
+      "type": "VStack",
+      "props": {
+       "alignment": "leading"
+      },
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Stacked"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "Rows"
+        },
+        "modifiers": [
+         {
+          "$type": "font",
+          "textStyle": "caption"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,196 @@
+{
+ "host": {
+  "width": 390,
+  "height": 600
+ },
+ "root": {
+  "type": "ScrollView",
+  "children": [
+   {
+    "type": "VStack",
+    "props": {
+     "alignment": "leading",
+     "spacing": 12
+    },
+    "modifiers": [
+     {
+      "$type": "padding"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Title"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "largeTitle"
+       }
+      ]
+     },
+     {
+      "type": "ScrollView",
+      "props": {
+       "axes": "horizontal"
+      },
+      "children": [
+       {
+        "type": "HStack",
+        "props": {
+         "spacing": 12
+        },
+        "modifiers": [],
+        "children": [
+         {
+          "type": "Text",
+          "props": {
+           "text": "Card 0"
+          },
+          "modifiers": [
+           {
+            "$type": "frame",
+            "width": 120,
+            "height": 80
+           },
+           {
+            "$type": "background",
+            "style": {
+             "type": "color",
+             "color": "#DDD"
+            }
+           }
+          ]
+         },
+         {
+          "type": "Text",
+          "props": {
+           "text": "Card 1"
+          },
+          "modifiers": [
+           {
+            "$type": "frame",
+            "width": 120,
+            "height": 80
+           },
+           {
+            "$type": "background",
+            "style": {
+             "type": "color",
+             "color": "#DDD"
+            }
+           }
+          ]
+         },
+         {
+          "type": "Text",
+          "props": {
+           "text": "Card 2"
+          },
+          "modifiers": [
+           {
+            "$type": "frame",
+            "width": 120,
+            "height": 80
+           },
+           {
+            "$type": "background",
+            "style": {
+             "type": "color",
+             "color": "#DDD"
+            }
+           }
+          ]
+         },
+         {
+          "type": "Text",
+          "props": {
+           "text": "Card 3"
+          },
+          "modifiers": [
+           {
+            "$type": "frame",
+            "width": 120,
+            "height": 80
+           },
+           {
+            "$type": "background",
+            "style": {
+             "type": "color",
+             "color": "#DDD"
+            }
+           }
+          ]
+         },
+         {
+          "type": "Text",
+          "props": {
+           "text": "Card 4"
+          },
+          "modifiers": [
+           {
+            "$type": "frame",
+            "width": 120,
+            "height": 80
+           },
+           {
+            "$type": "background",
+            "style": {
+             "type": "color",
+             "color": "#DDD"
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Paragraph 0: some text that wraps within the scroll view width when it is long enough."
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Paragraph 1: some text that wraps within the scroll view width when it is long enough."
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Paragraph 2: some text that wraps within the scroll view width when it is long enough."
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Paragraph 3: some text that wraps within the scroll view width when it is long enough."
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Paragraph 4: some text that wraps within the scroll view width when it is long enough."
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Paragraph 5: some text that wraps within the scroll view width when it is long enough."
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

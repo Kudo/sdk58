@@ -1,0 +1,131 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "VStack",
+  "props": {
+   "alignment": "leading",
+   "spacing": 10
+  },
+  "modifiers": [],
+  "children": [
+   {
+    "type": "HStack",
+    "props": {
+     "alignment": "firstTextBaseline"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Big"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "largeTitle"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "small"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "caption"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "body"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {
+     "alignment": "lastTextBaseline"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "VStack",
+      "props": {},
+      "modifiers": [],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "two"
+        },
+        "modifiers": []
+       },
+       {
+        "type": "Text",
+        "props": {
+         "text": "lines"
+        },
+        "modifiers": []
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Big"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "title"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {
+     "alignment": "center"
+    },
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Big"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "largeTitle"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "small"
+      },
+      "modifiers": [
+       {
+        "$type": "font",
+        "textStyle": "caption"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

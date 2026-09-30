@@ -1,0 +1,79 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844
+ },
+ "root": {
+  "type": "HStack",
+  "props": {},
+  "modifiers": [
+   {
+    "$type": "frame",
+    "height": 200
+   },
+   {
+    "$type": "padding"
+   }
+  ],
+  "children": [
+   {
+    "type": "VStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxHeight": "infinity"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Left column top"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Left bottom"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "VStack",
+    "props": {},
+    "modifiers": [
+     {
+      "$type": "frame",
+      "maxWidth": "infinity",
+      "maxHeight": "infinity",
+      "alignment": "topTrailing"
+     },
+     {
+      "$type": "background",
+      "style": {
+       "type": "color",
+       "color": "#DDD"
+      }
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Right"
+      },
+      "modifiers": []
+     }
+    ]
+   }
+  ]
+ }
+}

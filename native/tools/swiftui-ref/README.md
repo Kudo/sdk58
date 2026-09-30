@@ -14,6 +14,18 @@ swift build -c release                      # macOS 13.4+, Xcode 15+ (Swift 5.9)
 One run takes about 0.5 s. Exit code 1 on bad input, with the message on
 stderr.
 
+### iOS simulator
+
+```sh
+scripts/run-ios.sh out.json examples/*.json    # ~25 s (about 2 min the first time)
+```
+
+Builds the same sources as a minimal simulator app (`swiftc`, no Xcode project), installs it on a
+dedicated simulator named `swiftui-ref` (created from `$SWIFTUI_REF_DEVICE_TYPE`, default
+`iPhone 17 Pro`, with the newest iOS runtime) and lays out every input in one launch, in a
+`UIHostingController` with `safeAreaRegions = []`. `out.json` maps each input path to the output
+below, plus `_device` (screen scale, iOS version, `UIFont.preferredFont` metrics per text style).
+
 ## Input
 
 ```jsonc
@@ -100,7 +112,9 @@ listed in `unsupported` in the output.
 
 ## How it works
 
-- `main.swift` copies the body of `@expo/ui`'s `HostView` (sdk-58
+- `Shared.swift` has the input parsing, the output format and a copy of the body of `@expo/ui`'s
+  `HostView`; `main.swift` is the macOS entry point, `IOSApp.swift` the iOS one.
+- The Host copies the body of `@expo/ui`'s `HostView` (sdk-58
   `packages/expo-ui/ios/HostView.swift`): a top-leading `ZStack`, `fixedSize`
   on the `matchContents` axes, then the fill / pin frame.
   `useViewportSizeMeasurement`, color scheme and seed color are not copied.
@@ -141,9 +155,22 @@ Observed on macOS 26.5.2 (Xcode 26.6), from `examples/07-controls.json`
 | `Text` body, one line | height 16 | macOS body font is 13 pt |
 | `Text` `largeTitle` / `caption` | heights 31 / 13 | |
 
-For iOS the task gives the switch size as 51 x 31 (Apple HIG). This was not
-checked here. The other iOS control sizes still have to be measured on a
-simulator.
+Observed on the iOS 26.5 simulator (iPhone 17 Pro, scale 3) with `scripts/run-ios.sh`; these are
+the values in the engine's `ControlMetrics::ios()`:
+
+| Control | Observed on iOS |
+|---|---|
+| `Toggle` | fills the proposed width, 28 tall; ideal width 69 without a label (8 + 61 switch), label + 8 + 61 with one; a Toggle in an HStack in a Form row is 61 x 28 |
+| `Button` (automatic) | the label only (a plain text button) |
+| `Button` `bordered` / `borderedProminent` | label + 24 wide, label + 14 tall |
+| `Slider` | fills the proposed width, 31 tall |
+| `Picker` segmented | fills the proposed width, 31 tall |
+| `Picker` menu | selected option + 40.333 wide, 34.333 tall; no label |
+| `TextField` | fills the proposed width, 22 tall; ideal width = text or placeholder width (at least 5) |
+| `Divider` | 0.333 thick |
+| `Text` body (17 pt) | one line 20.333 tall; n lines = n x 20.287 + (n - 1) x 1.713, rounded up to 1/3 pt |
+
+The Apple HIG switch size (51 x 31) does not match iOS 26 (61 x 28).
 
 Other differences:
 

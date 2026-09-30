@@ -1,0 +1,90 @@
+{
+ "host": {
+  "width": 390,
+  "height": 600
+ },
+ "root": {
+  "type": "List",
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "Row A"
+    },
+    "modifiers": []
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Row B"
+    },
+    "modifiers": []
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Big"
+    },
+    "modifiers": [
+     {
+      "$type": "font",
+      "textStyle": "largeTitle"
+     }
+    ]
+   },
+   {
+    "type": "HStack",
+    "props": {},
+    "modifiers": [],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Leading"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Spacer",
+      "props": {}
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Trailing"
+      },
+      "modifiers": []
+     }
+    ]
+   },
+   {
+    "type": "Section",
+    "props": {
+     "title": "Section"
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "In section"
+      },
+      "modifiers": []
+     },
+     {
+      "type": "Button",
+      "props": {
+       "label": "Button"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "After section"
+    },
+    "modifiers": []
+   }
+  ]
+ }
+}
