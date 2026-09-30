@@ -745,7 +745,14 @@ matters: React Native's release code paths differ, for example
 `SanitizeLeak.cpp` is compiled in). Run it through the CLI with
 `RN_A11Y_HOST_BIN=<that path> ASAN_OPTIONS=detect_leaks=0:detect_container_overflow=0`
 (container-overflow reports are false positives: Hermes' static libraries are
-not instrumented). `RN_A11Y_OVERLAY_DIR` builds from another copy of the
+not instrumented). The sanitizer flags name `vptr` explicitly
+(clang 21 / Xcode 26.6 leaves it out of `undefined`, Xcode 26.3 includes it).
+It is turned off for the `reanimated` and `rngesturehandler` targets only:
+both cast shadow nodes to a sibling type on purpose to reach protected
+`ShadowNode` members (`ReanimatedCommitHook` casts the root to
+`ReanimatedCommitShadowNode`; `RNGestureHandlerDetectorShadowNode::unflattenNode`
+casts each child to the detector type); the types add no data and only base
+members are touched. Our own code keeps the check. `RN_A11Y_OVERLAY_DIR` builds from another copy of the
 overlay (for example `git checkout-index --prefix=/tmp/idx/ -- $(git ls-files native/overlay)`).
 
 The manual steps below build the Debug tester the upstream way (gradle,

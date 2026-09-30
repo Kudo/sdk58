@@ -170,13 +170,16 @@ CMAKE_ARGS=(
   -DHERMES_V1_ENABLED=1
 )
 if [[ "$SANITIZE" == "1" ]]; then
-  SANITIZE_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -g"
+  # vptr explicitly: clang 21 (Xcode 26.6) leaves it out of `undefined`,
+  # Xcode 26.3's clang includes it; the tester CMake turns it off for
+  # reanimated and rngesturehandler (see FANTOM_SANITIZE there).
+  SANITIZE_FLAGS="-fsanitize=address,undefined,vptr -fno-omit-frame-pointer -fno-sanitize-recover=undefined,vptr -g"
   CMAKE_ARGS+=(
     "-DCMAKE_C_FLAGS=$SANITIZE_FLAGS"
     "-DCMAKE_CXX_FLAGS=$SANITIZE_FLAGS"
     "-DCMAKE_OBJC_FLAGS=$SANITIZE_FLAGS"
     "-DCMAKE_OBJCXX_FLAGS=$SANITIZE_FLAGS"
-    "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined"
+    "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined,vptr"
     -DFANTOM_SANITIZE=ON
   )
 elif [[ "$BUILD_TYPE" != "Debug" ]]; then

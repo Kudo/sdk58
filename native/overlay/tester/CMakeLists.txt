@@ -469,6 +469,23 @@ target_compile_definitions(fantom_tester PRIVATE "FANTOM_BUILD_TYPE=\"${CMAKE_BU
 if(FANTOM_SANITIZE AND TARGET folly_runtime)
   target_sources(folly_runtime PRIVATE ${FANTOM_THIRD_PARTY_DIR}/folly/folly/memory/SanitizeLeak.cpp)
 endif()
+# UBSan's vptr check stays on for our code, but not for two libraries that
+# cast shadow nodes to a sibling type on purpose to reach protected ShadowNode
+# members (layout-compatible: the derived types add no data, single
+# inheritance, only base members are touched):
+# - reanimated: ReanimatedCommitHook / ReanimatedMountHook
+#   reinterpret_pointer_cast the RootShadowNode to ReanimatedCommitShadowNode (a
+#   ShadowNode subclass with only inline trait setters) to set commit traits;
+# - rngesturehandler: RNGestureHandlerDetectorShadowNode::unflattenNode
+#   static_pointer_casts each child (any view, e.g. RNGestureHandlerButton) to
+#   RNGestureHandlerDetectorShadowNode to set traits_.
+if(FANTOM_SANITIZE)
+  foreach(target reanimated rngesturehandler)
+    if(TARGET ${target})
+      target_compile_options(${target} PRIVATE -fno-sanitize=vptr)
+    endif()
+  endforeach()
+endif()
 
 target_include_directories(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
