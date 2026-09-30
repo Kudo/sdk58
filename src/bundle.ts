@@ -23,6 +23,21 @@ import type {CustomResolutionContext, Resolution} from 'metro-resolver';
 
 const require = createRequire(import.meta.url);
 
+/**
+ * Loads `id` as the project sees it (its Expo, Metro and metro-config, which
+ * must be one copy with the project's `expo/metro-config`), else from this
+ * package (a repo checkout, or a project without it).
+ */
+function projectRequire<T>(projectRoot: string, id: string): T {
+  let resolved: string;
+  try {
+    resolved = createRequire(path.join(projectRoot, 'package.json')).resolve(id);
+  } catch {
+    resolved = require.resolve(id);
+  }
+  return require(resolved) as T;
+}
+
 /** Root of this package (contains `runtime/`). */
 export const PACKAGE_ROOT = fs.realpathSync(
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'),
@@ -230,10 +245,11 @@ export function createMetroConfig(options: {
   platform: string;
 }): ConfigT {
   const {projectRoot, workDir, platform} = options;
-  const {getDefaultConfig} = require('expo/metro-config') as {
-    getDefaultConfig: (projectRoot: string) => ConfigT;
-  };
-  const {mergeConfig} = require('metro-config') as typeof import('metro-config');
+  const {getDefaultConfig} = projectRequire<{getDefaultConfig: (projectRoot: string) => ConfigT}>(
+    projectRoot,
+    'expo/metro-config',
+  );
+  const {mergeConfig} = projectRequire<typeof import('metro-config')>(projectRoot, 'metro-config');
 
   const base = getDefaultConfig(projectRoot);
   const upstreamResolveRequest = base.resolver.resolveRequest;
@@ -346,10 +362,15 @@ const SMALL_EDIT = 8;
  * `require-<entry>`), and every scale/platform variant of image assets
  * (as Server.getOrderedDependencyPaths lists them).
  */
-async function moduleFiles(modulePaths: Set<string>, assetExts: readonly string[], platform: string): Promise<string[]> {
-  const {getAssetFiles} = require('metro/private/Assets') as {
+async function moduleFiles(
+  projectRoot: string,
+  modulePaths: Set<string>,
+  assetExts: readonly string[],
+  platform: string,
+): Promise<string[]> {
+  const {getAssetFiles} = projectRequire<{
     getAssetFiles: (assetPath: string, platform: string | null) => Promise<string[]>;
-  };
+  }>(projectRoot, 'metro/private/Assets');
   const assetExtSet = new Set(assetExts);
   const files: string[] = [];
   for (const file of modulePaths) {
@@ -465,7 +486,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     if (keep && useCache) modulePaths.add(module.path);
     return keep;
   };
-  const Metro = require('metro') as typeof import('metro');
+  const Metro = projectRequire<typeof import('metro')>(projectRoot, 'metro');
 
   const showProgress = options.verbose === true && process.stderr.isTTY;
 
@@ -491,7 +512,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     root,
     key,
     bundleFile: bundlePath,
-    files: await moduleFiles(modulePaths, config.resolver.assetExts, platform),
+    files: await moduleFiles(projectRoot, modulePaths, config.resolver.assetExts, platform),
     excludeDir: fs.realpathSync(workDir),
   });
   fs.rmSync(outDir, {recursive: true, force: true});

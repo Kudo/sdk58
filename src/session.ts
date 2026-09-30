@@ -16,7 +16,7 @@
 import {type ChildProcess, spawn} from 'node:child_process';
 import readline from 'node:readline';
 
-import {getHostBin, hostArgs} from './host.ts';
+import {getHostBin, type HostInfo, hostArgs} from './host.ts';
 import type {ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
@@ -66,6 +66,8 @@ export async function runSession(options: {
   timing?: boolean;
   /** Do not echo app console output as [app] lines (it is in each response's `logs`). */
   quiet?: boolean;
+  /** The host found by ensureHost() (reported in the ready line). */
+  host?: HostInfo | null;
   io: SessionIO;
 }): Promise<number> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -266,10 +268,20 @@ export async function runSession(options: {
     );
   }
   const readyLogs = takeLogs();
+  const host = options.host;
   writeLine({
     ready: true,
     tree: start.tree ? convertShadowTree(start.tree) : null,
     capabilities: start.capabilities ?? [],
+    ...(host != null
+      ? {
+          host: {
+            source: host.source,
+            ...(host.version != null ? {version: host.version} : {}),
+            ...(host.protocolVersion != null ? {protocolVersion: host.protocolVersion} : {}),
+          },
+        }
+      : {}),
     ...(readyLogs.length > 0 ? {logs: readyLogs} : {}),
   });
 

@@ -406,7 +406,7 @@ async function session(file: string, options: RunOptions) {
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
     throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
   }
-  await ensureHost({quiet: isQuiet(options)});
+  const host = await ensureHost({quiet: isQuiet(options)});
   const result = await bundleOrFail({
     appPath: file,
     viewportWidth: options.width,
@@ -433,6 +433,7 @@ async function session(file: string, options: RunOptions) {
       timeoutMs: options.timeout,
       timing: options.timing,
       quiet: isQuiet(options),
+      host,
       io: {
         input: process.stdin,
         output: process.stdout,

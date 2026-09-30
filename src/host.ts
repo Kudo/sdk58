@@ -4,9 +4,12 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 import {CliError, type ErrorCode, type LogEntry, logEntry} from './errors.ts';
-import {BASE_URL_ENV, downloadHost} from './hostDownload.ts';
+import {BASE_URL_ENV, downloadHost, readManifest} from './hostDownload.ts';
 import type {HostPayload} from './schema.ts';
 
 export const HOST_BIN_ENV = 'RN_A11Y_HOST_BIN';
@@ -64,39 +67,162 @@ export const DEFAULT_HOST_BIN = path.join(
   'rn-a11y-host',
 );
 
-/** Set by ensureHost(). */
-let resolvedHostBin: string | null = null;
+/**
+ * Host <-> CLI contract version (bundle entry, NativeFantom methods, stdout
+ * protocol) that this CLI supports. `host-version.json` records the host's
+ * `protocolVersion` (scripts/release-host.mjs HOST_PROTOCOL_VERSION).
+ */
+export const SUPPORTED_PROTOCOL = {min: 1, max: 1};
+
+export type HostSource = 'env' | 'package' | 'download' | 'dist';
+
+export type HostInfo = {
+  bin: string;
+  source: HostSource;
+  /** From host-version.json (package or downloaded manifest). */
+  version?: string;
+  protocolVersion?: number;
+};
+
+type HostManifestLike = {version?: unknown; protocolVersion?: unknown} | null;
+
+/** Probes used by findHost (replaced in tests). */
+export type HostProbes = {
+  env: string | undefined;
+  baseUrl: string | undefined;
+  exists: (file: string) => boolean;
+  /** rn-a11y-host package: binary path and host-version.json, or null when not installed / no binary for this platform. */
+  packageHost: () => {bin: string; manifest: HostManifestLike} | null;
+  download: (baseUrl: string) => Promise<{bin: string; manifest: HostManifestLike}>;
+  distBin: string;
+  log: (line: string) => void;
+};
+
+function info(bin: string, source: HostSource, manifest: HostManifestLike): HostInfo {
+  const result: HostInfo = {bin, source};
+  if (typeof manifest?.version === 'string') result.version = manifest.version;
+  if (typeof manifest?.protocolVersion === 'number') result.protocolVersion = manifest.protocolVersion;
+  return result;
+}
+
+/** HOST_INCOMPATIBLE when the host's protocolVersion is outside SUPPORTED_PROTOCOL. */
+export function checkProtocol(host: HostInfo): void {
+  const v = host.protocolVersion;
+  if (v == null) return;
+  if (v < SUPPORTED_PROTOCOL.min || v > SUPPORTED_PROTOCOL.max) {
+    const range =
+      SUPPORTED_PROTOCOL.min === SUPPORTED_PROTOCOL.max
+        ? `${SUPPORTED_PROTOCOL.min}`
+        : `${SUPPORTED_PROTOCOL.min}-${SUPPORTED_PROTOCOL.max}`;
+    throw new CliError(
+      'HOST_INCOMPATIBLE',
+      `The host (${host.source}${host.version ? ` ${host.version}` : ''}, ${host.bin}) speaks protocol ${v}; this CLI supports ${range}`,
+      {
+        hint:
+          v > SUPPORTED_PROTOCOL.max
+            ? 'Update react-native-a11y-tree.'
+            : 'Update rn-a11y-host (or the downloaded host) to match this CLI.',
+        details: {host},
+      },
+    );
+  }
+}
 
 /**
- * Finds the host binary: RN_A11Y_HOST_BIN, then (with RN_A11Y_HOST_BASE_URL)
- * the prebuilt host for host-version.json, downloaded once into
- * ~/.cache/rn-a11y-tree/host/<version>/, then native/dist. Call before
- * getHostBin() / runHost().
+ * Host order: RN_A11Y_HOST_BIN, the rn-a11y-host package, the prebuilt host
+ * download (with RN_A11Y_HOST_BASE_URL; cached in
+ * ~/.cache/rn-a11y-tree/host/<version>/), native/dist, else HOST_MISSING.
  */
-export async function ensureHost(options: {quiet?: boolean} = {}): Promise<string> {
+export async function findHost(probes: HostProbes): Promise<HostInfo> {
+  if (probes.env != null && probes.env !== '') {
+    if (!probes.exists(probes.env)) {
+      throw new HostError('HOST_MISSING', `${HOST_BIN_ENV} points to a missing file: ${probes.env}`, undefined, BUILD_HINT);
+    }
+    return info(probes.env, 'env', null);
+  }
+  const fromPackage = probes.packageHost();
+  if (fromPackage != null && probes.exists(fromPackage.bin)) {
+    return info(fromPackage.bin, 'package', fromPackage.manifest);
+  }
+  let downloadError: string | null = null;
+  if (probes.baseUrl) {
+    try {
+      const downloaded = await probes.download(probes.baseUrl);
+      return info(downloaded.bin, 'download', downloaded.manifest);
+    } catch (error) {
+      downloadError = (error as Error).message;
+    }
+  }
+  if (probes.exists(probes.distBin)) {
+    if (downloadError != null) {
+      probes.log(`rn-a11y-tree: warning: prebuilt host download failed (${downloadError}); using ${probes.distBin}`);
+    }
+    return info(probes.distBin, 'dist', null);
+  }
+  if (downloadError != null) {
+    throw new HostError('HOST_MISSING', `Prebuilt host download failed: ${downloadError}`, undefined, BUILD_HINT);
+  }
+  throw new HostError(
+    'HOST_MISSING',
+    `No host binary: no rn-a11y-host package binary for ${process.platform}-${process.arch}, and none at ${probes.distBin}`,
+    undefined,
+    BUILD_HINT,
+  );
+}
+
+function readJson(file: string): HostManifestLike {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/** The rn-a11y-host package's binary for this platform, or null. */
+function packageHost(): {bin: string; manifest: HostManifestLike} | null {
+  // Tests of the later steps (download, native/dist) in a checkout with a packed package.
+  if (process.env.RN_A11Y_HOST_SKIP_PACKAGE === '1') return null;
+  try {
+    const hostPackage = require('rn-a11y-host') as {getHostPath: () => string; getHostVersionPath: () => string};
+    return {bin: hostPackage.getHostPath(), manifest: readJson(hostPackage.getHostVersionPath())};
+  } catch {
+    // Not installed, or HOST_UNAVAILABLE for this platform.
+    return null;
+  }
+}
+
+export function defaultProbes(log: (line: string) => void): HostProbes {
+  return {
+    env: process.env[HOST_BIN_ENV],
+    baseUrl: process.env[BASE_URL_ENV],
+    exists: fs.existsSync,
+    packageHost,
+    download: async baseUrl => {
+      const bin = await downloadHost({baseUrl, log});
+      return {bin, manifest: readManifest()?.manifest ?? null};
+    },
+    distBin: DEFAULT_HOST_BIN,
+    log,
+  };
+}
+
+/** Set by ensureHost(). */
+let resolvedHost: HostInfo | null = null;
+
+/** Finds the host (findHost) and checks its protocol. Call before getHostBin() / runHost(). */
+export async function ensureHost(options: {quiet?: boolean} = {}): Promise<HostInfo> {
   const log = (line: string) => {
     if (!options.quiet) process.stderr.write(line + '\n');
   };
-  const fromEnv = process.env[HOST_BIN_ENV];
-  const baseUrl = process.env[BASE_URL_ENV];
-  if ((fromEnv == null || fromEnv === '') && baseUrl) {
-    try {
-      resolvedHostBin = await downloadHost({baseUrl, log});
-      return resolvedHostBin;
-    } catch (error) {
-      const reason = (error as Error).message;
-      if (!fs.existsSync(DEFAULT_HOST_BIN)) {
-        throw new HostError('HOST_MISSING', `Prebuilt host download failed: ${reason}`, undefined, BUILD_HINT);
-      }
-      log(`rn-a11y-tree: warning: prebuilt host download failed (${reason}); using ${DEFAULT_HOST_BIN}`);
-    }
-  }
-  resolvedHostBin = getHostBin();
-  return resolvedHostBin;
+  const host = await findHost(defaultProbes(log));
+  checkProtocol(host);
+  resolvedHost = host;
+  return host;
 }
 
+/** The host found by ensureHost(), else RN_A11Y_HOST_BIN or native/dist (synchronous). */
 export function getHostBin(): string {
-  if (resolvedHostBin != null) return resolvedHostBin;
+  if (resolvedHost != null) return resolvedHost.bin;
   const fromEnv = process.env[HOST_BIN_ENV];
   if (fromEnv != null && fromEnv !== '') {
     if (!fs.existsSync(fromEnv)) {
@@ -104,10 +230,17 @@ export function getHostBin(): string {
     }
     return fromEnv;
   }
+  const fromPackage = packageHost();
+  if (fromPackage != null && fs.existsSync(fromPackage.bin)) return fromPackage.bin;
   if (!fs.existsSync(DEFAULT_HOST_BIN)) {
     throw new HostError('HOST_MISSING', `Host binary not found at ${DEFAULT_HOST_BIN}`, undefined, BUILD_HINT);
   }
   return DEFAULT_HOST_BIN;
+}
+
+/** The host found by ensureHost(), if it ran. */
+export function currentHost(): HostInfo | null {
+  return resolvedHost;
 }
 
 /**

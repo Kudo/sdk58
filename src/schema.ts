@@ -391,7 +391,14 @@ export type SessionRequest = SessionActionRequest | SessionTreeRequest | Session
 
 /** First line on the session's stdout. */
 export type SessionReady =
-  | {ready: true; tree: TreeNode | null; capabilities: string[]; logs?: LogEntry[]}
+  | {
+      ready: true;
+      tree: TreeNode | null;
+      capabilities: string[];
+      /** Where the host came from; `version` / `protocolVersion` from its host-version.json when it has one. */
+      host?: {source: 'env' | 'package' | 'download' | 'dist'; version?: string; protocolVersion?: number};
+      logs?: LogEntry[];
+    }
   | {ready: false; error: ErrorInfo; logs?: LogEntry[]};
 
 /** One line on the session's stdout per request. */

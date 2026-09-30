@@ -106,6 +106,7 @@ test('CLI uses the downloaded host (RN_A11Y_HOST_BASE_URL, fake host)', {timeout
   const env = {
     ...process.env,
     RN_A11Y_HOST_BIN: '',
+    RN_A11Y_HOST_SKIP_PACKAGE: '1',
     RN_A11Y_HOST_BASE_URL: pathToFileURL(release.out).href,
     RN_A11Y_HOST_MANIFEST: release.manifestFile,
     RN_A11Y_HOST_CACHE_DIR: release.cache,

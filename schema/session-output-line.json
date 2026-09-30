@@ -36,6 +36,31 @@
                 "type": "string"
               }
             },
+            "host": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "env",
+                    "package",
+                    "download",
+                    "dist"
+                  ]
+                },
+                "version": {
+                  "type": "string"
+                },
+                "protocolVersion": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "source"
+              ],
+              "additionalProperties": false,
+              "description": "Where the host came from; `version` / `protocolVersion` from its host-version.json when it has one."
+            },
             "logs": {
               "type": "array",
               "items": {
@@ -338,9 +363,10 @@
         "TIMEOUT",
         "HOST_MISSING",
         "HOST_UNAVAILABLE",
+        "HOST_INCOMPATIBLE",
         "HOST_CRASHED"
       ],
-      "description": "Machine-readable errors: `{code, message, hint?, details?}`, with one exit code per class of failure.\n\n| exit | meaning | | --- | --- | | 0 | ok | | 1 | usage (bad arguments, script, selector) | | 2 | check failed (`check` command) | | 3 | bundle failed (Metro) | | 4 | app error (the app threw while loading or rendering) | | 5 | host (missing, unavailable, crashed, timeout) |"
+      "description": "Machine-readable errors: `{code, message, hint?, details?}`, with one exit code per class of failure.\n\n| exit | meaning | | --- | --- | | 0 | ok | | 1 | usage (bad arguments, script, selector) | | 2 | check failed (`check` command) | | 3 | bundle failed (Metro) | | 4 | app error (the app threw while loading or rendering) | | 5 | host (missing, unavailable, incompatible, crashed, timeout) |"
     },
     "SessionResponse": {
       "type": "object",

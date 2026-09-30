@@ -184,13 +184,24 @@ export function hermescPath(): string | null {
         ? 'linux64-bin/hermesc'
         : null;
   if (sub == null) return null;
-  try {
-    const base = path.dirname(require.resolve('hermes-compiler/package.json'));
-    const bin = path.join(base, 'hermesc', sub);
-    return fs.existsSync(bin) ? bin : null;
-  } catch {
-    return null;
+  // hermes-compiler is a dependency of react-native: look next to it too
+  // (installs where it is not hoisted).
+  const lookups: Array<() => string> = [
+    () => require.resolve('hermes-compiler/package.json'),
+    () =>
+      require.resolve('hermes-compiler/package.json', {
+        paths: [path.dirname(require.resolve('react-native/package.json'))],
+      }),
+  ];
+  for (const lookup of lookups) {
+    try {
+      const bin = path.join(path.dirname(lookup()), 'hermesc', sub);
+      if (fs.existsSync(bin)) return bin;
+    } catch {
+      // Not found this way.
+    }
   }
+  return null;
 }
 
 function hermescArgs(js: string, out: string): string[] {

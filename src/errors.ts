@@ -9,7 +9,7 @@
  * | 2 | check failed (`check` command) |
  * | 3 | bundle failed (Metro) |
  * | 4 | app error (the app threw while loading or rendering) |
- * | 5 | host (missing, unavailable, crashed, timeout) |
+ * | 5 | host (missing, unavailable, incompatible, crashed, timeout) |
  */
 
 export type ErrorCode =
@@ -22,6 +22,7 @@ export type ErrorCode =
   | 'TIMEOUT'
   | 'HOST_MISSING'
   | 'HOST_UNAVAILABLE'
+  | 'HOST_INCOMPATIBLE'
   | 'HOST_CRASHED';
 
 export const EXIT_CODES: Record<ErrorCode, number> = {
@@ -34,6 +35,7 @@ export const EXIT_CODES: Record<ErrorCode, number> = {
   TIMEOUT: 5,
   HOST_MISSING: 5,
   HOST_UNAVAILABLE: 5,
+  HOST_INCOMPATIBLE: 5,
   HOST_CRASHED: 5,
 };
 

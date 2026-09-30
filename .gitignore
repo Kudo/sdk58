@@ -6,3 +6,9 @@ dist/
 /tmp/
 .metro-cache/
 native/dist/
+# rn-a11y-host package contents written by scripts/release-host.mjs --pack
+packages/rn-a11y-host/osx-bin/
+packages/rn-a11y-host/linux64-bin/
+packages/rn-a11y-host/win64-bin/
+packages/rn-a11y-host/host-version.json
+*.tgz

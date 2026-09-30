@@ -14,6 +14,8 @@
  * host-version.json it is given (see src/hostDownload.ts).
  *
  * Usage: node scripts/release-host.mjs [--out <dir>] [--arch <arch>] [--bin <file>] [--pin]
+ *        node scripts/release-host.mjs --pack [--package-dir <dir>] [--bin <file>]
+ *   --pack fill packages/rn-a11y-host (osx-bin/rn-a11y-host + host-version.json)
  *   --bin  package this file instead of native/dist/<arch>/rn-a11y-host (tests)
  *   --pin  also write host-version.json to the repo root (the version the
  *          CLI downloads by default).
@@ -85,16 +87,15 @@ export function nativeLibVersions() {
   return out;
 }
 
-function main() {
-  const arch = arg('--arch', os.arch() === 'x64' ? 'x86_64' : os.arch());
-  const platform = process.platform;
-  const outDir = path.resolve(arg('--out', path.join(ROOT, 'dist', 'release')));
-  const bin = path.resolve(arg('--bin', path.join(ROOT, 'native', 'dist', arch, 'rn-a11y-host')));
-  if (!fs.existsSync(bin)) {
-    console.error(`release-host: ${path.relative(ROOT, bin)} not found; run \`bun run build:host\` first`);
-    process.exit(1);
-  }
+/**
+ * Version of the CLI <-> host contract (bundle entry, NativeFantom methods,
+ * stdout protocol). Bump it with a change the CLI cannot use with older
+ * hosts, and update SUPPORTED_PROTOCOL in src/host.ts.
+ */
+export const HOST_PROTOCOL_VERSION = 1;
 
+/** What the host was built from (the manifest without `assets`). */
+function buildInfo(bin) {
   const submoduleCommit = git(['rev-parse', 'HEAD'], RN_DIR);
   // The commit recorded in this repo (differs from HEAD when the submodule was moved but not committed).
   const pinned = git(['ls-tree', 'HEAD', 'third_party/react-native']).split(/\s+/)[2] ?? null;
@@ -104,16 +105,84 @@ function main() {
   const overlay = overlayHash();
   const overlayGitStatus = git(['status', '--porcelain', '--', 'native/overlay']);
   const libs = nativeLibVersions();
-  const binStat = fs.statSync(bin);
-  if (overlay.newestMtimeMs > binStat.mtimeMs) {
+  if (overlay.newestMtimeMs > fs.statSync(bin).mtimeMs) {
     console.error('release-host: warning: native/overlay has files newer than the host binary; rebuild with `bun run build:host`');
   }
   if (overlayGitStatus !== '') {
     console.error(`release-host: warning: native/overlay has uncommitted changes:\n${overlayGitStatus}`);
   }
-
   const inputs = {submoduleCommit, overlayHash: overlay.hash, nativeLibs: libs};
-  const version = `${rnVersion}-${sha256(JSON.stringify(inputs)).slice(0, 12)}`;
+  return {
+    version: `${rnVersion}-${sha256(JSON.stringify(inputs)).slice(0, 12)}`,
+    protocolVersion: HOST_PROTOCOL_VERSION,
+    reactNative: rnVersion,
+    submoduleCommit,
+    ...(pinned != null && pinned !== submoduleCommit ? {submoduleCommitInRepo: pinned} : {}),
+    overlayHash: overlay.hash,
+    overlayFiles: overlay.files,
+    ...(overlayGitStatus !== '' ? {overlayDirty: true} : {}),
+    nativeLibs: libs,
+    repoCommit: git(['rev-parse', 'HEAD']),
+  };
+}
+
+/**
+ * --pack: fills packages/rn-a11y-host (or --package-dir) in the hermesc
+ * layout. macOS: osx-bin/rn-a11y-host, a universal binary (lipo) when both
+ * native/dist/arm64 and native/dist/x86_64 exist, else the one that exists.
+ */
+function pack() {
+  if (process.platform !== 'darwin') {
+    console.error('release-host: --pack only packs macOS hosts for now');
+    process.exit(1);
+  }
+  const packageDir = path.resolve(arg('--package-dir', path.join(ROOT, 'packages', 'rn-a11y-host')));
+  const archs = ['arm64', 'x86_64'].filter(a => fs.existsSync(path.join(ROOT, 'native', 'dist', a, 'rn-a11y-host')));
+  const explicit = arg('--bin', null);
+  const inputs = explicit != null ? [path.resolve(explicit)] : archs.map(a => path.join(ROOT, 'native', 'dist', a, 'rn-a11y-host'));
+  if (inputs.length === 0) {
+    console.error('release-host: no native/dist/<arch>/rn-a11y-host; run `bun run build:host` first');
+    process.exit(1);
+  }
+  const outBin = path.join(packageDir, 'osx-bin', 'rn-a11y-host');
+  fs.mkdirSync(path.dirname(outBin), {recursive: true});
+  if (inputs.length > 1) {
+    execFileSync('lipo', ['-create', '-output', outBin, ...inputs]);
+  } else {
+    fs.copyFileSync(inputs[0], outBin);
+  }
+  fs.chmodSync(outBin, 0o755);
+  const manifest = {
+    ...buildInfo(inputs[0]),
+    binaries: {
+      'osx-bin/rn-a11y-host': {
+        archs: explicit != null ? [os.arch() === 'x64' ? 'x86_64' : os.arch()] : archs,
+        sha256: sha256(fs.readFileSync(outBin)),
+        size: fs.statSync(outBin).size,
+      },
+    },
+  };
+  const text = JSON.stringify(manifest, null, 2) + '\n';
+  fs.writeFileSync(path.join(packageDir, 'host-version.json'), text);
+  console.log(text.trimEnd());
+  console.error(`release-host: packed ${path.relative(ROOT, outBin)} (${manifest.binaries['osx-bin/rn-a11y-host'].size} bytes)`);
+}
+
+function main() {
+  if (process.argv.includes('--pack')) {
+    pack();
+    return;
+  }
+  const arch = arg('--arch', os.arch() === 'x64' ? 'x86_64' : os.arch());
+  const platform = process.platform;
+  const outDir = path.resolve(arg('--out', path.join(ROOT, 'dist', 'release')));
+  const bin = path.resolve(arg('--bin', path.join(ROOT, 'native', 'dist', arch, 'rn-a11y-host')));
+  if (!fs.existsSync(bin)) {
+    console.error(`release-host: ${path.relative(ROOT, bin)} not found; run \`bun run build:host\` first`);
+    process.exit(1);
+  }
+  const info = buildInfo(bin);
+  const {version} = info;
   const assetKey = `${platform}-${arch}`;
   const file = `rn-a11y-host-${version}-${assetKey}.tar.gz`;
 
@@ -122,18 +191,7 @@ function main() {
   try {
     fs.copyFileSync(bin, path.join(stage, 'rn-a11y-host'));
     fs.chmodSync(path.join(stage, 'rn-a11y-host'), 0o755);
-    const manifest = {
-      version,
-      reactNative: rnVersion,
-      submoduleCommit,
-      ...(pinned != null && pinned !== submoduleCommit ? {submoduleCommitInRepo: pinned} : {}),
-      overlayHash: overlay.hash,
-      overlayFiles: overlay.files,
-      ...(overlayGitStatus !== '' ? {overlayDirty: true} : {}),
-      nativeLibs: libs,
-      repoCommit: git(['rev-parse', 'HEAD']),
-      assets: {} /* filled below */,
-    };
+    const manifest = {...info, assets: {} /* filled below */};
     fs.writeFileSync(path.join(stage, 'host-version.json'), JSON.stringify({...manifest, assets: undefined}, null, 2) + '\n');
     const tarPath = path.join(outDir, file);
     execFileSync('tar', ['-czf', tarPath, '-C', stage, 'rn-a11y-host', 'host-version.json']);

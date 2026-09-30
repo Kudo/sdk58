@@ -1,0 +1,31 @@
+{
+  "name": "rn-a11y-host",
+  "version": "0.1.0",
+  "description": "Prebuilt headless React Native host (Fantom: Fabric + Hermes) for react-native-a11y-tree",
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./host-version.json": "./host-version.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "osx-bin/",
+    "linux64-bin/",
+    "win64-bin/",
+    "host-version.json",
+    "index.js",
+    "index.d.ts",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kudo/react-native-a11y-tree.git",
+    "directory": "packages/rn-a11y-host"
+  }
+}
