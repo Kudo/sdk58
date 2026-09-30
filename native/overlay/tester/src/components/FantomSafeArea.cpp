@@ -7,7 +7,7 @@
 
 #include "FantomSafeArea.h"
 
-#include "AppSettings.h"
+#include "FantomDeviceInfo.h"
 
 #include <mutex>
 #include <unordered_map>
@@ -34,14 +34,8 @@ struct EmittedMetrics {
   Rect frame;
 };
 std::unordered_map<Tag, EmittedMetrics> emittedMetrics;
-std::optional<Size> windowSize;
 
 } // namespace
-
-void setSafeAreaWindowSize(Size size) {
-  std::lock_guard<std::mutex> lock(safeAreaMutex);
-  windowSize = size;
-}
 
 void setSafeAreaInsets(EdgeInsets insets) {
   std::lock_guard<std::mutex> lock(safeAreaMutex);
@@ -185,13 +179,13 @@ class FantomSafeAreaContextModule : public TurboModule {
                       TurboModule&,
                       const jsi::Value*,
                       size_t) -> jsi::Value {
-          Size size;
+          // The window frame is the device metrics (FantomDeviceInfo): the
+          // started surface's size, or NativeFantom.setDeviceMetrics.
+          auto deviceMetrics = getFantomDeviceMetrics();
+          Size size{static_cast<Float>(deviceMetrics.width), static_cast<Float>(deviceMetrics.height)};
           EdgeInsets insets;
           {
             std::lock_guard<std::mutex> lock(safeAreaMutex);
-            size = windowSize.value_or(Size{
-                static_cast<Float>(AppSettings::windowWidth),
-                static_cast<Float>(AppSettings::windowHeight)});
             insets = windowInsets;
           }
           auto frame = jsi::Object(runtime);

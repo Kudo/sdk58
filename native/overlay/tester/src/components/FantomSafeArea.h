@@ -42,10 +42,6 @@ EdgeInsets getSafeAreaInsets();
  */
 int updateSafeAreas(const ShadowNode &rootShadowNode);
 
-// Size of the most recently started surface (used as the window frame of
-// `initialWindowMetrics`).
-void setSafeAreaWindowSize(Size size);
-
 /*
  * `RNCSafeAreaContext` TurboModule: `getConstants()` returns
  * `{initialWindowMetrics: {frame: {x, y, width, height}, insets}}` with the

@@ -116,6 +116,33 @@ removed or renamed, its arguments or return value change meaning, or the
 type). New methods, new capabilities and new optional node fields do not bump
 it; they are announced through `getCapabilities()`.
 
+## Device metrics (Dimensions, PixelRatio)
+
+ReactCxxPlatform's `DeviceInfoModule` returns a fixed 1280x720 with scale 0
+(so `Dimensions.get('window')` was 1280x720 and `PixelRatio.get()` 0 under
+every preset). The tester registers its own `DeviceInfo` TurboModule
+(`components/FantomDeviceInfo.{h,cpp}`, the `NativeDeviceInfo` spec) before
+it:
+
+- `getConstants()` → `{Dimensions: {window, screen}}`, both
+  `{width, height, scale, fontScale}` from the current device metrics.
+- Defaults: the last started surface (its viewport size and
+  `devicePixelRatio`, font scale 1); before the first surface the tester
+  window size (1280x720), scale 3, font scale 1.
+- `NativeFantom.setDeviceMetrics({width, height, scale?, fontScale?})` sets
+  them (missing fields keep their values; later surfaces no longer change
+  them). A change emits `didUpdateDimensions` with `{window, screen}` through
+  `__rctDeviceEventEmitter` (TurboModule::emitDeviceEvent), so `Dimensions`
+  listeners and `useWindowDimensions()` update.
+- The safe-area `initialWindowMetrics` frame uses the same metrics.
+- `getCapabilities()` has `"deviceMetrics"`.
+
+`tests/FantomDeviceMetrics-itest.js`: default 390x844 scale 3 for a 390x844
+surface; after `setDeviceMetrics({width: 412, height: 915, scale: 2.625,
+fontScale: 1.3})`, `Dimensions` (window and screen), `PixelRatio.get()` /
+`getFontScale()` and a `useWindowDimensions()` component return the new values;
+a later surface does not override them.
+
 ## Mounted values in getA11yTree
 
 `getA11yTree` serializes the shadow tree. Some changes only reach the mounted

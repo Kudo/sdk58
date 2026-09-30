@@ -21,6 +21,7 @@
 #include "TesterAppDelegate.h"
 
 #include <jsi/instrumentation.h>
+#include "components/FantomDeviceInfo.h"
 #include "components/FantomExpo.h"
 #include "components/FantomExpoText.h"
 #include "components/FantomSafeArea.h"
@@ -360,6 +361,39 @@ jsi::Value getHostInfoHostFunction(
   return jsi::String::createFromUtf8(runtime, folly::toJson(info));
 }
 
+// setDeviceMetrics({width, height, scale?, fontScale?}): the DeviceInfo
+// metrics (Dimensions window and screen, PixelRatio) and the safe-area window
+// frame. Emits didUpdateDimensions when they change. Defaults for missing
+// fields: the current values.
+jsi::Value setDeviceMetricsHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& /*turboModule*/,
+    const jsi::Value* args,
+    size_t count) {
+  if (count < 1 || !args[0].isObject()) {
+    throw jsi::JSError(runtime, "setDeviceMetrics: expected {width, height, scale?, fontScale?}");
+  }
+  auto object = args[0].asObject(runtime);
+  auto metrics = getFantomDeviceMetrics();
+  auto read = [&](const char* key, double& out) {
+    auto value = object.getProperty(runtime, key);
+    if (value.isNumber()) {
+      if (!(value.asNumber() > 0)) {
+        throw jsi::JSError(runtime, std::string("setDeviceMetrics: ") + key + " must be > 0");
+      }
+      out = value.asNumber();
+    } else if (!value.isUndefined()) {
+      throw jsi::JSError(runtime, std::string("setDeviceMetrics: ") + key + " must be a number");
+    }
+  };
+  read("width", metrics.width);
+  read("height", metrics.height);
+  read("scale", metrics.scale);
+  read("fontScale", metrics.fontScale);
+  setFantomDeviceMetrics(metrics);
+  return jsi::Value::undefined();
+}
+
 // getCapabilities(): string (JSON array of the host's feature strings)
 jsi::Value getCapabilitiesHostFunction(
     jsi::Runtime& runtime,
@@ -381,6 +415,7 @@ jsi::Value getCapabilitiesHostFunction(
       "mountedRevision",
       "effectiveBackground",
       "getHostInfo",
+      "deviceMetrics",
       "protocolVersion:" + std::to_string(kHostProtocolVersion));
 #ifdef FANTOM_WITH_EXPO_UI
   capabilities.push_back("expoUI");
@@ -493,6 +528,8 @@ NativeFantom::NativeFantom(
       .argCount = 1, .invoker = setExpoUIPlatformHostFunction};
   methodMap_["getCapabilities"] = MethodMetadata{
       .argCount = 0, .invoker = getCapabilitiesHostFunction};
+  methodMap_["setDeviceMetrics"] = MethodMetadata{
+      .argCount = 1, .invoker = setDeviceMetricsHostFunction};
   methodMap_["getHostInfo"] = MethodMetadata{
       .argCount = 0, .invoker = getHostInfoHostFunction};
   methodMap_["updateNativeStates"] = MethodMetadata{
@@ -510,8 +547,7 @@ SurfaceId NativeFantom::startSurface(
     double viewportOffsetY) {
   SurfaceId surfaceId = nextSurfaceId_;
   nextSurfaceId_ += 10;
-  setSafeAreaWindowSize(Size{
-      static_cast<Float>(viewportWidth), static_cast<Float>(viewportHeight)});
+  noteFantomSurfaceStarted(viewportWidth, viewportHeight, devicePixelRatio);
   appDelegate_.startSurface(
       runtime,
       static_cast<float>(viewportWidth),

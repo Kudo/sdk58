@@ -7,6 +7,7 @@
 
 #include "../TesterTurboModuleProvider.h"
 
+#include "../../components/FantomDeviceInfo.h"
 #include "../../components/FantomGestureHandler.h"
 #include "../../components/FantomSafeArea.h"
 #include "../../components/FantomStatusBarManager.h"
@@ -17,6 +18,10 @@ TesterTurboModuleProvider::getTurboModuleProvider() {
   return TurboModuleProvider{
       [](const std::string& name, const std::shared_ptr<CallInvoker>& jsInvoker)
           -> std::shared_ptr<TurboModule> {
+        // Before ReactCxxPlatform's DeviceInfoModule (a fixed 1280x720, scale 0).
+        if (name == "DeviceInfo") {
+          return createDeviceInfoModule(jsInvoker);
+        }
         if (name == "RNGestureHandlerModule") {
           return createGestureHandlerModule(jsInvoker);
         }
