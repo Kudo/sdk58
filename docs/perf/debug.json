@@ -1,0 +1,1966 @@
+{
+  "label": "debug",
+  "n": 5,
+  "machine": {
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memGb": 16,
+    "node": "v26.5.0",
+    "macos": "26.5.2",
+    "hostBinary": "/tmp/rnhosts/debug/rn-a11y-host",
+    "hostBinaryBytes": 73617424
+  },
+  "scenarios": {
+    "render-cold": [
+      {
+        "wallMs": 5572.675375000001,
+        "cpuMs": 31360,
+        "maxRssCliTreeMb": 1630.078125,
+        "peakTotalMb": 1674.234375,
+        "peakHostMb": 191.9375,
+        "timings": [
+          {
+            "metroMs": 4544.452,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 903.379,
+            "hostStartupMs": 131.214,
+            "hostSpawnToExitMs": 914.848,
+            "js": {
+              "evalMs": 174.656,
+              "renderMs": 12.581,
+              "settleMs": 478.794,
+              "dumpMs": 104.946,
+              "jsTotalMs": 772.165,
+              "settleRounds": 3
+            },
+            "convertMs": 5.715,
+            "outputBytes": 1598904,
+            "totalMs": 5511.125
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 87.36
+      },
+      {
+        "wallMs": 5260.032708000001,
+        "cpuMs": 31340,
+        "maxRssCliTreeMb": 1749.578125,
+        "peakTotalMb": 1791.015625,
+        "peakHostMb": 193.09375,
+        "timings": [
+          {
+            "metroMs": 4207.865,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 929.114,
+            "hostStartupMs": 136.075,
+            "hostSpawnToExitMs": 941.666,
+            "js": {
+              "evalMs": 183.024,
+              "renderMs": 13.675,
+              "settleMs": 488.209,
+              "dumpMs": 106.894,
+              "jsTotalMs": 793.039,
+              "settleRounds": 3
+            },
+            "convertMs": 5.943,
+            "outputBytes": 1598904,
+            "totalMs": 5194.707
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 87
+      },
+      {
+        "wallMs": 5294.533124999998,
+        "cpuMs": 31080.000000000004,
+        "maxRssCliTreeMb": 1718.109375,
+        "peakTotalMb": 1748.875,
+        "peakHostMb": 192.828125,
+        "timings": [
+          {
+            "metroMs": 4265.665,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 924.089,
+            "hostStartupMs": 138.183,
+            "hostSpawnToExitMs": 936.346,
+            "js": {
+              "evalMs": 179.701,
+              "renderMs": 13.239,
+              "settleMs": 484.584,
+              "dumpMs": 107.157,
+              "jsTotalMs": 785.906,
+              "settleRounds": 3
+            },
+            "convertMs": 5.074,
+            "outputBytes": 1598904,
+            "totalMs": 5247.895
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 88.96
+      },
+      {
+        "wallMs": 5279.810834,
+        "cpuMs": 30930,
+        "maxRssCliTreeMb": 1719.515625,
+        "peakTotalMb": 1759.859375,
+        "peakHostMb": 194.15625,
+        "timings": [
+          {
+            "metroMs": 4215.614,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 956.886,
+            "hostStartupMs": 176.53,
+            "hostSpawnToExitMs": 969.308,
+            "js": {
+              "evalMs": 177.801,
+              "renderMs": 13.301,
+              "settleMs": 480.602,
+              "dumpMs": 107.383,
+              "jsTotalMs": 780.356,
+              "settleRounds": 3
+            },
+            "convertMs": 5.493,
+            "outputBytes": 1598904,
+            "totalMs": 5229.141
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 88.38
+      },
+      {
+        "wallMs": 5285.624292,
+        "cpuMs": 31080,
+        "maxRssCliTreeMb": 1730.703125,
+        "peakTotalMb": 1763.984375,
+        "peakHostMb": 193.125,
+        "timings": [
+          {
+            "metroMs": 4224.702,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 932.831,
+            "hostStartupMs": 140.247,
+            "hostSpawnToExitMs": 945.279,
+            "js": {
+              "evalMs": 182.338,
+              "renderMs": 13.508,
+              "settleMs": 488.343,
+              "dumpMs": 107.132,
+              "jsTotalMs": 792.584,
+              "settleRounds": 3
+            },
+            "convertMs": 5.185,
+            "outputBytes": 1598904,
+            "totalMs": 5213.686
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 87.36
+      }
+    ],
+    "render-warm": [
+      {
+        "wallMs": 1813.705833,
+        "cpuMs": 3170,
+        "maxRssCliTreeMb": 586.921875,
+        "peakTotalMb": 763.015625,
+        "peakHostMb": 194.296875,
+        "timings": [
+          {
+            "metroMs": 854.441,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 873.021,
+            "hostStartupMs": 108.55,
+            "hostSpawnToExitMs": 885.114,
+            "js": {
+              "evalMs": 155.565,
+              "renderMs": 11.601,
+              "settleMs": 495.934,
+              "dumpMs": 100.324,
+              "jsTotalMs": 764.471,
+              "settleRounds": 3
+            },
+            "convertMs": 5.24,
+            "outputBytes": 1598904,
+            "totalMs": 1784.558
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 88.4
+      },
+      {
+        "wallMs": 1895.5585419999989,
+        "cpuMs": 3240,
+        "maxRssCliTreeMb": 599.09375,
+        "peakTotalMb": 772.765625,
+        "peakHostMb": 193.0625,
+        "timings": [
+          {
+            "metroMs": 973.865,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 819.973,
+            "hostStartupMs": 112.438,
+            "hostSpawnToExitMs": 831.399,
+            "js": {
+              "evalMs": 154.296,
+              "renderMs": 11.491,
+              "settleMs": 440.05,
+              "dumpMs": 100.626,
+              "jsTotalMs": 707.535,
+              "settleRounds": 3
+            },
+            "convertMs": 5.017,
+            "outputBytes": 1598904,
+            "totalMs": 1852.418
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 88.15
+      },
+      {
+        "wallMs": 1767.0277499999938,
+        "cpuMs": 3120,
+        "maxRssCliTreeMb": 601.203125,
+        "peakTotalMb": 774.484375,
+        "peakHostMb": 191.953125,
+        "timings": [
+          {
+            "metroMs": 857.305,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 819.482,
+            "hostStartupMs": 111.162,
+            "hostSpawnToExitMs": 831.511,
+            "js": {
+              "evalMs": 155.174,
+              "renderMs": 11.749,
+              "settleMs": 439.964,
+              "dumpMs": 100.342,
+              "jsTotalMs": 708.32,
+              "settleRounds": 3
+            },
+            "convertMs": 5.296,
+            "outputBytes": 1598904,
+            "totalMs": 1733.331
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 88.15
+      },
+      {
+        "wallMs": 1774.0744580000028,
+        "cpuMs": 3120,
+        "maxRssCliTreeMb": 594.296875,
+        "peakTotalMb": 767.8125,
+        "peakHostMb": 193.171875,
+        "timings": [
+          {
+            "metroMs": 871.038,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 817.893,
+            "hostStartupMs": 112.324,
+            "hostSpawnToExitMs": 829.711,
+            "js": {
+              "evalMs": 155.219,
+              "renderMs": 11.746,
+              "settleMs": 437.295,
+              "dumpMs": 100.206,
+              "jsTotalMs": 705.569,
+              "settleRounds": 3
+            },
+            "convertMs": 5.191,
+            "outputBytes": 1598904,
+            "totalMs": 1746.537
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 82.27
+      },
+      {
+        "wallMs": 1765.5561670000025,
+        "cpuMs": 3110,
+        "maxRssCliTreeMb": 600.734375,
+        "peakTotalMb": 773.6875,
+        "peakHostMb": 191.953125,
+        "timings": [
+          {
+            "metroMs": 860.605,
+            "bundleBytes": 5563801,
+            "hostSpawnToResultMs": 813.039,
+            "hostStartupMs": 107.975,
+            "hostSpawnToExitMs": 824.478,
+            "js": {
+              "evalMs": 152.336,
+              "renderMs": 11.593,
+              "settleMs": 439.765,
+              "dumpMs": 100.333,
+              "jsTotalMs": 705.064,
+              "settleRounds": 3
+            },
+            "convertMs": 4.855,
+            "outputBytes": 1598904,
+            "totalMs": 1729.06
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 78.98
+      }
+    ],
+    "run-warm": [
+      {
+        "wallMs": 6043.550584000004,
+        "cpuMs": 7900,
+        "maxRssCliTreeMb": 603.125,
+        "peakTotalMb": 780,
+        "peakHostMb": 203.203125,
+        "timings": [
+          {
+            "metroMs": 885.94,
+            "bundleBytes": 5591724,
+            "hostSpawnToResultMs": 5057.164,
+            "hostStartupMs": 123.806,
+            "hostSpawnToExitMs": 5066.217,
+            "js": {
+              "evalMs": 153.682,
+              "renderMs": 11.279,
+              "settleMs": 439.7,
+              "actionsMs": 4327.517,
+              "jsTotalMs": 4933.358,
+              "settleRounds": 3
+            },
+            "convertMs": 21.886,
+            "outputBytes": 8201372,
+            "totalMs": 6015.25
+          }
+        ],
+        "stdoutBytes": 8201372,
+        "idleBefore": 87.96
+      },
+      {
+        "wallMs": 6029.533499999998,
+        "cpuMs": 7430.000000000001,
+        "maxRssCliTreeMb": 586.6875,
+        "peakTotalMb": 780.21875,
+        "peakHostMb": 203.1875,
+        "timings": [
+          {
+            "metroMs": 858.395,
+            "bundleBytes": 5591724,
+            "hostSpawnToResultMs": 5050.592,
+            "hostStartupMs": 122.004,
+            "hostSpawnToExitMs": 5060.523,
+            "js": {
+              "evalMs": 153.924,
+              "renderMs": 11.53,
+              "settleMs": 438.745,
+              "actionsMs": 4323.202,
+              "jsTotalMs": 4928.588,
+              "settleRounds": 3
+            },
+            "convertMs": 21.243,
+            "outputBytes": 8201372,
+            "totalMs": 5980.531
+          }
+        ],
+        "stdoutBytes": 8201372,
+        "idleBefore": 80.61
+      },
+      {
+        "wallMs": 6139.912832999995,
+        "cpuMs": 7540,
+        "maxRssCliTreeMb": 577.046875,
+        "peakTotalMb": 766.765625,
+        "peakHostMb": 207.875,
+        "timings": [
+          {
+            "metroMs": 869.293,
+            "bundleBytes": 5591724,
+            "hostSpawnToResultMs": 5149.61,
+            "hostStartupMs": 126.311,
+            "hostSpawnToExitMs": 5159.15,
+            "js": {
+              "evalMs": 159.652,
+              "renderMs": 12.439,
+              "settleMs": 451.97,
+              "actionsMs": 4397.972,
+              "jsTotalMs": 5023.299,
+              "settleRounds": 3
+            },
+            "convertMs": 23.732,
+            "outputBytes": 8201372,
+            "totalMs": 6093.172
+          }
+        ],
+        "stdoutBytes": 8201372,
+        "idleBefore": 88.85
+      },
+      {
+        "wallMs": 6099.224708000009,
+        "cpuMs": 7510,
+        "maxRssCliTreeMb": 586.765625,
+        "peakTotalMb": 769.625,
+        "peakHostMb": 202.203125,
+        "timings": [
+          {
+            "metroMs": 867.059,
+            "bundleBytes": 5591724,
+            "hostSpawnToResultMs": 5126.964,
+            "hostStartupMs": 124.007,
+            "hostSpawnToExitMs": 5135.824,
+            "js": {
+              "evalMs": 153.404,
+              "renderMs": 11.987,
+              "settleMs": 439.888,
+              "actionsMs": 4396.346,
+              "jsTotalMs": 5002.957,
+              "settleRounds": 3
+            },
+            "convertMs": 22.896,
+            "outputBytes": 8201372,
+            "totalMs": 6066.522
+          }
+        ],
+        "stdoutBytes": 8201372,
+        "idleBefore": 88.62
+      },
+      {
+        "wallMs": 6050.0850409999985,
+        "cpuMs": 7460,
+        "maxRssCliTreeMb": 595.015625,
+        "peakTotalMb": 778.828125,
+        "peakHostMb": 203.171875,
+        "timings": [
+          {
+            "metroMs": 867.856,
+            "bundleBytes": 5591724,
+            "hostSpawnToResultMs": 5078.576,
+            "hostStartupMs": 125.068,
+            "hostSpawnToExitMs": 5087.659,
+            "js": {
+              "evalMs": 155.268,
+              "renderMs": 12.041,
+              "settleMs": 441.037,
+              "actionsMs": 4343.948,
+              "jsTotalMs": 4953.508,
+              "settleRounds": 3
+            },
+            "convertMs": 23.613,
+            "outputBytes": 8201372,
+            "totalMs": 6021.679
+          }
+        ],
+        "stdoutBytes": 8201372,
+        "idleBefore": 88.25
+      }
+    ],
+    "session": [
+      {
+        "wallMs": 5116.093416000003,
+        "cpuMs": 6510,
+        "maxRssCliTreeMb": 560,
+        "peakTotalMb": 743.359375,
+        "peakHostMb": 203.015625,
+        "timings": [
+          {
+            "hostSpawnToReadyMs": 820.758,
+            "hostStartupMs": 103.917,
+            "js": {
+              "evalMs": 154.998,
+              "renderMs": 11.464,
+              "settleMs": 445.525,
+              "dumpMs": 102.236,
+              "jsTotalMs": 716.841
+            }
+          },
+          {
+            "id": 1,
+            "requestMs": 321.446
+          },
+          {
+            "id": 2,
+            "requestMs": 305.296
+          },
+          {
+            "id": 3,
+            "requestMs": 203.031
+          },
+          {
+            "id": 4,
+            "requestMs": 327.779
+          },
+          {
+            "id": 5,
+            "requestMs": 202.425
+          },
+          {
+            "id": 6,
+            "requestMs": 309.411
+          },
+          {
+            "id": 7,
+            "requestMs": 305.987
+          },
+          {
+            "id": 8,
+            "requestMs": 323.132
+          },
+          {
+            "id": 9,
+            "requestMs": 309.021
+          },
+          {
+            "id": 10,
+            "requestMs": 317.065
+          },
+          {
+            "id": 11,
+            "requestMs": 203.362
+          },
+          {
+            "id": 12,
+            "requestMs": 108.564
+          },
+          {
+            "id": "quit",
+            "requestMs": 10.462
+          }
+        ],
+        "stdoutBytes": 0,
+        "latencies": [
+          {
+            "id": 1,
+            "kind": "type",
+            "ms": 321.88925000000745,
+            "ok": true
+          },
+          {
+            "id": 2,
+            "kind": "scroll",
+            "ms": 305.4311250000028,
+            "ok": true
+          },
+          {
+            "id": 3,
+            "kind": "wait",
+            "ms": 203.14687500000582,
+            "ok": true
+          },
+          {
+            "id": 4,
+            "kind": "tap",
+            "ms": 340.18770799999766,
+            "ok": true
+          },
+          {
+            "id": 5,
+            "kind": "wait",
+            "ms": 202.877250000005,
+            "ok": true
+          },
+          {
+            "id": 6,
+            "kind": "snapshot",
+            "ms": 312.20229200000176,
+            "ok": true
+          },
+          {
+            "id": 7,
+            "kind": "scroll",
+            "ms": 306.1410420000029,
+            "ok": true
+          },
+          {
+            "id": 8,
+            "kind": "pan",
+            "ms": 323.2617500000051,
+            "ok": true
+          },
+          {
+            "id": 9,
+            "kind": "snapshot",
+            "ms": 310.224000000002,
+            "ok": true
+          },
+          {
+            "id": 10,
+            "kind": "tap",
+            "ms": 327.6810419999965,
+            "ok": true
+          },
+          {
+            "id": 11,
+            "kind": "wait",
+            "ms": 203.89858399999503,
+            "ok": true
+          },
+          {
+            "id": 12,
+            "kind": "tree",
+            "ms": 109.63912500000151,
+            "ok": true
+          }
+        ],
+        "idleBefore": 83.51
+      },
+      {
+        "wallMs": 5121.091874999998,
+        "cpuMs": 6480,
+        "maxRssCliTreeMb": 593.6875,
+        "peakTotalMb": 778.9375,
+        "peakHostMb": 204.25,
+        "timings": [
+          {
+            "hostSpawnToReadyMs": 811.537,
+            "hostStartupMs": 103.149,
+            "js": {
+              "evalMs": 153.165,
+              "renderMs": 11.309,
+              "settleMs": 439.716,
+              "dumpMs": 101.561,
+              "jsTotalMs": 708.388
+            }
+          },
+          {
+            "id": 1,
+            "requestMs": 322.368
+          },
+          {
+            "id": 2,
+            "requestMs": 304.895
+          },
+          {
+            "id": 3,
+            "requestMs": 203.029
+          },
+          {
+            "id": 4,
+            "requestMs": 326.226
+          },
+          {
+            "id": 5,
+            "requestMs": 201.657
+          },
+          {
+            "id": 6,
+            "requestMs": 308.401
+          },
+          {
+            "id": 7,
+            "requestMs": 304.225
+          },
+          {
+            "id": 8,
+            "requestMs": 398.844
+          },
+          {
+            "id": 9,
+            "requestMs": 308.398
+          },
+          {
+            "id": 10,
+            "requestMs": 321.575
+          },
+          {
+            "id": 11,
+            "requestMs": 203.036
+          },
+          {
+            "id": 12,
+            "requestMs": 119.43
+          },
+          {
+            "id": "quit",
+            "requestMs": 10.634
+          }
+        ],
+        "stdoutBytes": 0,
+        "latencies": [
+          {
+            "id": 1,
+            "kind": "type",
+            "ms": 328.5907089999964,
+            "ok": true
+          },
+          {
+            "id": 2,
+            "kind": "scroll",
+            "ms": 305.4337910000031,
+            "ok": true
+          },
+          {
+            "id": 3,
+            "kind": "wait",
+            "ms": 204.02508300000045,
+            "ok": true
+          },
+          {
+            "id": 4,
+            "kind": "tap",
+            "ms": 326.3399999999965,
+            "ok": true
+          },
+          {
+            "id": 5,
+            "kind": "wait",
+            "ms": 201.74633300000278,
+            "ok": true
+          },
+          {
+            "id": 6,
+            "kind": "snapshot",
+            "ms": 309.5062500000058,
+            "ok": true
+          },
+          {
+            "id": 7,
+            "kind": "scroll",
+            "ms": 304.3426249999902,
+            "ok": true
+          },
+          {
+            "id": 8,
+            "kind": "pan",
+            "ms": 398.9777499999909,
+            "ok": true
+          },
+          {
+            "id": 9,
+            "kind": "snapshot",
+            "ms": 311.1560829999944,
+            "ok": true
+          },
+          {
+            "id": 10,
+            "kind": "tap",
+            "ms": 321.75308300000324,
+            "ok": true
+          },
+          {
+            "id": 11,
+            "kind": "wait",
+            "ms": 203.1254590000026,
+            "ok": true
+          },
+          {
+            "id": 12,
+            "kind": "tree",
+            "ms": 135.14358399999037,
+            "ok": true
+          }
+        ],
+        "idleBefore": 88.97
+      },
+      {
+        "wallMs": 5012.904708000002,
+        "cpuMs": 6390.000000000001,
+        "maxRssCliTreeMb": 594.46875,
+        "peakTotalMb": 778.609375,
+        "peakHostMb": 203.234375,
+        "timings": [
+          {
+            "hostSpawnToReadyMs": 814.324,
+            "hostStartupMs": 103.853,
+            "js": {
+              "evalMs": 155.299,
+              "renderMs": 11.035,
+              "settleMs": 439.692,
+              "dumpMs": 101.794,
+              "jsTotalMs": 710.471
+            }
+          },
+          {
+            "id": 1,
+            "requestMs": 320.134
+          },
+          {
+            "id": 2,
+            "requestMs": 305.291
+          },
+          {
+            "id": 3,
+            "requestMs": 202.72
+          },
+          {
+            "id": 4,
+            "requestMs": 327.03
+          },
+          {
+            "id": 5,
+            "requestMs": 201.664
+          },
+          {
+            "id": 6,
+            "requestMs": 308.704
+          },
+          {
+            "id": 7,
+            "requestMs": 304.959
+          },
+          {
+            "id": 8,
+            "requestMs": 322.551
+          },
+          {
+            "id": 9,
+            "requestMs": 311.24
+          },
+          {
+            "id": 10,
+            "requestMs": 317.373
+          },
+          {
+            "id": 11,
+            "requestMs": 202.873
+          },
+          {
+            "id": 12,
+            "requestMs": 108.623
+          },
+          {
+            "id": "quit",
+            "requestMs": 10.388
+          }
+        ],
+        "stdoutBytes": 0,
+        "latencies": [
+          {
+            "id": 1,
+            "kind": "type",
+            "ms": 320.45345899999666,
+            "ok": true
+          },
+          {
+            "id": 2,
+            "kind": "scroll",
+            "ms": 305.42541700000584,
+            "ok": true
+          },
+          {
+            "id": 3,
+            "kind": "wait",
+            "ms": 202.83533299999544,
+            "ok": true
+          },
+          {
+            "id": 4,
+            "kind": "tap",
+            "ms": 327.13962499999616,
+            "ok": true
+          },
+          {
+            "id": 5,
+            "kind": "wait",
+            "ms": 203.23704199999338,
+            "ok": true
+          },
+          {
+            "id": 6,
+            "kind": "snapshot",
+            "ms": 309.7313339999964,
+            "ok": true
+          },
+          {
+            "id": 7,
+            "kind": "scroll",
+            "ms": 305.05704200000037,
+            "ok": true
+          },
+          {
+            "id": 8,
+            "kind": "pan",
+            "ms": 322.67941599999904,
+            "ok": true
+          },
+          {
+            "id": 9,
+            "kind": "snapshot",
+            "ms": 313.9621249999909,
+            "ok": true
+          },
+          {
+            "id": 10,
+            "kind": "tap",
+            "ms": 328.0429160000058,
+            "ok": true
+          },
+          {
+            "id": 11,
+            "kind": "wait",
+            "ms": 203.24374999999418,
+            "ok": true
+          },
+          {
+            "id": 12,
+            "kind": "tree",
+            "ms": 109.66783299999952,
+            "ok": true
+          }
+        ],
+        "idleBefore": 82.77
+      },
+      {
+        "wallMs": 5163.725875000004,
+        "cpuMs": 6500,
+        "maxRssCliTreeMb": 586.234375,
+        "peakTotalMb": 765.875,
+        "peakHostMb": 202.53125,
+        "timings": [
+          {
+            "hostSpawnToReadyMs": 896.994,
+            "hostStartupMs": 102.923,
+            "js": {
+              "evalMs": 154.839,
+              "renderMs": 11.441,
+              "settleMs": 523.006,
+              "dumpMs": 102.103,
+              "jsTotalMs": 794.071
+            }
+          },
+          {
+            "id": 1,
+            "requestMs": 320.753
+          },
+          {
+            "id": 2,
+            "requestMs": 305.308
+          },
+          {
+            "id": 3,
+            "requestMs": 203.024
+          },
+          {
+            "id": 4,
+            "requestMs": 326.826
+          },
+          {
+            "id": 5,
+            "requestMs": 202.174
+          },
+          {
+            "id": 6,
+            "requestMs": 308.69
+          },
+          {
+            "id": 7,
+            "requestMs": 306.228
+          },
+          {
+            "id": 8,
+            "requestMs": 322.988
+          },
+          {
+            "id": 9,
+            "requestMs": 308.65
+          },
+          {
+            "id": 10,
+            "requestMs": 316.478
+          },
+          {
+            "id": 11,
+            "requestMs": 203.276
+          },
+          {
+            "id": 12,
+            "requestMs": 108.503
+          },
+          {
+            "id": "quit",
+            "requestMs": 10.473
+          }
+        ],
+        "stdoutBytes": 0,
+        "latencies": [
+          {
+            "id": 1,
+            "kind": "type",
+            "ms": 321.07895799999824,
+            "ok": true
+          },
+          {
+            "id": 2,
+            "kind": "scroll",
+            "ms": 325.3877919999941,
+            "ok": true
+          },
+          {
+            "id": 3,
+            "kind": "wait",
+            "ms": 204.28829199999745,
+            "ok": true
+          },
+          {
+            "id": 4,
+            "kind": "tap",
+            "ms": 326.92820900000515,
+            "ok": true
+          },
+          {
+            "id": 5,
+            "kind": "wait",
+            "ms": 202.25416700000642,
+            "ok": true
+          },
+          {
+            "id": 6,
+            "kind": "snapshot",
+            "ms": 311.52129100001184,
+            "ok": true
+          },
+          {
+            "id": 7,
+            "kind": "scroll",
+            "ms": 326.32241700000304,
+            "ok": true
+          },
+          {
+            "id": 8,
+            "kind": "pan",
+            "ms": 323.201040999993,
+            "ok": true
+          },
+          {
+            "id": 9,
+            "kind": "snapshot",
+            "ms": 309.8428750000021,
+            "ok": true
+          },
+          {
+            "id": 10,
+            "kind": "tap",
+            "ms": 336.45991700000013,
+            "ok": true
+          },
+          {
+            "id": 11,
+            "kind": "wait",
+            "ms": 204.00024999999732,
+            "ok": true
+          },
+          {
+            "id": 12,
+            "kind": "tree",
+            "ms": 109.55520900001284,
+            "ok": true
+          }
+        ],
+        "idleBefore": 88.75
+      },
+      {
+        "wallMs": 5164.567500000005,
+        "cpuMs": 6490,
+        "maxRssCliTreeMb": 570.015625,
+        "peakTotalMb": 754.75,
+        "peakHostMb": 204.15625,
+        "timings": [
+          {
+            "hostSpawnToReadyMs": 814.657,
+            "hostStartupMs": 102.811,
+            "js": {
+              "evalMs": 154.838,
+              "renderMs": 11.116,
+              "settleMs": 440.965,
+              "dumpMs": 102.344,
+              "jsTotalMs": 711.846
+            }
+          },
+          {
+            "id": 1,
+            "requestMs": 321.537
+          },
+          {
+            "id": 2,
+            "requestMs": 307.036
+          },
+          {
+            "id": 3,
+            "requestMs": 204.314
+          },
+          {
+            "id": 4,
+            "requestMs": 328.072
+          },
+          {
+            "id": 5,
+            "requestMs": 202.851
+          },
+          {
+            "id": 6,
+            "requestMs": 310.755
+          },
+          {
+            "id": 7,
+            "requestMs": 307.405
+          },
+          {
+            "id": 8,
+            "requestMs": 324.058
+          },
+          {
+            "id": 9,
+            "requestMs": 309.721
+          },
+          {
+            "id": 10,
+            "requestMs": 318.601
+          },
+          {
+            "id": 11,
+            "requestMs": 204.27
+          },
+          {
+            "id": 12,
+            "requestMs": 185.893
+          },
+          {
+            "id": "quit",
+            "requestMs": 10.403
+          }
+        ],
+        "stdoutBytes": 0,
+        "latencies": [
+          {
+            "id": 1,
+            "kind": "type",
+            "ms": 329.3187089999992,
+            "ok": true
+          },
+          {
+            "id": 2,
+            "kind": "scroll",
+            "ms": 307.22404200000165,
+            "ok": true
+          },
+          {
+            "id": 3,
+            "kind": "wait",
+            "ms": 204.4067919999943,
+            "ok": true
+          },
+          {
+            "id": 4,
+            "kind": "tap",
+            "ms": 328.1782919999969,
+            "ok": true
+          },
+          {
+            "id": 5,
+            "kind": "wait",
+            "ms": 202.94487500000105,
+            "ok": true
+          },
+          {
+            "id": 6,
+            "kind": "snapshot",
+            "ms": 331.65962500000023,
+            "ok": true
+          },
+          {
+            "id": 7,
+            "kind": "scroll",
+            "ms": 307.5630419999943,
+            "ok": true
+          },
+          {
+            "id": 8,
+            "kind": "pan",
+            "ms": 324.17508400000224,
+            "ok": true
+          },
+          {
+            "id": 9,
+            "kind": "snapshot",
+            "ms": 310.81341699999757,
+            "ok": true
+          },
+          {
+            "id": 10,
+            "kind": "tap",
+            "ms": 327.9356669999979,
+            "ok": true
+          },
+          {
+            "id": 11,
+            "kind": "wait",
+            "ms": 204.388082999998,
+            "ok": true
+          },
+          {
+            "id": 12,
+            "kind": "tree",
+            "ms": 205.47000000000116,
+            "ok": true
+          }
+        ],
+        "idleBefore": 87.17
+      }
+    ],
+    "render-no-mounted": [
+      {
+        "wallMs": 1764.6933750000026,
+        "cpuMs": 3110.0000000000005,
+        "maxRssCliTreeMb": 596.78125,
+        "peakTotalMb": 770.21875,
+        "peakHostMb": 192.71875,
+        "timings": [
+          {
+            "metroMs": 848.447,
+            "bundleBytes": 5563829,
+            "hostSpawnToResultMs": 816.001,
+            "hostStartupMs": 110.328,
+            "hostSpawnToExitMs": 827.648,
+            "js": {
+              "evalMs": 155.868,
+              "renderMs": 11.478,
+              "settleMs": 437.488,
+              "dumpMs": 99.747,
+              "jsTotalMs": 705.673,
+              "settleRounds": 3
+            },
+            "convertMs": 4.718,
+            "outputBytes": 1598904,
+            "totalMs": 1721.913
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 88.7
+      },
+      {
+        "wallMs": 1764.0397499999963,
+        "cpuMs": 3100,
+        "maxRssCliTreeMb": 595.453125,
+        "peakTotalMb": 767.828125,
+        "peakHostMb": 191.734375,
+        "timings": [
+          {
+            "metroMs": 849.742,
+            "bundleBytes": 5563829,
+            "hostSpawnToResultMs": 816.994,
+            "hostStartupMs": 110.867,
+            "hostSpawnToExitMs": 828.128,
+            "js": {
+              "evalMs": 154.543,
+              "renderMs": 12.038,
+              "settleMs": 438.724,
+              "dumpMs": 99.756,
+              "jsTotalMs": 706.127,
+              "settleRounds": 3
+            },
+            "convertMs": 4.786,
+            "outputBytes": 1598904,
+            "totalMs": 1723.586
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 88.76
+      },
+      {
+        "wallMs": 1765.2343330000003,
+        "cpuMs": 3150.0000000000005,
+        "maxRssCliTreeMb": 593.5625,
+        "peakTotalMb": 767.25,
+        "peakHostMb": 191.921875,
+        "timings": [
+          {
+            "metroMs": 863.636,
+            "bundleBytes": 5563829,
+            "hostSpawnToResultMs": 812.497,
+            "hostStartupMs": 110.572,
+            "hostSpawnToExitMs": 824.801,
+            "js": {
+              "evalMs": 152.215,
+              "renderMs": 11.567,
+              "settleMs": 437.156,
+              "dumpMs": 99.918,
+              "jsTotalMs": 701.925,
+              "settleRounds": 3
+            },
+            "convertMs": 5.238,
+            "outputBytes": 1598904,
+            "totalMs": 1732.843
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 89.55
+      },
+      {
+        "wallMs": 1779.5626670000056,
+        "cpuMs": 3190,
+        "maxRssCliTreeMb": 601.515625,
+        "peakTotalMb": 774,
+        "peakHostMb": 191.84375,
+        "timings": [
+          {
+            "metroMs": 883.162,
+            "bundleBytes": 5563829,
+            "hostSpawnToResultMs": 814.034,
+            "hostStartupMs": 111.838,
+            "hostSpawnToExitMs": 825.642,
+            "js": {
+              "evalMs": 153.554,
+              "renderMs": 11.506,
+              "settleMs": 436.111,
+              "dumpMs": 99.901,
+              "jsTotalMs": 702.196,
+              "settleRounds": 3
+            },
+            "convertMs": 4.929,
+            "outputBytes": 1598904,
+            "totalMs": 1754.161
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 80.22
+      },
+      {
+        "wallMs": 1764.3572920000006,
+        "cpuMs": 3100,
+        "maxRssCliTreeMb": 601.046875,
+        "peakTotalMb": 774.53125,
+        "peakHostMb": 192.859375,
+        "timings": [
+          {
+            "metroMs": 850.408,
+            "bundleBytes": 5563829,
+            "hostSpawnToResultMs": 812.776,
+            "hostStartupMs": 108.714,
+            "hostSpawnToExitMs": 824.322,
+            "js": {
+              "evalMs": 154.378,
+              "renderMs": 11.495,
+              "settleMs": 437.29,
+              "dumpMs": 99.817,
+              "jsTotalMs": 704.062,
+              "settleRounds": 3
+            },
+            "convertMs": 4.642,
+            "outputBytes": 1598904,
+            "totalMs": 1719.686
+          }
+        ],
+        "stdoutBytes": 1598904,
+        "idleBefore": 84
+      }
+    ],
+    "render-debug-props": [
+      {
+        "wallMs": 1818.953125,
+        "cpuMs": 3170,
+        "maxRssCliTreeMb": 601.078125,
+        "peakTotalMb": 776.4375,
+        "peakHostMb": 194,
+        "timings": [
+          {
+            "metroMs": 863.992,
+            "bundleBytes": 5563800,
+            "hostSpawnToResultMs": 868.951,
+            "hostStartupMs": 109.079,
+            "hostSpawnToExitMs": 880.712,
+            "js": {
+              "evalMs": 154.91,
+              "renderMs": 11.828,
+              "settleMs": 439.409,
+              "dumpMs": 152.624,
+              "jsTotalMs": 759.872,
+              "settleRounds": 3
+            },
+            "convertMs": 5.557,
+            "outputBytes": 2031393,
+            "totalMs": 1792.093
+          }
+        ],
+        "stdoutBytes": 2031393,
+        "idleBefore": 88.91
+      },
+      {
+        "wallMs": 1918.3298340000038,
+        "cpuMs": 3290,
+        "maxRssCliTreeMb": 588.859375,
+        "peakTotalMb": 764.90625,
+        "peakHostMb": 194.046875,
+        "timings": [
+          {
+            "metroMs": 956.899,
+            "bundleBytes": 5563800,
+            "hostSpawnToResultMs": 870.584,
+            "hostStartupMs": 109.729,
+            "hostSpawnToExitMs": 882.414,
+            "js": {
+              "evalMs": 154.623,
+              "renderMs": 11.385,
+              "settleMs": 440.858,
+              "dumpMs": 152.933,
+              "jsTotalMs": 760.855,
+              "settleRounds": 3
+            },
+            "convertMs": 5.354,
+            "outputBytes": 2031393,
+            "totalMs": 1885.094
+          }
+        ],
+        "stdoutBytes": 2031393,
+        "idleBefore": 89.15
+      },
+      {
+        "wallMs": 1812.777166999993,
+        "cpuMs": 3159.9999999999995,
+        "maxRssCliTreeMb": 572.0625,
+        "peakTotalMb": 748.078125,
+        "peakHostMb": 193.96875,
+        "timings": [
+          {
+            "metroMs": 850.229,
+            "bundleBytes": 5563800,
+            "hostSpawnToResultMs": 867.117,
+            "hostStartupMs": 108.929,
+            "hostSpawnToExitMs": 878.129,
+            "js": {
+              "evalMs": 152.674,
+              "renderMs": 11.542,
+              "settleMs": 439.457,
+              "dumpMs": 153.431,
+              "jsTotalMs": 758.188,
+              "settleRounds": 3
+            },
+            "convertMs": 5.208,
+            "outputBytes": 2031393,
+            "totalMs": 1773.712
+          }
+        ],
+        "stdoutBytes": 2031393,
+        "idleBefore": 88.26
+      },
+      {
+        "wallMs": 1818.5496669999848,
+        "cpuMs": 3199.9999999999995,
+        "maxRssCliTreeMb": 591.15625,
+        "peakTotalMb": 768.46875,
+        "peakHostMb": 193.8125,
+        "timings": [
+          {
+            "metroMs": 862.069,
+            "bundleBytes": 5563800,
+            "hostSpawnToResultMs": 870.239,
+            "hostStartupMs": 111.339,
+            "hostSpawnToExitMs": 882.175,
+            "js": {
+              "evalMs": 153.259,
+              "renderMs": 11.796,
+              "settleMs": 439.615,
+              "dumpMs": 153.147,
+              "jsTotalMs": 758.9,
+              "settleRounds": 3
+            },
+            "convertMs": 5.368,
+            "outputBytes": 2031393,
+            "totalMs": 1791.804
+          }
+        ],
+        "stdoutBytes": 2031393,
+        "idleBefore": 88.16
+      },
+      {
+        "wallMs": 1913.878583999991,
+        "cpuMs": 3260,
+        "maxRssCliTreeMb": 583.75,
+        "peakTotalMb": 760.140625,
+        "peakHostMb": 194.71875,
+        "timings": [
+          {
+            "metroMs": 855.23,
+            "bundleBytes": 5563800,
+            "hostSpawnToResultMs": 960.204,
+            "hostStartupMs": 109.185,
+            "hostSpawnToExitMs": 972.133,
+            "js": {
+              "evalMs": 156.648,
+              "renderMs": 11.686,
+              "settleMs": 528.964,
+              "dumpMs": 152.643,
+              "jsTotalMs": 851.019,
+              "settleRounds": 3
+            },
+            "convertMs": 5.381,
+            "outputBytes": 2031393,
+            "totalMs": 1872.856
+          }
+        ],
+        "stdoutBytes": 2031393,
+        "idleBefore": 89.19
+      }
+    ]
+  },
+  "summary": {
+    "render-cold": {
+      "wallMs": {
+        "median": 5285.624292,
+        "min": 5260.032708000001,
+        "max": 5572.675375000001
+      },
+      "cpuMs": {
+        "median": 31080.000000000004,
+        "min": 30930,
+        "max": 31360
+      },
+      "peakHostMb": {
+        "median": 193.09375,
+        "min": 191.9375,
+        "max": 194.15625
+      },
+      "peakTotalMb": {
+        "median": 1759.859375,
+        "min": 1674.234375,
+        "max": 1791.015625
+      },
+      "maxRssCliTreeMb": {
+        "median": 1719.515625,
+        "min": 1630.078125,
+        "max": 1749.578125
+      },
+      "metroMs": {
+        "median": 4224.702,
+        "min": 4207.865,
+        "max": 4544.452
+      },
+      "hostStartupMs": {
+        "median": 138.183,
+        "min": 131.214,
+        "max": 176.53
+      },
+      "hostSpawnToResultMs": {
+        "median": 929.114,
+        "min": 903.379,
+        "max": 956.886
+      },
+      "evalMs": {
+        "median": 179.701,
+        "min": 174.656,
+        "max": 183.024
+      },
+      "renderMs": {
+        "median": 13.301,
+        "min": 12.581,
+        "max": 13.675
+      },
+      "settleMs": {
+        "median": 484.584,
+        "min": 478.794,
+        "max": 488.343
+      },
+      "actionsMs": null,
+      "dumpMs": {
+        "median": 107.132,
+        "min": 104.946,
+        "max": 107.383
+      },
+      "convertMs": {
+        "median": 5.493,
+        "min": 5.074,
+        "max": 5.943
+      },
+      "outputBytes": {
+        "median": 1598904,
+        "min": 1598904,
+        "max": 1598904
+      },
+      "bundleBytes": {
+        "median": 5563801,
+        "min": 5563801,
+        "max": 5563801
+      },
+      "requestMs": null,
+      "requestServerMs": null
+    },
+    "render-warm": {
+      "wallMs": {
+        "median": 1774.0744580000028,
+        "min": 1765.5561670000025,
+        "max": 1895.5585419999989
+      },
+      "cpuMs": {
+        "median": 3120,
+        "min": 3110,
+        "max": 3240
+      },
+      "peakHostMb": {
+        "median": 193.0625,
+        "min": 191.953125,
+        "max": 194.296875
+      },
+      "peakTotalMb": {
+        "median": 772.765625,
+        "min": 763.015625,
+        "max": 774.484375
+      },
+      "maxRssCliTreeMb": {
+        "median": 599.09375,
+        "min": 586.921875,
+        "max": 601.203125
+      },
+      "metroMs": {
+        "median": 860.605,
+        "min": 854.441,
+        "max": 973.865
+      },
+      "hostStartupMs": {
+        "median": 111.162,
+        "min": 107.975,
+        "max": 112.438
+      },
+      "hostSpawnToResultMs": {
+        "median": 819.482,
+        "min": 813.039,
+        "max": 873.021
+      },
+      "evalMs": {
+        "median": 155.174,
+        "min": 152.336,
+        "max": 155.565
+      },
+      "renderMs": {
+        "median": 11.601,
+        "min": 11.491,
+        "max": 11.749
+      },
+      "settleMs": {
+        "median": 439.964,
+        "min": 437.295,
+        "max": 495.934
+      },
+      "actionsMs": null,
+      "dumpMs": {
+        "median": 100.333,
+        "min": 100.206,
+        "max": 100.626
+      },
+      "convertMs": {
+        "median": 5.191,
+        "min": 4.855,
+        "max": 5.296
+      },
+      "outputBytes": {
+        "median": 1598904,
+        "min": 1598904,
+        "max": 1598904
+      },
+      "bundleBytes": {
+        "median": 5563801,
+        "min": 5563801,
+        "max": 5563801
+      },
+      "requestMs": null,
+      "requestServerMs": null
+    },
+    "run-warm": {
+      "wallMs": {
+        "median": 6050.0850409999985,
+        "min": 6029.533499999998,
+        "max": 6139.912832999995
+      },
+      "cpuMs": {
+        "median": 7510,
+        "min": 7430.000000000001,
+        "max": 7900
+      },
+      "peakHostMb": {
+        "median": 203.1875,
+        "min": 202.203125,
+        "max": 207.875
+      },
+      "peakTotalMb": {
+        "median": 778.828125,
+        "min": 766.765625,
+        "max": 780.21875
+      },
+      "maxRssCliTreeMb": {
+        "median": 586.765625,
+        "min": 577.046875,
+        "max": 603.125
+      },
+      "metroMs": {
+        "median": 867.856,
+        "min": 858.395,
+        "max": 885.94
+      },
+      "hostStartupMs": {
+        "median": 124.007,
+        "min": 122.004,
+        "max": 126.311
+      },
+      "hostSpawnToResultMs": {
+        "median": 5078.576,
+        "min": 5050.592,
+        "max": 5149.61
+      },
+      "evalMs": {
+        "median": 153.924,
+        "min": 153.404,
+        "max": 159.652
+      },
+      "renderMs": {
+        "median": 11.987,
+        "min": 11.279,
+        "max": 12.439
+      },
+      "settleMs": {
+        "median": 439.888,
+        "min": 438.745,
+        "max": 451.97
+      },
+      "actionsMs": {
+        "median": 4343.948,
+        "min": 4323.202,
+        "max": 4397.972
+      },
+      "dumpMs": null,
+      "convertMs": {
+        "median": 22.896,
+        "min": 21.243,
+        "max": 23.732
+      },
+      "outputBytes": {
+        "median": 8201372,
+        "min": 8201372,
+        "max": 8201372
+      },
+      "bundleBytes": {
+        "median": 5591724,
+        "min": 5591724,
+        "max": 5591724
+      },
+      "requestMs": null,
+      "requestServerMs": null
+    },
+    "session": {
+      "wallMs": {
+        "median": 5121.091874999998,
+        "min": 5012.904708000002,
+        "max": 5164.567500000005
+      },
+      "cpuMs": {
+        "median": 6490,
+        "min": 6390.000000000001,
+        "max": 6510
+      },
+      "peakHostMb": {
+        "median": 203.234375,
+        "min": 202.53125,
+        "max": 204.25
+      },
+      "peakTotalMb": {
+        "median": 765.875,
+        "min": 743.359375,
+        "max": 778.9375
+      },
+      "maxRssCliTreeMb": {
+        "median": 586.234375,
+        "min": 560,
+        "max": 594.46875
+      },
+      "metroMs": null,
+      "hostStartupMs": {
+        "median": 103.149,
+        "min": 102.811,
+        "max": 103.917
+      },
+      "hostSpawnToResultMs": {
+        "median": 814.657,
+        "min": 811.537,
+        "max": 896.994
+      },
+      "evalMs": {
+        "median": 154.839,
+        "min": 153.165,
+        "max": 155.299
+      },
+      "renderMs": {
+        "median": 11.309,
+        "min": 11.035,
+        "max": 11.464
+      },
+      "settleMs": {
+        "median": 440.965,
+        "min": 439.692,
+        "max": 523.006
+      },
+      "actionsMs": null,
+      "dumpMs": {
+        "median": 102.103,
+        "min": 101.561,
+        "max": 102.344
+      },
+      "convertMs": null,
+      "outputBytes": null,
+      "bundleBytes": null,
+      "requestMs": {
+        "median": 309.78710449999926,
+        "min": 109.55520900001284,
+        "max": 398.9777499999909
+      },
+      "requestServerMs": {
+        "median": 307.9015,
+        "min": 108.503,
+        "max": 398.844
+      }
+    },
+    "render-no-mounted": {
+      "wallMs": {
+        "median": 1764.6933750000026,
+        "min": 1764.0397499999963,
+        "max": 1779.5626670000056
+      },
+      "cpuMs": {
+        "median": 3110.0000000000005,
+        "min": 3100,
+        "max": 3190
+      },
+      "peakHostMb": {
+        "median": 191.921875,
+        "min": 191.734375,
+        "max": 192.859375
+      },
+      "peakTotalMb": {
+        "median": 770.21875,
+        "min": 767.25,
+        "max": 774.53125
+      },
+      "maxRssCliTreeMb": {
+        "median": 596.78125,
+        "min": 593.5625,
+        "max": 601.515625
+      },
+      "metroMs": {
+        "median": 850.408,
+        "min": 848.447,
+        "max": 883.162
+      },
+      "hostStartupMs": {
+        "median": 110.572,
+        "min": 108.714,
+        "max": 111.838
+      },
+      "hostSpawnToResultMs": {
+        "median": 814.034,
+        "min": 812.497,
+        "max": 816.994
+      },
+      "evalMs": {
+        "median": 154.378,
+        "min": 152.215,
+        "max": 155.868
+      },
+      "renderMs": {
+        "median": 11.506,
+        "min": 11.478,
+        "max": 12.038
+      },
+      "settleMs": {
+        "median": 437.29,
+        "min": 436.111,
+        "max": 438.724
+      },
+      "actionsMs": null,
+      "dumpMs": {
+        "median": 99.817,
+        "min": 99.747,
+        "max": 99.918
+      },
+      "convertMs": {
+        "median": 4.786,
+        "min": 4.642,
+        "max": 5.238
+      },
+      "outputBytes": {
+        "median": 1598904,
+        "min": 1598904,
+        "max": 1598904
+      },
+      "bundleBytes": {
+        "median": 5563829,
+        "min": 5563829,
+        "max": 5563829
+      },
+      "requestMs": null,
+      "requestServerMs": null
+    },
+    "render-debug-props": {
+      "wallMs": {
+        "median": 1818.953125,
+        "min": 1812.777166999993,
+        "max": 1918.3298340000038
+      },
+      "cpuMs": {
+        "median": 3199.9999999999995,
+        "min": 3159.9999999999995,
+        "max": 3290
+      },
+      "peakHostMb": {
+        "median": 194,
+        "min": 193.8125,
+        "max": 194.71875
+      },
+      "peakTotalMb": {
+        "median": 764.90625,
+        "min": 748.078125,
+        "max": 776.4375
+      },
+      "maxRssCliTreeMb": {
+        "median": 588.859375,
+        "min": 572.0625,
+        "max": 601.078125
+      },
+      "metroMs": {
+        "median": 862.069,
+        "min": 850.229,
+        "max": 956.899
+      },
+      "hostStartupMs": {
+        "median": 109.185,
+        "min": 108.929,
+        "max": 111.339
+      },
+      "hostSpawnToResultMs": {
+        "median": 870.239,
+        "min": 867.117,
+        "max": 960.204
+      },
+      "evalMs": {
+        "median": 154.623,
+        "min": 152.674,
+        "max": 156.648
+      },
+      "renderMs": {
+        "median": 11.686,
+        "min": 11.385,
+        "max": 11.828
+      },
+      "settleMs": {
+        "median": 439.615,
+        "min": 439.409,
+        "max": 528.964
+      },
+      "actionsMs": null,
+      "dumpMs": {
+        "median": 152.933,
+        "min": 152.624,
+        "max": 153.431
+      },
+      "convertMs": {
+        "median": 5.368,
+        "min": 5.208,
+        "max": 5.557
+      },
+      "outputBytes": {
+        "median": 2031393,
+        "min": 2031393,
+        "max": 2031393
+      },
+      "bundleBytes": {
+        "median": 5563800,
+        "min": 5563800,
+        "max": 5563800
+      },
+      "requestMs": null,
+      "requestServerMs": null
+    }
+  }
+}

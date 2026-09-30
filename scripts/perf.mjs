@@ -34,7 +34,12 @@ const SCRIPT = path.resolve(ROOT, arg('script', 'examples/medium/actions.json'))
 const LABEL = arg('label', 'host');
 const OUT = arg('out', null);
 const PLATFORM = ['--platform', 'android'];
-const HOST_NAME = 'rn-a11y-host';
+// --host <path>: host binary to measure (default native/dist/<arch>/rn-a11y-host).
+const HOST_BIN = path.resolve(ROOT, arg('host', path.join('native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host')));
+const HOST_NAME = path.basename(HOST_BIN);
+// Wait until the machine is this idle (%) before each iteration (other
+// builds on a shared machine distort the numbers).
+const MIN_IDLE = Number(arg('min-idle', '70'));
 
 // --- process tree sampling ----------------------------------------------------
 
@@ -109,6 +114,24 @@ function parseTimings(stderr) {
     .map(l => JSON.parse(l.slice(l.indexOf('rn-a11y-tree timing: ') + 21)));
 }
 
+function cpuIdlePercent() {
+  const out = execFileSync('top', ['-l', '2', '-n', '0', '-s', '1'], {encoding: 'utf8'});
+  const lines = out.split('\n').filter(l => l.startsWith('CPU usage'));
+  const m = lines[lines.length - 1]?.match(/([\d.]+)% idle/);
+  return m ? Number(m[1]) : 100;
+}
+
+function waitForIdle() {
+  const deadline = Date.now() + 10 * 60 * 1000;
+  let idle = cpuIdlePercent();
+  while (idle < MIN_IDLE && Date.now() < deadline) {
+    console.error(`waiting for an idle machine (idle ${idle}% < ${MIN_IDLE}%)`);
+    execFileSync('sleep', ['10']);
+    idle = cpuIdlePercent();
+  }
+  return idle;
+}
+
 /** Runs the CLI under /usr/bin/time -l; optional line-based stdin driver. */
 function runCli(cliArgs, {driver} = {}) {
   return new Promise((resolve, reject) => {
@@ -116,6 +139,7 @@ function runCli(cliArgs, {driver} = {}) {
     const child = spawn('/usr/bin/time', ['-l', process.execPath, CLI, ...cliArgs], {
       cwd: ROOT,
       stdio: ['pipe', 'pipe', 'pipe'],
+      env: {...process.env, RN_A11Y_HOST_BIN: HOST_BIN},
     });
     const stop = sampleTree(child.pid);
     let stdoutBytes = 0;
@@ -207,7 +231,8 @@ async function main() {
     memGb: Math.round(os.totalmem() / 2 ** 30),
     node: process.version,
     macos: execFileSync('sw_vers', ['-productVersion'], {encoding: 'utf8'}).trim(),
-    hostBinary: fs.statSync(path.join(ROOT, 'native', 'dist', 'arm64', HOST_NAME)).size,
+    hostBinary: HOST_BIN,
+    hostBinaryBytes: fs.statSync(HOST_BIN).size,
   };
   console.error(`machine: ${JSON.stringify(machine)}`);
 
@@ -218,12 +243,14 @@ async function main() {
   for (const scenario of scenarios) {
     const runs = [];
     for (let i = 0; i < N; i++) {
+      const idle = waitForIdle();
       const latencies = [];
       const r = await runCli(
         scenario.args,
         scenario.session ? {driver: sessionDriver(sessionRequests(), latencies)} : {},
       );
       if (scenario.session) r.latencies = latencies;
+      r.idleBefore = idle;
       runs.push(r);
       console.error(`${scenario.name} #${i + 1}: ${Math.round(r.wallMs)} ms`);
     }

@@ -68,6 +68,8 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--header-height <dp>` | all | 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
 | `--safe-area-insets <t,l,r,b>` | all | `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
 | `--no-mounted` | all | mounted on | Do not read mounted-view values (`getA11yTree` `includeMountedProps`; used for `visualBox`, `effectiveOpacity`) |
+| `--timing` | all | off | Print phase timings as JSON on stderr (see [`docs/perf-analysis.md`](docs/perf-analysis.md)) |
+| `--reset-cache` | all | off | Ignore Metro's transform cache (cold bundle) |
 | `--dev` | all | off | Development bundle (`__DEV__ = true`) |
 | `--keep-bundle` | all | off | Keep the bundle and print its path to stderr |
 | `-v, --verbose` | all | off | Metro progress, host glog and console output on stderr |
