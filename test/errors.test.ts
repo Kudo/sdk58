@@ -47,6 +47,10 @@ test('CLI: usage errors (exit 1) as JSON on stderr; explicit --format json puts 
   assert.equal(lastJson(unknown.stderr).error.code, 'USAGE');
   assert.match(lastJson(unknown.stderr).error.message, /unknown option '--bogus'/);
 
+  const missingFile = cli(['render', 'nope/App.tsx', '--platform', 'android', '--bundle-only']);
+  assert.equal(missingFile.status, 1);
+  assert.match(lastJson(missingFile.stderr).error.message, /File not found/);
+
   const noPlatform = cli(['render', APP, '--format', 'json']);
   assert.equal(noPlatform.status, 1);
   const {error} = JSON.parse(noPlatform.stdout);

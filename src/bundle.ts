@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 
 import type {ConfigT, InputConfigT} from 'metro-config';
 
+import {usage} from './errors.ts';
 import {
   BUNDLE_FILE,
   BYTECODE_FILE,
@@ -301,7 +302,7 @@ export function createMetroConfig(options: {
 export async function bundle(options: BundleOptions): Promise<BundleResult> {
   const {platform} = options;
   if (!fs.existsSync(options.appPath)) {
-    throw new Error(`File not found: ${path.resolve(options.appPath)}`);
+    throw usage(`File not found: ${path.resolve(options.appPath)}`);
   }
   // Metro's file map uses real paths (e.g. /tmp -> /private/tmp on macOS).
   const appPath = fs.realpathSync(options.appPath);
