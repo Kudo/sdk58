@@ -1,0 +1,15 @@
+{
+  "host": {"width": 390, "height": 844, "matchContents": {"horizontal": false, "vertical": true}},
+  "root": {
+    "type": "Column",
+    "props": {"verticalArrangement": {"spacedBy": 8}, "horizontalAlignment": "start"},
+    "modifiers": [{"$type": "paddingAll", "all": 16}],
+    "children": [
+      {"type": "Text", "props": {"text": "Hello"}, "modifiers": [{"$type": "defaultMinSize", "minWidth": 100}]},
+      {"type": "Button", "children": [{"type": "Text", "props": {"text": "Go"}}]},
+      {"type": "Switch", "props": {"value": true}},
+      {"type": "Spacer"},
+      {"type": "Spacer", "modifiers": [{"$type": "weight", "weight": 1}]}
+    ]
+  }
+}

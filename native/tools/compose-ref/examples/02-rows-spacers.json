@@ -1,0 +1,27 @@
+{
+  "host": {"width": 390, "height": 300},
+  "root": {
+    "type": "Column",
+    "modifiers": [{"$type": "fillMaxSize"}],
+    "children": [
+      {"type": "Row", "modifiers": [{"$type": "fillMaxWidth"}, {"$type": "padding", "start": 20, "top": 0, "end": 20, "bottom": 0}], "children": [
+        {"type": "Text", "props": {"text": "Leading"}},
+        {"type": "Spacer", "modifiers": [{"$type": "weight", "weight": 1}]},
+        {"type": "Text", "props": {"text": "Trailing"}}
+      ]},
+      {"type": "Spacer", "modifiers": [{"$type": "height", "height": 40}]},
+      {"type": "Row", "props": {"horizontalArrangement": {"spacedBy": 12}, "verticalAlignment": "bottom"}, "children": [
+        {"type": "Text", "props": {"text": "Big", "typography": "headlineLarge"}},
+        {"type": "Text", "props": {"text": "small", "typography": "labelSmall"}},
+        {"type": "Spacer", "modifiers": [{"$type": "weight", "weight": 1}]}
+      ]},
+      {"type": "Row", "props": {"horizontalArrangement": "spaceBetween", "verticalAlignment": "center"}, "modifiers": [{"$type": "fillMaxWidth"}], "children": [
+        {"type": "Text", "props": {"text": "A"}},
+        {"type": "Text", "props": {"text": "B", "fontSize": 30}},
+        {"type": "Text", "props": {"text": "C"}}
+      ]},
+      {"type": "Spacer", "modifiers": [{"$type": "weight", "weight": 1}]},
+      {"type": "Text", "props": {"text": "Pinned to the bottom"}, "modifiers": [{"$type": "align", "alignment": "end"}]}
+    ]
+  }
+}

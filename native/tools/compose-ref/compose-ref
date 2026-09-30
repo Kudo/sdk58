@@ -1,0 +1,13 @@
+#!/bin/sh
+# Builds compose-ref on first use, then runs it. Arguments go to the tool.
+set -eu
+dir=$(cd "$(dirname "$0")" && pwd)
+if [ -z "${JAVA_HOME:-}" ] && [ -d /opt/homebrew/opt/openjdk@17 ]; then
+  JAVA_HOME=/opt/homebrew/opt/openjdk@17
+  export JAVA_HOME
+fi
+bin="$dir/build/install/compose-ref/bin/compose-ref"
+if [ ! -x "$bin" ] || [ -n "$(find "$dir/src" "$dir/build.gradle.kts" -newer "$bin" 2>/dev/null | head -1)" ]; then
+  (cd "$dir" && ./gradlew -q installDist >&2)
+fi
+exec "$bin" "$@"

@@ -1,0 +1,28 @@
+{
+  "host": {"width": 390, "height": 600},
+  "root": {
+    "type": "Column",
+    "props": {"verticalArrangement": {"spacedBy": 12}},
+    "modifiers": [{"$type": "fillMaxSize"}, {"$type": "paddingAll", "all": 16}],
+    "children": [
+      {"type": "Text", "props": {"text": "Account", "typography": "titleMedium"}},
+      {"type": "TextField", "props": {"value": "", "singleLine": true}, "modifiers": [{"$type": "fillMaxWidth"}], "children": [
+        {"type": "Slot", "props": {"name": "label"}, "children": [{"type": "Text", "props": {"text": "Name"}}]}
+      ]},
+      {"type": "TextField", "props": {"value": "", "variant": "outlined"}, "children": [
+        {"type": "Slot", "props": {"name": "placeholder"}, "children": [{"type": "Text", "props": {"text": "Email"}}]}
+      ]},
+      {"type": "Row", "props": {"verticalAlignment": "center"}, "modifiers": [{"$type": "fillMaxWidth"}], "children": [
+        {"type": "Text", "props": {"text": "Notifications"}, "modifiers": [{"$type": "weight", "weight": 1}]},
+        {"type": "Switch", "props": {"value": true}}
+      ]},
+      {"type": "Row", "props": {"verticalAlignment": "center"}, "children": [
+        {"type": "Checkbox", "props": {"value": false}},
+        {"type": "Text", "props": {"text": "Remember me"}}
+      ]},
+      {"type": "Text", "props": {"text": "Volume", "typography": "titleMedium"}},
+      {"type": "Slider", "props": {"value": 0.5}},
+      {"type": "Text", "props": {"text": "Applies to all outputs.", "typography": "bodySmall"}}
+    ]
+  }
+}

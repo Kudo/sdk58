@@ -1,0 +1,33 @@
+{
+  "host": {"width": 300, "height": 300},
+  "root": {
+    "type": "Column",
+    "props": {"verticalArrangement": {"spacedBy": 10}},
+    "children": [
+      {"type": "Row", "children": [
+        {"type": "Text", "props": {"text": "A fairly long first label that wraps"}},
+        {"type": "Text", "props": {"text": "Second label that also wants space"}}
+      ]},
+      {"type": "Row", "children": [
+        {"type": "Text", "props": {"text": "A fairly long first label that wraps"}, "modifiers": [{"$type": "weight", "weight": 1}]},
+        {"type": "Text", "props": {"text": "Second label, weight 1"}, "modifiers": [{"$type": "weight", "weight": 1}]}
+      ]},
+      {"type": "Row", "modifiers": [{"$type": "fillMaxWidth"}], "children": [
+        {"type": "Text", "props": {"text": "weight 2"}, "modifiers": [{"$type": "weight", "weight": 2}]},
+        {"type": "Text", "props": {"text": "weight 1"}, "modifiers": [{"$type": "weight", "weight": 1}]},
+        {"type": "Text", "props": {"text": "fixed"}}
+      ]},
+      {"type": "Row", "children": [
+        {"type": "Text", "props": {"text": "Truncated to one line with an ellipsis", "maxLines": 1, "overflow": "ellipsis"}, "modifiers": [{"$type": "weight", "weight": 1}]},
+        {"type": "Text", "props": {"text": "Fixed"}}
+      ]},
+      {"type": "Row", "modifiers": [{"$type": "height", "height": 60}], "children": [
+        {"type": "Column", "props": {"verticalArrangement": "spaceEvenly"}, "modifiers": [{"$type": "weight", "weight": 1}, {"$type": "fillMaxHeight"}], "children": [
+          {"type": "Text", "props": {"text": "top"}},
+          {"type": "Text", "props": {"text": "bottom"}}
+        ]},
+        {"type": "Box", "modifiers": [{"$type": "weight", "weight": 1}, {"$type": "fillMaxHeight"}]}
+      ]}
+    ]
+  }
+}

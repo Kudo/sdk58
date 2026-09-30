@@ -1,0 +1,29 @@
+{
+  "host": {"width": 390, "height": 844, "matchContents": {"vertical": true}},
+  "root": {
+    "type": "Column",
+    "props": {"horizontalAlignment": "start"},
+    "children": [
+      {"type": "Switch", "props": {"value": true}},
+      {"type": "Switch", "props": {"value": false, "enabled": false}},
+      {"type": "Checkbox", "props": {"value": true}},
+      {"type": "Checkbox", "props": {"value": true, "nativeClickable": false}},
+      {"type": "Button", "children": [{"type": "Text", "props": {"text": "Go"}}]},
+      {"type": "Button", "children": [{"type": "Text", "props": {"text": "A longer button label"}}]},
+      {"type": "OutlinedButton", "children": [{"type": "Text", "props": {"text": "Go"}}]},
+      {"type": "TextButton", "children": [{"type": "Text", "props": {"text": "Go"}}]},
+      {"type": "Button", "props": {"contentPadding": {"start": 0, "top": 0, "end": 0, "bottom": 0}}, "children": [{"type": "Text", "props": {"text": "Go"}}]},
+      {"type": "Slider", "props": {"value": 0.3}},
+      {"type": "Slider", "props": {"value": 0.3, "steps": 4}, "modifiers": [{"$type": "width", "width": 120}]},
+      {"type": "TextField", "props": {"value": "Email"}},
+      {"type": "TextField", "props": {"value": "Email", "variant": "outlined", "singleLine": true}},
+      {"type": "Icon"},
+      {"type": "Text", "props": {"text": "Body text"}},
+      {"type": "Text", "props": {"text": "bodyLarge", "typography": "bodyLarge"}},
+      {"type": "Text", "props": {"text": "labelLarge", "typography": "labelLarge"}},
+      {"type": "Text", "props": {"text": "fontSize 20", "fontSize": 20}},
+      {"type": "Unknown", "modifiers": [{"$type": "glassEffect"}]},
+      {"type": "Text", "props": {"text": "Unknown modifier"}, "modifiers": [{"$type": "glassEffect"}]}
+    ]
+  }
+}

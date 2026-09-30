@@ -1,0 +1,27 @@
+{
+  "host": {"width": 390, "height": 400},
+  "root": {
+    "type": "Column",
+    "props": {"verticalArrangement": {"spacedBy": 16}},
+    "children": [
+      {"type": "Box", "props": {"contentAlignment": "bottomEnd"}, "modifiers": [{"$type": "size", "width": 200, "height": 100}, {"$type": "background", "color": "gray"}], "children": [
+        {"type": "Text", "props": {"text": "Back"}, "modifiers": [{"$type": "size", "width": 150, "height": 80}]},
+        {"type": "Text", "props": {"text": "Front"}}
+      ]},
+      {"type": "Box", "props": {"contentAlignment": "center"}, "children": [
+        {"type": "Icon", "props": {"size": 60}},
+        {"type": "Text", "props": {"text": "1", "typography": "titleMedium"}}
+      ]},
+      {"type": "Box", "modifiers": [{"$type": "fillMaxWidth"}, {"$type": "height", "height": 80}], "children": [
+        {"type": "Text", "props": {"text": "topStart"}},
+        {"type": "Text", "props": {"text": "center"}, "modifiers": [{"$type": "align", "alignment": "center"}]},
+        {"type": "Text", "props": {"text": "bottomEnd"}, "modifiers": [{"$type": "align", "alignment": "bottomEnd"}]},
+        {"type": "Text", "props": {"text": "ignored"}, "modifiers": [{"$type": "align", "alignment": "centerVertically"}]}
+      ]},
+      {"type": "Box", "children": [
+        {"type": "Text", "props": {"text": "Sized by this text"}, "modifiers": [{"$type": "paddingAll", "all": 12}]},
+        {"type": "Box", "modifiers": [{"$type": "matchParentSize"}, {"$type": "border", "borderWidth": 1, "borderColor": "red"}]}
+      ]}
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "host": {"width": 390, "height": 844, "matchContents": true},
+  "root": {
+    "type": "Column",
+    "props": {"verticalArrangement": {"spacedBy": 4}, "horizontalAlignment": "start"},
+    "modifiers": [
+      {"$type": "padding", "start": 20, "top": 10, "end": 40, "bottom": 30},
+      {"$type": "background", "color": "#EEEEEE"},
+      {"$type": "paddingAll", "all": 16}
+    ],
+    "children": [
+      {"type": "Text", "props": {"text": "Fixed 200x44"}, "modifiers": [{"$type": "size", "width": 200, "height": 44}]},
+      {"type": "Text", "props": {"text": "Width 150, wrap end"}, "modifiers": [{"$type": "width", "width": 150}, {"$type": "wrapContentWidth", "alignment": "end"}]},
+      {"type": "Text", "props": {"text": "Min size 250x40"}, "modifiers": [{"$type": "defaultMinSize", "minWidth": 250, "minHeight": 40}]},
+      {"type": "Text", "props": {"text": "Offset (layout unchanged)"}, "modifiers": [{"$type": "offset", "x": 10, "y": 5}]},
+      {"type": "Text", "props": {"text": "Padding 12.7 is truncated to 12"}, "modifiers": [{"$type": "paddingAll", "all": 12.7}]},
+      {"type": "Text", "props": {"text": "Rounded"}, "modifiers": [{"$type": "paddingAll", "all": 8}, {"$type": "background", "color": "blue"}, {"$type": "clip", "shape": {"type": "roundedCorner", "radius": 8}}, {"$type": "testID", "testID": "rounded"}]},
+      {"type": "Row", "props": {"horizontalArrangement": {"spacedBy": 8}}, "modifiers": [{"$type": "height", "height": 30}, {"$type": "border", "borderWidth": 1, "borderColor": "#000000"}], "children": [
+        {"type": "Text", "props": {"text": "fillMaxHeight"}, "modifiers": [{"$type": "fillMaxHeight"}]},
+        {"type": "Text", "props": {"text": "wrapContentHeight"}, "modifiers": [{"$type": "fillMaxHeight"}, {"$type": "wrapContentHeight", "alignment": "centerVertically"}]}
+      ]},
+      {"type": "Column", "modifiers": [{"$type": "width", "width": "max"}], "children": [
+        {"type": "Text", "props": {"text": "Intrinsic max"}, "modifiers": [{"$type": "fillMaxWidth"}]},
+        {"type": "Text", "props": {"text": "width of this column"}, "modifiers": [{"$type": "fillMaxWidth"}]}
+      ]}
+    ]
+  }
+}

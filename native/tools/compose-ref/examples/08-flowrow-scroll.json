@@ -1,0 +1,27 @@
+{
+  "host": {"width": 390, "height": 400},
+  "root": {
+    "type": "Column",
+    "children": [
+      {"type": "Row", "props": {"horizontalArrangement": {"spacedBy": 8}}, "modifiers": [{"$type": "height", "height": 60}, {"$type": "horizontalScroll"}], "children": [
+        {"type": "Text", "props": {"text": "Chip one"}, "modifiers": [{"$type": "paddingAll", "all": 8}]},
+        {"type": "Text", "props": {"text": "Chip two"}, "modifiers": [{"$type": "paddingAll", "all": 8}]},
+        {"type": "Text", "props": {"text": "Chip three, a lot wider than the others"}, "modifiers": [{"$type": "paddingAll", "all": 8}]},
+        {"type": "Text", "props": {"text": "Chip four, off screen"}, "modifiers": [{"$type": "paddingAll", "all": 8}]}
+      ]},
+      {"type": "FlowRow", "props": {"horizontalArrangement": {"spacedBy": 8}, "verticalArrangement": {"spacedBy": 4}}, "modifiers": [{"$type": "paddingAll", "all": 16}], "children": [
+        {"type": "OutlinedButton", "children": [{"type": "Text", "props": {"text": "Kotlin"}}]},
+        {"type": "OutlinedButton", "children": [{"type": "Text", "props": {"text": "Compose"}}]},
+        {"type": "OutlinedButton", "children": [{"type": "Text", "props": {"text": "Multiplatform"}}]},
+        {"type": "OutlinedButton", "children": [{"type": "Text", "props": {"text": "Desktop"}}]},
+        {"type": "OutlinedButton", "children": [{"type": "Text", "props": {"text": "Expo"}}]},
+        {"type": "Text", "props": {"text": "weight in FlowRow"}, "modifiers": [{"$type": "weight", "weight": 1}]}
+      ]},
+      {"type": "Column", "modifiers": [{"$type": "height", "height": 100}, {"$type": "verticalScroll"}], "children": [
+        {"type": "Text", "props": {"text": "Row 1"}, "modifiers": [{"$type": "height", "height": 40}]},
+        {"type": "Text", "props": {"text": "Row 2"}, "modifiers": [{"$type": "height", "height": 40}]},
+        {"type": "Text", "props": {"text": "Row 3 (past the viewport)"}, "modifiers": [{"$type": "height", "height": 40}]}
+      ]}
+    ]
+  }
+}
