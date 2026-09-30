@@ -23,7 +23,7 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | Rendering and layout | Real Fabric (React, ShadowTree, Yoga) in the Fantom host | `e2e/render.test.ts` | macOS only; one surface per run |
 | Text measurement | CoreText `TextLayoutManager` in the host | `e2e/render.test.ts` (heights > 10) | macOS fonts, not Android/iOS fonts |
 | Accessibility tree | Host `NativeFantom.getA11yTree` (typed ShadowTree dump) → `src/tree.ts` | `e2e/render.test.ts` | Role/name derivation is simpler than real screen readers |
-| TextInput, Switch | Host `AndroidTextInput` (CoreText measured) and `AndroidSwitch` shadow nodes | `e2e/render.test.ts`, `e2e/run.test.ts` | Android components only (`--platform android`) |
+| TextInput, Switch | Host `AndroidTextInput` / iOS `TextInput` (CoreText measured) and `AndroidSwitch` / `Switch` shadow nodes | `e2e/render.test.ts`, `e2e/run.test.ts` (both presets) | |
 | Tap, long press, typing | Host `hitTest` + by-tag native events, Pressable responder events, `setTextInputTextByTag` | `e2e/run.test.ts` | No multi-touch responder events; `click` does not bubble |
 | Scrolling, FlatList | Host scroll events and ScrollView state; `onLayout` delivered by settling the event queue | `e2e/scrolling.test.ts` | One scroll event per `scroll` action (no fling) |
 | Session mode | Host `--interactive` mode, one bundle | `e2e/session.test.ts` | No recovery after a host crash |
@@ -34,6 +34,8 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); other Expo native modules are not emulated |
 
 ## Install
+
+Changes per version: [CHANGELOG.md](CHANGELOG.md).
 
 From version 0.1.0 (macOS arm64 only), in an Expo SDK 58 project:
 

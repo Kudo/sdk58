@@ -1,6 +1,6 @@
 {
   "name": "rn-a11y-host",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Prebuilt headless React Native host (Fantom: Fabric + Hermes + Yoga) used by react-native-a11y-tree. macOS arm64 in 0.1.0.",
   "keywords": [
     "react-native",

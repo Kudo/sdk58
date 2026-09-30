@@ -6,7 +6,7 @@
       "name": "react-native-a11y-tree",
       "dependencies": {
         "commander": "^15.0.0",
-        "rn-a11y-host": "0.1.0",
+        "rn-a11y-host": "0.1.1",
       },
       "devDependencies": {
         "@expo/ui": "~58.0.9",
@@ -117,7 +117,7 @@
     },
     "packages/rn-a11y-host": {
       "name": "rn-a11y-host",
-      "version": "0.1.0",
+      "version": "0.1.1",
     },
   },
   "packages": {

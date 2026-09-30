@@ -1,6 +1,6 @@
 {
   "name": "react-native-a11y-tree",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Render a React Native component headlessly (real Metro + Fabric/Hermes) and print its accessibility and layout tree; interact with it and check a11y/design rules. For agents and CI.",
   "keywords": [
     "react-native",
@@ -65,7 +65,7 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
-    "rn-a11y-host": "0.1.0"
+    "rn-a11y-host": "0.1.1"
   },
   "peerDependencies": {
     "expo": ">=58.0.0",

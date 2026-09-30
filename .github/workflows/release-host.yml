@@ -120,7 +120,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="${GITHUB_REF_NAME}"
-          gh release view "$tag" > /dev/null 2>&1 || gh release create "$tag" --title "$tag" --notes "Prebuilt rn-a11y-host (see host-version.json)."
+          # Release body: the CHANGELOG.md section of the tag's version.
+          notes="$RUNNER_TEMP/release-notes.md"
+          node scripts/changelog-section.mjs "$tag" > "$notes"
+          printf '\nAssets: the npm tarballs of react-native-a11y-tree and rn-a11y-host, and the prebuilt host (tar.gz + .sha256 + host-version.json).\n' >> "$notes"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release edit "$tag" --notes-file "$notes"
+          else
+            gh release create "$tag" --title "$tag" --notes-file "$notes"
+          fi
           gh release upload "$tag" release/* --clobber
 
       - uses: actions/upload-artifact@v7
@@ -163,7 +171,7 @@ jobs:
           grep -q 'submit View #submit role=button "Submit"' render.txt
 
   # Later: publish both packages to npm from the release tarballs. Needs the
-  # NPM_TOKEN secret (the user publishes 0.1.0 manually from these tarballs).
+  # NPM_TOKEN secret (until then the user publishes manually from these tarballs).
   # publish:
   #   needs: release
   #   runs-on: ubuntu-latest
