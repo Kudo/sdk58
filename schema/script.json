@@ -1,12 +1,40 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Script",
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/Action"
-  },
-  "description": "`run --script` file: the actions, in order.",
+  "anyOf": [
+    {
+      "$ref": "#/definitions/ScriptFile"
+    },
+    {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Action"
+      }
+    }
+  ],
+  "description": "`run --script` / `check --script` file: the actions, in order. Either the object form (with `$schema` for editors and agents) or a bare array.",
   "definitions": {
+    "ScriptFile": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string",
+          "description": "Path or URL of this schema (schema/script.json), e.g. `./node_modules/react-native-a11y-tree/schema/script.json`."
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Action"
+          },
+          "description": "The actions, in order."
+        }
+      },
+      "required": [
+        "actions"
+      ],
+      "additionalProperties": false,
+      "description": "Object form of a script file."
+    },
     "Action": {
       "anyOf": [
         {

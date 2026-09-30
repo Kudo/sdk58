@@ -99,6 +99,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `run <file> --script <json>` | Render, run the actions, print steps and trees | `{viewport, source, steps, snapshots, final, fallbacks, capabilities}` ([Interactions](#interactions)) |
 | `session <file>` | Render, then serve JSON-line requests on stdin | one JSON object per line ([Session mode](#session-mode)) |
 | `check <file> --rules <json>` | Render (or run `--script`), then evaluate accessibility and design-token rules; exit 2 on violations | `{ok, summary, nodes, violations}` ([Check](#check)) |
+| `schema [name]` | Print `schema/<name>.json` (e.g. `script`, `rules-file`, `session-request`); no name: list the schemas | JSON Schema, or `name<TAB>description` lines ([Schemas](#schemas-and-tool-descriptors)) |
 
 | Option | Commands | Default | Description |
 | --- | --- | --- | --- |
@@ -127,7 +128,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--style` | `render`, `run` | off | Keep `style` in `compact`/`ndjson` |
 | `--bundle-only` | `render`, `run` | off | Build the bundle and stop (no host needed) |
 | `--debug-props` | `render` | off | Add raw host debug props to each node (`debugProps`) |
-| `--script <json>` | `run`, `check` | required for `run` | JSON file with an array of actions, or the array itself (a value that starts with `[`). `check`: run them, then check the final tree |
+| `--script <json>` | `run`, `check` | required for `run` | Script file `{"$schema": ..., "actions": [...]}` or `[...]`, or that JSON itself (a value that starts with `[` or `{`). `check`: run them, then check the final tree |
 | `--tap-mode <mode>` | `run`, `session`, `check` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
 | `--rules <json>` | `check` | `rules` in `a11y-tree.json` | Rules file `{"rules": {...}}`, or that JSON itself (a value that starts with `{`) (see [Check](#check)) |
 | `--diff` | `run` | off | Add `diff: {added, removed, changed}` (by `key`) to each step |
@@ -163,7 +164,7 @@ file's nearest `package.json`) holds defaults for the project. Allowed keys:
 keys and wrong types are usage errors (exit 1).
 
 ```json
-{"preset": "android-phone", "format": "text"}
+{"$schema": "./node_modules/react-native-a11y-tree/schema/a11y-tree-config.json", "preset": "android-phone", "format": "text"}
 ```
 
 For each setting the first value found wins: command-line flag,
@@ -193,6 +194,7 @@ Rules file (the `rules` object can also be in `a11y-tree.json`, which
 
 ```json
 {
+  "$schema": "./node_modules/react-native-a11y-tree/schema/rules-file.json",
   "rules": {
     "names": true,
     "touchTarget": {"min": 48, "ignore": ["testID=remember"]},
@@ -261,7 +263,11 @@ adds a violation with `rule: "step"` and `key: "step:<index>"`.
 - `schema/*.json`: JSON Schema (draft-07) for the outputs and input files.
   They are generated from the types in `src/schema.ts` with
   `ts-json-schema-generator` (`bun run schema`; `bun run check` fails when they
-  are out of date). Objects do not allow unknown keys.
+  are out of date). Objects do not allow unknown keys. `rn-a11y-tree schema
+  <name>` prints one (the installed copy); input files point to theirs with
+  `$schema`, e.g. `"$schema":
+  "./node_modules/react-native-a11y-tree/schema/script.json"` (the examples
+  use `../../schema/*.json`).
 
   | File | Type |
   | --- | --- |
@@ -271,7 +277,7 @@ adds a violation with `rule: "step"` and `key: "step:<index>"`.
   | `check-result.json` | `check` (`--format json`) |
   | `error-output.json` | `{"error": {code, message, hint?, details?}}` |
   | `session-request.json` / `session-output-line.json` | `session` stdin / stdout lines |
-  | `script.json` | `--script` files |
+  | `script.json` | `--script` files (`{$schema?, actions}` or an array) |
   | `rules-file.json` | `--rules` files |
   | `a11y-tree-config.json` | `a11y-tree.json` |
 
@@ -517,8 +523,25 @@ renders the component, runs the actions in order, and prints:
 }
 ```
 
-The script is a JSON array. It is validated before bundling; errors name the
-step index.
+The script is a JSON object with `$schema` (so editors and agents find the
+schema) and `actions`, or a bare array of actions:
+
+```json
+{
+  "$schema": "./node_modules/react-native-a11y-tree/schema/script.json",
+  "actions": [
+    {"type": {"testID": "email", "text": "a@b.c"}},
+    {"tap": {"testID": "submit"}},
+    {"snapshot": "after-submit"}
+  ]
+}
+```
+
+`$schema` is a path relative to the file (the examples use
+`../../schema/script.json`) or a URL; the CLI ignores its value. The script
+is validated before bundling; errors name the step index. `run --help`,
+`check --help` and `session --help` list every action;
+`rn-a11y-tree schema script` prints the full schema.
 
 | Action | Form | Events |
 | --- | --- | --- |

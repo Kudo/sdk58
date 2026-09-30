@@ -380,8 +380,19 @@ export type QueryResult = {
 /** Any failure: `{"error": {...}}` (stderr; stdout with an explicit `--format json`). */
 export type ErrorOutput = {error: ErrorInfo};
 
-/** `run --script` file: the actions, in order. */
-export type Script = Action[];
+/**
+ * `run --script` / `check --script` file: the actions, in order. Either the
+ * object form (with `$schema` for editors and agents) or a bare array.
+ */
+export type Script = ScriptFile | Action[];
+
+/** Object form of a script file. */
+export type ScriptFile = {
+  /** Path or URL of this schema (schema/script.json), e.g. `./node_modules/react-native-a11y-tree/schema/script.json`. */
+  $schema?: string;
+  /** The actions, in order. */
+  actions: Action[];
+};
 
 /** `check --rules` file. */
 export type RulesFile = {$schema?: string; rules: Rules};

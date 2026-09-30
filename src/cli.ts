@@ -1,8 +1,9 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
 import {Command, CommanderError, InvalidArgumentError} from 'commander';
 
-import {bundle, type BundleResult, findProjectRoot, type HostConfig, type TapMode} from './bundle.ts';
+import {bundle, type BundleResult, findProjectRoot, type HostConfig, PACKAGE_ROOT, type TapMode} from './bundle.ts';
 import {loadProjectConfig, PRESET_NAMES, resolveSettings} from './presets.ts';
 import {type Format, type FormatOptions, FORMATS, formatRender, formatRun} from './format.ts';
 import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
@@ -10,7 +11,7 @@ import {addStepViolations, type CheckResult, checkText, checkTree, readRulesFile
 import {CliError, EXIT_CODES, type LogEntry, usage} from './errors.ts';
 import {checkHostInfo, ensureHost, type HostTiming, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, HostRuntimeInfo, Step} from './schema.ts';
-import {ScriptError, validateScript} from './script.ts';
+import {ScriptError, scriptHelp, validateScript} from './script.ts';
 import {DEFAULT_TIMEOUT_MS, runSession} from './session.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
 
@@ -150,8 +151,8 @@ function readScript(scriptPath: string | undefined) {
   if (scriptPath == null || scriptPath === '') {
     throw usage('--script <json> is required');
   }
-  // A value that starts with `[` is the script itself (inline JSON).
-  const inline = scriptPath.trimStart().startsWith('[');
+  // A value that starts with `[` or `{` is the script itself (inline JSON).
+  const inline = /^\s*[[{]/.test(scriptPath);
   let text: string;
   try {
     text = inline ? scriptPath : fs.readFileSync(scriptPath, 'utf8');
@@ -420,6 +421,26 @@ async function run(file: string, options: RunOptions) {
   if (timing) printTiming(timing);
 }
 
+const SCHEMA_DIR = path.join(PACKAGE_ROOT, 'schema');
+
+/** `schema [name]`: prints schema/<name>.json, or lists the schemas. */
+function printSchema(name: string | undefined) {
+  const names = fs
+    .readdirSync(SCHEMA_DIR)
+    .filter(f => f.endsWith('.json'))
+    .map(f => f.slice(0, -'.json'.length))
+    .sort();
+  if (name == null) {
+    for (const n of names) {
+      const {description} = JSON.parse(fs.readFileSync(path.join(SCHEMA_DIR, `${n}.json`), 'utf8')) as {description?: string};
+      process.stdout.write(`${n}\t${description ?? ''}\n`);
+    }
+    return;
+  }
+  if (!names.includes(name)) throw usage(`unknown schema "${name}" (one of: ${names.join(', ')})`);
+  process.stdout.write(fs.readFileSync(path.join(SCHEMA_DIR, `${name}.json`), 'utf8'));
+}
+
 async function session(file: string, options: RunOptions) {
   applySettings(file, options);
   const platform = requirePlatform(options.platform);
@@ -616,18 +637,20 @@ addCommonOptions(addOutputOptions(program.command('render')))
 
 addCommonOptions(addOutputOptions(program.command('run')))
   .description('render the component, run a script of actions, print steps and trees')
-  .option('--script <json>', 'JSON file with an array of actions, or the array itself (required)')
+  .option('--script <json>', 'script file or inline JSON: {"actions": [...]} or [...] (required; see below)')
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option('--diff', 'add to each step the changes it made ({added, removed, changed} by key)', false)
+  .addHelpText('after', `\n${scriptHelp()}`)
   .action(run);
 
 addCommonOptions(program.command('check'))
   .description('render (or run a script), then evaluate accessibility and design-token rules; exit 2 on violations')
   .option('--rules <json>', 'rules file {"rules": {...}}, or that JSON itself (default: "rules" in a11y-tree.json)')
-  .option('--script <json>', 'run these actions first (file or inline JSON array) and check the final tree')
+  .option('--script <json>', 'run these actions first (file or inline JSON, see below) and check the final tree')
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option('--format <format>', 'json (default) or text (one line per violation)')
   .option('--subtree <selector>', 'check only the first node matching the selector and its descendants')
+  .addHelpText('after', `\nRules (--rules): {"$schema": "./node_modules/react-native-a11y-tree/schema/rules-file.json", "rules": {...}}.\nFull schema: rn-a11y-tree schema rules-file\n\n${scriptHelp()}`)
   .action(check);
 
 program
@@ -672,7 +695,19 @@ program
   .option('--scale <n>', 'device pixel ratio for Dimensions/PixelRatio (default: preset, else 3)', positiveNumber)
   .option('--font-scale <n>', 'font scale for Dimensions/PixelRatio (default 1)', positiveNumber)
   .option('-v, --verbose', 'print Metro progress and host logs to stderr', false)
+  .addHelpText(
+    'after',
+    `\nRequests (one JSON object per stdin line): {"id": 1, "action": ACTION}, {"id": 2, "tree": true}, {"id": 3, "quit": true}.\n` +
+      'Full schemas: rn-a11y-tree schema session-request, rn-a11y-tree schema session-output-line\n\n' +
+      scriptHelp().split('\n').slice(3).join('\n'),
+  )
   .action(session);
+
+program
+  .command('schema')
+  .description('print a JSON Schema of the CLI inputs and outputs (script, rules-file, session-request, ...); no name: list them')
+  .argument('[name]', 'schema name, e.g. script')
+  .action(printSchema);
 
 try {
   await program.parseAsync(process.argv);

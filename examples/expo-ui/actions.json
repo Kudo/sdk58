@@ -1,6 +1,9 @@
-[
-  {"tap": {"testID": "go"}},
-  {"tap": {"testID": "remember"}},
-  {"tap": {"testID": "greeting"}},
-  {"snapshot": "after"}
-]
+{
+  "$schema": "../../schema/script.json",
+  "actions": [
+    {"tap": {"testID": "go"}},
+    {"tap": {"testID": "remember"}},
+    {"tap": {"testID": "greeting"}},
+    {"snapshot": "after"}
+  ]
+}

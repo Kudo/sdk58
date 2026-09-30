@@ -22,9 +22,19 @@ test('accepts every action form', () => {
   assert.equal(validateScript(script), script);
 });
 
+test('accepts the object form with $schema and returns its actions', () => {
+  const actions = [{tap: {testID: 'submit'}}, {snapshot: 'after'}];
+  assert.equal(validateScript({$schema: '../../schema/script.json', actions}), actions);
+  assert.equal(validateScript({actions}), actions);
+});
+
 test('reports the step index and the problem', () => {
   const cases: Array<[unknown, RegExp]> = [
-    [{}, /must be a JSON array/],
+    [{}, /script must be \{"actions": \[\.\.\.\]\} or a JSON array of actions/],
+    ['tap', /script must be \{"actions"/],
+    [{actions: [], steps: []}, /unknown key "steps" \(allowed: \$schema, actions\)/],
+    [{$schema: 1, actions: []}, /"\$schema" must be a string/],
+    [{actions: [{wait: 1}, {tap: {}}]}, /step 1: tap: needs exactly one of/],
     [[{tap: {x: 1}}], /step 0: tap: "x" and "y" must both be numbers/],
     [[{wait: 1}, {tap: {}}], /step 1: tap: needs exactly one of "testID", "ref", "key" or "sel"/],
     [[{tap: {testID: 'a', ref: 'n1'}}], /needs exactly one of/],

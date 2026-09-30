@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import os from 'node:os';
 
 import type {RenderResult, RunResult} from '../src/schema.ts';
+import {ACTION_NAMES} from '../src/script.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(ROOT, 'src', 'cli.ts');
@@ -103,6 +104,7 @@ function writeScript(script: unknown): string {
 test('run: validates the script before bundling', {timeout: 120_000}, () => {
   const cases: Array<[unknown, RegExp]> = [
     [[{tap: {testID: 'submit'}}, {wait: 'soon'}], /step 1: wait: must be a number/],
+    [{$schema: 'x', actions: [{wait: 'soon'}]}, /step 0: wait: must be a number/],
     ['[not json', /is not valid JSON/],
   ];
   for (const [script, pattern] of cases) {
@@ -164,4 +166,33 @@ test('run: the script and tap mode are embedded in the bundle', {timeout: 120_00
   fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
   assert.match(code, /script = \[\{\s*"wait": 5\s*\}\]/);
   assert.match(code, /tapMode = "both"/);
+});
+
+test('run: inline object-form script with $schema', {timeout: 120_000}, () => {
+  const script = JSON.stringify({$schema: 'schema/script.json', actions: [{wait: 5}]});
+  const proc = run(['run', APP, '--platform', 'android', '--script', script, '--bundle-only', '--no-cache'], {});
+  assert.equal(proc.status, 0, proc.stderr);
+  const bundlePath = /Bundle: (.+) \(\d+ bytes/.exec(proc.stderr)![1];
+  const code = fs.readFileSync(bundlePath, 'utf8');
+  fs.rmSync(path.dirname(bundlePath), {recursive: true, force: true});
+  assert.match(code, /script = \[\{\s*"wait": 5\s*\}\]/);
+});
+
+test('--help lists the actions; schema prints and lists the schemas', () => {
+  for (const command of ['run', 'check', 'session']) {
+    const help = run([command, '--help'], {});
+    assert.equal(help.status, 0, help.stderr);
+    for (const name of ACTION_NAMES) assert.match(help.stdout, new RegExp(`^  ${name} +\\{"${name}"`, 'm'), `${command} --help: ${name}`);
+  }
+  assert.match(run(['run', '--help'], {}).stdout, /rn-a11y-tree schema script/);
+  const list = run(['schema'], {});
+  assert.equal(list.status, 0, list.stderr);
+  assert.match(list.stdout, /^script\t/m);
+  assert.match(list.stdout, /^session-request\t/m);
+  const schema = run(['schema', 'script'], {});
+  assert.equal(schema.status, 0, schema.stderr);
+  assert.equal(schema.stdout, fs.readFileSync(path.join(ROOT, 'schema', 'script.json'), 'utf8'));
+  const unknown = run(['schema', 'nope'], {});
+  assert.equal(unknown.status, 1);
+  assert.match(JSON.parse(unknown.stderr).error.message, /unknown schema "nope" \(one of: .*script/);
 });

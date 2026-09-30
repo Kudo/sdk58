@@ -28,6 +28,30 @@ export const ACTION_NAMES = [
   'snapshot',
 ] as const;
 
+/** One line per action for `--help` (keep in sync with validateScript). TARGET is one of testID/ref/key/sel. */
+export const ACTION_SYNTAX: ReadonlyArray<readonly [(typeof ACTION_NAMES)[number], string]> = [
+  ['tap', '{"tap": TARGET} or {"tap": {"x": 10, "y": 20}}'],
+  ['longPress', '{"longPress": TARGET} or {"longPress": {"x": 10, "y": 20}}'],
+  ['type', '{"type": {TARGET, "text": "a@b.c", "submit"?: true}}'],
+  ['scroll', '{"scroll": {TARGET, "x"?: 0, "y"?: 600}}'],
+  ['pan', '{"pan": {TARGET or "x", "y", "dx"?: 100, "dy"?: 0, "steps"?: 10, "durationMs"?: 300}} (dx and/or dy)'],
+  ['pinch', '{"pinch": {TARGET, "scale": 2, "steps"?: 10, "durationMs"?: 300}}'],
+  ['wait', '{"wait": 300} (milliseconds)'],
+  ['snapshot', '{"snapshot": "after-submit"} (unique name)'],
+];
+
+/** `--help` text: the script file forms and every action. */
+export function scriptHelp(): string {
+  const width = Math.max(...ACTION_SYNTAX.map(([name]) => name.length));
+  return [
+    'Script (--script): a file or inline JSON, either',
+    '  {"$schema": "./node_modules/react-native-a11y-tree/schema/script.json", "actions": [ACTION, ...]}',
+    '  or a bare array [ACTION, ...]. Full schema: rn-a11y-tree schema script',
+    'Actions (TARGET = exactly one of "testID", "ref" ("n5"), "key", "sel"):',
+    ...ACTION_SYNTAX.map(([name, syntax]) => `  ${name.padEnd(width)}  ${syntax}`),
+  ].join('\n');
+}
+
 export class ScriptError extends Error {
   constructor(message: string) {
     super(message);
@@ -75,9 +99,20 @@ function checkTarget(spec: Record<string, unknown>, fail: (msg: string) => never
   }
 }
 
-export function validateScript(value: unknown): Action[] {
+/** Accepts the object form `{"$schema"?, "actions": [...]}` or a bare array; returns the actions. */
+export function validateScript(input: unknown): Action[] {
+  let value = input;
+  if (isObject(input)) {
+    checkKeys(input, ['$schema', 'actions'], msg => {
+      throw new ScriptError(msg);
+    });
+    if ('$schema' in input && typeof input.$schema !== 'string') {
+      throw new ScriptError('"$schema" must be a string');
+    }
+    value = input.actions;
+  }
   if (!Array.isArray(value)) {
-    throw new ScriptError('script must be a JSON array of actions');
+    throw new ScriptError('script must be {"actions": [...]} or a JSON array of actions');
   }
   const snapshotNames = new Set<string>();
 

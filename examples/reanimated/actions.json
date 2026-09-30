@@ -1,19 +1,22 @@
-[
-  {"snapshot": "start"},
-  {"tap": {"testID": "grow"}},
-  {"wait": 200},
-  {"snapshot": "mid"},
-  {"wait": 400},
-  {"snapshot": "end"},
-  {"tap": {"testID": "slide-btn"}},
-  {"wait": 1000},
-  {"snapshot": "slid"},
-  {"tap": {"testID": "show"}},
-  {"wait": 50},
-  {"snapshot": "fade-start"},
-  {"wait": 400},
-  {"snapshot": "fade-end"},
-  {"tap": {"testID": "ui"}},
-  {"wait": 50},
-  {"snapshot": "ui"}
-]
+{
+  "$schema": "../../schema/script.json",
+  "actions": [
+    {"snapshot": "start"},
+    {"tap": {"testID": "grow"}},
+    {"wait": 200},
+    {"snapshot": "mid"},
+    {"wait": 400},
+    {"snapshot": "end"},
+    {"tap": {"testID": "slide-btn"}},
+    {"wait": 1000},
+    {"snapshot": "slid"},
+    {"tap": {"testID": "show"}},
+    {"wait": 50},
+    {"snapshot": "fade-start"},
+    {"wait": 400},
+    {"snapshot": "fade-end"},
+    {"tap": {"testID": "ui"}},
+    {"wait": 50},
+    {"snapshot": "ui"}
+  ]
+}
