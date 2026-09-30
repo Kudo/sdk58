@@ -116,8 +116,16 @@ jobs:
         if: failure()
         continue-on-error: true
         run: |
-          bun run rn-a11y-tree render examples/expo-ui/App.tsx --platform android --format text -v --no-quiet
+          sw_vers
+          bun run rn-a11y-tree render examples/expo-ui/App.tsx --platform android --format text -v --no-quiet || true
           ls -la ~/Library/Logs/DiagnosticReports/ || true
+          # The same run under lldb: backtraces of all threads at the crash.
+          cat > "$RUNNER_TEMP/lldb-host" <<EOF
+          #!/bin/bash
+          exec lldb --batch -o "process launch" -k "thread backtrace all" -k "quit 1" -- "$PWD/native/dist/arm64/rn-a11y-host" "\$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/lldb-host"
+          RN_A11Y_HOST_BIN="$RUNNER_TEMP/lldb-host" bun run rn-a11y-tree render examples/expo-ui/App.tsx --platform android --format text -v --no-quiet || true
 
       - name: Upload crash reports and the host binary (on failure)
         if: failure()
