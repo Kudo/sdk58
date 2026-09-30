@@ -20,6 +20,7 @@
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <yoga/style/Style.h>
 
+#include "components/FantomExpo.h"
 #include "components/FantomSafeArea.h"
 #include "components/FantomSwitch.h"
 #ifdef FANTOM_WITH_RNSCREENS
@@ -796,6 +797,54 @@ folly::dynamic renderNode(
     }
   }
 #endif
+
+  if (auto expoInfo = getExpoViewInfo(node)) {
+    // Expo module views (@expo/ui): the props are untyped (propsMap).
+    result["type"] = expoInfo->type;
+    if (!expoInfo->layout.empty()) {
+      result["layout"] = expoInfo->layout;
+    }
+    // Accessibility from modifiers (SwiftUI accessibilityLabel/Hint/Value,
+    // Compose semantics/testID) unless set as props.
+    auto modifiers = expoInfo->props.get_ptr("modifiers");
+    if (modifiers != nullptr && modifiers->isArray()) {
+      auto setIfMissing = [&](const char* key, const folly::dynamic* value) {
+        if (value != nullptr && value->isString() && result.find(key) == result.items().end()) {
+          result[key] = *value;
+        }
+      };
+      for (const auto& modifier : *modifiers) {
+        if (!modifier.isObject()) {
+          continue;
+        }
+        auto type = modifier.get_ptr("$type");
+        if (type == nullptr || !type->isString()) {
+          continue;
+        }
+        const auto& typeName = type->getString();
+        if (typeName == "accessibilityLabel") {
+          setIfMissing("accessibilityLabel", modifier.get_ptr("label"));
+        } else if (typeName == "accessibilityHint") {
+          setIfMissing("accessibilityHint", modifier.get_ptr("hint"));
+        } else if (typeName == "accessibilityValue") {
+          if (result.find("accessibilityValue") == result.items().end()) {
+            auto value = modifier.get_ptr("value");
+            if (value != nullptr && value->isString()) {
+              result["accessibilityValue"] =
+                  folly::dynamic::object("text", *value);
+            }
+          }
+        } else if (typeName == "semantics") {
+          setIfMissing("accessibilityLabel", modifier.get_ptr("contentDescription"));
+        } else if (typeName == "testID") {
+          setIfMissing("testID", modifier.get_ptr("testID"));
+        } else if (typeName == "accessibilityIdentifier") {
+          setIfMissing("testID", modifier.get_ptr("identifier"));
+        }
+      }
+    }
+    result["expo"] = std::move(expoInfo->props);
+  }
 
   if (std::strcmp(node.getComponentName(), "RNCSafeAreaProvider") == 0) {
     if (auto insets = getEmittedSafeAreaProviderInsets(node.getTag())) {

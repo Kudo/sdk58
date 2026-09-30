@@ -20,6 +20,7 @@
 #include "TesterAppDelegate.h"
 
 #include <jsi/instrumentation.h>
+#include "components/FantomExpo.h"
 #include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
 #include "components/FantomTextInput.h"
@@ -223,6 +224,9 @@ jsi::Value getCapabilitiesHostFunction(
       "shadowTreeRevision",
       "mountedRevision",
       "effectiveBackground");
+#ifdef FANTOM_WITH_EXPO_UI
+  capabilities.push_back("expoUI");
+#endif
 #ifdef FANTOM_WITH_MACOS_TEXT_LAYOUT
   capabilities.push_back("textLayout");
 #endif
@@ -572,7 +576,7 @@ int NativeFantom::updateScreenStates(
     SurfaceId surfaceId) {
   auto rootShadowNode = getRootShadowNode(runtime, surfaceId);
   return facebook::react::updateScreenStates(*rootShadowNode) +
-      updateSafeAreas(*rootShadowNode);
+      updateSafeAreas(*rootShadowNode) + updateExpoHostSizes(*rootShadowNode);
 }
 
 void NativeFantom::reportTestSuiteResultsJSON(

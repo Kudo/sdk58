@@ -9,6 +9,7 @@
 
 #include "FantomTimerRegistry.h"
 #include "NativeFantom.h"
+#include "components/FantomExpo.h"
 #include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
 #include "platform/TesterTurboModuleProvider.h"
@@ -105,6 +106,7 @@ TesterAppDelegate::TesterAppDelegate(
                     *shadowTree.getCurrentRevision().rootShadowNode;
                 updateScreenStates(root);
                 updateSafeAreas(root);
+                updateExpoHostSizes(root);
               });
         });
       });

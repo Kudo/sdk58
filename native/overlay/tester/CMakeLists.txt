@@ -247,22 +247,28 @@ function(fantom_add_native_library target package codegen_name)
   endif()
   message(STATUS "${package}: ${package_dir}")
 
-  set(codegen_dir "${CMAKE_BINARY_DIR}/codegen-libs/${codegen_name}")
-  execute_process(
-    COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/codegen-lib.sh"
-      "${package_dir}" "${codegen_name}" "${codegen_dir}"
-    RESULT_VARIABLE codegen_result)
-  if(NOT codegen_result EQUAL 0)
-    message(FATAL_ERROR "codegen for ${package} failed")
+  # codegen_name NONE: the package has no codegen specs (expo-modules-core).
+  set(source_globs)
+  set(codegen_include_dirs)
+  if(NOT codegen_name STREQUAL "NONE")
+    set(codegen_dir "${CMAKE_BINARY_DIR}/codegen-libs/${codegen_name}")
+    execute_process(
+      COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/codegen-lib.sh"
+        "${package_dir}" "${codegen_name}" "${codegen_dir}"
+      RESULT_VARIABLE codegen_result)
+    if(NOT codegen_result EQUAL 0)
+      message(FATAL_ERROR "codegen for ${package} failed")
+    endif()
+    # Re-run codegen when the package or its specs change.
+    file(GLOB_RECURSE specs CONFIGURE_DEPENDS
+      "${package_dir}/src/*NativeComponent.ts" "${package_dir}/src/specs/*.ts"
+      "${package_dir}/src/fabric/*.ts")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+      "${package_dir}/package.json" ${specs})
+    list(APPEND source_globs "${codegen_dir}/jni/react/renderer/components/${codegen_name}/*.cpp")
+    list(APPEND codegen_include_dirs "${codegen_dir}/jni")
   endif()
-  # Re-run codegen when the package or its specs change.
-  file(GLOB_RECURSE specs CONFIGURE_DEPENDS
-    "${package_dir}/src/*NativeComponent.ts" "${package_dir}/src/specs/*.ts"
-    "${package_dir}/src/fabric/*.ts")
-  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${package_dir}/package.json" ${specs})
 
-  set(source_globs "${codegen_dir}/jni/react/renderer/components/${codegen_name}/*.cpp")
   foreach(glob ${ARG_SOURCE_GLOBS})
     list(APPEND source_globs "${package_dir}/${glob}")
   endforeach()
@@ -273,7 +279,7 @@ function(fantom_add_native_library target package codegen_name)
   foreach(dir ${ARG_INCLUDE_DIRS})
     list(APPEND include_dirs "${package_dir}/${dir}")
   endforeach()
-  target_include_directories(${target} PUBLIC ${include_dirs} "${codegen_dir}/jni")
+  target_include_directories(${target} PUBLIC ${include_dirs} ${codegen_include_dirs})
   target_link_libraries(${target}
     folly_runtime
     glog
@@ -394,6 +400,16 @@ endif()
 fantom_add_native_library(rngesturehandler react-native-gesture-handler rngesturehandler_codegen
   SOURCE_GLOBS "shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/*.cpp"
   INCLUDE_DIRS "shared/shadowNodes")
+# expo-modules-core: the Fabric view of every Expo module view
+# (ExpoViewComponentDescriptor; @expo/ui primitives are
+# ViewManagerAdapter_ExpoUI_<View>). No codegen. FANTOM_WITH_EXPO_UI when
+# @expo/ui is installed too.
+fantom_add_native_library(expomodulescore expo-modules-core NONE
+  SOURCE_GLOBS "common/cpp/fabric/*.cpp"
+  INCLUDE_DIRS "common/cpp" "common/cpp/fabric")
+if(TARGET expomodulescore AND EXISTS "${FANTOM_NODE_MODULES_DIR}/@expo/ui/package.json")
+  set(FANTOM_WITH_EXPO_UI ON)
+endif()
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
@@ -408,6 +424,9 @@ target_include_directories(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 
 if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
   target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_MACOS_TEXT_LAYOUT=1)
+endif()
+if(FANTOM_WITH_EXPO_UI)
+  target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_EXPO_UI=1)
 endif()
 
 foreach(library ${FANTOM_NATIVE_LIBRARIES})

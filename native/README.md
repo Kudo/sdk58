@@ -23,6 +23,7 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
 | `tester/src/components/FantomScreens.h`, `FantomScreens.cpp`, `FantomScreensSplitScreen.cpp` (new) | react-native-screens: descriptor registration, context entry, emulated native state updates (see Screens). |
 | `tester/src/components/FantomGestureHandler.h`, `FantomGestureHandler.cpp` (new) | react-native-gesture-handler: descriptor registration and the no-op `RNGestureHandlerModule` TurboModule (see Gesture handler). |
+| `tester/src/components/FantomExpo.h`, `FantomExpo.cpp` (new) | Expo module views (`@expo/ui`): descriptor provider request for `ViewManagerAdapter_*`, Host `matchContents` state, tree info (see Expo UI). |
 | `tester/src/platform/oss/TesterTurboModuleProvider.cpp` | Provides `RNGestureHandlerModule`, `RNCSafeAreaContext` and `StatusBarManager`. |
 | `tester/src/components/FantomStatusBarManager.h`, `FantomStatusBarManager.cpp` (new) | `StatusBarManager` TurboModule (union of the Android and iOS specs): `getConstants()` returns `{HEIGHT, DEFAULT_BACKGROUND_COLOR: 0}` with `HEIGHT` = the safe area top inset (`setSafeAreaInsets`, default 0); `getHeight(callback)` calls `callback({height})`; `setStyle`, `setHidden`, `setColor`, `setTranslucent`, `setNetworkActivityIndicatorVisible`, `addListener`, `removeListeners` are no-ops. `StatusBar` caches the constants when it is first evaluated. |
 | `tester/src/components/FantomSafeArea.h`, `FantomSafeArea.cpp` (new) | react-native-safe-area-context: descriptor registration, `onInsetsChange` events and `RNCSafeAreaView` state (see Safe area). |
@@ -190,6 +191,7 @@ packages is patched.
 | `react-native-screens` `~4.28.0` | `rnscreens` | `common/cpp/react/renderer/components/rnscreens/*.cpp` |
 | `react-native-safe-area-context` `~5.9.1` | `safeareacontext` | `common/cpp/react/renderer/components/safeareacontext/*.cpp` |
 | `react-native-worklets` `0.13.0` + `react-native-reanimated` `4.7.0` | `worklets`, `reanimated` (both packages or neither) | worklets `Common/cpp/worklets/**/*.cpp`; reanimated `Common/cpp/reanimated/**/*.cpp`, `Common/NativeView/.../rnreanimated/*.cpp` (its `ComponentDescriptors.h` shadows the codegen one) and `tester/src/reanimated/*.cpp` |
+| `expo-modules-core` `~58.0.9` (with `@expo/ui` `~58.0.9`: `FANTOM_WITH_EXPO_UI`) | `expomodulescore` (no codegen) | `common/cpp/fabric/*.cpp` |
 | `react-native-gesture-handler` `~3.2.1` | `rngesturehandler` | `shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/*.cpp` (its `ComponentDescriptors.h` shadows the codegen one: `shared/shadowNodes` is first on the include path) |
 
 ## Screens (react-native-screens)
@@ -419,6 +421,111 @@ The test checks: `withTiming(200, {duration: 300})` on `width` is 100 after
 then 1; `runOnUI` + `runOnJS` returns from the UI runtime; frames and mocked
 timers advanced together (as the CLI) agree.
 
+## Expo UI (@expo/ui, expo-modules-core)
+
+Step 1 (load and render). Every `@expo/ui` primitive is a Fabric view named
+`ViewManagerAdapter_ExpoUI_<View>` (`requireNativeView('ExpoUI', '<View>')`),
+all with expo-modules-core's `expo::ExpoViewComponentDescriptor<>`
+(`common/cpp/fabric`, built as the `expomodulescore` library).
+
+Native:
+
+- Registration: a `ComponentDescriptorProviderRegistry` request handler
+  (`registerExpoViewComponentDescriptors`): the first time an unknown
+  component name starting with `ViewManagerAdapter_` is used, it registers
+  `ExpoViewComponentDescriptor` with that name as flavor, as on iOS
+  (`ExpoFabricViewObjC componentDescriptorProvider`). So every Expo module
+  view, of either name set, works without a list:
+  - iOS (SwiftUI, `ios/ExpoUIModule.swift`, 69 views): `HostView`,
+    `VStackView`, `HStackView`, `ZStackView`, `TextView`, `Button`,
+    `ToggleView`, `SliderView`, `SpacerView`, `ImageView`, `ListView`, ...
+  - Android (Compose, `android/.../ExpoUIModule.kt`, 93 views): `HostView`,
+    `ColumnView`, `RowView`, `BoxView`, `TextView`, `Button`,
+    `OutlinedButton`, `TextButton`, `SwitchView`, `CheckboxView`,
+    `SliderView`, `SpacerView`, ...
+  - The Android bundle (`--platform android`) with the universal entry
+    (`@expo/ui`) resolves `index.android.tsx` and emits the Compose names
+    (Host → `HostView`, Column → `ColumnView`, Text → `TextView`, Button →
+    `Button`, Switch → `SwitchView` + a `RowView`/`TextView` for its label).
+    `@expo/ui/swift-ui` emits the SwiftUI names on any platform.
+- Props: `ExpoViewProps::propsMap`, every raw prop (including RN style
+  props such as `flex`).
+- `getA11yTree`: `type` is `ExpoUI.<View>` (`Expo.<Module>_<View>` for
+  other Expo module views); `expo` is the full `propsMap` (with `modifiers`
+  verbatim); `accessibilityLabel`, `accessibilityHint`, `accessibilityValue`
+  (`{text}`) and `testID` come from the modifiers `accessibilityLabel`
+  (`label`), `accessibilityHint` (`hint`), `accessibilityValue` (`value`),
+  Compose `semantics` (`contentDescription`), `testID` (`testID`) and
+  `accessibilityIdentifier` (`identifier`) when they are not props.
+  `layout`: `"emulated"` on a Host sized by `matchContents`,
+  `"placeholder"` on the other `@expo/ui` views: their frames are Yoga's
+  (no SwiftUI/Compose layout yet; usually height 0), not the drawn frames.
+- Host `matchContents` (`matchContentsHorizontal`/`matchContentsVertical`
+  props): after every mount (and on `updateNativeStates`) the host dispatches
+  `ExpoViewState::withStyleDimensions` with the content size, like the
+  platform's `ShadowNodeProxy.setStyleSize`, and the library's
+  `ExpoViewComponentDescriptor::adopt` writes it into the Yoga width/height.
+  The content size comes from `layoutExpoHostSubtree(ShadowNode&)`, the hook
+  for the SwiftUI/Compose layout emulation (step 2); for now it is the
+  bounding box of the Host's children's Yoga frames.
+- Events: `onX` props are direct events `topX`; send them with
+  `enqueueNativeEventByTag(surfaceId, tag, 'x', payload)`: SwiftUI Button
+  `buttonPress`, Compose Button `buttonPressed`, Compose Switch
+  `checkedChange` `{value}`, SwiftUI Toggle `isOnChange` ... (the name
+  without `on`, first letter lower case). They reach the JS callbacks
+  (`onPress`, `onValueChange`).
+- `getCapabilities()` has `"expoUI"`.
+
+JS prelude (`tests/fantomExpoUIPrelude.js`; import it before anything that
+imports `expo`, `expo-modules-core` or `@expo/ui`):
+
+1. `installExpoGlobalPolyfill()` from
+   `expo-modules-core/src/polyfill/dangerous-internal` (the web
+   `globalThis.expo`: `EventEmitter`, `NativeModule`, `SharedObject`,
+   `SharedRef`, `modules: {}`).
+2. `globalThis.expo.getViewConfig = () => ({validAttributes,
+   directEventTypes})` for every view: the union of the @expo/ui prop names
+   (`validAttributes[name] = true`) and of the event names
+   (`directEventTypes['top' + name.slice(2)] = {registrationName: name}`)
+   from `tests/fantomExpoUIViewConfig.json` (367 props, 46 events), generated
+   by `native/scripts/gen-expo-ui-view-config.py node_modules/@expo/ui`.
+   React Native (bridgeless) merges these with the base View config, so
+   style props still work; a prop that is not in `validAttributes` is not
+   sent to native. `children`, `key`, `ref` and `style` must not be in the
+   list (a React element prop fails with "JS Symbols are not convertible to
+   dynamic").
+3. Module stubs in `globalThis.expo.modules` (`requireNativeModule` reads
+   them): `ExpoUI` (`ObservableState` and `WorkletCallback` classes extending
+   `SharedObject`, `ViewPrototypes: {}`, `completeRefresh`, `withAnimation`,
+   `isDynamicColorAvailable: false`, `getMaterialColors: () => ({})`,
+   `SwitchDefaultIconSize`, `ToggleButtonIconSize`,
+   `ToggleButtonIconSpacing`), `ExpoAsset` (`downloadAsync`),
+   `ExponentConstants`/`ExpoConstants` (`manifest: null`, ...).
+4. Development bundles only (`__DEV__`, the Fantom tests): `expo`'s
+   `Expo.fx` opens a dev-server socket from the SourceCode `scriptURL`, which
+   is `''` in the host (`new URL('')` throws). The prelude sets
+   `NativeSourceCode.getConstants = () => ({scriptURL: null})`. Production
+   bundles (the CLI) do not need it.
+5. Load `@expo/ui` inside the event loop (`Fantom.runTask`) in Fantom tests,
+   like reanimated.
+
+No resolver alias is needed: `expo` (58.0.0) resolves normally, and the
+`@expo/ui/swift-ui`, `@expo/ui/jetpack-compose` subpaths through the
+package `exports`.
+
+`tests/FantomExpoUI-itest.js` (needs `expo`, `@expo/ui` in the React Native
+checkout): universal `<Host matchContents><Column spacing={8}><Text>Hello</Text>
+<Button label="Go"/><Switch value label="Remember"/></Column></Host>` gives
+`ExpoUI.HostView > ExpoUI.ColumnView > [ExpoUI.TextView, ExpoUI.Button >
+ExpoUI.TextView, ExpoUI.RowView > [ExpoUI.TextView, ExpoUI.SwitchView]]`;
+`buttonPressed` calls `onPress`, `checkedChange {value: false}` calls
+`onValueChange(false)`. SwiftUI `<Host style={{flex: 1}}><VStack spacing={8}>
+<Text modifiers={[accessibilityLabel('Greeting'), ...]}>Hello</Text><Button
+label="Go"/><Toggle isOn label="Remember"/></VStack></Host>` gives
+`ExpoUI.HostView > ExpoUI.VStackView > [ExpoUI.TextView, ExpoUI.Button,
+ExpoUI.ToggleView]` with the Text's `accessibilityLabel`/`accessibilityHint`;
+`buttonPress` calls `onPress`.
+
 ## TextInput and Switch
 
 The JS bundle uses the Android implementations, which render the native
@@ -507,6 +614,7 @@ yarn fantom FantomInputs      # TextInput measurement and Switch size
 yarn fantom FantomInteraction # hitTest, by-tag events, typing, scrolling
 yarn fantom FantomScreens     # react-native-screens native stack (see Screens)
 yarn fantom FantomGestureHandler # gesture-handler detector (see Gesture handler)
+yarn fantom FantomExpoUI      # @expo/ui load, render, events (see Expo UI)
 yarn fantom FantomReanimated  # reanimated/worklets (see Reanimated; needs both packages in the checkout)
 FANTOM_PRINT_OUTPUT=1 yarn fantom FantomA11yTree   # also print the raw binary stdout
 ```
