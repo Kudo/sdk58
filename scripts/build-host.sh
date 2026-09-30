@@ -7,9 +7,15 @@
 #   native/dist/<arch>/lib/libhermesvm.dylib
 #   native/dist/<arch>/lib/libjsi.dylib
 #
-# Requirements: JDK 17, Android SDK (for its CMake), Xcode command line tools,
-# Node with corepack. First build takes ~5 min (Hermes from source);
-# incremental builds ~20 s.
+# RN_A11Y_HOST_BUILD_TYPE=Release (default) | MinSizeRel | Debug selects the
+# tester build type (build dir: .../build/tester-<type>). Release and
+# MinSizeRel use ThinLTO and -dead_strip, and strip local symbols (strip -x)
+# in native/dist. See docs/build-analysis.md.
+#
+# Requirements: JDK 17, Android SDK (for its CMake and Ninja), Xcode command
+# line tools, Node with corepack. First build takes ~5 min on an M4 (Hermes
+# from source ~2.5 min, tester ~2.2 min); incremental builds ~10 s (Release)
+# or ~3 s (Debug) after the gradle check.
 
 set -euo pipefail
 
@@ -74,16 +80,57 @@ rsync -a "$OVERLAY_DIR/" "$FANTOM_DIR/"
 
 # --- (d) build --------------------------------------------------------------
 
-log "gradle :private:react-native-fantom:buildFantomTester (logs: $FANTOM_DIR/build/reports/)"
-(cd "$RN_DIR" && ./gradlew :private:react-native-fantom:buildFantomTester --no-daemon --console=plain)
+# RN_A11Y_HOST_BUILD_TYPE: Release (default), MinSizeRel or Debug. Gradle's
+# configureFantomTester hardcodes CMAKE_BUILD_TYPE=Debug, so gradle only builds
+# the prerequisites (Hermes, third-party sources, codegen) and the tester is
+# configured here with the same arguments into build/tester-<type> (Ninja).
+BUILD_TYPE="${RN_A11Y_HOST_BUILD_TYPE:-Release}"
+case "$BUILD_TYPE" in
+  Debug|Release|MinSizeRel) ;;
+  *) die "RN_A11Y_HOST_BUILD_TYPE must be Debug, Release or MinSizeRel (got $BUILD_TYPE)" ;;
+esac
+BUILD_TYPE_LOWER="$(printf '%s' "$BUILD_TYPE" | tr '[:upper:]' '[:lower:]')"
 
-# Gradle's buildFantomTester only tracks CMake files as inputs, so it can
-# report "up to date" after .cpp/.mm edits. Always run the CMake build too
-# (a no-op when nothing changed).
-TESTER_BUILD_DIR="$FANTOM_DIR/build/tester"
-log "cmake --build (catches source edits Gradle does not track)"
-"$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake" --build "$TESTER_BUILD_DIR" \
-  --target fantom_tester -j "$(sysctl -n hw.ncpu)"
+log "gradle :private:react-native-fantom:prepareAllDependencies (Hermes, third-party, codegen; logs: $FANTOM_DIR/build/reports/)"
+(cd "$RN_DIR" && ./gradlew :private:react-native-fantom:prepareAllDependencies --no-daemon --console=plain)
+
+CMAKE_BIN_DIR="$ANDROID_HOME/cmake/$CMAKE_VERSION/bin"
+FANTOM_BUILD_DIR="$FANTOM_DIR/build"
+REACT_NATIVE_DIR="$RN_DIR/packages/react-native"
+TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER"
+
+# Same arguments as configureFantomTester in private/react-native-fantom/build.gradle.kts.
+CMAKE_ARGS=(
+  -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+  -DFANTOM_CODEGEN_DIR="$FANTOM_BUILD_DIR/codegen"
+  -DFANTOM_THIRD_PARTY_DIR="$FANTOM_BUILD_DIR/third-party"
+  -DREACT_ANDROID_DIR="$REACT_NATIVE_DIR/ReactAndroid"
+  -DREACT_COMMON_DIR="$REACT_NATIVE_DIR/ReactCommon"
+  -DREACT_CXX_PLATFORM_DIR="$REACT_NATIVE_DIR/ReactCxxPlatform"
+  -DREACT_THIRD_PARTY_NDK_DIR="$REACT_NATIVE_DIR/ReactAndroid/build/third-party-ndk"
+  -DRN_ENABLE_DEBUG_STRING_CONVERTIBLE=ON
+  -DHERMES_V1_ENABLED=1
+)
+if [[ "$BUILD_TYPE" != "Debug" ]]; then
+  # ThinLTO and dead code stripping (docs/build-analysis.md).
+  CMAKE_ARGS+=(
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-dead_strip"
+    "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-dead_strip"
+  )
+fi
+
+# Configure once per build directory; Ninja re-runs CMake itself when a
+# CMakeLists.txt or a CONFIGURE_DEPENDS glob changes.
+if [[ ! -f "$TESTER_BUILD_DIR/build.ninja" ]]; then
+  log "cmake configure ($BUILD_TYPE, Ninja) -> ${TESTER_BUILD_DIR#"$ROOT"/}"
+  "$CMAKE_BIN_DIR/cmake" --log-level=ERROR -G Ninja \
+    -DCMAKE_MAKE_PROGRAM="$CMAKE_BIN_DIR/ninja" \
+    -S "$FANTOM_DIR/tester" -B "$TESTER_BUILD_DIR" "${CMAKE_ARGS[@]}"
+fi
+
+log "cmake --build ($BUILD_TYPE)"
+"$CMAKE_BIN_DIR/cmake" --build "$TESTER_BUILD_DIR" --target fantom_tester
 
 BIN="$TESTER_BUILD_DIR/fantom_tester"
 [[ -x "$BIN" ]] || die "build did not produce $BIN"
@@ -138,6 +185,14 @@ for lib in "$DIST_DIR"/lib/*.dylib; do
   install_name_tool -id "@rpath/$(basename "$lib")" "$lib"
   fix_rpaths "$lib" "@loader_path"
 done
+
+# Release/MinSizeRel: remove local symbols (strip -x; exported symbols stay,
+# libjsi/libhermesvm need them).
+if [[ "$BUILD_TYPE" != "Debug" ]]; then
+  for f in "$DIST_DIR/rn-a11y-host" "$DIST_DIR"/lib/*.dylib; do
+    strip -x "$f"
+  done
+fi
 
 # install_name_tool invalidates signatures; arm64 requires one.
 for f in "$DIST_DIR/rn-a11y-host" "$DIST_DIR"/lib/*.dylib; do

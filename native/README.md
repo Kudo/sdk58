@@ -431,6 +431,19 @@ Known differences from a device:
 
 ## Build
 
+`yarn build:host` (`scripts/build-host.sh`) builds the host into
+`native/dist/<arch>/`. `RN_A11Y_HOST_BUILD_TYPE` selects the tester build type:
+`Release` (default; ThinLTO, `-dead_strip`, `strip -x`), `MinSizeRel` (same with
+`-Os`) or `Debug`. Gradle only builds the prerequisites
+(`:private:react-native-fantom:prepareAllDependencies`: Hermes, third-party
+sources, codegen), because its `configureFantomTester` task hardcodes
+`CMAKE_BUILD_TYPE=Debug`; the script configures the tester with the same
+arguments into `private/react-native-fantom/build/tester-<type>` with Ninja.
+Times and sizes: `docs/build-analysis.md`.
+
+The manual steps below build the Debug tester the upstream way (gradle,
+`build/tester`), which the Fantom tests in a React Native checkout use:
+
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17 PATH=/opt/homebrew/opt/openjdk@17/bin:$PATH
 export ANDROID_HOME=$HOME/Library/Android/sdk ANDROID_SDK_ROOT=$HOME/Library/Android/sdk
