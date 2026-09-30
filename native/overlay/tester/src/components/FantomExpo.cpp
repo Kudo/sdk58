@@ -71,13 +71,20 @@ std::mutex gEmulatedMutex;
 std::unordered_map<Tag, std::string> gEmulated;
 
 /*
- * Writes the emulated frames into the Expo views under `parent`. Each child
- * with a frame is cloned (`clone({})`: a new, unsealed node; the ones from the
- * Yoga pass may be shared with the previous revision), its layout metrics
- * get the frame (displayType, layoutDirection, pointScaleFactor stay the
- * Yoga pass's), and it replaces the child in `parent`
- * (YogaLayoutableShadowNode::replaceChild keeps the Yoga tree in sync). The
- * children of an RNHostView (RN content) keep their Yoga layout.
+ * Writes the emulated frames into the Expo views under `parent`.
+ *
+ * A child that is not sealed was cloned by this layout pass (the Yoga pass
+ * clones the children it lays out) and is owned by `parent` only: its layout
+ * metrics are set in place. It must not be replaced: the commit keeps raw
+ * pointers to the nodes the Yoga pass laid out (the affected layoutable
+ * nodes, read by LayoutEventEmitter::shadowTreeDidCommit), and replacing
+ * would free them (a heap-use-after-free that crashed the host on CI).
+ * A sealed child is shared with the previous revision: it is cloned
+ * (`clone({})`), gets the frame, and replaces the child in `parent`
+ * (YogaLayoutableShadowNode::replaceChild keeps the Yoga tree in sync); the
+ * original stays alive in the previous revision. displayType,
+ * layoutDirection and pointScaleFactor stay the Yoga pass's. The children of
+ * an RNHostView (RN content) keep their Yoga layout.
  */
 void writeFrames(
     ShadowNode& parent,
@@ -89,18 +96,27 @@ void writeFrames(
     if (it == frames.end()) {
       continue;
     }
-    auto clone = child->clone({});
-    auto* layoutable = dynamic_cast<LayoutableShadowNode*>(clone.get());
+    std::shared_ptr<ShadowNode> clone;
+    ShadowNode* target;
+    if (!child->getSealed()) {
+      target = const_cast<ShadowNode*>(child.get());
+    } else {
+      clone = child->clone({});
+      target = clone.get();
+    }
+    auto* layoutable = dynamic_cast<LayoutableShadowNode*>(target);
     if (layoutable == nullptr) {
       continue;
     }
     auto metrics = layoutable->getLayoutMetrics();
     metrics.frame = it->second;
     layoutable->setLayoutMetrics(metrics);
-    if (clone->getComponentName() != kExpoUIRNHostViewName) {
-      writeFrames(*clone, frames);
+    if (target->getComponentName() != kExpoUIRNHostViewName) {
+      writeFrames(*target, frames);
     }
-    parent.replaceChild(*child, clone, index);
+    if (clone) {
+      parent.replaceChild(*child, clone, index);
+    }
   }
 }
 

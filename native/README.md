@@ -704,6 +704,16 @@ sources, codegen), because its `configureFantomTester` task hardcodes
 arguments into `private/react-native-fantom/build/tester-<type>` with Ninja.
 Times and sizes: `docs/build-analysis.md`.
 
+`RN_A11Y_HOST_SANITIZE=1 bun run build:host` builds a Debug host with
+AddressSanitizer and UndefinedBehaviorSanitizer into
+`private/react-native-fantom/build/tester-debug-sanitize/fantom_tester` (not
+copied to `native/dist`; with `-DFANTOM_SANITIZE=ON` folly's
+`SanitizeLeak.cpp` is compiled in). Run it through the CLI with
+`RN_A11Y_HOST_BIN=<that path> ASAN_OPTIONS=detect_leaks=0:detect_container_overflow=0`
+(container-overflow reports are false positives: Hermes' static libraries are
+not instrumented). `RN_A11Y_OVERLAY_DIR` builds from another copy of the
+overlay (for example `git checkout-index --prefix=/tmp/idx/ -- $(git ls-files native/overlay)`).
+
 The manual steps below build the Debug tester the upstream way (gradle,
 `build/tester`), which the Fantom tests in a React Native checkout use:
 

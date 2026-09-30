@@ -127,7 +127,16 @@ rsync -a "$OVERLAY_DIR/" "$FANTOM_DIR/"
 # configureFantomTester hardcodes CMAKE_BUILD_TYPE=Debug, so gradle only builds
 # the prerequisites (Hermes, third-party sources, codegen) and the tester is
 # configured here with the same arguments into build/tester-<type> (Ninja).
+#
+# RN_A11Y_HOST_SANITIZE=1: a Debug build with AddressSanitizer and
+# UndefinedBehaviorSanitizer in build/tester-debug-sanitize. It is not copied
+# to native/dist (the dist binary stays as it is); run it with
+# RN_A11Y_HOST_BIN=<printed path>.
+SANITIZE="${RN_A11Y_HOST_SANITIZE:-0}"
 BUILD_TYPE="${RN_A11Y_HOST_BUILD_TYPE:-Release}"
+if [[ "$SANITIZE" == "1" ]]; then
+  BUILD_TYPE=Debug
+fi
 case "$BUILD_TYPE" in
   Debug|Release|MinSizeRel) ;;
   *) die "RN_A11Y_HOST_BUILD_TYPE must be Debug, Release or MinSizeRel (got $BUILD_TYPE)" ;;
@@ -141,6 +150,9 @@ CMAKE_BIN_DIR="$ANDROID_HOME/cmake/$CMAKE_VERSION/bin"
 FANTOM_BUILD_DIR="$FANTOM_DIR/build"
 REACT_NATIVE_DIR="$RN_DIR/packages/react-native"
 TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER"
+if [[ "$SANITIZE" == "1" ]]; then
+  TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-debug-sanitize"
+fi
 
 # Same arguments as configureFantomTester in private/react-native-fantom/build.gradle.kts.
 CMAKE_ARGS=(
@@ -154,7 +166,17 @@ CMAKE_ARGS=(
   -DRN_ENABLE_DEBUG_STRING_CONVERTIBLE=ON
   -DHERMES_V1_ENABLED=1
 )
-if [[ "$BUILD_TYPE" != "Debug" ]]; then
+if [[ "$SANITIZE" == "1" ]]; then
+  SANITIZE_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
+  CMAKE_ARGS+=(
+    "-DCMAKE_C_FLAGS=$SANITIZE_FLAGS"
+    "-DCMAKE_CXX_FLAGS=$SANITIZE_FLAGS"
+    "-DCMAKE_OBJC_FLAGS=$SANITIZE_FLAGS"
+    "-DCMAKE_OBJCXX_FLAGS=$SANITIZE_FLAGS"
+    "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined"
+    -DFANTOM_SANITIZE=ON
+  )
+elif [[ "$BUILD_TYPE" != "Debug" ]]; then
   # ThinLTO and dead code stripping (docs/build-analysis.md).
   CMAKE_ARGS+=(
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
@@ -184,6 +206,12 @@ NEWER_OVERLAY="$(find "$OVERLAY_DIR" -type f -newer "$BIN" | head -n 5)"
 if [[ -n "$NEWER_OVERLAY" ]]; then
   log "warning: $BIN is older than these overlay files:"
   printf '  %s\n' $NEWER_OVERLAY
+fi
+
+if [[ "$SANITIZE" == "1" ]]; then
+  log "sanitizer build (not copied to native/dist): $BIN"
+  log "run: RN_A11Y_HOST_BIN=$BIN ASAN_OPTIONS=detect_leaks=0 node bin/rn-a11y-tree.js ..."
+  exit 0
 fi
 
 # --- (e) relocatable dist ---------------------------------------------------

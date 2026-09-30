@@ -461,6 +461,13 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
 )
 add_executable(fantom_tester ${SOURCES})
 
+# Sanitizer builds (scripts/build-host.sh RN_A11Y_HOST_SANITIZE=1): with
+# AddressSanitizer folly calls its leak annotations, which live in a file the
+# folly_runtime target does not compile.
+if(FANTOM_SANITIZE AND TARGET folly_runtime)
+  target_sources(folly_runtime PRIVATE ${FANTOM_THIRD_PARTY_DIR}/folly/folly/memory/SanitizeLeak.cpp)
+endif()
+
 target_include_directories(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
