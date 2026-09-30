@@ -254,6 +254,7 @@ const SHADOW_A11Y_RAW_KEYS = [
 /** Visual keys copied into `style` as-is. */
 const SHADOW_STYLE_KEYS = [
   'backgroundColor',
+  'effectiveBackground',
   'opacity',
   'borderColors',
   'borderRadii',

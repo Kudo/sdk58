@@ -43,6 +43,7 @@ test('loadProjectConfig validates keys and types', () => {
   assert.throws(() => loadProjectConfig(tmpProject({safeAreaInsets: {top: 1}})), /safeAreaInsets/);
   assert.throws(() => loadProjectConfig(tmpProject('{nope')), /not valid JSON/);
   assert.throws(() => loadProjectConfig(tmpProject({preset: 'watch'})), /unknown preset/);
+  assert.throws(() => loadProjectConfig(tmpProject({rules: {names: 'yes'}})), /"rules": "names" must be true, false or an object/);
 });
 
 test('CLI: a11y-tree.json supplies the platform and viewport; flags override', {timeout: 180_000}, () => {

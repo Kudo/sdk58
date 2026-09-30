@@ -51,14 +51,15 @@ another host binary.
 The file must have a default export or an `App` named export that is a React
 component. Metro's project root is the directory of the nearest
 `package.json` above the file, so the project's own dependencies resolve.
-`react` and `react-native` resolve from that project first. Exit code is 1 on
-failure, with the message on stderr; stdout has only the JSON.
+`react` and `react-native` resolve from that project first. stdout has only
+the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 
 | Command | What it does | Output |
 | --- | --- | --- |
 | `render <file>` | Render once and print the tree | `{viewport, source, root}` ([schema](#output-schema)) |
 | `run <file> --script <json>` | Render, run the actions, print steps and trees | `{viewport, source, steps, snapshots, final, fallbacks, capabilities}` ([Interactions](#interactions)) |
 | `session <file>` | Render, then serve JSON-line requests on stdin | one JSON object per line ([Session mode](#session-mode)) |
+| `check <file> --rules <json>` | Render (or run `--script`), then evaluate accessibility and design-token rules; exit 2 on violations | `{ok, summary, nodes, violations}` ([Check](#check)) |
 
 | Option | Commands | Default | Description |
 | --- | --- | --- | --- |
@@ -85,8 +86,9 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--style` | `render`, `run` | off | Keep `style` in `compact`/`ndjson` |
 | `--bundle-only` | `render`, `run` | off | Build the bundle and stop (no host needed) |
 | `--debug-props` | `render` | off | Add raw host debug props to each node (`debugProps`) |
-| `--script <json>` | `run` | required | JSON file with an array of actions |
-| `--tap-mode <mode>` | `run`, `session` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
+| `--script <json>` | `run`, `check` | required for `run` | JSON file with an array of actions (`check`: run them, then check the final tree) |
+| `--tap-mode <mode>` | `run`, `session`, `check` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
+| `--rules <json>` | `check` | `rules` in `a11y-tree.json` | Rules file `{"rules": {...}}` (see [Check](#check)) |
 | `--diff` | `run` | off | Add `diff: {added, removed, changed}` (by `key`) to each step |
 | `--timeout <ms>` | `session` | `30000` | Per-request timeout; on timeout the host is killed and the exit code is 1 |
 
@@ -121,6 +123,90 @@ For each setting the first value found wins: command-line flag,
 built-in default. `--platform` therefore overrides the preset's platform.
 Note that the config's own values also override a `--preset` given on the
 command line.
+
+## Check
+
+`check` renders the component (or runs `--script` and uses the final tree),
+evaluates rules on the tree and prints the result. The exit code is 0 when
+all checks pass and 2 when there are violations. `--format text` prints one
+line per violation; `--subtree <sel>` checks only one part of the screen.
+
+```sh
+rn-a11y-tree check examples/basic/App.tsx --platform android --rules examples/basic/rules-fail.json --format text
+# FAIL touchTarget email height: touch target height 36.333 < 48
+# FAIL touchTarget remember height: touch target height 31 < 48
+# FAIL tokens submit backgroundColor: backgroundColor #1e6fff is not a token color
+# FAIL contrast submit/Paragraph:1 contrast: contrast 4.4:1 < 4.5:1 (#ffffff on #1e6fff)
+# failed: 4 violation(s), 7 of 8 nodes checked
+```
+
+Rules file (the `rules` object can also be in `a11y-tree.json`, which
+`check` uses when there is no `--rules`):
+
+```json
+{
+  "rules": {
+    "names": true,
+    "touchTarget": {"min": 48, "ignore": ["testID=remember"]},
+    "hiddenFocusable": true,
+    "contrast": {"min": 4.5, "minLarge": 3},
+    "tokens": {
+      "colors": {"background": "#ffffff", "text": "#000000", "primary": "#1e6fff"},
+      "spacing": 8,
+      "fonts": ["System"],
+      "fontSizes": [14, 16, 28]
+    }
+  }
+}
+```
+
+| Rule | Nodes | Passes when |
+| --- | --- | --- |
+| `names` | Focusable nodes (interactive `role`, or `accessible: true`) and images, not inside an `accessible` ancestor, not hidden | `name` is not empty. For `textbox`, the placeholder counts (`from: "placeholder"`) |
+| `touchTarget` (`min`, default 48) | Nodes with an interactive role, not grouped, not hidden | `box.width >= min` and `box.height >= min` |
+| `hiddenFocusable` | Focusable nodes | Not hidden from screen readers. Hidden = own `a11y.hidden`, or an ancestor with `importantForAccessibility: "no-hide-descendants"` / `accessibilityElementsHidden` (`"no"` hides only the node itself) |
+| `contrast` (`min`, default 4.5; `minLarge`) | Nodes with `text` and a `color` (not TextInput), not hidden | WCAG 2.x ratio of `color` (composited over the background) to the background `>= min`. Large text (>= 24 dp, or >= 18.66 dp bold) uses `minLarge` when set |
+| `tokens.colors` (array, or name -> color) | `color`, `backgroundColor`, `borderColors` (not transparent) | The color is in the list (alpha to 0.01) |
+| `tokens.spacing` (grid step, or array) | Numeric non-zero `margin*`, `padding*`, `gap`, `rowGap`, `columnGap` | Multiple of the step, or in the array |
+| `tokens.fonts` | Paragraphs with text | `fontFamily` is in the list (`"System"` = no `fontFamily`) |
+| `tokens.fontSizes` | Paragraphs with text and a `fontSize` | `fontSize` is in the list |
+
+Every rule object accepts `ignore: [selector, ...]` (the `--select` syntax).
+The contrast background is `style.effectiveBackground` from the host (the
+ancestors' backgrounds composited over the white window) when present, else
+the CLI composites the ancestors' `backgroundColor` values over white
+(`bgFrom: "host"` or `"ancestors"`). Opacity (`effectiveOpacity`), images
+and gradients behind text are not taken into account.
+
+Output:
+
+```jsonc
+{
+  "ok": false,
+  "viewport": {"width": 390, "height": 844},
+  "source": "shadowTree",
+  "summary": {"nodes": 8, "checked": 7, "violations": 4, "byRule": {"touchTarget": 2, "tokens": 1, "contrast": 1}},
+  // Every node with at least one evaluated property (some props left out here).
+  "nodes": [
+    {"ref": "n6", "key": "submit", "sel": "#submit", "props": {
+      "width": {"rule": "touchTarget", "got": 342, "want": 48, "op": ">=", "pass": true},
+      "backgroundColor": {"rule": "tokens", "got": "#1e6fff", "pass": false,
+        "wantToken": ["background", "text", "primary"], "wantResolved": ["#ffffff", "#000000", "#0055d4"]}
+    }},
+    {"ref": "n7", "key": "submit/Paragraph:1", "sel": "RootView>View>View>Paragraph", "props": {
+      "contrast": {"rule": "contrast", "got": 4.4, "want": 4.5, "op": ">=", "pass": false,
+        "fg": "#ffffff", "bg": "#1e6fff", "bgFrom": "host"}
+    }}
+  ],
+  "violations": [
+    {"rule": "contrast", "key": "submit/Paragraph:1", "sel": "RootView>View>View>Paragraph", "prop": "contrast",
+     "expected": ">= 4.5", "actual": 4.4, "message": "contrast 4.4:1 < 4.5:1 (#ffffff on #1e6fff)"}
+  ]
+}
+```
+
+A passing token color has `token: <name>`. With `--script`, each failed step
+adds a violation with `rule: "step"` and `key: "step:<index>"`.
 
 ## Caching
 
@@ -238,7 +324,7 @@ TypeScript types: [`src/schema.ts`](src/schema.ts).
     "box": {"x": 0, "y": 0, "width": 390, "height": 844},  // on screen, dp (ShadowTree layout)
     "visualBox": {...},        // only if a transform/mounted frame applies: where it is drawn
     "effectiveOpacity": 0.5,   // only if < 1: own x ancestors' opacity (mounted opacity if reported)
-    "style": {"backgroundColor": "rgba(255, 255, 255, 1)"}, // other props: visual, Yoga style, font, component props
+    "style": {"backgroundColor": "rgba(255, 255, 255, 1)"}, // other props: visual (incl. effectiveBackground), Yoga style, font, component props
     "text": null,              // text content of Paragraph / Text fragment / TextInput nodes
     "testID": null,
     "virtual": true,           // only on nodes without their own frame (box = parent's box)

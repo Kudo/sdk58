@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import {type Rules, validateRules} from './check.ts';
 import {usage} from './errors.ts';
 
 export type Insets = {top: number; left: number; right: number; bottom: number};
@@ -66,9 +67,20 @@ export const PRESET_NAMES = Object.keys(PRESETS) as PresetName[];
 
 export const CONFIG_FILE = 'a11y-tree.json';
 
-const CONFIG_KEYS = ['preset', 'platform', 'width', 'height', 'safeAreaInsets', 'headerHeight', 'tapMode', 'format'];
+const CONFIG_KEYS = [
+  'preset',
+  'platform',
+  'width',
+  'height',
+  'safeAreaInsets',
+  'headerHeight',
+  'tapMode',
+  'format',
+  'rules',
+];
 
-export type ProjectConfig = Settings & {preset?: PresetName};
+/** `rules` are the default rules for `check` (same shape as a rules file's `rules`). */
+export type ProjectConfig = Settings & {preset?: PresetName; rules?: Rules};
 
 function checkPreset(name: unknown, where: string): PresetName {
   if (typeof name !== 'string' || !PRESET_NAMES.includes(name as PresetName)) {
@@ -113,6 +125,7 @@ export function loadProjectConfig(projectRoot: string): ProjectConfig | null {
   for (const key of ['platform', 'tapMode', 'format']) {
     if (key in config && typeof config[key] !== 'string') throw usage(`${file}: "${key}" must be a string`);
   }
+  if ('rules' in config) validateRules(config.rules, `${file}: "rules"`);
   return config as ProjectConfig;
 }
 

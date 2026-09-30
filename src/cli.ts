@@ -6,6 +6,7 @@ import {bundle, type BundleResult, findProjectRoot, type HostConfig, type TapMod
 import {loadProjectConfig, PRESET_NAMES, resolveSettings} from './presets.ts';
 import {type Format, type FormatOptions, FORMATS, formatRender, formatRun} from './format.ts';
 import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
+import {addStepViolations, type CheckResult, checkText, checkTree, readRulesFile, type Rules} from './check.ts';
 import {CliError, EXIT_CODES, type LogEntry, usage} from './errors.ts';
 import {getHostBin, type HostTiming, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
@@ -306,6 +307,14 @@ async function execute<T>(
  */
 function applySettings(file: string, options: RenderOptions & {tapMode?: string; preset?: string}) {
   const config = loadProjectConfig(findProjectRoot(file));
+  applyConfig(options, config);
+  return config;
+}
+
+function applyConfig(
+  options: RenderOptions & {tapMode?: string; preset?: string},
+  config: ReturnType<typeof loadProjectConfig>,
+) {
   const resolved = resolveSettings(
     {
       preset: options.preset,
@@ -434,6 +443,62 @@ async function session(file: string, options: RunOptions) {
   }
 }
 
+type CheckOptions = RunOptions & {rules?: string};
+
+const CHECK_FORMATS = ['json', 'text'];
+
+async function check(file: string, options: CheckOptions) {
+  // `format` in a11y-tree.json is for render/run output; check has its own.
+  const format = options.format ?? 'json';
+  const config = loadProjectConfig(findProjectRoot(file));
+  applyConfig(options, config);
+  requirePlatform(options.platform);
+  if (!CHECK_FORMATS.includes(format)) {
+    throw usage(`--format must be one of: ${CHECK_FORMATS.join(', ')} (for check)`);
+  }
+  if (!TAP_MODES.includes(options.tapMode as TapMode)) {
+    throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
+  }
+  let rules: Rules;
+  if (options.rules != null) {
+    rules = readRulesFile(options.rules);
+  } else if (config?.rules != null) {
+    rules = config.rules;
+  } else {
+    throw usage('--rules <json> is required (or "rules" in a11y-tree.json)');
+  }
+  const script = options.script != null ? readScript(options.script) : undefined;
+  const timing: Timing | undefined = options.timing ? {} : undefined;
+  const logs: LogEntry[] = [];
+  let result: CheckResult | undefined;
+  if (script) {
+    const payload = await execute<HostRunPayload>(file, options, {script, tapMode: options.tapMode as TapMode}, timing, logs);
+    if (payload) {
+      const run = toRunResult(payload);
+      result = addStepViolations(
+        checkTree(run.final, rules, {viewport: run.viewport, source: run.source, subtree: options.subtree}),
+        run.steps,
+      );
+    }
+  } else {
+    const payload = await execute<HostPayload>(file, options, {}, timing, logs);
+    if (payload) {
+      const rendered = toRenderResult(payload);
+      result = checkTree(rendered.root, rules, {
+        viewport: rendered.viewport,
+        source: rendered.source,
+        subtree: options.subtree,
+      });
+    }
+  }
+  if (result) {
+    if (logs.length > 0) result.logs = logs;
+    write(format === 'text' ? checkText(result) : JSON.stringify(result, null, 2) + '\n', options.out);
+    if (!result.ok) process.exitCode = EXIT_CODES.CHECK_FAILED;
+  }
+  if (timing) printTiming(timing);
+}
+
 /** Which JS fallbacks a run used (see runtime/actions.js). */
 function describeFallbacks(steps: Step[]): string[] {
   const used = new Set<string>();
@@ -529,6 +594,15 @@ addCommonOptions(addOutputOptions(program.command('run')))
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option('--diff', 'add to each step the changes it made ({added, removed, changed} by key)', false)
   .action(run);
+
+addCommonOptions(program.command('check'))
+  .description('render (or run a script), then evaluate accessibility and design-token rules; exit 2 on violations')
+  .option('--rules <json>', 'rules file {"rules": {...}} (default: "rules" in a11y-tree.json)')
+  .option('--script <json>', 'run these actions first and check the final tree')
+  .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
+  .option('--format <format>', 'json (default) or text (one line per violation)')
+  .option('--subtree <selector>', 'check only the first node matching the selector and its descendants')
+  .action(check);
 
 program
   .command('session')

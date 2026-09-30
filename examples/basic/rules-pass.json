@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "names": true,
+    "touchTarget": {"min": 48, "ignore": ["testID=remember", "testID=email"]},
+    "hiddenFocusable": true,
+    "contrast": {"min": 3},
+    "tokens": {
+      "colors": {"background": "#ffffff", "text": "#000000", "primary": "#1e6fff", "onPrimary": "#ffffff"},
+      "spacing": 8,
+      "fonts": ["System"],
+      "fontSizes": [14, 16, 28]
+    }
+  }
+}

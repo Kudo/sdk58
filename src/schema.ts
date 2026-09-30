@@ -160,6 +160,12 @@ export type ShadowNodeJSON = {
   pointerEvents?: string;
   opacity?: number;
   backgroundColor?: unknown;
+  /**
+   * Ancestors' and own background colors composited over the window
+   * background (`rgba(...)`). On every Paragraph, and on nodes where it
+   * differs from `backgroundColor`.
+   */
+  effectiveBackground?: string;
   borderColors?: unknown;
   borderRadii?: unknown;
   borderWidths?: unknown;

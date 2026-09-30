@@ -32,6 +32,13 @@ Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 - `remember` `a11y.state.checked === false` (the Switch toggled from on).
 - `run --diff`: the `type` step adds `echo` and changes `email.text` to "a@b.c"; the Switch tap changes only `remember` (`state: {checked: false}`); the Submit tap adds `status`.
 
+## `e2e/check.test.ts` — `examples/basic/App.tsx`, `check`
+
+- `--rules examples/basic/rules-fail.json`: exit code 2, `ok: false`. The violations are exactly: touchTarget `email` height (36.3), touchTarget `remember` height (31), tokens `submit` backgroundColor (#1e6fff is not a token), contrast `submit/Paragraph:1` (4.4, #ffffff on #1e6fff, `bgFrom: "host"`).
+- `email` passes `names` through its placeholder ("Email", `from: "placeholder"`).
+- `--rules examples/basic/rules-pass.json`: exit code 0, `ok: true`, no violations.
+- `--rules rules-pass.json --script actions.json --format text`: exit code 0; the final tree (with `echo` and `status`) passes.
+
 ## `e2e/scrolling.test.ts` — `examples/scrolling/actions.json`, `run`
 
 Actions: snapshot `before`, scroll `list` to y=600, snapshot `after`, tap

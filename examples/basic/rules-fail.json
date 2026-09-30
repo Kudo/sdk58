@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "names": true,
+    "touchTarget": {"min": 48},
+    "hiddenFocusable": true,
+    "contrast": {"min": 4.5},
+    "tokens": {
+      "colors": {"background": "#ffffff", "text": "#000000", "primary": "#0055d4"},
+      "spacing": 8,
+      "fonts": ["System"]
+    }
+  }
+}
