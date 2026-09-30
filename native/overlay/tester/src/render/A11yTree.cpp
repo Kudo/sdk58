@@ -741,6 +741,24 @@ folly::dynamic renderNode(
     result["editable"] = textInputProps->editable;
     result["secureTextEntry"] = textInputProps->secureTextEntry;
     result["multiline"] = textInputProps->multiline;
+  } else if (const auto* iosTextInputProps = dynamic_cast<const TextInputProps*>(props.get())) {
+    // iOS TextInput (RCTSinglelineTextInputView / RCTMultilineTextInputView).
+    result["text"] = getFantomTextInputText(node).value_or(iosTextInputProps->text);
+    if (!iosTextInputProps->defaultValue.empty()) {
+      result["defaultValue"] = iosTextInputProps->defaultValue;
+    }
+    if (!iosTextInputProps->placeholder.empty()) {
+      result["placeholder"] = iosTextInputProps->placeholder;
+    }
+    result["editable"] = iosTextInputProps->traits.editable;
+    result["secureTextEntry"] = iosTextInputProps->traits.secureTextEntry;
+    result["multiline"] = iosTextInputProps->multiline;
+  } else if (const auto* iosSwitchProps = dynamic_cast<const SwitchProps*>(props.get())) {
+    // iOS Switch (RCTSwitch).
+    result["value"] = iosSwitchProps->value;
+    if (iosSwitchProps->disabled) {
+      result["disabled"] = true;
+    }
   } else if (const auto* switchProps = dynamic_cast<const AndroidSwitchProps*>(props.get())) {
     // Android's Switch.js sends the value as `on` (and also `value`).
     result["value"] = switchProps->on || switchProps->value;

@@ -53,4 +53,37 @@ class FantomAndroidSwitchShadowNode final : public ConcreteViewShadowNode<
 
 using FantomAndroidSwitchComponentDescriptor = ConcreteComponentDescriptor<FantomAndroidSwitchShadowNode>;
 
+extern const char FantomSwitchComponentName[];
+
+/*
+ * `ShadowNode` for <Switch> (iOS: the JS sends `RCTSwitch`, which Fabric maps
+ * to `Switch`; the codegen `SwitchProps` / `SwitchEventEmitter`). iOS has no
+ * C++ shadow node for it (RCTSwitchComponentView sizes the UISwitch), so this
+ * leaf measures 51x31, the intrinsic size of UISwitch. Explicit width/height
+ * styles still take precedence.
+ */
+class FantomSwitchShadowNode final
+    : public ConcreteViewShadowNode<FantomSwitchComponentName, SwitchProps, SwitchEventEmitter> {
+ public:
+  static constexpr Size kIntrinsicSize{.width = 51, .height = 31};
+
+  using ConcreteViewShadowNode::ConcreteViewShadowNode;
+
+  static ShadowNodeTraits BaseTraits()
+  {
+    auto traits = ConcreteViewShadowNode::BaseTraits();
+    traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
+    traits.set(ShadowNodeTraits::Trait::MeasurableYogaNode);
+    return traits;
+  }
+
+  Size measureContent(const LayoutContext & /*layoutContext*/, const LayoutConstraints &layoutConstraints)
+      const override
+  {
+    return layoutConstraints.clamp(kIntrinsicSize);
+  }
+};
+
+using FantomSwitchComponentDescriptor = ConcreteComponentDescriptor<FantomSwitchShadowNode>;
+
 } // namespace facebook::react

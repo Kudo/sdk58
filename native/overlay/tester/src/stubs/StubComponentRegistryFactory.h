@@ -44,6 +44,10 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       providerRegistry->add(concreteComponentDescriptorProvider<ModalHostViewComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<FantomAndroidTextInputComponentDescriptor>());
       providerRegistry->add(concreteComponentDescriptorProvider<FantomAndroidSwitchComponentDescriptor>());
+      // iOS bundles: RCTSinglelineTextInputView / RCTMultilineTextInputView -> TextInput,
+      // RCTSwitch -> Switch.
+      providerRegistry->add(concreteComponentDescriptorProvider<TextInputComponentDescriptor>());
+      providerRegistry->add(concreteComponentDescriptorProvider<FantomSwitchComponentDescriptor>());
       registerScreensComponentDescriptors(providerRegistry);
       registerSafeAreaComponentDescriptors(providerRegistry);
 #ifdef FANTOM_WITH_REANIMATED // rn-a11y: reanimated

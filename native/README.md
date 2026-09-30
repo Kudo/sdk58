@@ -703,10 +703,26 @@ Android TextLayoutManager API (`measureCachedSpannableById`, `measureLines`) and
 - `AndroidSwitch`: codegen `AndroidSwitchProps`, leaf node with a fixed
   intrinsic size of 51x31. Explicit `width`/`height` styles override it.
 
+iOS bundles (`--platform ios`, e.g. `--preset ios-phone`) render
+`RCTSinglelineTextInputView` / `RCTMultilineTextInputView`, which Fabric maps
+to `TextInput` (`componentNameByReactViewName`), and `RCTSwitch` (Fabric:
+`Switch`):
+
+- `TextInput`: ReactCommon's iOS `TextInputComponentDescriptor` /
+  `TextInputShadowNode` / `TextInputProps`, registered as they are (plain C++;
+  the tester CMake compiles `platform/ios/.../iostextinput/*.cpp`, since
+  `rrc_textinput` only builds the Android variant). Measured with the macOS
+  TextLayoutManager like `AndroidTextInput`; `setTextInputTextByTag` and the
+  typed-text readback work for both.
+- `Switch`: tester-side leaf on the codegen `SwitchProps` /
+  `SwitchEventEmitter`, 51x31 (UISwitch); iOS `Switch.js` also styles it
+  51x31.
+
 `getA11yTree` keys: `AndroidTextInput` gives `text`, `placeholder` (if not
 empty), `defaultValue` (if set; Android JS sends `defaultValue` as `text`),
 `editable`, `secureTextEntry`, `multiline`. `AndroidSwitch` gives `value` and
-`disabled: true` when disabled.
+`disabled: true` when disabled. The iOS `TextInput` and `Switch` give the same
+keys (`editable` / `secureTextEntry` from the iOS `traits`).
 
 Known differences from a device:
 
@@ -714,6 +730,10 @@ Known differences from a device:
   JNI, so a TextInput without padding styles has 0 padding.
 - `secureTextEntry` text is measured unmasked (Android measures bullets).
 - 51x31 is the intrinsic size of iOS `UISwitch`, not an Android measurement.
+- iOS: a multiline TextInput measures taller than a single-line one with the
+  same text (22.333 vs 17.333 for a one-line placeholder at 14 pt); this comes
+  from ReactCommon's iOS `TextInputShadowNode`, measured here with CoreText,
+  and was not compared with a device.
 - Baseline alignment of TextInput is not supported (the TextLayoutManager has
   no `measureLines`); Yoga gets only the top padding and border.
 

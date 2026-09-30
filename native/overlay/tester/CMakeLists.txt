@@ -460,6 +460,16 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/oss/*.cpp
 )
 add_executable(fantom_tester ${SOURCES})
+# iOS bundles render RCTSinglelineTextInputView / RCTMultilineTextInputView,
+# which Fabric maps to `TextInput`: ReactCommon's iOS TextInput shadow node
+# (plain C++, measured with the platform TextLayoutManager). The textinput
+# target (rrc_textinput) only builds the Android variant.
+set(FANTOM_IOS_TEXTINPUT_DIR ${REACT_COMMON_DIR}/react/renderer/components/textinput/platform/ios)
+target_sources(fantom_tester
+  PRIVATE
+    ${FANTOM_IOS_TEXTINPUT_DIR}/react/renderer/components/iostextinput/TextInputProps.cpp
+    ${FANTOM_IOS_TEXTINPUT_DIR}/react/renderer/components/iostextinput/TextInputShadowNode.cpp)
+target_include_directories(fantom_tester PRIVATE ${FANTOM_IOS_TEXTINPUT_DIR})
 # For NativeFantom.getHostInfo().
 target_compile_definitions(fantom_tester PRIVATE "FANTOM_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\"")
 

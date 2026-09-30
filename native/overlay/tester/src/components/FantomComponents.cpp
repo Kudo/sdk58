@@ -15,6 +15,7 @@ namespace facebook::react {
 
 extern const char FantomAndroidTextInputComponentName[] = "AndroidTextInput";
 extern const char FantomAndroidSwitchComponentName[] = "AndroidSwitch";
+extern const char FantomSwitchComponentName[] = "Switch";
 
 FantomAndroidTextInputProps::FantomAndroidTextInputProps(
     const PropsParserContext& context,
@@ -42,14 +43,13 @@ void FantomAndroidTextInputProps::setProp(
   }
 }
 
-bool setFantomTextInputText(
+namespace {
+
+template <typename ShadowNodeT>
+bool setTextInputText(
+    const ShadowNodeT* textInputShadowNode,
     const ShadowNode& shadowNode,
     const std::string& text) {
-  const auto* textInputShadowNode =
-      dynamic_cast<const FantomAndroidTextInputShadowNode*>(&shadowNode);
-  if (textInputShadowNode == nullptr) {
-    return false;
-  }
 
   const auto& props = textInputShadowNode->getConcreteProps();
   auto textAttributes = props.getEffectiveTextAttributes(
@@ -85,8 +85,7 @@ bool setFantomTextInputText(
   }
 
   auto state = std::static_pointer_cast<
-      const FantomAndroidTextInputShadowNode::ConcreteState>(
-      shadowNode.getState());
+      const typename ShadowNodeT::ConcreteState>(shadowNode.getState());
   state->updateState(
       [attributedString, reactTreeAttributedString](
           const TextInputState& oldData)
@@ -102,13 +101,10 @@ bool setFantomTextInputText(
   return true;
 }
 
-std::optional<std::string> getFantomTextInputText(
+template <typename ShadowNodeT>
+std::string textInputText(
+    const ShadowNodeT* textInputShadowNode,
     const ShadowNode& shadowNode) {
-  const auto* textInputShadowNode =
-      dynamic_cast<const FantomAndroidTextInputShadowNode*>(&shadowNode);
-  if (textInputShadowNode == nullptr) {
-    return std::nullopt;
-  }
   if (shadowNode.getState() != nullptr &&
       shadowNode.getState()->getRevision() != State::initialRevisionValue) {
     const auto& box = textInputShadowNode->getStateData().attributedStringBox;
@@ -117,6 +113,33 @@ std::optional<std::string> getFantomTextInputText(
     }
   }
   return textInputShadowNode->getConcreteProps().text;
+}
+
+} // namespace
+
+bool setFantomTextInputText(
+    const ShadowNode& shadowNode,
+    const std::string& text) {
+  if (const auto* android =
+          dynamic_cast<const FantomAndroidTextInputShadowNode*>(&shadowNode)) {
+    return setTextInputText(android, shadowNode, text);
+  }
+  if (const auto* ios = dynamic_cast<const TextInputShadowNode*>(&shadowNode)) {
+    return setTextInputText(ios, shadowNode, text);
+  }
+  return false;
+}
+
+std::optional<std::string> getFantomTextInputText(
+    const ShadowNode& shadowNode) {
+  if (const auto* android =
+          dynamic_cast<const FantomAndroidTextInputShadowNode*>(&shadowNode)) {
+    return textInputText(android, shadowNode);
+  }
+  if (const auto* ios = dynamic_cast<const TextInputShadowNode*>(&shadowNode)) {
+    return textInputText(ios, shadowNode);
+  }
+  return std::nullopt;
 }
 
 } // namespace facebook::react

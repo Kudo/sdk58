@@ -59,4 +59,48 @@ describe('TextInput and Switch', () => {
     expect(swOff.value).toBe(false);
     expect(swSized.frame.width).toBe(80);
   });
+
+  // iOS bundles render RCTSinglelineTextInputView / RCTMultilineTextInputView
+  // (Fabric: TextInput) and RCTSwitch (Fabric: Switch). The Fantom runner
+  // bundles for Android, so the iOS native components are rendered directly
+  // through their JS NativeComponent modules.
+  it('renders the iOS TextInput and Switch native components', () => {
+    const SinglelineTextInput =
+      require('react-native/Libraries/Components/TextInput/RCTSingelineTextInputNativeComponent').default;
+    const MultilineTextInput =
+      require('react-native/Libraries/Components/TextInput/RCTMultilineTextInputNativeComponent').default;
+    const IOSSwitch = require('react-native/src/private/components/switch/specs/SwitchNativeComponent').default;
+    const root = Fantom.createRoot({viewportWidth: 300, viewportHeight: 800});
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{alignItems: 'flex-start'}}>
+          <SinglelineTextInput placeholder="Email" text="a@b.c" style={{fontSize: 16}} />
+          <SinglelineTextInput placeholder="Password" secureTextEntry style={{fontSize: 16}} />
+          <MultilineTextInput multiline text={'line one\nline two\nline three'} style={{fontSize: 16, width: 200}} />
+          <SinglelineTextInput editable={false} text="read only" />
+          <IOSSwitch value />
+          <IOSSwitch value={false} disabled />
+        </View>,
+      );
+    });
+    const tree = getA11yTree(root);
+    console.log('IOS_INPUTS ' + JSON.stringify(strip(tree.children[0]).children));
+    const [email, password, multi, readOnly, sw, swOff] = tree.children[0].children;
+    expect(email.type).toBe('TextInput');
+    expect(email.text).toBe('a@b.c');
+    expect(email.placeholder).toBe('Email');
+    expect(email.frame.height).toBeGreaterThan(15);
+    expect(email.frame.width).toBeGreaterThan(0);
+    expect(password.secureTextEntry).toBe(true);
+    expect(multi.multiline).toBe(true);
+    expect(multi.frame.height).toBeGreaterThan(email.frame.height * 2);
+    expect(readOnly.editable).toBe(false);
+    expect(sw.type).toBe('Switch');
+    expect(sw.value).toBe(true);
+    // Pixel-grid rounding at a fractional y: 30.99999.
+    expect(sw.frame.width).toBeCloseTo(51, 2);
+    expect(sw.frame.height).toBeCloseTo(31, 2);
+    expect(swOff.value).toBe(false);
+    expect(swOff.disabled).toBe(true);
+  });
 });
