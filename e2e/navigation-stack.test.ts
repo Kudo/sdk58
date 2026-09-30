@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
 import {cliJson, E2E_PRESETS, findAll, hostSkip, ROOT} from './helpers.ts';
@@ -12,7 +12,8 @@ const byType = (root: TreeNode, type: string) => findAll(root, n => n.type === t
 const byTestID = (root: TreeNode, testID: string) => findAll(root, n => n.testID === testID)[0];
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] run examples/navigation-stack/actions.json`, {skip: hostSkip, timeout: 180_000}, t => {
+  test(`[${preset.name}] run examples/navigation-stack/actions.json`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     const result = cliJson<RunResult>(['run', APP, '--script', SCRIPT], preset);
     for (const step of result.steps) {
       assert.equal(step.error, undefined, `step ${step.index} failed: ${JSON.stringify(step.error)}`);
@@ -24,11 +25,9 @@ for (const preset of E2E_PRESETS) {
     const firstScreen = byType(home, 'RNSScreen')[0];
     if (firstScreen == null || firstScreen.box.width === 0) {
       t.skip('host lacks react-native-screens support (RNSScreen has no size)');
-      return;
     }
     if (!byType(home, 'RNSScreenStackHeaderConfig').some(h => h.style.title === 'Home')) {
       t.skip('host lacks react-native-screens support (RNSScreenStackHeaderConfig has no title)');
-      return;
     }
 
     // details: two screens in the stack; the top one fills the stack.

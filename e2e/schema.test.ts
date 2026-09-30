@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import {Ajv} from 'ajv';
 
@@ -12,7 +12,8 @@ const schema = (name: string) =>
   ajv.compile(JSON.parse(fs.readFileSync(path.join(ROOT, 'schema', `${name}.json`), 'utf8')));
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] real host output validates against schema/*.json (every example)`, {skip: hostSkip, timeout: 600_000}, () => {
+  test(`[${preset.name}] real host output validates against schema/*.json (every example)`, {timeout: 600_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     const renderResult = schema('render-result');
     const runResult = schema('run-result');
     const checkResult = schema('check-result');

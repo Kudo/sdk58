@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test, type TestContext} from 'node:test';
+import {test, type TestContext} from 'vitest';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
 import {cliJson, E2E_PRESETS, findAll, hostSkip, isIOS, type Preset, ROOT} from './helpers.ts';
@@ -27,13 +27,13 @@ const shape = (n: TreeNode): unknown =>
  *   Hosts (the other kind keeps the fake layout until its engine lands).
  * Box assertions need the engine of the screen's kind.
  */
-function gates(result: RunResult, t: {diagnostic: (m: string) => void}, kind: 'swiftUI' | 'compose') {
+function gates(result: RunResult, t: TestContext, kind: 'swiftUI' | 'compose') {
   const caps = new Set(result.capabilities);
   const modifierEvents = caps.has('expoModifierEvents');
   const engine = kind === 'swiftUI' ? 'expoUI.swiftUILayout' : 'expoUI.composeLayout';
   const realLayout = modifierEvents && caps.has(engine);
-  if (!modifierEvents) t.diagnostic('host without expoModifierEvents (step 1): modifier callbacks and frames not checked');
-  else if (!realLayout) t.diagnostic(`no ${engine}: box assertions skipped`);
+  if (!modifierEvents) t.annotate('host without expoModifierEvents (step 1): modifier callbacks and frames not checked');
+  else if (!realLayout) t.annotate(`no ${engine}: box assertions skipped`);
   return {modifierEvents, realLayout};
 }
 
@@ -152,11 +152,11 @@ for (const preset of E2E_PRESETS) {
       ];
   for (const [file, kind] of cases) {
     const title = kind === 'compose' ? 'universal @expo/ui (Compose views)' : '@expo/ui/swift-ui (SwiftUI views)';
-    test(`[${preset.name}] expo-ui ${file}: ${title}`, {skip: hostSkip, timeout: 180_000}, t => {
+    test(`[${preset.name}] expo-ui ${file}: ${title}`, {timeout: 180_000}, t => {
+      if (hostSkip) t.skip(hostSkip);
       const result = run(file, preset);
       if (!result.capabilities.includes('expoUI')) {
         t.skip('host has no expoUI capability');
-        return;
       }
       if (kind === 'compose') checkCompose(result, t);
       else checkSwiftUI(result, t);

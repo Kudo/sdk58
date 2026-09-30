@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import type {RenderResult} from '../src/schema.ts';
 import {cli, cliJson, E2E_PRESETS, findAll, get, hostSkip, isIOS, ROOT} from './helpers.ts';
@@ -8,7 +8,8 @@ import {cli, cliJson, E2E_PRESETS, findAll, get, hostSkip, isIOS, ROOT} from './
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] render examples/basic/App.tsx`, {skip: hostSkip, timeout: 180_000}, () => {
+  test(`[${preset.name}] render examples/basic/App.tsx`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     const result = cliJson<RenderResult>(['render', APP], preset);
     const {width, height} = preset;
     assert.deepEqual(result.viewport, {width, height});
@@ -60,7 +61,8 @@ for (const preset of E2E_PRESETS) {
 }
 
 // A preset outside the matrix (tablet): the platform and viewport come from it.
-test('[android-tablet] render examples/basic/App.tsx --select role=button', {skip: hostSkip, timeout: 180_000}, () => {
+test('[android-tablet] render examples/basic/App.tsx --select role=button', {timeout: 180_000}, t => {
+  if (hostSkip) t.skip(hostSkip);
   const tablet = cli(['render', APP, '--format', 'text', '--select', 'role=button'], {name: 'android-tablet'} as never);
   assert.equal(tablet.status, 0, tablet.stderr);
   assert.match(tablet.stdout.trim(), /^submit View #submit role=button "Submit" \{24,[\d.]+,752x48\}$/);

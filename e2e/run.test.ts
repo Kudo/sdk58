@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import type {RunResult} from '../src/schema.ts';
 import {cliJson, E2E_PRESETS, get, hostSkip, ROOT} from './helpers.ts';
@@ -9,7 +9,8 @@ const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 const SCRIPT = path.join(ROOT, 'examples', 'basic', 'actions.json');
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] run examples/basic/actions.json`, {skip: hostSkip, timeout: 180_000}, () => {
+  test(`[${preset.name}] run examples/basic/actions.json`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     const result = cliJson<RunResult>(['run', APP, '--script', SCRIPT], preset);
 
     assert.deepEqual(

@@ -58,7 +58,7 @@
     "typecheck": "tsc --noEmit",
     "schema": "node --import tsx src/genSchema.ts",
     "test": "node --import tsx --test test/*.test.ts",
-    "test:e2e": "node --import tsx --test e2e/*.test.ts",
+    "test:e2e": "vitest run",
     "check": "tsc --noEmit && bun run schema --check && bun run test && bun run test:e2e",
     "build": "tsc -p tsconfig.build.json",
     "prepack": "bun run build && bun run schema --check"
@@ -91,6 +91,8 @@
     "react-native-worklets": "0.13.0",
     "ts-json-schema-generator": "^2.9.0",
     "tsx": "^4.23.15",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vite": "^8",
+    "vitest": "^5.0.3"
   }
 }

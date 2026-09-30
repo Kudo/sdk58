@@ -3,7 +3,7 @@ import {execFileSync, spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
 /**
@@ -34,7 +34,8 @@ function run(cmd: string, args: string[], cwd: string, env: Record<string, strin
   return proc;
 }
 
-test('npm pack both packages, install into a scratch Expo project, npx rn-a11y-tree render', {skip, timeout: 900_000}, t => {
+test('npm pack both packages, install into a scratch Expo project, npx rn-a11y-tree render', {timeout: 900_000}, t => {
+  if (skip) t.skip(skip);
   const work = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-pkgtest-')));
   try {
     // rn-a11y-host: a copy of the package directory, packed with the built host.
@@ -52,7 +53,7 @@ test('npm pack both packages, install into a scratch Expo project, npx rn-a11y-t
     run('npm', ['pack', '--pack-destination', tarballs], ROOT);
     const files = fs.readdirSync(tarballs).sort();
     assert.deepEqual(files.map(f => f.replace(/-\d+\.\d+\.\d+.*\.tgz$/, '')), ['react-native-a11y-tree', 'rn-a11y-host']);
-    for (const f of files) t.diagnostic(`${f}: ${fs.statSync(path.join(tarballs, f)).size} bytes`);
+    for (const f of files) t.annotate(`${f}: ${fs.statSync(path.join(tarballs, f)).size} bytes`);
 
     const listing = run('tar', ['-tzf', path.join(tarballs, files[0])], work).stdout;
     assert.match(listing, /package\/dist\/cli\.js/);

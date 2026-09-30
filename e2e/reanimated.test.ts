@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
 import {cli, E2E_PRESETS, get, hostSkip, ROOT} from './helpers.ts';
@@ -16,13 +16,13 @@ const NO_REANIMATED =
   /__workletsModuleProxy|WorkletsModule|ReanimatedModule|NativeWorklets|installUnpackers|loadUnpackersWith|Worklets|Reanimated/;
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] run examples/reanimated/actions.json`, {skip: hostSkip, timeout: 180_000}, t => {
+  test(`[${preset.name}] run examples/reanimated/actions.json`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     const proc = cli(['run', APP, '--script', SCRIPT], preset);
     if (proc.status !== 0) {
       if (NO_REANIMATED.test(proc.stderr)) {
         const first = proc.stderr.split('\n').find(l => l.startsWith('rn-a11y-tree:')) ?? '';
         t.skip(`host lacks reanimated support (${first.replace(/^rn-a11y-tree: /, '')})`);
-        return;
       }
       assert.fail(`CLI failed:\n${proc.stderr}`);
     }
@@ -31,7 +31,6 @@ for (const preset of E2E_PRESETS) {
     const errorText = (e: unknown) => (typeof e === 'string' ? e : ((e as {message?: string})?.message ?? ''));
     if (stepErrors.some(s => NO_REANIMATED.test(errorText(s.error)))) {
       t.skip(`host lacks reanimated support (${errorText(stepErrors[0].error)})`);
-      return;
     }
     assert.deepEqual(stepErrors, []);
     const s = result.snapshots;
@@ -56,7 +55,7 @@ for (const preset of E2E_PRESETS) {
     if (result.capabilities.includes('getA11yTree.mounted')) {
       assert.ok(opacity(get(s['fade-start'], 'fade')) < 1, 'fade is fully opaque at fade-start');
     } else {
-      t.diagnostic('fade-start opacity not checked: host lacks getA11yTree.mounted');
+      t.annotate('fade-start opacity not checked: host lacks getA11yTree.mounted');
     }
     assert.equal(opacity(get(s['fade-end'], 'fade')), 1);
 

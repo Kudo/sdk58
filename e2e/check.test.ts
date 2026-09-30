@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import type {CheckResult} from '../src/check.ts';
 import {cli, E2E_PRESETS, hostSkip, type Preset, ROOT} from './helpers.ts';
@@ -13,7 +13,8 @@ function check(args: string[], preset: Preset) {
 }
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] check examples/basic with rules-fail.json and rules-pass.json`, {skip: hostSkip, timeout: 180_000}, () => {
+  test(`[${preset.name}] check examples/basic with rules-fail.json and rules-pass.json`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     const fail = check(['--rules', path.join(EXAMPLE, 'rules-fail.json')], preset);
     assert.equal(fail.status, 2, fail.stderr);
     const failed = JSON.parse(fail.stdout) as CheckResult;

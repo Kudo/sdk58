@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import type {RenderResult} from '../src/schema.ts';
 import {cliJson, E2E_PRESETS, get, hostCapabilities, hostSkip, ROOT} from './helpers.ts';
@@ -8,10 +8,10 @@ import {cliJson, E2E_PRESETS, get, hostCapabilities, hostSkip, ROOT} from './hel
 const APP = path.join(ROOT, 'examples', 'dimensions', 'App.tsx');
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] Dimensions and PixelRatio follow the preset (examples/dimensions)`, {skip: hostSkip, timeout: 180_000}, t => {
+  test(`[${preset.name}] Dimensions and PixelRatio follow the preset (examples/dimensions)`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     if (!hostCapabilities(preset).includes('deviceMetrics')) {
       t.skip('host lacks deviceMetrics (NativeFantom.setDeviceMetrics)');
-      return;
     }
     const {width, height, scale, fontScale} = preset;
     const result = cliJson<RenderResult>(['render', APP], preset);

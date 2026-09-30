@@ -2,14 +2,15 @@ import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import path from 'node:path';
 import readline from 'node:readline';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import {CLI, E2E_PRESETS, find, hostBin, hostSkip, ROOT} from './helpers.ts';
 
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] session: start, tap submit, tree shows Submitted, quit`, {skip: hostSkip, timeout: 180_000}, async () => {
+  test(`[${preset.name}] session: start, tap submit, tree shows Submitted, quit`, {timeout: 180_000}, async t => {
+    if (hostSkip) t.skip(hostSkip);
     const child = spawn(process.execPath, [CLI, 'session', APP, '--preset', preset.name], {
       cwd: ROOT,
       env: {...process.env, RN_A11Y_HOST_BIN: hostBin},

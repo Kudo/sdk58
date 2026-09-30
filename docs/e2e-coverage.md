@@ -66,7 +66,7 @@ Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 
 ## `e2e/expo-ui.test.ts` — `examples/expo-ui/actions.json`, `run`
 
-Actions: tap `go`, tap `remember`, tap `greeting`, snapshot. Capability gating: modifier callbacks need `expoModifierEvents`; boxes need `expoModifierEvents` and the engine of the screen's kind (`expoUI.composeLayout` for `App.tsx`, `expoUI.swiftUILayout` for `SwiftUIScreen.tsx`); the test prints a diagnostic when it skips them. Skipped without `expoUI`.
+Actions: tap `go`, tap `remember`, tap `greeting`, snapshot. Capability gating: modifier callbacks need `expoModifierEvents`; boxes need `expoModifierEvents` and the engine of the screen's kind (`expoUI.composeLayout` for `App.tsx`, `expoUI.swiftUILayout` for `SwiftUIScreen.tsx`); the test adds an annotation when it skips them. Skipped without `expoUI`.
 
 - `App.tsx` (universal `@expo/ui`, `--platform android`): Host tree is `ExpoUI.HostView > ExpoUI.ColumnView > [ExpoUI.TextView, ExpoUI.Button > ExpoUI.TextView, ExpoUI.RowView > [ExpoUI.TextView, ExpoUI.SwitchView]]`; Host `layout: emulated`; descendants `emulated` or `placeholder` (both accepted; with `emulatedBy` on the Host it must be `compose`, and with `expoUI.composeLayout` every descendant must be `emulated`).
   - `go`: role `button`, name "Go", `expo.modifiers` `[{$type: testID}]`; `greeting`: role `text`, name/text "Hello", a `clickable` modifier; `remember`: role `switch`.
@@ -152,5 +152,5 @@ without Reanimated).
 - No step has an error.
 - `box` width 50 at `start`, strictly between 50 and 250 at `mid` (200 ms into a 400 ms `withTiming`; 150 today), 250 at `end` (±0.5).
 - `slide`: the layout `box` does not move; `visualBox.x - box.x` ≈ 120 (±1) after `withSpring(120)` and 1000 ms (`style.transform[12]` = 120).
-- `fade`: `effectiveOpacity` < 1 at `fade-start` (50 ms into `FadeIn.duration(300)`; mounted opacity ≈ 0.056 today) — checked when `capabilities` has `getA11yTree.mounted`, otherwise logged as a diagnostic — and 1 at `fade-end`.
+- `fade`: `effectiveOpacity` < 1 at `fade-start` (50 ms into `FadeIn.duration(300)`; mounted opacity ≈ 0.056 today) — checked when `capabilities` has `getA11yTree.mounted`, otherwise logged as an annotation — and 1 at `fade-end`.
 - `label` = "from-ui" (`runOnUI` → `runOnJS` roundtrip).

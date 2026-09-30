@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
 import {cli, E2E_PRESETS, get, hostSkip, isIOS, ROOT} from './helpers.ts';
@@ -14,7 +14,8 @@ const SCRIPT = path.join(ROOT, 'examples', 'gestures', 'actions.json');
 const TOUCH_SLOP = 15;
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] run examples/gestures/actions.json`, {skip: hostSkip, timeout: 180_000}, t => {
+  test(`[${preset.name}] run examples/gestures/actions.json`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     const proc = cli(['run', APP, '--script', SCRIPT], preset);
     assert.equal(proc.status, 0, `CLI failed:\n${proc.stderr}`);
     const result = JSON.parse(proc.stdout) as RunResult;
@@ -27,7 +28,6 @@ for (const preset of E2E_PRESETS) {
     assert.ok(rootView, `the root has no ${rootType} child`);
     if (rootView.box.width === 0) {
       t.skip('host lacks react-native-gesture-handler support (RNGestureHandlerRootView has no size)');
-      return;
     }
 
     for (const step of result.steps) {

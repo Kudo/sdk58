@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {test} from 'node:test';
+import {test} from 'vitest';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
 import {cliJson, E2E_PRESETS, find, hostSkip, ROOT} from './helpers.ts';
@@ -13,7 +13,8 @@ function refs(node: TreeNode): string[] {
 }
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] run examples/scrolling/actions.json`, {skip: hostSkip, timeout: 180_000}, () => {
+  test(`[${preset.name}] run examples/scrolling/actions.json`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
     const result = cliJson<RunResult>(['run', APP, '--script', SCRIPT], preset);
     for (const step of result.steps) {
       assert.equal(step.error, undefined, `step ${step.index} failed: ${JSON.stringify(step.error)}`);
