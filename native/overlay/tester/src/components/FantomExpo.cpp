@@ -25,6 +25,10 @@
 #ifdef FANTOM_EXPO_UI_LAYOUT_ENGINE
 #include "FantomExpoText.h"
 #include "expoui/layout/Layout.h"
+#ifdef FANTOM_EXPO_UI_COMPOSE_ENGINE
+#include "FantomComposeText.h"
+#include "expoui/compose/ComposeLayout.h"
+#endif
 #endif
 #endif
 
@@ -156,33 +160,6 @@ void registerExpoViewComponentDescriptors(
 
 namespace {
 
-// Fake layout (see FantomExpo.h). Returns the height of `node`'s rows.
-Float fakeLayoutChildren(
-    const ShadowNode& node,
-    Float width,
-    std::unordered_map<Tag, Rect>& frames) {
-  constexpr Float kRowHeight = 40;
-  Float y = 0;
-  for (const auto& child : node.getChildren()) {
-    if (!isExpoView(*child)) {
-      continue;
-    }
-    Size size;
-    if (child->getComponentName() == kExpoUIRNHostViewName) {
-      const auto* layoutable =
-          dynamic_cast<const LayoutableShadowNode*>(child.get());
-      size = layoutable != nullptr ? layoutable->getLayoutMetrics().frame.size
-                                   : Size{};
-    } else {
-      auto rows = fakeLayoutChildren(*child, width, frames);
-      size = Size{width, rows > 0 ? rows : kRowHeight};
-    }
-    frames[child->getTag()] = Rect{Point{0, y}, size};
-    y += size.height;
-  }
-  return y;
-}
-
 #ifdef FANTOM_EXPO_UI_LAYOUT_ENGINE
 
 namespace layout = expoui::layout;
@@ -239,7 +216,7 @@ bool isSwiftUISubtree(const ShadowNode& node) {
 // the @expo/ui components: VStackView -> VStack, ScrollViewComponent ->
 // ScrollView, ...). Unknown names keep their name minus "View"; the engine
 // reports them as unsupported and gives them no frame.
-std::string engineType(std::string_view view) {
+std::string swiftUIEngineType(std::string_view view) {
   static const std::unordered_map<std::string_view, std::string_view> names = {
       {"VStackView", "VStack"}, {"HStackView", "HStack"}, {"ZStackView", "ZStack"},
       {"TextView", "Text"}, {"Button", "Button"}, {"ToggleView", "Toggle"},
@@ -259,6 +236,31 @@ std::string engineType(std::string_view view) {
   }
   return name;
 }
+
+// The Compose engine's component name for an @expo/ui Android view name
+// (ExpoUIModule.kt: ColumnView -> Column, SwitchView -> Switch, ...). The
+// button names (Button, OutlinedButton, TextButton, ...) are already the
+// component names. Unknown names keep their name minus "View"; the engine
+// reports them as unsupported and gives them no frame.
+std::string composeEngineType(std::string_view view) {
+  static const std::unordered_map<std::string_view, std::string_view> names = {
+      {"ColumnView", "Column"}, {"RowView", "Row"}, {"BoxView", "Box"}, {"FlowRowView", "FlowRow"},
+      {"SpacerView", "Spacer"}, {"TextView", "Text"}, {"SwitchView", "Switch"}, {"CheckboxView", "Checkbox"},
+      {"SliderView", "Slider"}, {"TextFieldView", "TextField"}, {"IconView", "Icon"}, {"SlotView", "Slot"},
+      {"RNHostView", "RNHost"},
+  };
+  auto it = names.find(view);
+  if (it != names.end()) {
+    return std::string(it->second);
+  }
+  std::string name(view);
+  if (name.size() > 4 && name.compare(name.size() - 4, 4, "View") == 0) {
+    name.resize(name.size() - 4);
+  }
+  return name;
+}
+
+using EngineTypeFn = std::string (*)(std::string_view);
 
 layout::Value toValue(const folly::dynamic& value) {
   switch (value.type()) {
@@ -298,6 +300,7 @@ layout::Value toValue(const folly::dynamic& value) {
 void buildEngineNode(
     const ShadowNode& shadowNode,
     const std::string& path,
+    EngineTypeFn engineType,
     layout::Node& out,
     std::unordered_map<std::string, Tag>& paths) {
   paths[path] = shadowNode.getTag();
@@ -329,7 +332,7 @@ void buildEngineNode(
       continue;
     }
     layout::Node node;
-    buildEngineNode(*child, path + "/" + std::to_string(out.children.size()), node, paths);
+    buildEngineNode(*child, path + "/" + std::to_string(out.children.size()), engineType, node, paths);
     out.children.push_back(std::move(node));
   }
 }
@@ -406,15 +409,14 @@ class HostTextMeasurer final : public layout::TextMeasurer {
   Float scale_;
 };
 
-ExpoLayoutResult layoutSwiftUIHost(const ShadowNode& host, Size proposal) {
-  ExpoLayoutResult result;
-  const auto* props = expoProps(host);
+Float pointScaleFactorOf(const ShadowNode& host) {
   const auto* layoutable = dynamic_cast<const LayoutableShadowNode*>(&host);
   Float scale = layoutable != nullptr ? layoutable->getLayoutMetrics().pointScaleFactor : 3;
-  if (!(scale > 0)) {
-    scale = 3;
-  }
+  return scale > 0 ? scale : 3;
+}
 
+layout::HostSpec hostSpecOf(const ShadowNode& host, Size proposal) {
+  const auto* props = expoProps(host);
   layout::HostSpec spec;
   spec.matchContentsHorizontal = props != nullptr && propIsTrue(*props, "matchContentsHorizontal");
   spec.matchContentsVertical = props != nullptr && propIsTrue(*props, "matchContentsVertical");
@@ -427,32 +429,42 @@ ExpoLayoutResult layoutSwiftUIHost(const ShadowNode& host, Size proposal) {
   // filling frame; 0 keeps the content's own size on the matchContents axes.
   spec.width = std::isfinite(proposal.width) ? proposal.width : 0;
   spec.height = std::isfinite(proposal.height) ? proposal.height : 0;
+  return spec;
+}
 
-  // The Host's children are the content of a top-leading ZStack; a Group root
-  // (path "0") holds them.
+// The Host's Expo view children under a root node of type `rootType`, with
+// paths "0/<index>".
+layout::Node engineRootOf(
+    const ShadowNode& host,
+    const char* rootType,
+    EngineTypeFn engineType,
+    std::unordered_map<std::string, Tag>& paths) {
   layout::Node root;
-  root.type = "Group";
-  std::unordered_map<std::string, Tag> paths;
+  root.type = rootType;
   for (const auto& child : host.getChildren()) {
     if (!isExpoView(*child)) {
       continue;
     }
     layout::Node node;
-    buildEngineNode(*child, "0/" + std::to_string(root.children.size()), node, paths);
+    buildEngineNode(*child, "0/" + std::to_string(root.children.size()), engineType, node, paths);
     root.children.push_back(std::move(node));
   }
+  return root;
+}
 
-  auto metrics = gExpoUIMacOS.load() ? layout::ControlMetrics::macos() : layout::ControlMetrics::ios();
-  metrics.pixelScale = scale;
-  HostTextMeasurer measurer(scale);
-  auto layoutResult = layout::layout(spec, root, measurer, metrics);
+/*
+ * Engine result -> hook result. Engine frames are relative to the Host; the
+ * hook's are relative to the parent. Nodes without an engine frame (slots,
+ * nested Text spans, Picker options, unsupported views) get the union of
+ * their children's frames, or an empty frame at their parent's origin.
+ */
+ExpoLayoutResult hookResultOf(
+    const ShadowNode& host,
+    const layout::LayoutResult& layoutResult,
+    const std::unordered_map<std::string, Tag>& paths) {
+  ExpoLayoutResult result;
   result.contentSize = Size{
       static_cast<Float>(layoutResult.host.width), static_cast<Float>(layoutResult.host.height)};
-
-  // Engine frames are relative to the Host; the hook's are relative to the
-  // parent. Nodes without an engine frame (slots, nested Text spans, Picker
-  // options, unsupported views) get the union of their children's frames, or
-  // an empty frame at their parent's origin.
   std::unordered_map<Tag, Rect> absolute;
   for (const auto& node : layoutResult.nodes) {
     auto it = paths.find(node.path);
@@ -513,6 +525,37 @@ ExpoLayoutResult layoutSwiftUIHost(const ShadowNode& host, Size proposal) {
   relative(host, Point{0, 0});
   return result;
 }
+
+ExpoLayoutResult layoutSwiftUIHost(const ShadowNode& host, Size proposal) {
+  Float scale = pointScaleFactorOf(host);
+  // The Host's children are the content of a top-leading ZStack; a Group root
+  // (path "0") holds them.
+  std::unordered_map<std::string, Tag> paths;
+  layout::Node root = engineRootOf(host, "Group", &swiftUIEngineType, paths);
+  auto metrics = gExpoUIMacOS.load() ? layout::ControlMetrics::macos() : layout::ControlMetrics::ios();
+  metrics.pixelScale = scale;
+  HostTextMeasurer measurer(scale);
+  return hookResultOf(host, layout::layout(hostSpecOf(host, proposal), root, measurer, metrics), paths);
+}
+
+#ifdef FANTOM_EXPO_UI_COMPOSE_ENGINE
+/*
+ * Compose Host: the Compose engine (tester/src/expoui/compose) in dp with
+ * density = the point scale factor (px = round(dp * density), as on Android),
+ * font scale 1 and the 48 dp touch targets; text in the embedded Roboto
+ * (FantomComposeText).
+ */
+ExpoLayoutResult layoutComposeHost(const ShadowNode& host, Size proposal) {
+  std::unordered_map<std::string, Tag> paths;
+  layout::Node root = engineRootOf(host, "Host", &composeEngineType, paths);
+  expoui::compose::ControlMetrics metrics;
+  metrics.density = pointScaleFactorOf(host);
+  metrics.fontScale = 1;
+  metrics.touchTarget = true;
+  static FantomComposeTextMeasurer measurer;
+  return hookResultOf(host, expoui::compose::layout(hostSpecOf(host, proposal), root, measurer, metrics), paths);
+}
+#endif
 #endif
 
 } // namespace
@@ -520,17 +563,18 @@ ExpoLayoutResult layoutSwiftUIHost(const ShadowNode& host, Size proposal) {
 ExpoLayoutResult layoutExpoHostSubtree(
     const ShadowNode& hostShadowNode,
     Size proposal) {
-  ExpoLayoutResult result;
 #ifdef FANTOM_EXPO_UI_LAYOUT_ENGINE
   if (isSwiftUISubtree(hostShadowNode)) {
     return layoutSwiftUIHost(hostShadowNode, proposal);
   }
-  // Compose Hosts: the Compose engine is not wired in yet; the fake layout
-  // below keeps them usable.
+#ifdef FANTOM_EXPO_UI_COMPOSE_ENGINE
+  return layoutComposeHost(hostShadowNode, proposal);
 #endif
-  auto height = fakeLayoutChildren(hostShadowNode, proposal.width, result.frames);
-  result.contentSize = Size{proposal.width, height};
-  return result;
+#endif
+  // No engine for this Host: the Expo views keep their Yoga frames.
+  (void)hostShadowNode;
+  (void)proposal;
+  return ExpoLayoutResult{};
 }
 
 void setExpoUIPlatform(const std::string& platform) {

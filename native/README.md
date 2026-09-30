@@ -508,12 +508,43 @@ Native:
     views, nested Text spans, Picker options, unsupported views) get the
     union of their children's frames, or an empty frame at the parent's
     origin. The engine's `host` size is the `matchContents` content size.
-  Compose Hosts (any Compose-only name such as `ColumnView`, `RowView`,
-  `SwitchView`) keep the fake layout until the Compose engine is wired in:
-  every child is a row of the proposal's width stacked vertically; a view
-  without Expo view children is 40 high, a container is as high as its rows;
-  an `RNHostView` keeps its measured size. Without the engine every Host
-  uses it and `getCapabilities()` has `"expoUI.fakeLayout"`.
+  Any other Host (a Compose-only name such as `ColumnView`, `RowView`,
+  `SwitchView`) goes through the Compose engine (`tester/src/expoui/compose/`,
+  `FANTOM_EXPO_UI_COMPOSE_ENGINE`, built when the embedded fonts are;
+  `getCapabilities()` has `"expoUI.composeLayout"`; checked against real
+  Compose Desktop by `tools/compose-layout-test`):
+  - Input: as above with the Android names (`ColumnView` → `Column`,
+    `RowView` → `Row`, `BoxView` → `Box`, `FlowRowView` → `FlowRow`,
+    `SpacerView` → `Spacer`, `TextView` → `Text`, `SwitchView` → `Switch`,
+    `CheckboxView` → `Checkbox`, `SliderView` → `Slider`, `TextFieldView` →
+    `TextField`, `IconView` → `Icon`, `SlotView` → `Slot` (its `slotName`),
+    `RNHostView` → `RNHost`; the button names stay). The root is a `Host`
+    node whose children are the Host's children (a Compose Host can have
+    several). A Text with `spans` (nested Text) is measured as the
+    concatenated text without the span styles (reported unsupported).
+  - Metrics: `compose::ControlMetrics` (Material 3, observed with
+    compose-ref) with density = the Host's `pointScaleFactor` (px =
+    `round(dp * density)`, as on Android), font scale 1, 48 dp touch targets.
+  - Text: `FantomComposeText` (CoreText with the embedded Roboto, see below):
+    widths and line counts; the engine computes line heights like Skia.
+  - Output: converted as above.
+  A Host with only shared names (for example a single `TextView`) goes to the
+  SwiftUI engine. Without the engines the Expo views keep their Yoga frames
+  (empty hook result).
+- Embedded Roboto (`native/fonts/roboto`: Roboto 2.138 Regular, Medium,
+  Bold, Italic, Apache 2.0): `tester/cmake/embed-files.cmake` gzips the TTFs
+  at build time into a generated source of byte arrays (the
+  `fantom_embedded_fonts` library, 834 KB; linked into the TextLayoutManager
+  target with `FANTOM_WITH_EMBEDDED_FONTS`), and
+  `platform/macos/EmbeddedFonts.mm` inflates them (libcompression) and
+  registers them for the process (`CTFontManagerRegisterGraphicsFont`) on
+  first use: the first `fontFamily: "Roboto…"` text or the first Compose
+  Host (about 6 ms). `fontFamily: "Roboto"` in React Native text then
+  resolves to Android's font (`tests/FantomRoboto-itest.js`: "Hello world"
+  at 14 pt is 70.33 wide, 72.67 in the system font). Other weights map to
+  the nearest face (100-450 Regular, 500 Medium, 600-900 Bold); every italic
+  uses Italic. `FANTOM_FONTS_DIR` overrides the fonts directory (default
+  `<node_modules>/../native/fonts`).
 - Host `matchContents` (`matchContentsHorizontal`/`matchContentsVertical`
   props): after every mount (and on `updateNativeStates`) the host dispatches
   `ExpoViewState::withStyleDimensions` with the content size of
@@ -593,7 +624,16 @@ No resolver alias is needed: `expo` (58.0.0) resolves normally, and the
 package `exports`.
 
 `tests/FantomExpoUI-itest.js` (needs `expo`, `@expo/ui` in the React Native
-checkout): universal `<Host matchContents><Column spacing={8}><Text>Hello</Text>
+checkout; CI does both steps):
+
+```sh
+cp native/tools/expo-view-configs/out/viewConfigs.json \
+  third_party/react-native/packages/react-native/Libraries/Components/View/__tests__/fantomExpoUIViewConfigs.json
+(cd third_party/react-native && corepack yarn@1.22.22 add -W --ignore-scripts --no-lockfile \
+  expo@58.0.0 expo-modules-core@58.0.9 @expo/ui@58.0.9)
+```
+
+The test: universal `<Host matchContents><Column spacing={8}><Text>Hello</Text>
 <Button label="Go"/><Switch value label="Remember"/></Column></Host>` gives
 `ExpoUI.HostView > ExpoUI.ColumnView > [ExpoUI.TextView, ExpoUI.Button >
 ExpoUI.TextView, ExpoUI.RowView > [ExpoUI.TextView, ExpoUI.SwitchView]]`;
@@ -603,13 +643,16 @@ ExpoUI.TextView, ExpoUI.RowView > [ExpoUI.TextView, ExpoUI.SwitchView]]`;
 label="Go"/><Toggle isOn label="Remember"/></VStack></Host>` gives
 `ExpoUI.HostView > ExpoUI.VStackView > [ExpoUI.TextView, ExpoUI.Button,
 ExpoUI.ToggleView]` with the Text's `accessibilityLabel`/`accessibilityHint`;
-`buttonPress` calls `onPress`. With the fake layout: the universal tree has
-Host 390x160 (`matchContents`: Text 40 + Button 40 + Row 80), Button at
-y 40; `hitTest` at the Button's center returns its Text child (path contains
-the Button); the SwiftUI Text's `onTapGesture` fires through
-`dispatchExpoModifierEvent`. An `RNHostView` with a 100x30 `Pressable`
-under a Text is placed at (0, 40), 100x30, and `hitTest` reaches the
-`Pressable`. `measureExpoText` sizes are logged.
+`buttonPress` calls `onPress`. Compose engine frames (pointScaleFactor 3,
+relative to the parent) of the universal tree: Host and Column 128.333 x
+128.333 (`matchContents` on both axes), Text "Hello" 32.333 x 16.333 (14 sp),
+Button (0, 24.333) 65.667 x 48 with its Text at (24, 16), Row (0, 80.333)
+128.333 x 48 with Text "Remember" at (0, 16) 68.333 x 16.333 and the Switch
+at (76.333, 0) 52 x 48; `hitTest` at the Button's center returns its Text
+child (path contains the Button); the SwiftUI Text's `onTapGesture` fires
+through `dispatchExpoModifierEvent`. An `RNHostView` with a 100x30
+`Pressable` under a SwiftUI Text is placed below it, 100x30, and `hitTest`
+reaches the `Pressable`. `measureExpoText` sizes are logged.
 
 ## TextInput and Switch
 
@@ -699,7 +742,8 @@ yarn fantom FantomInputs      # TextInput measurement and Switch size
 yarn fantom FantomInteraction # hitTest, by-tag events, typing, scrolling
 yarn fantom FantomScreens     # react-native-screens native stack (see Screens)
 yarn fantom FantomGestureHandler # gesture-handler detector (see Gesture handler)
-yarn fantom FantomExpoUI      # @expo/ui load, render, events (see Expo UI)
+yarn fantom FantomExpoUI      # @expo/ui load, render, events, SwiftUI/Compose frames (see Expo UI; prerequisites there)
+yarn fantom FantomRoboto      # fontFamily "Roboto" with the embedded font (see Expo UI)
 yarn fantom FantomReanimated  # reanimated/worklets (see Reanimated; needs both packages in the checkout)
 FANTOM_PRINT_OUTPUT=1 yarn fantom FantomA11yTree   # also print the raw binary stdout
 ```

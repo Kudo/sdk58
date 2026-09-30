@@ -77,14 +77,36 @@ describe('@expo/ui', () => {
     console.log('EXPO_EVENTS ' + JSON.stringify({presses, switches}));
     expect(presses).toEqual(['go']);
 
-    // Fake layout (until the SwiftUI/Compose engine lands): rows of 390x40.
+    // Compose engine (tester/src/expoui/compose, density = pointScaleFactor 3,
+    // checked against real Compose Desktop by native/tools/compose-layout-test):
+    // Host matchContents on both axes; Column spacedBy(8) of Text "Hello"
+    // (14 sp Roboto: 16.333 high), Button (58x40 minimum, 24/8 padding, 48 dp
+    // touch target) and the universal Switch's Row (fillMaxWidth,
+    // width(IntrinsicSize.Max), spacedBy(8)) of Text "Remember" (weight 1) and
+    // Switch (52x32 in a 48 dp touch target). Frames relative to the parent.
+    expect(JSON.parse(Native.getCapabilities())).toContain('expoUI.composeLayout');
     const t2 = tree(root);
-    const frames = findAll(t2, n => String(n.type).startsWith('ExpoUI.')).map(n => [n.type, n.tag, n.frame]);
+    const frames = findAll(t2, n => String(n.type).startsWith('ExpoUI.')).map(n => [n.type, n.frame]);
     console.log('EXPO_FRAMES ' + JSON.stringify(frames));
-    const host2 = findAll(t2, n => n.type === 'ExpoUI.HostView')[0];
-    expect(host2.frame.height).toBe(160);
+    const expected = [
+      ['ExpoUI.HostView', [0, 0, 128.333, 128.333]],
+      ['ExpoUI.ColumnView', [0, 0, 128.333, 128.333]],
+      ['ExpoUI.TextView', [0, 0, 32.333, 16.333]],
+      ['ExpoUI.Button', [0, 24.333, 65.667, 48]],
+      ['ExpoUI.TextView', [24, 16, 17.667, 16.333]],
+      ['ExpoUI.RowView', [0, 80.333, 128.333, 48]],
+      ['ExpoUI.TextView', [0, 16, 68.333, 16.333]],
+      ['ExpoUI.SwitchView', [76.333, 0, 52, 48]],
+    ];
+    expect(frames.map(([type]) => type)).toEqual(expected.map(([type]) => type));
+    frames.forEach(([, frame], i) => {
+      const [x, y, width, height] = expected[i][1];
+      expect(frame.x).toBeCloseTo(x, 2);
+      expect(frame.y).toBeCloseTo(y, 2);
+      expect(frame.width).toBeCloseTo(width, 2);
+      expect(frame.height).toBeCloseTo(height, 2);
+    });
     const button2 = findAll(t2, n => n.type === 'ExpoUI.Button')[0];
-    expect(button2.frame.height).toBe(40);
     const buttonBox = (() => {
       let result = null;
       function walk(node: $FlowFixMe, x: number, y: number) {

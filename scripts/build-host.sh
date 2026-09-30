@@ -24,7 +24,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RN_DIR="$ROOT/third_party/react-native"
 FANTOM_DIR="$RN_DIR/private/react-native-fantom"
-OVERLAY_DIR="$ROOT/native/overlay"
+# RN_A11Y_OVERLAY_DIR: build from another copy of native/overlay (for example
+# the git index exported with `git checkout-index`, to leave out uncommitted
+# work in the tree).
+OVERLAY_DIR="${RN_A11Y_OVERLAY_DIR:-$ROOT/native/overlay}"
 ARCH="$(uname -m)"
 DIST_DIR="$ROOT/native/dist/$ARCH"
 CMAKE_VERSION="${CMAKE_VERSION:-3.30.5}"

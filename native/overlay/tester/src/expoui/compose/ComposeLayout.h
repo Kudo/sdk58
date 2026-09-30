@@ -76,22 +76,6 @@ struct ResolvedTextStyle {
   bool trimLineHeight = true;
 };
 
-/// Optional extension of layout::TextMeasurer for what FontSpec cannot say (italic, letter
-/// spacing, numeric weight). The engine uses it when the measurer also implements it
-/// (dynamic_cast); otherwise it converts the style to a FontSpec (family "Roboto", `pointSize` =
-/// px size, named weight) and adds letter spacing to the width of each glyph itself (exact on one
-/// line; line breaks then ignore it).
-class ComposeTextMeasurer {
- public:
-  virtual ~ComposeTextMeasurer() = default;
-  /// Like TextMeasurer::measureText (px). `maxLines` 0 = unlimited. Letter spacing is added after
-  /// every glyph (Skia's behavior).
-  virtual TextMeasurement measureComposeText(const std::string& text, const ResolvedTextStyle& style,
-                                             double maxWidth, int maxLines) = 0;
-  /// ascent + descent of the font, px, not rounded.
-  virtual double composeFontHeight(const ResolvedTextStyle& style) = 0;
-};
-
 /// Everything platform-specific: density and the Material 3 sizes in dp (observed with
 /// compose-ref; CMP material3 1.10.0-alpha05, the desktop build of androidx material3 1.5.0-alpha).
 struct ControlMetrics {
@@ -122,7 +106,9 @@ struct ControlMetrics {
 };
 
 /// Lays out `root` inside an @expo/ui `Host` (HostView.kt MaybeMatchContentsLayout in an Android
-/// ComposeView). `host` is in dp. The result has the swiftui-ref / compose-ref shape
+/// ComposeView). `host` is in dp. A root of type "Host" stands for the Host itself: its children
+/// are the Host's children (paths "0/<index>"); any other root is the single child (path "0").
+/// Type "RNHost" is an RNHostView leaf with props.width / props.height (its Yoga size, dp). The result has the swiftui-ref / compose-ref shape
 /// (LayoutResult::toValue()).
 LayoutResult layout(const HostSpec& host, const Node& root, TextMeasurer& measurer, const ControlMetrics& metrics);
 

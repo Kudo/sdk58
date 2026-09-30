@@ -234,6 +234,47 @@ else()
 endif()
 set(FANTOM_NATIVE_LIBRARIES)
 
+# Roboto, the Android system font, compiled into the executable
+# (native/fonts/roboto): gzip byte arrays generated at build time by
+# cmake/embed-files.cmake, inflated and registered at startup by
+# src/platform/macos/EmbeddedFonts.mm.
+if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
+  if(NOT FANTOM_FONTS_DIR)
+    get_filename_component(FANTOM_FONTS_DIR "${FANTOM_NODE_MODULES_DIR}/../native/fonts" ABSOLUTE)
+  endif()
+  set(roboto_names fantom_roboto_regular fantom_roboto_medium fantom_roboto_bold fantom_roboto_italic)
+  set(roboto_files
+    ${FANTOM_FONTS_DIR}/roboto/Roboto-Regular.ttf
+    ${FANTOM_FONTS_DIR}/roboto/Roboto-Medium.ttf
+    ${FANTOM_FONTS_DIR}/roboto/Roboto-Bold.ttf
+    ${FANTOM_FONTS_DIR}/roboto/Roboto-Italic.ttf)
+  set(embedded_font_data ${CMAKE_CURRENT_BINARY_DIR}/generated/EmbeddedFontData.cpp)
+  add_custom_command(
+    OUTPUT ${embedded_font_data}
+    COMMAND ${CMAKE_COMMAND}
+      -DOUTPUT=${embedded_font_data}
+      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/generated/fonts
+      "-DNAMES=${roboto_names}"
+      "-DFILES=${roboto_files}"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed-files.cmake
+    DEPENDS ${roboto_files}
+      ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed-files.cmake
+      ${CMAKE_CURRENT_SOURCE_DIR}/cmake/gzip-file.cmake
+    COMMENT "Embedding Roboto"
+    VERBATIM)
+  # A library in this directory: a custom command's output is only visible to
+  # targets of the same directory, and react_renderer_textlayoutmanager is not.
+  add_library(fantom_embedded_fonts STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/macos/EmbeddedFonts.mm
+    ${embedded_font_data})
+  target_compile_options(fantom_embedded_fonts PRIVATE -std=c++20 -Wall -Werror)
+  target_link_libraries(fantom_embedded_fonts PUBLIC "-framework CoreText" "-framework Foundation" compression)
+  target_link_libraries(react_renderer_textlayoutmanager fantom_embedded_fonts)
+  target_include_directories(react_renderer_textlayoutmanager
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/macos)
+  target_compile_definitions(react_renderer_textlayoutmanager PRIVATE FANTOM_WITH_EMBEDDED_FONTS=1)
+endif()
+
 # fantom_add_native_library(<target> <package> <codegen name>
 #   SOURCE_GLOBS <globs relative to the package>...
 #   INCLUDE_DIRS <dirs relative to the package>...   (before the codegen output)
@@ -432,6 +473,18 @@ if(FANTOM_WITH_EXPO_UI)
       ${CMAKE_CURRENT_SOURCE_DIR}/src/expoui/layout/*.cpp)
   target_sources(fantom_tester PRIVATE ${FANTOM_EXPO_UI_LAYOUT_SOURCES})
   target_compile_definitions(fantom_tester PRIVATE FANTOM_EXPO_UI_LAYOUT_ENGINE=1)
+  # The Compose layout engine (STL only; src/expoui/compose) with its text
+  # adapter: CoreText and the embedded Roboto (fantom_embedded_fonts above).
+  if(TARGET fantom_embedded_fonts)
+    file(GLOB FANTOM_EXPO_UI_COMPOSE_SOURCES CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/expoui/compose/*.cpp)
+    target_sources(fantom_tester
+      PRIVATE
+        ${FANTOM_EXPO_UI_COMPOSE_SOURCES}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/components/FantomComposeText.mm)
+    target_link_libraries(fantom_tester PRIVATE fantom_embedded_fonts)
+    target_compile_definitions(fantom_tester PRIVATE FANTOM_EXPO_UI_COMPOSE_ENGINE=1)
+  endif()
 endif()
 
 foreach(library ${FANTOM_NATIVE_LIBRARIES})

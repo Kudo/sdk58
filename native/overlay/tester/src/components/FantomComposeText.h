@@ -1,9 +1,8 @@
 /*
  * Text measurement for the @expo/ui Jetpack Compose layout engine
  * (expoui/compose): CoreText with the embedded Roboto (platform/macos/
- * EmbeddedFonts.h). It implements the engine's shared layout::TextMeasurer and
- * the compose::ComposeTextMeasurer extension (italic, letter spacing, numeric
- * weight). Checked against real Compose Desktop by
+ * EmbeddedFonts.h), behind the engines' shared layout::TextMeasurer. FontSpec:
+ * pointSize in px, named weight, letterSpacing (px, tracking), italic. Checked against real Compose Desktop by
  * native/tools/compose-layout-test, which builds this file.
  */
 
@@ -15,7 +14,7 @@
 
 namespace facebook::react {
 
-class FantomComposeTextMeasurer : public expoui::layout::TextMeasurer, public expoui::compose::ComposeTextMeasurer {
+class FantomComposeTextMeasurer : public expoui::layout::TextMeasurer {
  public:
   /// Registers the embedded fonts (once per process).
   FantomComposeTextMeasurer();
@@ -24,19 +23,19 @@ class FantomComposeTextMeasurer : public expoui::layout::TextMeasurer, public ex
   /// not match Android).
   bool hasRoboto() const { return hasRoboto_; }
 
-  // expoui::layout::TextMeasurer. FontSpec: pointSize in px, weight name, design.
   expoui::layout::TextMeasurement
   measureText(const std::string &text, const expoui::layout::FontSpec &font, double maxWidth, int maxLines) override;
   double lineHeight(const expoui::layout::FontSpec &font) override;
   expoui::layout::Size measureSymbol(const std::string &name, const expoui::layout::FontSpec &font) override;
 
-  // expoui::compose::ComposeTextMeasurer
+  /// The same with the style in px; the other methods convert FontSpec to it.
   expoui::layout::TextMeasurement measureComposeText(
       const std::string &text,
       const expoui::compose::ResolvedTextStyle &style,
       double maxWidth,
-      int maxLines) override;
-  double composeFontHeight(const expoui::compose::ResolvedTextStyle &style) override;
+      int maxLines);
+  /// ascent + descent, px, not rounded.
+  double composeFontHeight(const expoui::compose::ResolvedTextStyle &style);
 
  private:
   bool hasRoboto_ = false;

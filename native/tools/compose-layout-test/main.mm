@@ -1,6 +1,6 @@
 // compose-layout: the C++ Compose engine as a CLI with compose-ref's interface.
 //
-//   build/compose-layout [--density N] [--font-scale N] [--no-touch-target] [--shared-measurer] < input.json
+//   build/compose-layout [--density N] [--font-scale N] [--no-touch-target] < input.json
 //
 // Text goes through the host adapter (FantomComposeText.mm) with the embedded Roboto.
 
@@ -15,32 +15,10 @@
 
 using namespace expoui;
 
-namespace {
-
-/// Only the shared interface (no ComposeTextMeasurer): what a host measurer that serves both
-/// engines provides. `--shared-measurer` checks the engine's fallback path.
-class SharedOnly : public layout::TextMeasurer {
- public:
-  explicit SharedOnly(layout::TextMeasurer& inner) : inner_(inner) {}
-  layout::TextMeasurement measureText(const std::string& text, const layout::FontSpec& font, double maxWidth,
-                                      int maxLines) override {
-    return inner_.measureText(text, font, maxWidth, maxLines);
-  }
-  double lineHeight(const layout::FontSpec& font) override { return inner_.lineHeight(font); }
-  layout::Size measureSymbol(const std::string& name, const layout::FontSpec& font) override {
-    return inner_.measureSymbol(name, font);
-  }
-
- private:
-  layout::TextMeasurer& inner_;
-};
-
-}  // namespace
 
 int main(int argc, char** argv) {
   @autoreleasepool {
     compose::ControlMetrics metrics;
-    bool sharedOnly = false;
     for (int i = 1; i < argc; i++) {
       std::string arg = argv[i];
       auto value = [&]() -> std::string {
@@ -56,8 +34,6 @@ int main(int argc, char** argv) {
         metrics.fontScale = std::stof(value());
       } else if (arg == "--no-touch-target") {
         metrics.touchTarget = false;
-      } else if (arg == "--shared-measurer") {
-        sharedOnly = true;
       } else {
         std::cerr << "compose-layout: unknown argument " << arg << "\n";
         return 1;
@@ -71,8 +47,7 @@ int main(int argc, char** argv) {
         std::cerr << "compose-layout: the embedded Roboto did not register\n";
         return 1;
       }
-      SharedOnly shared(roboto);
-      layout::TextMeasurer& text = sharedOnly ? static_cast<layout::TextMeasurer&>(shared) : roboto;
+      layout::TextMeasurer& text = roboto;
       layout::LayoutResult result = compose::layout(layout::HostSpec::fromValue(json["host"]),
                                                     layout::Node::fromValue(json["root"]), text, metrics);
       std::cout << result.toValue().serialize(2) << "\n";

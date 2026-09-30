@@ -337,8 +337,7 @@ bool isWidth(Intrinsic k) {
 
 class Engine {
  public:
-  Engine(TextMeasurer& text, const ControlMetrics& metrics)
-      : text_(text), compose_(dynamic_cast<ComposeTextMeasurer*>(&text)), metrics_(metrics) {}
+  Engine(TextMeasurer& text, const ControlMetrics& metrics) : text_(text), metrics_(metrics) {}
 
   bool rtl = false;
   std::map<std::string, std::vector<std::string>> unsupported;
@@ -392,6 +391,8 @@ class Engine {
     FontSpec f;
     f.pointSize = style.fontSizePx;
     f.weight = weightName(style.fontWeight);
+    f.letterSpacing = style.letterSpacingPx;
+    f.italic = style.italic;
     if (style.fontFamily == "serif") {
       f.design = "serif";
     } else if (style.fontFamily == "monospace") {
@@ -403,28 +404,14 @@ class Engine {
     return f;
   }
 
-  static int codePoints(const std::string& text) {
-    int n = 0;
-    for (unsigned char c : text) {
-      if ((c & 0xC0) != 0x80 && c != '\n') n++;
-    }
-    return n;
-  }
-
+  /// The shared TextMeasurer with FontSpec in px (family "Roboto", named weight, letterSpacing,
+  /// italic).
   TextMeasurement measureText(const std::string& text, const ResolvedTextStyle& style, double maxWidth, int maxLines) {
-    if (compose_) {
-      return compose_->measureComposeText(text, style, maxWidth, maxLines);
-    }
-    TextMeasurement m = text_.measureText(text, fontSpec(style), maxWidth, maxLines);
-    if (style.letterSpacingPx != 0 && m.lines <= 1) {
-      m.width += style.letterSpacingPx * codePoints(text);
-    }
-    return m;
+    return text_.measureText(text, fontSpec(style), maxWidth, maxLines);
   }
 
-  double fontHeight(const ResolvedTextStyle& style) {
-    return compose_ ? compose_->composeFontHeight(style) : text_.lineHeight(fontSpec(style));
-  }
+  /// ascent + descent, px, not rounded.
+  double fontHeight(const ResolvedTextStyle& style) { return text_.lineHeight(fontSpec(style)); }
 
   /// ParagraphIntrinsics.maxIntrinsicWidth: the widest line without wrapping.
   float maxIntrinsicWidth(const std::string& text, const ResolvedTextStyle& style) {
@@ -1443,7 +1430,6 @@ class Engine {
 
  private:
   TextMeasurer& text_;
-  ComposeTextMeasurer* compose_;
   const ControlMetrics& metrics_;
 };
 
@@ -1489,6 +1475,24 @@ const std::vector<std::string>& nonLayoutModifiers() {
 
 float optFloat(const Json& v) {
   return v.isNumber() ? static_cast<float>(v.asNumber()) : NAN;
+}
+
+/// A Slot's name: `name` in the compose-ref input, `slotName` in @expo/ui's SlotView props.
+std::string slotName(const Node& slot) {
+  Json props(slot.props);
+  const std::string& name = props["name"].asString();
+  return name.empty() ? props["slotName"].asString() : name;
+}
+
+/// TextView `spans` (nested Text): the text of the leaves, in order. Span styles are not applied.
+void appendSpanText(const Json& spans, std::string& out) {
+  for (const Json& span : spans.asArray()) {
+    if (span["children"].isArray()) {
+      appendSpanText(span["children"], out);
+    } else {
+      out += span["text"].asString();
+    }
+  }
 }
 
 class Builder {
@@ -1847,6 +1851,10 @@ class Builder {
     } else if (type == "Text") {
       n->policy = Policy::Text;
       n->text = props["text"].asString();
+      if (n->text.empty() && props["spans"].isArray()) {
+        appendSpanText(props["spans"], n->text);
+        engine_.report("prop:spans (styles not applied)", path);
+      }
       n->style = textStyle(props, path);
       if (props["maxLines"].isNumber()) n->maxLines = truncToInt(props["maxLines"].asNumber());
       if (props["minLines"].isNumber()) n->minLines = truncToInt(props["minLines"].asNumber());
@@ -1909,7 +1917,7 @@ class Builder {
       n->outlined = props["variant"].asString() == "outlined";
       bool hasLabel = false;
       for (const Node& child : json.children) {
-        hasLabel = hasLabel || (child.type == "Slot" && Json(child.props)["name"].asString() == "label");
+        hasLabel = hasLabel || (child.type == "Slot" && slotName(child) == "label");
       }
       if (n->outlined && hasLabel) {
         // OutlinedTextField: padding(top = OutlinedTextFieldTopPadding) when there is a label.
@@ -1940,7 +1948,7 @@ class Builder {
         if (child.type != "Slot") {
           continue;
         }
-        const std::string name = Json(child.props)["name"].asString();
+        const std::string name = slotName(child);
         std::string childPath = path + "/" + std::to_string(i);
         auto slot = std::make_unique<CNode>();
         slot->type = "Slot";
@@ -2003,6 +2011,13 @@ class Builder {
       n->textBox = box.get();
       box->children.push_back(std::move(core));
       n->children.push_back(std::move(box));
+    } else if (type == "RNHost") {
+      // RNHostView: React Native content with its measured (Yoga) size in dp, as the host adapter
+      // passes it (props.width / props.height).
+      float w = props["width"].isNumber() ? static_cast<float>(props["width"].asNumber()) : 0;
+      float h = props["height"].isNumber() ? static_cast<float>(props["height"].asNumber()) : 0;
+      n->mods.push_back(size(w, w, h, h));
+      n->policy = Policy::EmptyBox;
     } else if (type == "Icon") {
       // material3 Icon with a painter of unspecified size: DefaultIconSizeModifier.
       n->mods.push_back(size(m.iconSize, m.iconSize, m.iconSize, m.iconSize));
@@ -2097,7 +2112,14 @@ LayoutResult layout(const HostSpec& host, const Node& rootNode, TextMeasurer& te
     root.mods.push_back(m);
   }
   root.coords.resize(root.mods.size() + 1);
-  if (auto node = builder.build(rootNode, "0", Scope::None, virtuals)) {
+  if (rootNode.type == "Host") {
+    // The Host's own children (a Compose Host can have several): paths "0/<index>".
+    for (size_t i = 0; i < rootNode.children.size(); i++) {
+      if (auto node = builder.build(rootNode.children[i], "0/" + std::to_string(i), Scope::None, virtuals)) {
+        root.children.push_back(std::move(node));
+      }
+    }
+  } else if (auto node = builder.build(rootNode, "0", Scope::None, virtuals)) {
     root.children.push_back(std::move(node));
   }
 

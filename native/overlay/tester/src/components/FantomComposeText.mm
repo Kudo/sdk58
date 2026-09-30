@@ -2,7 +2,7 @@
  * See FantomComposeText.h.
  *
  * Widths and line counts only; the Compose engine computes paragraph heights
- * from the line count and composeFontHeight (ascent + descent). Observed with
+ * from the line count and lineHeight() (ascent + descent). Observed with
  * compose-ref (Skia): the width is the advance sum with kerning, plus the
  * letter spacing after every glyph, which is what CoreText tracking does
  * (kCTKernAttributeName = 0 would turn the font's kerning off).
@@ -133,6 +133,8 @@ ResolvedTextStyle fromFontSpec(const expoui::layout::FontSpec &spec)
   style.fontSizePx = static_cast<float>(spec.pointSize);
   auto it = weights.find(spec.weight);
   style.fontWeight = it == weights.end() ? 400 : it->second;
+  style.letterSpacingPx = static_cast<float>(spec.letterSpacing);
+  style.italic = spec.italic;
   if (spec.design == "serif") {
     style.fontFamily = "serif";
   } else if (spec.design == "monospaced") {

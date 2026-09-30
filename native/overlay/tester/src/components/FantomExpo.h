@@ -44,14 +44,14 @@ struct ExpoLayoutResult {
 };
 
 /*
- * The layout emulation hook. With FANTOM_EXPO_UI_LAYOUT_ENGINE, a Host whose
- * subtree has only SwiftUI view names is laid out by the SwiftUI engine
- * (tester/src/expoui/layout, ControlMetrics::ios() unless
- * setExpoUIPlatform("macos")). Other Hosts (Compose names), and every Host
- * without the engine, get a fake layout: every child is a row of the
- * proposal's width, stacked vertically; a view without Expo view children is
- * 40 high, a container is as high as its rows; an RNHostView keeps its Yoga
- * (measured) size.
+ * The layout emulation hook (FANTOM_EXPO_UI_LAYOUT_ENGINE). A Host whose
+ * subtree has only SwiftUI (or shared) view names is laid out by the SwiftUI
+ * engine (tester/src/expoui/layout, ControlMetrics::ios() unless
+ * setExpoUIPlatform("macos")); any other Host (Compose names: ColumnView,
+ * RowView, SwitchView, ...) by the Compose engine (tester/src/expoui/compose,
+ * FANTOM_EXPO_UI_COMPOSE_ENGINE: density = the point scale factor, font scale
+ * 1, 48 dp touch targets, embedded Roboto). An RNHostView is a leaf with its
+ * Yoga (measured) size. Without an engine the result is empty (Yoga frames).
  */
 ExpoLayoutResult layoutExpoHostSubtree(const ShadowNode &hostShadowNode, Size proposal);
 

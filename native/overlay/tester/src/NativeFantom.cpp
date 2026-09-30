@@ -334,8 +334,9 @@ jsi::Value getCapabilitiesHostFunction(
 #ifdef FANTOM_EXPO_UI_LAYOUT_ENGINE
   capabilities.push_back("expoUI.swiftUILayout");
   capabilities.push_back("setExpoUIPlatform");
-#else
-  capabilities.push_back("expoUI.fakeLayout");
+#ifdef FANTOM_EXPO_UI_COMPOSE_ENGINE
+  capabilities.push_back("expoUI.composeLayout");
+#endif
 #endif
 #endif
 #ifdef FANTOM_WITH_MACOS_TEXT_LAYOUT

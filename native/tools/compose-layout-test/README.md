@@ -12,8 +12,7 @@ node compare.mjs --tolerance 0 --densities 1,2.75,2.625,3.5 -v 17-rtl
 ```
 
 `build/compose-layout` has compose-ref's interface (`--density`,
-`--font-scale`, `--no-touch-target`; JSON on stdin, the same output JSON), plus
-`--shared-measurer` (see Text below). It is built from the host's own files:
+`--font-scale`, `--no-touch-target`; JSON on stdin, the same output JSON). It is built from the host's own files:
 the engine, the SwiftUI engine's `layout/Layout.cpp` (shared types), the host
 text adapter `tester/src/components/FantomComposeText.mm` and the embedded
 Roboto (`native/fonts/roboto`, generated with `tester/cmake/embed-files.cmake`,
@@ -38,16 +37,13 @@ layout::LayoutResult compose::layout(const layout::HostSpec& host, const layout:
 
 `Node`, `HostSpec`, `Value`, `TextMeasurer`, `LayoutResult` are the `layout::`
 types; frames are dp (px / density). `compose::ControlMetrics` holds `density`,
-`fontScale`, `touchTarget` and the Material 3 sizes. Text: the engine calls
+`fontScale`, `touchTarget` and the Material 3 sizes. A root of type `Host`
+stands for the Host (its children get paths `0/<index>`); `RNHost` is an
+RNHostView leaf with `props.width` / `props.height`. Text: the engine calls
 `measureText(text, FontSpec, maxWidth, maxLines)` for widths and line counts
-(FontSpec: family `Roboto`, `pointSize` = px size, named weight) and
-`lineHeight(FontSpec)` for ascent + descent, and computes paragraph heights
-itself. FontSpec has no italic or letter spacing, so a measurer can also
-implement `compose::ComposeTextMeasurer` (found with `dynamic_cast`); without
-it, letter spacing is added to single-line widths by the engine and ignored for
-line breaks. `node compare.mjs --shared-measurer` runs that fallback: 54/56
-(only `18-text-wrapping`, a paragraph with 2 sp letter spacing, breaks
-differently).
+(FontSpec: family `Roboto`, `pointSize` = px size, named weight,
+`letterSpacing` in px, `italic`) and `lineHeight(FontSpec)` for ascent +
+descent, and computes paragraph heights itself.
 
 `ComposeLayout.h/.cpp` (STL only) copies Compose's measure / layout protocol in
 integer px:
@@ -78,7 +74,7 @@ integer px:
 - `ControlMetrics` holds the Material 3 sizes; `TextMeasurer` is the text
   interface; `materialTypography` has the CMP material3 1.10 type scale.
 
-`FantomComposeText.mm` is the measurer (both interfaces): CoreText with the
+`FantomComposeText.mm` is the measurer: CoreText with the
 embedded Roboto Regular, Medium, Bold and Italic. Observed rules, in the engine,
 that make it equal to Skia: line height `round(ascent + descent)` per line; with a `lineHeight` and `LineHeightStyle.Trim.Both` (the
 `TextStyle.Default`): `(lines - 1) * lineHeight + ascent + descent`; with the
