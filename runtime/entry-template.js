@@ -111,6 +111,7 @@ registerRender(() => {
         fallbacks,
         stepTrees,
         capabilities: require('__RUNTIME_DIR__/capabilities').getCapabilities(),
+        hostInfo: require('__RUNTIME_DIR__/capabilities').getHostInfo(),
         timings: summarize(),
       });
     }
@@ -137,8 +138,9 @@ registerRender(() => {
     root.destroy();
 
     // `tree` is already a JSON string; splice it in as-is.
+    const hostInfo = require('__RUNTIME_DIR__/capabilities').getHostInfo();
     return `{"viewport":${JSON.stringify(viewport)},"source":${JSON.stringify(
       source,
-    )},"timings":${JSON.stringify(summarize())},"tree":${tree}}`;
+    )},"hostInfo":${JSON.stringify(hostInfo)},"timings":${JSON.stringify(summarize())},"tree":${tree}}`;
   };
 });

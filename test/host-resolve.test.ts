@@ -54,6 +54,7 @@ function probes(overrides: Partial<HostProbes> & {files?: string[]}): HostProbes
       return {bin: '/cache/v1/rn-a11y-host', manifest: {version: 'v1', protocolVersion: 1}};
     },
     distBin: '/repo/native/dist/arm64/rn-a11y-host',
+    checkout: false,
     logs: [] as string[],
     log: (line: string) => result.logs.push(line),
     downloads: 0,
@@ -81,6 +82,15 @@ test('findHost order: RN_A11Y_HOST_BIN, package, download, native/dist, HOST_MIS
   assert.deepEqual(await findHost(p2), {bin: '/cache/v1/rn-a11y-host', source: 'download', version: 'v1', protocolVersion: 1});
 
   assert.deepEqual(await findHost(probes({files: all.slice(2)})), {bin: '/repo/native/dist/arm64/rn-a11y-host', source: 'dist'});
+
+  // Repo checkout: a fresh native/dist build outranks the staged package
+  // (not RN_A11Y_HOST_BIN); without native/dist the package is used.
+  assert.equal((await findHost(probes({checkout: true, packageHost: pkg, files: all}))).source, 'dist');
+  assert.equal((await findHost(probes({checkout: true, env: '/env/host', packageHost: pkg, files: all}))).source, 'env');
+  assert.equal((await findHost(probes({checkout: true, packageHost: pkg, files: all.slice(0, 2)}))).source, 'package');
+  assert.equal((await findHost(probes({checkout: true, packageHost: pkg, baseUrl: 'file:///x', files: all}))).source, 'download');
+  // Installed package: the package first.
+  assert.equal((await findHost(probes({checkout: false, packageHost: pkg, files: all}))).source, 'package');
 
   const failing = probes({
     baseUrl: 'file:///x',
@@ -149,4 +159,54 @@ test('RN_A11Y_HOST_STDERR_LOG collects the host stderr of every run (fake host)'
   assert.match(text, /^--- .*fake-host\.js \(pid \d+\) ---$/m);
   assert.match(text, /fake-host: glog line on stderr/);
   fs.rmSync(dir, {recursive: true, force: true});
+});
+
+function cliRun(args: string[], env: Record<string, string>, input?: string) {
+  return spawnSync(process.execPath, [path.join(ROOT, 'bin/rn-a11y-tree.js'), ...args], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    input,
+    env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.js'), ...env},
+  });
+}
+
+test('runtime protocol check (getHostInfo) and hostInfo in the output (fake host)', {timeout: 180_000}, () => {
+  const app = path.join(ROOT, 'examples/basic/App.tsx');
+  const ok = cliRun(['render', app, '--platform', 'android', '-v'], {FAKE_HOST_MODE: 'shadow-tree'});
+  assert.equal(ok.status, 0, ok.stderr);
+  const result = JSON.parse(ok.stdout);
+  assert.deepEqual(result.hostInfo, {
+    protocolVersion: 1,
+    rnVersion: '0.88.0-fake',
+    buildType: 'Release',
+    sanitize: false,
+    engines: {swiftui: true, compose: true},
+    fonts: {roboto: true},
+  });
+  assert.match(ok.stderr, /rn-a11y-tree: host: env .*fake-host\.js/);
+  assert.match(ok.stderr, /rn-a11y-tree: host info: \{"protocolVersion":1/);
+
+  const run = cliRun(['run', app, '--platform', 'android', '--script', 'examples/basic/actions.json'], {FAKE_HOST_MODE: 'run'});
+  assert.equal(JSON.parse(run.stdout).hostInfo.protocolVersion, 1);
+
+  // RN_A11Y_HOST_BIN is checked too (no manifest): the running host decides.
+  const tooNew = cliRun(['render', app, '--platform', 'android'], {FAKE_HOST_MODE: 'shadow-tree', FAKE_HOST_PROTOCOL: '99'});
+  assert.equal(tooNew.status, 5);
+  const {error} = JSON.parse(tooNew.stderr.trim().split('\n').pop()!);
+  assert.equal(error.code, 'HOST_INCOMPATIBLE');
+  assert.match(error.message, /speaks protocol 99; this CLI supports 1/);
+
+  // Hosts without getHostInfo: no check, no hostInfo.
+  const old = cliRun(['render', app, '--platform', 'android'], {FAKE_HOST_MODE: 'shadow-tree', FAKE_HOST_PROTOCOL: 'none'});
+  assert.equal(old.status, 0, old.stderr);
+  assert.equal(JSON.parse(old.stdout).hostInfo, undefined);
+
+  // Session: hostInfo in the ready line; an incompatible host ends the session with exit 5.
+  const session = cliRun(['session', app, '--platform', 'android'], {}, '{"id":1,"quit":true}\n');
+  assert.equal(session.status, 0, session.stderr);
+  assert.equal(JSON.parse(session.stdout.split('\n')[0]).hostInfo.protocolVersion, 1);
+  const badSession = cliRun(['session', app, '--platform', 'android'], {FAKE_HOST_PROTOCOL: '0'}, '{"id":1,"quit":true}\n');
+  assert.equal(badSession.status, 5);
+  const ready = JSON.parse(badSession.stdout.split('\n')[0]);
+  assert.deepEqual([ready.ready, ready.error.code], [false, 'HOST_INCOMPATIBLE']);
 });

@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 
 import {CliError, type ErrorCode, type LogEntry, logEntry} from './errors.ts';
 import {BASE_URL_ENV, downloadHost, readManifest} from './hostDownload.ts';
-import type {HostPayload} from './schema.ts';
+import type {HostPayload, HostRuntimeInfo} from './schema.ts';
 
 export const HOST_BIN_ENV = 'RN_A11Y_HOST_BIN';
 
@@ -95,6 +95,12 @@ export type HostProbes = {
   packageHost: () => {bin: string; manifest: HostManifestLike} | null;
   download: (baseUrl: string) => Promise<{bin: string; manifest: HostManifestLike}>;
   distBin: string;
+  /**
+   * A repo checkout (src/cli.ts next to the running code): native/dist, the
+   * host just built, ranks above the staged rn-a11y-host package (the
+   * git-ignored output of `release-host.mjs --pack`).
+   */
+  checkout: boolean;
   log: (line: string) => void;
 };
 
@@ -132,6 +138,8 @@ export function checkProtocol(host: HostInfo): void {
  * Host order: RN_A11Y_HOST_BIN, the rn-a11y-host package, the prebuilt host
  * download (with RN_A11Y_HOST_BASE_URL; cached in
  * ~/.cache/rn-a11y-tree/host/<version>/), native/dist, else HOST_MISSING.
+ * In a repo checkout: RN_A11Y_HOST_BIN, the download (when
+ * RN_A11Y_HOST_BASE_URL is set), native/dist, the staged package.
  */
 export async function findHost(probes: HostProbes): Promise<HostInfo> {
   if (probes.env != null && probes.env !== '') {
@@ -140,25 +148,36 @@ export async function findHost(probes: HostProbes): Promise<HostInfo> {
     }
     return info(probes.env, 'env', null);
   }
-  const fromPackage = probes.packageHost();
-  if (fromPackage != null && probes.exists(fromPackage.bin)) {
-    return info(fromPackage.bin, 'package', fromPackage.manifest);
-  }
   let downloadError: string | null = null;
-  if (probes.baseUrl) {
+  const tryDownload = async (): Promise<HostInfo | null> => {
+    if (!probes.baseUrl) return null;
     try {
       const downloaded = await probes.download(probes.baseUrl);
       return info(downloaded.bin, 'download', downloaded.manifest);
     } catch (error) {
       downloadError = (error as Error).message;
+      return null;
     }
-  }
-  if (probes.exists(probes.distBin)) {
+  };
+  const tryDist = (): HostInfo | null => {
+    if (!probes.exists(probes.distBin)) return null;
     if (downloadError != null) {
       probes.log(`rn-a11y-tree: warning: prebuilt host download failed (${downloadError}); using ${probes.distBin}`);
     }
     return info(probes.distBin, 'dist', null);
-  }
+  };
+  const tryPackage = (): HostInfo | null => {
+    const fromPackage = probes.packageHost();
+    return fromPackage != null && probes.exists(fromPackage.bin)
+      ? info(fromPackage.bin, 'package', fromPackage.manifest)
+      : null;
+  };
+  // Installed: package, download, native/dist. Checkout: an explicit
+  // download, then native/dist (the host just built), then the staged package.
+  const found = probes.checkout
+    ? ((await tryDownload()) ?? tryDist() ?? tryPackage())
+    : (tryPackage() ?? (await tryDownload()) ?? tryDist());
+  if (found != null) return found;
   if (downloadError != null) {
     throw new HostError('HOST_MISSING', `Prebuilt host download failed: ${downloadError}`, undefined, BUILD_HINT);
   }
@@ -202,22 +221,44 @@ export function defaultProbes(log: (line: string) => void): HostProbes {
       return {bin, manifest: readManifest()?.manifest ?? null};
     },
     distBin: DEFAULT_HOST_BIN,
+    checkout: IS_CHECKOUT,
     log,
   };
 }
+
+/** Running from a repo checkout (src/cli.ts exists), not an installed package. */
+export const IS_CHECKOUT = fs.existsSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'cli.ts'));
 
 /** Set by ensureHost(). */
 let resolvedHost: HostInfo | null = null;
 
 /** Finds the host (findHost) and checks its protocol. Call before getHostBin() / runHost(). */
-export async function ensureHost(options: {quiet?: boolean} = {}): Promise<HostInfo> {
+export async function ensureHost(options: {quiet?: boolean; verbose?: boolean} = {}): Promise<HostInfo> {
   const log = (line: string) => {
     if (!options.quiet) process.stderr.write(line + '\n');
   };
   const host = await findHost(defaultProbes(log));
+  if (options.verbose) {
+    const details = [host.version, host.protocolVersion != null ? `protocol ${host.protocolVersion}` : null]
+      .filter(Boolean)
+      .join(', ');
+    process.stderr.write(`rn-a11y-tree: host: ${host.source} ${host.bin}${details ? ` (${details})` : ''}\n`);
+  }
   checkProtocol(host);
   resolvedHost = host;
   return host;
+}
+
+/**
+ * Checks the protocolVersion the running host reports (getHostInfo() or its
+ * `protocolVersion:<n>` capability), for every host source. Hosts that
+ * report neither are not checked.
+ */
+export function checkHostInfo(hostInfo: HostRuntimeInfo | null | undefined, options: {verbose?: boolean} = {}): void {
+  if (hostInfo == null) return;
+  if (options.verbose) process.stderr.write(`rn-a11y-tree: host info: ${JSON.stringify(hostInfo)}\n`);
+  const host = resolvedHost ?? {bin: getHostBin(), source: 'env' as HostSource};
+  checkProtocol({...host, protocolVersion: hostInfo.protocolVersion});
 }
 
 /** The host found by ensureHost(), else RN_A11Y_HOST_BIN or native/dist (synchronous). */

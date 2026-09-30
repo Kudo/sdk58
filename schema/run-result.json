@@ -52,6 +52,9 @@
       },
       "description": "Optional host features found (NativeFantom methods and getCapabilities())."
     },
+    "hostInfo": {
+      "$ref": "#/definitions/HostRuntimeInfo"
+    },
     "logs": {
       "type": "array",
       "items": {
@@ -528,6 +531,68 @@
         "compose"
       ],
       "description": "Layout engine of an Expo Host (`emulatedBy`)."
+    },
+    "HostRuntimeInfo": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "type": "number",
+          "description": "Version of the CLI <-> host contract; the CLI refuses unsupported ones (HOST_INCOMPATIBLE)."
+        },
+        "rnVersion": {
+          "type": "string"
+        },
+        "buildType": {
+          "type": "string"
+        },
+        "sanitize": {
+          "type": "boolean"
+        },
+        "engines": {
+          "type": "object",
+          "properties": {
+            "swiftui": {
+              "type": "boolean"
+            },
+            "compose": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "not": {}
+              }
+            ]
+          }
+        },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "roboto": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "not": {}
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "protocolVersion"
+      ],
+      "additionalProperties": {},
+      "description": "The host's build info (`NativeFantom.getHostInfo()`), or `{protocolVersion}` from a `protocolVersion:<n>` capability. Absent for hosts that report neither."
     },
     "LogEntry": {
       "type": "object",

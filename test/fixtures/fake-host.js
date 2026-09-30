@@ -4,6 +4,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+// NativeFantom.getHostInfo() of the real host. FAKE_HOST_PROTOCOL=<n> sets
+// protocolVersion; FAKE_HOST_PROTOCOL=none: a host without getHostInfo.
+const HOST_INFO =
+  process.env.FAKE_HOST_PROTOCOL === 'none'
+    ? null
+    : {
+        protocolVersion: Number(process.env.FAKE_HOST_PROTOCOL ?? 1),
+        rnVersion: '0.88.0-fake',
+        buildType: 'Release',
+        sanitize: false,
+        engines: {swiftui: true, compose: true},
+        fonts: {roboto: true},
+      };
+
 const args = process.argv.slice(2);
 const bundlePath = args[args.indexOf('--bundlePath') + 1];
 if (!bundlePath || !fs.existsSync(bundlePath)) {
@@ -29,7 +43,7 @@ if (args.includes('--interactive')) {
     const {id} = request;
     console.log(JSON.stringify({type: 'console-log', level: 'info', message: `request ${JSON.stringify(request)}`}));
     if (request.start) {
-      respond({id, ok: true, ready: true, tree: shadow});
+      respond({id, ok: true, ready: true, tree: shadow, hostInfo: HOST_INFO});
     } else if (request.tree) {
       respond({id, ok: true, tree: shadow});
     } else if (request.quit) {
@@ -89,6 +103,7 @@ if (process.env.FAKE_HOST_MODE === 'run') {
     ],
     snapshots: {after: shadow},
     final: shadow,
+    hostInfo: HOST_INFO,
   };
   console.log(JSON.stringify({type: 'rn-a11y-tree-result', rnA11yTree: payload}));
   process.exit(0);
@@ -98,7 +113,7 @@ if (process.env.FAKE_HOST_MODE === 'shadow-tree') {
     path.join(path.dirname(fileURLToPath(import.meta.url)), 'shadow-tree.json'),
     'utf8',
   );
-  console.log(`{"type":"rn-a11y-tree-result","rnA11yTree":{"viewport":{"width":390,"height":844},"source":"shadowTree","tree":${JSON.stringify(JSON.parse(shadow))}}}`);
+  console.log(`{"type":"rn-a11y-tree-result","rnA11yTree":{"viewport":{"width":390,"height":844},"source":"shadowTree","hostInfo":${JSON.stringify(HOST_INFO)},"tree":${JSON.stringify(JSON.parse(shadow))}}}`);
   process.exit(0);
 }
 const tree = fs.readFileSync(
@@ -107,5 +122,5 @@ const tree = fs.readFileSync(
 );
 console.error('I0000 fake-host: glog line on stderr');
 console.log(JSON.stringify({type: 'console-log', level: 'info', message: 'hello from JS'}));
-console.log(`{"type":"rn-a11y-tree-result","rnA11yTree":{"viewport":{"width":390,"height":844},"source":"mounted","tree":${JSON.stringify(JSON.parse(tree))}}}`);
+console.log(`{"type":"rn-a11y-tree-result","rnA11yTree":{"viewport":{"width":390,"height":844},"source":"mounted","hostInfo":${JSON.stringify(HOST_INFO)},"tree":${JSON.stringify(JSON.parse(tree))}}}`);
 }

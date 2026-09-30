@@ -958,13 +958,26 @@ The CLI looks for the host in this order:
    prints a warning (unless `--quiet`) and uses this file.
 5. Else `HOST_MISSING` (exit 5), with the download error when there was one.
 
+In a repo checkout (`src/cli.ts` next to the running code) the order is
+`RN_A11Y_HOST_BIN`, the download (only with `RN_A11Y_HOST_BASE_URL`),
+`native/dist`, then the staged package: a fresh `bun run build:host` is
+used even when `packages/rn-a11y-host/osx-bin` holds an older `--pack`
+output. `-v` prints the chosen host (`rn-a11y-tree: host: <source> <path>
+(<version>, protocol <n>)`) and the running host's info.
+
 **Protocol check.** `host-version.json` of the package or of the download
 has `protocolVersion`, the version of the CLI <-> host contract
 (`HOST_PROTOCOL_VERSION` in `scripts/release-host.mjs`). The CLI supports
 `SUPPORTED_PROTOCOL` (`src/host.ts`, now 1..1) and stops with
 `HOST_INCOMPATIBLE` (exit 5) for other versions. Hosts without a manifest
-(`RN_A11Y_HOST_BIN`, `native/dist`) are not checked. The session `ready`
-line has `host: {source, version?, protocolVersion?}`.
+(`RN_A11Y_HOST_BIN`, `native/dist`) are checked when the host runs: the
+bundle reads `NativeFantom.getHostInfo()` (`{protocolVersion, rnVersion,
+buildType, sanitize, engines: {swiftui, compose}, fonts: {roboto}}`, else a
+`protocolVersion:<n>` capability), and the CLI stops with
+`HOST_INCOMPATIBLE` for an unsupported version, for every host source.
+Hosts that report neither are not checked. The `--format json` output of
+`render`/`run` has `hostInfo`; the session `ready` line has
+`hostInfo` and `host: {source, version?, protocolVersion?}`.
 
 The download adds about 200 ms to the first run (3.7 MB tarball from
 `file://`, Release host); later runs use the cache.

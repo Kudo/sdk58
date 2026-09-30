@@ -16,11 +16,11 @@
 import {type ChildProcess, spawn} from 'node:child_process';
 import readline from 'node:readline';
 
-import {appendHostStderr, getHostBin, type HostInfo, hostArgs} from './host.ts';
-import type {ShadowNodeJSON, Step} from './schema.ts';
+import {appendHostStderr, checkHostInfo, getHostBin, type HostInfo, hostArgs} from './host.ts';
+import type {HostRuntimeInfo, ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
-import {type ErrorCode, EXIT_CODES, type LogEntry, logEntry, stepErrorCode} from './errors.ts';
+import {type CliError, type ErrorCode, EXIT_CODES, type LogEntry, logEntry, stepErrorCode} from './errors.ts';
 import {type Format, FORMATS, formatRender, parseSelector} from './format.ts';
 import type {TreeNode} from './schema.ts';
 import {convertShadowTree, convertStep} from './tree.ts';
@@ -40,6 +40,7 @@ type HostResponse = {
   capabilities?: string[];
   timings?: Record<string, number | undefined>;
   diffTrees?: ShadowNodeJSON[];
+  hostInfo?: HostRuntimeInfo | null;
 };
 
 type Frame = {
@@ -256,6 +257,14 @@ export async function runSession(options: {
     await finish();
     return EXIT_CODES[code];
   }
+  try {
+    checkHostInfo(start.hostInfo);
+  } catch (error) {
+    const cliError = error as CliError;
+    writeLine({ready: false, error: cliError.toJSON()});
+    await finish();
+    return EXIT_CODES[cliError.code];
+  }
   if (options.timing) {
     const toReady = Math.round((performance.now() - spawnedAt) * 1000) / 1000;
     const js = start.timings;
@@ -274,6 +283,7 @@ export async function runSession(options: {
     ready: true,
     tree: start.tree ? convertShadowTree(start.tree) : null,
     capabilities: start.capabilities ?? [],
+    ...(start.hostInfo != null ? {hostInfo: start.hostInfo} : {}),
     ...(host != null
       ? {
           host: {

@@ -22,18 +22,20 @@ import type {
  */
 export function toRenderResult(payload: HostPayload): RenderResult {
   const nextRef = refCounter();
-  if (payload.source === 'shadowTree') {
-    return {
-      viewport: payload.viewport,
-      source: 'shadowTree',
-      root: withKeys(convertShadowNode(payload.tree, ORIGIN, '', nextRef, null)),
-    };
-  }
-  return {
-    viewport: payload.viewport,
-    source: 'mounted',
-    root: withKeys(convertMountedNode(payload.tree, ORIGIN, '', nextRef, null)),
-  };
+  const result: RenderResult =
+    payload.source === 'shadowTree'
+      ? {
+          viewport: payload.viewport,
+          source: 'shadowTree',
+          root: withKeys(convertShadowNode(payload.tree, ORIGIN, '', nextRef, null)),
+        }
+      : {
+          viewport: payload.viewport,
+          source: 'mounted',
+          root: withKeys(convertMountedNode(payload.tree, ORIGIN, '', nextRef, null)),
+        };
+  if (payload.hostInfo != null) result.hostInfo = payload.hostInfo;
+  return result;
 }
 
 /** Converts the payload of `run --script`: every snapshot and the final tree. */
@@ -57,6 +59,7 @@ export function toRunResult(payload: HostRunPayload): RunResult {
     final: convertShadowTree(payload.final),
     fallbacks: payload.fallbacks ?? [],
     capabilities: payload.capabilities ?? [],
+    ...(payload.hostInfo != null ? {hostInfo: payload.hostInfo} : {}),
   };
 }
 

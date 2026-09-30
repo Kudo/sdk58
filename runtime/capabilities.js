@@ -29,3 +29,21 @@ export function getCapabilities() {
   }
   return out;
 }
+
+/**
+ * The host's build info: `NativeFantom.getHostInfo()` (JSON:
+ * {protocolVersion, rnVersion, buildType, sanitize, engines, fonts}), else
+ * `{protocolVersion}` from a `protocolVersion:<n>` capability, else null
+ * (hosts older than the protocol check). The CLI checks protocolVersion.
+ */
+export function getHostInfo() {
+  if (typeof NativeFantom.getHostInfo === 'function') {
+    const raw = NativeFantom.getHostInfo();
+    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+  }
+  for (const name of getCapabilities()) {
+    const m = /^protocolVersion:(\d+)$/.exec(name);
+    if (m) return {protocolVersion: Number(m[1])};
+  }
+  return null;
+}

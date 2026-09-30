@@ -128,10 +128,27 @@ export type TreeNode = {
  */
 export type TreeSource = 'shadowTree' | 'mounted';
 
+/**
+ * The host's build info (`NativeFantom.getHostInfo()`), or `{protocolVersion}`
+ * from a `protocolVersion:<n>` capability. Absent for hosts that report
+ * neither.
+ */
+export type HostRuntimeInfo = {
+  /** Version of the CLI <-> host contract; the CLI refuses unsupported ones (HOST_INCOMPATIBLE). */
+  protocolVersion: number;
+  rnVersion?: string;
+  buildType?: string;
+  sanitize?: boolean;
+  engines?: {swiftui?: boolean; compose?: boolean; [engine: string]: boolean | undefined};
+  fonts?: {roboto?: boolean; [font: string]: boolean | undefined};
+  [key: string]: unknown;
+};
+
 export type RenderResult = {
   viewport: {width: number; height: number};
   source: TreeSource;
   root: TreeNode;
+  hostInfo?: HostRuntimeInfo;
   /** App console output (only when there was any); `known: true` marks common React Native noise. */
   logs?: LogEntry[];
 };
@@ -315,6 +332,7 @@ export type RunResult = {
   fallbacks: string[];
   /** Optional host features found (NativeFantom methods and getCapabilities()). */
   capabilities: string[];
+  hostInfo?: HostRuntimeInfo;
   logs?: LogEntry[];
 };
 
@@ -328,6 +346,7 @@ export type HostRunPayload = {
   /** JS fallbacks the runner used, e.g. `hitTest: js`, `scrollOffset: dom`. */
   fallbacks?: string[];
   capabilities?: string[];
+  hostInfo?: HostRuntimeInfo | null;
   /** With `--diff`: the tree before the first step and after each step. */
   stepTrees?: ShadowNodeJSON[];
 };
@@ -337,12 +356,14 @@ export type HostPayload =
   | {
       viewport: {width: number; height: number};
       source: 'shadowTree';
+      hostInfo?: HostRuntimeInfo | null;
       tree: ShadowNodeJSON;
     }
   | {
       viewport: {width: number; height: number};
       /** Absent in payloads from entries built before `source` existed. */
       source?: 'mounted';
+      hostInfo?: HostRuntimeInfo | null;
       tree: FantomNode;
     };
 
@@ -397,6 +418,8 @@ export type SessionReady =
       capabilities: string[];
       /** Where the host came from; `version` / `protocolVersion` from its host-version.json when it has one. */
       host?: {source: 'env' | 'package' | 'download' | 'dist'; version?: string; protocolVersion?: number};
+      /** The host's own build info (getHostInfo). */
+      hostInfo?: HostRuntimeInfo;
       logs?: LogEntry[];
     }
   | {ready: false; error: ErrorInfo; logs?: LogEntry[]};

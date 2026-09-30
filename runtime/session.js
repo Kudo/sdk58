@@ -18,7 +18,7 @@
  */
 
 import {createRunner} from './actions';
-import {getCapabilities} from './capabilities';
+import {getCapabilities, getHostInfo} from './capabilities';
 import {setRootTag} from './gh/hostContext';
 import {applyHostConfig} from './hostConfig';
 import {settle} from './settle';
@@ -71,7 +71,7 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
       mark('dumpStart');
       const tree = runner.readTree();
       mark('dumpEnd');
-      report({id, ok: true, ready: true, tree, capabilities: getCapabilities(), timings: summarize()});
+      report({id, ok: true, ready: true, tree, capabilities: getCapabilities(), hostInfo: getHostInfo(), timings: summarize()});
     } else if (request.action != null) {
       requireStarted();
       const before = request.diff === true ? runner.readTree() : undefined;

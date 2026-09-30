@@ -8,8 +8,8 @@ import {type Format, type FormatOptions, FORMATS, formatRender, formatRun} from 
 import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
 import {addStepViolations, type CheckResult, checkText, checkTree, readRulesFile, type Rules} from './check.ts';
 import {CliError, EXIT_CODES, type LogEntry, usage} from './errors.ts';
-import {ensureHost, type HostTiming, runHost} from './host.ts';
-import type {HostPayload, HostRunPayload, Step} from './schema.ts';
+import {checkHostInfo, ensureHost, type HostTiming, runHost} from './host.ts';
+import type {HostPayload, HostRunPayload, HostRuntimeInfo, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
 import {DEFAULT_TIMEOUT_MS, runSession} from './session.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
@@ -224,7 +224,7 @@ async function execute<T>(
   const platform = requirePlatform(options.platform);
   if (!options.bundleOnly) {
     // Fail (or download) before spending time on Metro.
-    await ensureHost({quiet: isQuiet(options)});
+    await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
   }
   const metroStart = performance.now();
   const result = await bundleOrFail({
@@ -283,6 +283,7 @@ async function execute<T>(
       if (timing) timing.bytecode = false;
       payload = await runHost<T>({...hostOptions, bundlePath: result.jsBundlePath});
     }
+    checkHostInfo((payload as {hostInfo?: HostRuntimeInfo | null}).hostInfo, {verbose: options.verbose});
     if (timing && hostTiming.spawn != null) {
       const js = (payload as {timings?: Record<string, number | undefined>}).timings;
       if (hostTiming.result != null) {
@@ -406,7 +407,7 @@ async function session(file: string, options: RunOptions) {
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
     throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
   }
-  const host = await ensureHost({quiet: isQuiet(options)});
+  const host = await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
   const result = await bundleOrFail({
     appPath: file,
     viewportWidth: options.width,
