@@ -17,7 +17,7 @@ import {type ChildProcess, spawn} from 'node:child_process';
 import readline from 'node:readline';
 
 import {appendHostStderr, checkHostInfo, getHostBin, type HostInfo, hostArgs} from './host.ts';
-import type {HostRuntimeInfo, ShadowNodeJSON, Step} from './schema.ts';
+import type {HostRuntimeInfo, SessionTreeOptions, ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
 import {type CliError, type ErrorCode, EXIT_CODES, type LogEntry, logEntry, stepErrorCode} from './errors.ts';
@@ -69,8 +69,11 @@ export async function runSession(options: {
   quiet?: boolean;
   /** The host found by ensureHost() (reported in the ready line). */
   host?: HostInfo | null;
+  /** Output options for the ready tree, and defaults for `tree` / `snapshot` responses (a request's own fields win). */
+  treeDefaults?: SessionTreeOptions;
   io: SessionIO;
 }): Promise<number> {
+  const treeDefaults: Record<string, unknown> = {...options.treeDefaults};
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   let timedOut = false;
   const {io} = options;
@@ -215,7 +218,9 @@ export async function runSession(options: {
           : {code: responseErrorCode(response.error), message: response.error};
     }
     if (step != null) out.step = step;
-    if (response.tree != null) out.tree = formatSessionTree(convertShadowTree(response.tree), request);
+    if (response.tree != null) {
+      out.tree = formatSessionTree(convertShadowTree(response.tree), {...treeDefaults, ...pickOutputKeys(request)});
+    }
     if (response.diffTrees != null) {
       const [before, after] = response.diffTrees.map(convertShadowTree);
       out.diff = diffTrees(before, after);
@@ -281,7 +286,7 @@ export async function runSession(options: {
   const host = options.host;
   writeLine({
     ready: true,
-    tree: start.tree ? convertShadowTree(start.tree) : null,
+    tree: start.tree ? formatSessionTree(convertShadowTree(start.tree), treeDefaults) : null,
     capabilities: start.capabilities ?? [],
     ...(start.hostInfo != null ? {hostInfo: start.hostInfo} : {}),
     ...(host != null
@@ -364,6 +369,10 @@ function formatSessionTree(tree: TreeNode, request: Record<string, unknown>): un
 }
 
 const OUTPUT_KEYS = ['format', 'select', 'depth', 'subtree', 'style'];
+
+function pickOutputKeys(request: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(OUTPUT_KEYS.filter(key => key in request).map(key => [key, request[key]]));
+}
 
 function responseErrorCode(message: string): ErrorCode {
   if (message === 'timeout') return 'TIMEOUT';

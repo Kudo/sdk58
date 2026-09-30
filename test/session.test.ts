@@ -137,3 +137,26 @@ test('session: diff on action requests (fake host)', {timeout: 120_000}, () => {
   assert.equal(out[1].diffTrees, undefined);
   assert.match(out[2].error.message, /"diff" must be true or false, on action requests/);
 });
+
+test('session --format/--select: the ready tree and default tree output; a request overrides (fake host)', {timeout: 120_000}, () => {
+  const proc = runSession(
+    [
+      {id: 1, tree: true},
+      {id: 2, tree: true, format: 'json'},
+      {id: 3, quit: true},
+    ],
+    ['--format', 'text', '--select', 'role=button'],
+  );
+  assert.equal(proc.status, 0, proc.stderr);
+  const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
+  assert.equal(typeof out[0].tree, 'string');
+  assert.match(out[0].tree, /^submit View #submit role=button "Submit"/);
+  assert.equal(out[1].tree, out[0].tree);
+  // The request's format wins; --select still applies.
+  assert.ok(Array.isArray(out[2].tree));
+  assert.deepEqual(out[2].tree.map((n: {testID: string}) => n.testID), ['submit']);
+
+  const bad = runSession([], ['--format', 'xml']);
+  assert.equal(bad.status, 1);
+  assert.match(bad.stderr, /--format must be one of: json, compact, text, ndjson/);
+});

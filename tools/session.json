@@ -118,12 +118,13 @@
               "tree": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/TreeNode"
+                    "$ref": "#/definitions/SessionTree"
                   },
                   {
                     "type": "null"
                   }
-                ]
+                ],
+                "description": "The initial tree: a TreeNode, or the `session --format/--select/...` output (see SessionResponse.tree)."
               },
               "capabilities": {
                 "type": "array",
@@ -199,6 +200,34 @@
           }
         ],
         "description": "First line on the session's stdout."
+      },
+      "SessionTree": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/TreeNode"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/TreeNode"
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "description": "A tree in session output: a TreeNode (`json`), matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`)."
       },
       "TreeNode": {
         "type": "object",
@@ -545,31 +574,7 @@
             "$ref": "#/definitions/Step"
           },
           "tree": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/TreeNode"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/TreeNode"
-                }
-              },
-              {
-                "type": "object",
-                "additionalProperties": {}
-              },
-              {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "$ref": "#/definitions/SessionTree",
             "description": "`tree` requests and `snapshot` actions: a TreeNode (`json`), a list of matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`)."
           },
           "diff": {

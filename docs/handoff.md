@@ -105,12 +105,13 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
    (a) Linux host (stub text first, then HarfBuzz+FreeType text),
    (b) `@expo/agent-cli` integration PR, (c) Windows spike. The agent's
    recommendation was: publish 0.1.1 -> (b) -> (a) -> Windows.
-5. Proposed to the user, not decided: session improvements for agents
-   (`candidates` on TARGET_NOT_FOUND, a compact list of actionable elements in
-   `ready` and after each step, changes after each action) and exporting a
-   session's successful actions as an `actions.json` (refs mapped to
-   testID/key). The user said actions are written by agents only, not humans:
-   keep JSON + the session loop, no TS action scripts. `ref` targets already work.
+5. Session for agents (2026-09-30): done: "Did you mean" candidates on
+   TARGET_NOT_FOUND (`targetNotFoundMessage` in `runtime/tree-index.ts`) and
+   `session --format/--select/--depth/--subtree/--style` for the ready tree and
+   default responses. Not done on purpose (decide during the `@expo/agent-cli`
+   work): a separate actionable-elements list and exporting a session as
+   `actions.json`. The user said actions are written by agents only, not
+   humans: keep JSON + the session loop, no TS action scripts.
 
 ## Commands
 

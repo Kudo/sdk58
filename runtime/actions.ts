@@ -27,6 +27,7 @@ import {
   hitTestEntries,
   indexTree,
   isWithin,
+  targetNotFoundMessage,
 } from './tree-index';
 import type {A11yNode, Box, IndexEntry, Point, TargetSpec} from './tree-index';
 
@@ -279,7 +280,7 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
     } else {
       target = findEntry(entries, spec);
       if (target == null) {
-        throw new Error(`Target not found: ${JSON.stringify(spec)}`);
+        throw new Error(targetNotFoundMessage(entries, spec));
       }
       // Aim at where the target is drawn (transforms move it; the host
       // hit test honors transforms). An index entry has both boxes.
@@ -501,7 +502,7 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
     const entries = indexTree(readTree());
     const target = findEntry(entries, spec);
     if (target == null) {
-      throw new Error(`Target not found: ${JSON.stringify(spec)}`);
+      throw new Error(targetNotFoundMessage(entries, spec));
     }
     step.target = describe(target);
     step.hit = describe(target);
@@ -555,7 +556,7 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
     const entries = indexTree(readTree());
     const target = findEntry(entries, spec);
     if (target == null) {
-      throw new Error(`Target not found: ${JSON.stringify(spec)}`);
+      throw new Error(targetNotFoundMessage(entries, spec));
     }
     step.target = describe(target);
     step.hit = describe(target);

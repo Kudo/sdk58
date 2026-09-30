@@ -774,7 +774,7 @@ Navigation imports it).
 ## Session mode
 
 ```sh
-bun run rn-a11y-tree session examples/basic/App.tsx --platform android [--tap-mode touch|click|both]
+bun run rn-a11y-tree session examples/basic/App.tsx --platform android [--tap-mode touch|click|both] [--format text] [--select role=button]
 ```
 
 Bundles once, renders the app, and then serves requests: one JSON object per
@@ -788,13 +788,21 @@ order, one at a time.
 {"id": 1, "action": {"tap": {"testID": "submit"}}}   {"id": 1, "ok": true, "step": {...}}
 {"id": 2, "action": {"snapshot": "x"}}               {"id": 2, "ok": true, "step": {...}, "tree": {...}}
 {"id": 3, "tree": true}                              {"id": 3, "ok": true, "tree": {...}}
-{"id": 4, "action": {"tap": {"testID": "nope"}}}     {"id": 4, "ok": false, "error": "Target not found: ...", "step": {...}}
+{"id": 4, "action": {"tap": {"testID": "sumbit"}}}   {"id": 4, "ok": false, "error": {"code": "TARGET_NOT_FOUND", "message": "Target not found: {\"testID\":\"sumbit\"}. Did you mean testID \"submit\" (ref n6, View)?"}, "step": {...}}
 {"id": 5, "quit": true}                              {"id": 5, "ok": true}
 ```
 
 - `action` takes the same objects as `run --script`; `step` has the same
   shape as in `run`, and trees the same schema as `render`. Invalid requests
   get `{"id", "ok": false, "error"}` without reaching the app.
+- `--format`, `--select`, `--depth`, `--subtree` and `--style` (same values
+  as `render`) set the `ready` tree and the default output of `tree` and
+  `snapshot` responses; a request's own `format`, `select`, ... win. Without
+  them the trees are full JSON. `format` in `a11y-tree.json` does not apply to
+  sessions.
+- A target that is not found (`run` steps too) names the closest `testID` /
+  `key` / `sel` values with their `ref` ("Did you mean ..."), or, for a
+  `testID` without a close match, the testIDs in the tree.
 - `fallbacks` is added to a response when JS fallbacks were used.
 - If the app fails to load, the first line is `{"ready": false, "error"}`
   and the exit code is 1.

@@ -10,9 +10,9 @@ import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
 import {addStepViolations, type CheckResult, checkText, checkTree, readRulesFile, type Rules} from './check.ts';
 import {CliError, EXIT_CODES, type LogEntry, usage} from './errors.ts';
 import {checkHostInfo, ensureHost, type HostTiming, runHost} from './host.ts';
-import type {HostPayload, HostRunPayload, HostRuntimeInfo, Step} from './schema.ts';
+import type {HostPayload, HostRunPayload, HostRuntimeInfo, SessionTreeOptions, Step} from './schema.ts';
 import {ScriptError, scriptHelp, validateScript} from './script.ts';
-import {DEFAULT_TIMEOUT_MS, runSession} from './session.ts';
+import {DEFAULT_TIMEOUT_MS, runSession, validateRequest} from './session.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
 
 // stdout is reserved for the JSON result. Metro and @expo/metro-config log
@@ -442,6 +442,16 @@ function printSchema(name: string | undefined) {
 }
 
 async function session(file: string, options: RunOptions) {
+  // Only the command line sets the session's tree output (not `format` in a11y-tree.json).
+  const treeDefaults: SessionTreeOptions = {
+    ...(options.format != null ? {format: options.format as Format} : {}),
+    ...(options.select != null && options.select.length > 0 ? {select: options.select} : {}),
+    ...(options.depth != null ? {depth: options.depth} : {}),
+    ...(options.subtree != null ? {subtree: options.subtree} : {}),
+    ...(options.style ? {style: true} : {}),
+  };
+  const problem = validateRequest({id: null, tree: true, ...treeDefaults});
+  if (problem != null) throw usage(problem.replace(/^"(\w+)"/, '--$1'));
   applySettings(file, options);
   const platform = requirePlatform(options.platform);
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
@@ -475,6 +485,7 @@ async function session(file: string, options: RunOptions) {
       timing: options.timing,
       quiet: isQuiet(options),
       host,
+      treeDefaults,
       io: {
         input: process.stdin,
         output: process.stdout,
@@ -653,8 +664,7 @@ addCommonOptions(program.command('check'))
   .addHelpText('after', `\nRules (--rules): {"$schema": "./node_modules/react-native-a11y-tree/schema/rules-file.json", "rules": {...}}.\nFull schema: rn-a11y-tree schema rules-file\n\n${scriptHelp()}`)
   .action(check);
 
-program
-  .command('session')
+addOutputOptions(program.command('session'))
   .description(
     'render the component and serve JSON-line requests on stdin (actions, tree, quit)',
   )
@@ -698,6 +708,8 @@ program
   .addHelpText(
     'after',
     `\nRequests (one JSON object per stdin line): {"id": 1, "action": ACTION}, {"id": 2, "tree": true}, {"id": 3, "quit": true}.\n` +
+      '--format, --select, --depth, --subtree and --style set the tree of the ready line and the default for tree/snapshot\n' +
+      'responses; a request\'s own "format", "select", ... win.\n' +
       'Full schemas: rn-a11y-tree schema session-request, rn-a11y-tree schema session-output-line\n\n' +
       scriptHelp().split('\n').slice(3).join('\n'),
   )

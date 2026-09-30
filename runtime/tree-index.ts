@@ -291,6 +291,64 @@ export function findEntry(entries: IndexEntry[], target: TargetSpec): IndexEntry
   return null;
 }
 
+/** Edit distance (Levenshtein) of two short strings. */
+function distance(a: string, b: string): number {
+  let previous = Array.from({length: b.length + 1}, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) {
+      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+const MAX_LISTED = 10;
+
+/**
+ * Error message for a target that findEntry did not find: the spec, then
+ * the closest `testID` / `key` / `sel` values in the tree ("did you mean"),
+ * or, for a testID without a close match, the testIDs that exist.
+ */
+export function targetNotFoundMessage(entries: IndexEntry[], target: TargetSpec): string {
+  const message = `Target not found: ${JSON.stringify(target)}`;
+  const field = (['key', 'sel', 'testID'] as const).find(f => target[f] != null);
+  if (field == null) {
+    if (target.ref != null) {
+      return `${message}. Refs change when the tree changes: read the tree again and use its ref, or target a testID or key`;
+    }
+    return message;
+  }
+  const wanted = String(target[field]);
+  const byValue = new Map<string, IndexEntry>();
+  for (const entry of entries) {
+    const value = entry[field];
+    if (value != null && !byValue.has(value)) byValue.set(value, entry);
+  }
+  const lower = wanted.toLowerCase();
+  const limit = Math.max(2, Math.floor(wanted.length / 3));
+  const close = [...byValue.keys()]
+    .map(value => ({value, d: distance(lower, value.toLowerCase())}))
+    .filter(({value, d}) => d <= limit || value.toLowerCase().includes(lower) || lower.includes(value.toLowerCase()))
+    .sort((a, b) => a.d - b.d || a.value.localeCompare(b.value))
+    .slice(0, 3);
+  if (close.length > 0) {
+    const list = close.map(({value}) => {
+      const entry = byValue.get(value)!;
+      return `${field} ${JSON.stringify(value)} (ref ${entry.ref}, ${entry.type})`;
+    });
+    return `${message}. Did you mean ${list.join(' or ')}?`;
+  }
+  if (field === 'testID') {
+    const values = [...byValue.keys()].sort();
+    if (values.length === 0) return `${message}. The tree has no testIDs`;
+    const more = values.length > MAX_LISTED ? ` (+${values.length - MAX_LISTED} more)` : '';
+    return `${message}. testIDs in the tree: ${values.slice(0, MAX_LISTED).join(', ')}${more}`;
+  }
+  return message;
+}
+
 export function center(box: Box): Point {
   return {x: box.x + box.width / 2, y: box.y + box.height / 2};
 }

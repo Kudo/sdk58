@@ -4,7 +4,7 @@ import path from 'node:path';
 import {test} from 'node:test';
 import {fileURLToPath} from 'node:url';
 
-import {findEntry, hitTestEntries, indexTree} from '../runtime/tree-index.ts';
+import {findEntry, hitTestEntries, indexTree, targetNotFoundMessage} from '../runtime/tree-index.ts';
 import type {ShadowNodeJSON, TreeNode} from '../src/schema.ts';
 import {convertShadowTree} from '../src/tree.ts';
 
@@ -126,4 +126,20 @@ test('runtime/tree-index.ts visualBox matches src/tree.ts (transforms)', () => {
   // The JS hit test uses the drawn position: the translated view is hit at x=150.
   assert.equal(hitTestEntries(entries, 150, 120)!.tag, 2);
   assert.equal(hitTestEntries(entries, 40, 120)!.tag, 1);
+});
+
+test('targetNotFoundMessage: close testIDs/keys, else the testIDs in the tree; refs', () => {
+  const entries = indexTree(tree);
+  const submit = findEntry(entries, {testID: 'submit'})!;
+  assert.equal(
+    targetNotFoundMessage(entries, {testID: 'sumbit'}),
+    `Target not found: {"testID":"sumbit"}. Did you mean testID "submit" (ref ${submit.ref}, ${submit.type})?`,
+  );
+  assert.match(targetNotFoundMessage(entries, {testID: 'Submit-button'}), /Did you mean testID "submit"/);
+  assert.equal(
+    targetNotFoundMessage(entries, {testID: 'zzz'}),
+    'Target not found: {"testID":"zzz"}. testIDs in the tree: email, remember, submit',
+  );
+  assert.match(targetNotFoundMessage(entries, {key: 'sumbit'}), /Did you mean key "submit"/);
+  assert.match(targetNotFoundMessage(entries, {ref: 'n999'}), /^Target not found: \{"ref":"n999"\}\. Refs change when the tree changes/);
 });

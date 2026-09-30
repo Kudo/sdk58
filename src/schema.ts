@@ -421,11 +421,15 @@ export type SessionQuitRequest = {id: RequestId; quit: true};
 /** One line on the session's stdin. */
 export type SessionRequest = SessionActionRequest | SessionTreeRequest | SessionQuitRequest;
 
+/** A tree in session output: a TreeNode (`json`), matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`). */
+export type SessionTree = TreeNode | TreeNode[] | Record<string, unknown> | Array<Record<string, unknown>> | string;
+
 /** First line on the session's stdout. */
 export type SessionReady =
   | {
       ready: true;
-      tree: TreeNode | null;
+      /** The initial tree: a TreeNode, or the `session --format/--select/...` output (see SessionResponse.tree). */
+      tree: SessionTree | null;
       capabilities: string[];
       /** Where the host came from; `version` / `protocolVersion` from its host-version.json when it has one. */
       host?: {source: 'env' | 'package' | 'download' | 'dist'; version?: string; protocolVersion?: number};
@@ -445,7 +449,7 @@ export type SessionResponse = {
    * `tree` requests and `snapshot` actions: a TreeNode (`json`), a list of
    * matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`).
    */
-  tree?: TreeNode | TreeNode[] | Record<string, unknown> | Array<Record<string, unknown>> | string;
+  tree?: SessionTree;
   /** Action requests with `diff: true`. */
   diff?: TreeDiff;
   fallbacks?: string[];
