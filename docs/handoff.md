@@ -1,4 +1,4 @@
-# Hand-off (2026-09-30)
+# Hand-off (2026-09-30, updated the same day after the tooling migration)
 
 This file lets a new session continue the project without the chat history.
 Everything here was observed in this repository or on its CI. Dates are absolute.
@@ -28,7 +28,8 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
 ## State on 2026-09-30
 
 - Repository: https://github.com/Kudo/react-native-a11y-tree (private), branch
-  `main` at `7934efd`, 127 commits. Local checkout: `~/Developer/react-native-a11y-tree`.
+  `main` at `97ba6e1` (134 commits; this update is the next commit). Local
+  checkout: `~/Developer/react-native-a11y-tree`.
 - Released: `v0.1.0` (tag = `e917634`). Assets on the GitHub release:
   `react-native-a11y-tree-0.1.0.tgz` (137 KB), `rn-a11y-host-0.1.0.tgz`
   (4.9 MB, macOS arm64 host), raw host archive + sha256 + `host-version.json`.
@@ -42,10 +43,34 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
   e2e matrix over `android-phone` and `ios-phone`, universal arm64+x86_64 macOS
   host (`RN_A11Y_HOST_ARCH`), OpenSSL-free host (CommonCrypto shim), release
   workflow builds the x86_64 slice and checks it on `macos-15-intel`.
+  Also in 0.1.1 (commits `861b1f2`..`97ba6e1`, NOT yet in `CHANGELOG.md`):
+  the tooling migration and script-file changes in the next section.
+- Tooling migration (2026-09-30, user request):
+  - All sources are TypeScript with `erasableSyntaxOnly` (root and
+    `runtime/tsconfig.json`), so Node runs `src/cli.ts` directly (type
+    stripping; checked on Node 22, 24 and 26). No `tsx`, no `bin/`.
+  - CLI package: `bin` is `dist/rn-a11y-tree.js`, one ESM file from
+    `bun build src/cli.ts --target node` (`bun run build`, run by `prepack`).
+    It ships `runtime/*.ts` (Metro compiles them in the user's project;
+    `runtime/tsconfig.json` is not packed). 48 files.
+  - `rn-a11y-host`: source `index.ts`; `bun scripts/release-host.ts --pack`
+    builds `index.js` (bun build) and `index.d.ts` (tsc); both git-ignored.
+  - `runtime/**` (incl. vendored Fantom, Flow before) is `.ts`/`.tsx`,
+    checked by `tsc -p runtime` (strict, no DOM/Node types; see
+    `runtime/fantom/VENDORED.md`). `NativeEventCategory` is a `const` object.
+  - Scripts (`scripts/*.ts`, `native/tools/*/*.ts`) run with `bun`. Unit tests:
+    `bun test ./test` (node:test API). E2E: Vitest 5 (`vitest.config.ts`,
+    `bun run test:e2e`).
+  - Still JS on purpose: `native/tests/*-itest.js` (Fantom's Jest `testRegex`
+    needs `-itest.js`, Flow) and `native/overlay/config/metro-babel-transformer.flow.js`.
+- Script files (2026-09-30): `--script` accepts `{"$schema": ..., "actions":
+  [...]}` (bare array still works); every `examples/*/actions.json` and the
+  rules files have `$schema`. `run`/`check`/`session --help` list every action;
+  `rn-a11y-tree schema [name]` prints or lists `schema/*.json`.
 - CI: `.github/workflows/ci.yml` (`test` + Release ASan/UBSan `sanitize` jobs)
   and `release-host.yml` (on `v*` tags). Last green run on `main`: commit
-  `60af98a`. Commits after it (`72d5b6c`..`7934efd`) are verified locally
-  (`bun run check`: 78 unit, 25 e2e, host rebuilt) but NOT on CI, because GitHub
+  `60af98a`. Commits after it (`72d5b6c`..`97ba6e1`) are verified locally
+  (`bun run check`: 81 unit + 1 skipped, 25 e2e) but NOT on CI, because GitHub
   Actions is blocked by the account spending limit ("The job was not started
   because recent account payments have failed or your spending limit needs to
   be increased"). The user said the limit resets in October 2026.
@@ -62,27 +87,40 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
 1. `cd ~/Developer/react-native-a11y-tree && git status && git log --oneline -3`.
    The submodule `third_party/react-native` always shows as modified (the
    overlay is rsynced into it); ignore that.
-2. Check GitHub Actions: `gh run list --repo Kudo/react-native-a11y-tree --limit 3`.
+2. Add the 0.1.1 `CHANGELOG.md` entries for the tooling migration and the
+   script-file changes (see "State"); `test/changelog.test.ts` only checks
+   that the section exists.
+3. Check GitHub Actions: `gh run list --repo Kudo/react-native-a11y-tree --limit 3`.
    If runs start (not "job was not started"), re-run CI on `main`
    (`gh workflow run ci.yml --ref main` or push an empty commit), wait for
-   green, then tag `v0.1.1`:
+   green (the first CI run of the tooling migration: Vitest, `bun test`, Node 24
+   type stripping on the runner, the sanitizer step's `bun run test:e2e <files>`),
+   then tag `v0.1.1`:
    `git tag -a v0.1.1 -m "v0.1.1" && git push origin v0.1.1`.
    The release workflow builds the universal host, runs the Intel check,
    packs both packages, and creates the GitHub release with notes from
    `CHANGELOG.md`. Download the two `.tgz` assets, verify them in a scratch
    project (see "Verify a release" below), and give them to the user.
-3. Ask the user which of these is next (they had not answered on 2026-09-30):
+4. Ask the user which of these is next (they had not answered on 2026-09-30):
    (a) Linux host (stub text first, then HarfBuzz+FreeType text),
    (b) `@expo/agent-cli` integration PR, (c) Windows spike. The agent's
    recommendation was: publish 0.1.1 -> (b) -> (a) -> Windows.
+5. Proposed to the user, not decided: session improvements for agents
+   (`candidates` on TARGET_NOT_FOUND, a compact list of actionable elements in
+   `ready` and after each step, changes after each action) and exporting a
+   session's successful actions as an `actions.json` (refs mapped to
+   testID/key). The user said actions are written by agents only, not humans:
+   keep JSON + the session loop, no TS action scripts. `ref` targets already work.
 
 ## Commands
 
 ```
 bun install
 bun run build:host            # Release, arm64; ~5 min first time, ~10-60 s incremental
-bun run check                 # tsc + schema check + unit tests + e2e (both presets)
-bun run test | bun run test:e2e
+bun run check                 # tsc (root + runtime) + schema check + unit tests + e2e (both presets)
+bun run test | bun run test:e2e   # bun test ./test | vitest run
+bun run build                 # dist/rn-a11y-tree.js (bun build)
+bun run rn-a11y-tree schema script   # print a schema; no name: list them
 bun run rn-a11y-tree render examples/basic/App.tsx --preset android-phone --format text
 bun run rn-a11y-tree run examples/basic/App.tsx --preset ios-phone --script examples/basic/actions.json --format text
 bun run rn-a11y-tree check examples/basic/App.tsx --preset android-phone --rules examples/basic/rules-fail.json --format text
@@ -140,6 +178,15 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 - GitHub Actions concurrency cancels the in-progress `main` run on every push;
   batch pushes when a run must finish.
 - Rosetta is not installed on the dev Mac (decided not to install it).
+- `bunfig.toml` has `peer = false`: peer dependencies are not installed, so
+  `vite` (Vitest 5's peer) is a direct devDependency.
+- Under `bun test`, `process.execPath` is bun. Tests spawn the CLI with
+  `'node'` explicitly (the CLI must stay on Node) and scripts with `'bun'`.
+- `node src/cli.ts` needs erasable TypeScript only (no enums, namespaces or
+  constructor parameter properties); `erasableSyntaxOnly` makes tsc enforce it.
+- A new worktree needs `bun install`, `git submodule update --init --depth 1
+  third_party/react-native` (release-host reads its package.json), and a host
+  in `native/dist/<arch>/` (copy it from the main checkout) for the e2e suite.
 - The user's requirements (from the chat): true Metro and true Fabric, no fake
   renderer, no text heuristics; `--platform` must be explicit (presets set
   it); the tool must stay a standalone one-shot CLI (no daemon); Bun as package
@@ -154,8 +201,9 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 | Host overlay over Fantom | `native/overlay/tester/` (`CMakeLists.txt`, `src/components/*` custom shadow nodes, `src/render/A11yTree.cpp`, `HitTest.cpp`, `src/reanimated/`, `src/expoui/layout/` SwiftUI engine, `src/expoui/compose/` Compose engine, `src/platform/macos/` CoreText text + fonts, `src/stubs/crypto/`) |
 | Fantom itests | `native/tests/` |
 | Reference harnesses | `native/tools/swiftui-ref/` (real SwiftUI, macOS + iOS sim), `native/tools/compose-ref/` (Compose Desktop), `native/tools/*-layout-test/` (engine vs reference) |
-| Host build script | `scripts/build-host.sh`; release packaging `scripts/release-host.ts` |
-| Packages | root = CLI; `packages/rn-a11y-host/` (hermesc-style `osx-bin/`, `linux64-bin/`, `win64-bin/`) |
+| Host build script | `scripts/build-host.sh`; release packaging `scripts/release-host.ts`; other scripts `scripts/*.ts` (bun) |
+| Tests | `test/` (bun test, fake host `test/fixtures/fake-host.ts`), `e2e/` (Vitest, real host) |
+| Packages | root = CLI (`bin` = `dist/rn-a11y-tree.js`); `packages/rn-a11y-host/` (`index.ts`; hermesc-style `osx-bin/`, `linux64-bin/`, `win64-bin/`) |
 | Docs | `docs/agent-friendliness.md`, `docs/build-analysis.md`, `docs/perf-analysis.md`, `docs/expo-ui-status.md`, `docs/e2e-coverage.md`, `docs/research/*` |
 | Schemas / tool descriptors | `schema/*.json`, `tools/*.json` (regenerate with `bun run schema`) |
 
@@ -176,7 +224,7 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 
 ## Next-step plan (proposed, not started)
 
-1. Publish 0.1.1 (blocked on GitHub Actions billing).
+1. Publish 0.1.1 (blocked on GitHub Actions billing; CHANGELOG entries first).
 2. `@expo/agent-cli` integration: a new command group in its
    `src/commandRegistry.ts` that spawns `rn-a11y-tree` through its
    `subprocess.ts` (that repo's rule is subprocess-only), using `tools/*.json`
