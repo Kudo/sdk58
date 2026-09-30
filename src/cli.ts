@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {Command, InvalidArgumentError} from 'commander';
 
 import {bundle, type BundleResult, type HostConfig, type TapMode} from './bundle.ts';
+import {type Format, type FormatOptions, FORMATS, formatRender, formatRun} from './format.ts';
 import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
 import {getHostBin, HostError, type HostTiming, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
@@ -30,7 +31,29 @@ type HostConfigOptions = {
   safeAreaInsets?: HostConfig['safeAreaInsets'];
 };
 
-type RenderOptions = HostConfigOptions & {
+type OutputOptions = {
+  format?: string;
+  select?: string[];
+  depth?: number;
+  subtree?: string;
+  style?: boolean;
+};
+
+function formatOptions(options: OutputOptions): FormatOptions {
+  const format = (options.format ?? 'json') as Format;
+  if (!FORMATS.includes(format)) {
+    throw new Error(`--format must be one of: ${FORMATS.join(', ')}`);
+  }
+  return {
+    format,
+    select: options.select,
+    depth: options.depth,
+    subtree: options.subtree,
+    style: options.style,
+  };
+}
+
+type RenderOptions = HostConfigOptions & OutputOptions & {
   timing?: boolean;
   resetCache?: boolean;
   /** --no-cache sets false. */
@@ -255,11 +278,12 @@ async function execute<T>(
 }
 
 async function render(file: string, options: RenderOptions) {
+  const output = formatOptions(options);
   const timing: Timing | undefined = options.timing ? {} : undefined;
   const payload = await execute<HostPayload>(file, options, {}, timing);
   if (payload) {
     const convertStart = performance.now();
-    const text = JSON.stringify(toRenderResult(payload), null, 2) + '\n';
+    const text = formatRender(toRenderResult(payload), output);
     if (timing) {
       timing.convertMs = round3(performance.now() - convertStart);
       timing.outputBytes = Buffer.byteLength(text);
@@ -275,6 +299,7 @@ async function run(file: string, options: RunOptions) {
     throw new Error(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
   }
   // Validate before bundling.
+  const output = formatOptions(options);
   const script = readScript(options.script);
   const timing: Timing | undefined = options.timing ? {} : undefined;
   const payload = await execute<HostRunPayload>(
@@ -293,7 +318,7 @@ async function run(file: string, options: RunOptions) {
       );
     }
     const convertStart = performance.now();
-    const text = JSON.stringify(toRunResult(payload), null, 2) + '\n';
+    const text = formatRun(toRunResult(payload), output);
     if (timing) {
       timing.convertMs = round3(performance.now() - convertStart);
       timing.outputBytes = Buffer.byteLength(text);
@@ -397,7 +422,31 @@ function addCommonOptions(command: Command): Command {
     .option('-v, --verbose', 'print Metro progress and host logs to stderr', false);
 }
 
-addCommonOptions(program.command('render'))
+function collect(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+function nonNegativeInt(value: string): number {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 0) throw new InvalidArgumentError('Must be an integer >= 0.');
+  return n;
+}
+
+function addOutputOptions(command: Command): Command {
+  return command
+    .option('--format <format>', 'json, compact (no defaults/empties/style), text (one line per node), ndjson', 'json')
+    .option(
+      '--select <selector>',
+      'only nodes matching field=value or field~text (testID, role, name, type, key, ref, sel, text); repeat to AND',
+      collect,
+      [],
+    )
+    .option('--depth <n>', 'levels of children to keep below each output root', nonNegativeInt)
+    .option('--subtree <selector>', 'start the output at the first node matching the selector')
+    .option('--style', 'keep style props in compact/ndjson output', false);
+}
+
+addCommonOptions(addOutputOptions(program.command('render')))
   .description('render the component and print its tree')
   .option(
     '--debug-props',
@@ -406,7 +455,7 @@ addCommonOptions(program.command('render'))
   )
   .action(render);
 
-addCommonOptions(program.command('run'))
+addCommonOptions(addOutputOptions(program.command('run')))
   .description('render the component, run a script of actions, print steps and trees')
   .option('--script <json>', 'JSON file with an array of actions (required)')
   .option('--tap-mode <mode>', 'events for taps: touch, click or both', 'touch')

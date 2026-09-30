@@ -19,6 +19,8 @@ import readline from 'node:readline';
 import {getHostBin, hostArgs} from './host.ts';
 import type {ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
+import {type Format, FORMATS, formatRender, parseSelector} from './format.ts';
+import type {TreeNode} from './schema.ts';
 import {convertShadowTree, convertStep} from './tree.ts';
 
 const RESPONSE_TYPE = 'rn-a11y-tree-response';
@@ -184,11 +186,11 @@ export async function runSession(options: {
     io.output.write(JSON.stringify(value) + '\n');
   };
 
-  const convert = (response: HostResponse) => {
+  const convert = (response: HostResponse, request: Record<string, unknown>) => {
     const out: Record<string, unknown> = {id: response.id, ok: response.ok};
     if (response.error != null) out.error = response.error;
     if (response.step != null) out.step = convertStep(response.step);
-    if (response.tree != null) out.tree = convertShadowTree(response.tree);
+    if (response.tree != null) out.tree = formatSessionTree(convertShadowTree(response.tree), request);
     if (response.fallbacks != null && response.fallbacks.length > 0) {
       out.fallbacks = response.fallbacks;
     }
@@ -259,7 +261,7 @@ export async function runSession(options: {
     }
     const requestStart = performance.now();
     const response = await send(request);
-    writeLine(convert(response));
+    writeLine(convert(response, request));
     if (options.timing) {
       io.log(
         `rn-a11y-tree timing: ${JSON.stringify({id: request.id, requestMs: Math.round((performance.now() - requestStart) * 1000) / 1000})}`,
@@ -280,6 +282,34 @@ export async function runSession(options: {
   return finish();
 }
 
+/**
+ * Optional output fields on `tree` and `snapshot` requests: `format`
+ * (json | compact | text | ndjson), `select` (string or list), `depth`,
+ * `subtree`, `style`. Text and ndjson trees are returned as a string.
+ */
+function formatSessionTree(tree: TreeNode, request: Record<string, unknown>): unknown {
+  const format = (request.format as Format | undefined) ?? 'json';
+  const select =
+    typeof request.select === 'string' ? [request.select] : (request.select as string[] | undefined);
+  const options = {
+    format,
+    select,
+    depth: request.depth as number | undefined,
+    subtree: request.subtree as string | undefined,
+    style: request.style === true,
+  };
+  if (format === 'json' && select == null && options.depth == null && options.subtree == null) {
+    return tree;
+  }
+  const viewport = {width: 0, height: 0};
+  const text = formatRender({viewport, source: 'shadowTree', root: tree}, options);
+  if (format === 'text' || format === 'ndjson') return text;
+  const parsed = JSON.parse(text) as {root?: unknown; matches?: unknown};
+  return parsed.root ?? parsed.matches;
+}
+
+const OUTPUT_KEYS = ['format', 'select', 'depth', 'subtree', 'style'];
+
 /** Returns an error message, or null if the request is valid. */
 export function validateRequest(request: unknown): string | null {
   if (typeof request !== 'object' || request == null || Array.isArray(request)) {
@@ -290,6 +320,19 @@ export function validateRequest(request: unknown): string | null {
   const kinds = ['action', 'tree', 'quit'].filter(k => k in r);
   if (kinds.length !== 1) {
     return 'request needs exactly one of "action", "tree" or "quit"';
+  }
+  if ('format' in r && !FORMATS.includes(r.format as Format)) {
+    return `"format" must be one of: ${FORMATS.join(', ')}`;
+  }
+  for (const key of OUTPUT_KEYS) {
+    if (key in r && kinds[0] === 'quit') return `"${key}" is not allowed on quit`;
+  }
+  if (typeof r.select === 'string' || Array.isArray(r.select)) {
+    try {
+      for (const sel of typeof r.select === 'string' ? [r.select] : (r.select as string[])) parseSelector(sel);
+    } catch (error) {
+      return (error as Error).message;
+    }
   }
   if (kinds[0] === 'action') {
     try {

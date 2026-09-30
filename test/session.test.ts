@@ -103,3 +103,20 @@ test('session: per-request timeout kills the host and exits 1', {timeout: 120_00
   assert.match(proc.stderr, /request timed out after 1500 ms; host killed/);
   assert.ok(Date.now() - started < 60_000);
 });
+
+test('session: tree requests accept format/select/depth (fake host)', {timeout: 120_000}, () => {
+  const proc = runSession([
+    {id: 1, tree: true, format: 'text', select: 'role=button'},
+    {id: 2, tree: true, format: 'compact', select: ['testID=submit'], depth: 1},
+    {id: 3, tree: true, format: 'xml'},
+    {id: 4, tree: true, select: 'color=red'},
+    {id: 5, quit: true},
+  ]);
+  assert.equal(proc.status, 0, proc.stderr);
+  const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
+  assert.match(out[1].tree, /^n\d+ View #submit role=button "Submit"/);
+  assert.equal(out[2].tree.length, 1);
+  assert.equal(out[2].tree[0].children.length, 1);
+  assert.match(out[3].error, /"format" must be one of/);
+  assert.match(out[4].error, /invalid selector/);
+});

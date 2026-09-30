@@ -75,7 +75,12 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--dev` | all | off | Development bundle (`__DEV__ = true`) |
 | `--keep-bundle` | all | off | Keep the bundle and print its path to stderr |
 | `-v, --verbose` | all | off | Metro progress, host glog and console output on stderr |
-| `--out <file>` | `render`, `run` | stdout | Write the JSON to a file |
+| `--out <file>` | `render`, `run` | stdout | Write the output to a file |
+| `--format <f>` | `render`, `run` | `json` | `json`, `compact` (no defaults/empties, no `style`), `text` (one line per node), `ndjson` (one node per line) |
+| `--select <sel>` | `render`, `run` | all | Only nodes matching `field=value` or `field~text` (fields: `testID`, `role`, `name`, `type`, `key`, `ref`, `sel`, `text`); repeat to AND. Matches only, unless `--depth` |
+| `--depth <n>` | `render`, `run` | all | Levels of children below each output root (0 = node only) |
+| `--subtree <sel>` | `render`, `run` | root | Start the output at the first node matching the selector |
+| `--style` | `render`, `run` | off | Keep `style` in `compact`/`ndjson` |
 | `--bundle-only` | `render`, `run` | off | Build the bundle and stop (no host needed) |
 | `--debug-props` | `render` | off | Add raw host debug props to each node (`debugProps`) |
 | `--script <json>` | `run` | required | JSON file with an array of actions |
@@ -114,6 +119,38 @@ Medium example, Release host, median of 5 (`render --timing`):
 
 (Before caching: 1.3 s warm, Metro 0.86 s, bundle eval 150 ms; with bytecode
 bundle eval is 13 ms.)
+
+## Formats and queries
+
+For agents, `--format` and the query options make the output small:
+
+```sh
+rn-a11y-tree render App.tsx --platform android --format text
+# n0 RootView {0,0,390x844}
+#   n1 View {0,0,390x844}
+#     n2 Paragraph role=header "Sign in" {24,24,342x33.3}
+#     n5 AndroidSwitch #remember role=switch "Remember me" {24,205.7,51x31} [checked]
+#     n6 View #submit role=button "Submit" {24,252.7,342x48}
+rn-a11y-tree render App.tsx --platform android --format text --select role=button
+rn-a11y-tree render App.tsx --platform android --format compact --subtree testID=card-3 --depth 1
+```
+
+- `text`: `<key> <type> [#testID] [role=…] ["name"] {x,y,wxh} [visual={…}]
+  [flags]`; flags: `hidden`, `disabled`, `checked`, `mixed`, `selected`,
+  `virtual`, `opacity=…`.
+- `compact`: one-line JSON without null/false/empty fields, `a11y.raw` and
+  `style` (`--style` keeps `style`, minus `layoutDirection: "ltr"`).
+- `ndjson`: one compact node per line with `depth` and `parent`; for `run`,
+  one line per step first, then nodes tagged with `tree` (snapshot name or
+  `final`).
+- `run --format text`: one line per step, then each snapshot and the final
+  tree.
+- Session `tree` and `snapshot` requests take the same `format`, `select`
+  (string or list), `depth`, `subtree`, `style` fields; `text`/`ndjson` trees
+  are returned as a string.
+
+Output size for the medium example (832 nodes): `json` 1,598,904 bytes,
+`ndjson` 246,853, `compact` 230,446, `text` 60,844.
 
 ## Output schema
 

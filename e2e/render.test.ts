@@ -85,5 +85,14 @@ test(
       // host's debug props, so only `accessibilityRole` would show a role.
       assert.equal(result.source, 'mounted');
     }
+
+    // Agent formats on the real host.
+    const text = spawnSync(
+      process.execPath,
+      [CLI, 'render', APP, '--platform', 'android', '--format', 'text', '--select', 'role=button'],
+      {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: hostBin}},
+    );
+    assert.equal(text.status, 0, text.stderr);
+    assert.match(text.stdout.trim(), /^n\d+ View #submit role=button "Submit" \{24,[\d.]+,342x48\}$/);
   },
 );
