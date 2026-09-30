@@ -35,8 +35,7 @@ macOS arm64 only (the host is built by `bun run build:host`).
 
 ## Install
 
-Not published to npm yet. The planned flow, in an Expo SDK 58 project on
-macOS:
+From version 0.1.0 (macOS arm64 only), in an Expo SDK 58 project:
 
 ```sh
 npx react-native-a11y-tree render App.tsx --preset android-phone --format text
@@ -46,7 +45,8 @@ npx react-native-a11y-tree render App.tsx --preset android-phone --format text
 Two packages:
 
 - `react-native-a11y-tree`: the CLI. `bin/rn-a11y-tree.js` runs the tsc
-  build in `dist/` (`bun run build`); in a repo checkout (with `src/`) it
+  build in `dist/` (`bun run build`, run by `prepack` together with
+  `bun run schema --check`); in a repo checkout (with `src/`) it
   runs the TypeScript sources through `tsx`. Files: `bin/`, `dist/`,
   `runtime/`, `schema/`, `tools/`, `README.md`, `LICENSE`. Dependencies:
   `commander` and `rn-a11y-host`. Peer dependencies: `expo` (>= 58),
@@ -55,7 +55,10 @@ Two packages:
   React Native install), so the bundle uses the project's Metro.
 - `rn-a11y-host`: the prebuilt host, in hermes-compiler's layout
   (`osx-bin/`, `linux64-bin/`, `win64-bin/`, `host-version.json`,
-  `getHostPath()`). macOS only for now.
+  `getHostPath()`). 0.1.0 has a macOS arm64 binary only; see
+  [packages/rn-a11y-host/README.md](packages/rn-a11y-host/README.md). Its
+  `prepack` fails when `osx-bin/rn-a11y-host` is missing (run
+  `node scripts/release-host.mjs --pack` first).
 
 Local check of this flow: `e2e/package.test.ts` packs both packages
 (`npm pack`), installs them with `expo@58.0.0 react-native@0.88.0-rc.2

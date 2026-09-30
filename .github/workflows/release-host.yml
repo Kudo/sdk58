@@ -119,7 +119,7 @@ jobs:
           path: dist/release/
 
   # Later: publish both packages to npm from the release tarballs. Needs the
-  # NPM_TOKEN secret and `"private": true` removed from package.json.
+  # NPM_TOKEN secret (the user publishes 0.1.0 manually from these tarballs).
   # publish:
   #   needs: release
   #   runs-on: ubuntu-latest

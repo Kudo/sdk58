@@ -1,8 +1,26 @@
 {
   "name": "rn-a11y-host",
   "version": "0.1.0",
-  "description": "Prebuilt headless React Native host (Fantom: Fabric + Hermes) for react-native-a11y-tree",
+  "description": "Prebuilt headless React Native host (Fantom: Fabric + Hermes + Yoga) used by react-native-a11y-tree. macOS arm64 in 0.1.0.",
+  "keywords": [
+    "react-native",
+    "fantom",
+    "fabric",
+    "hermes",
+    "headless",
+    "accessibility",
+    "react-native-a11y-tree"
+  ],
   "license": "MIT",
+  "homepage": "https://github.com/Kudo/react-native-a11y-tree/tree/main/packages/rn-a11y-host#readme",
+  "bugs": {
+    "url": "https://github.com/Kudo/react-native-a11y-tree/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kudo/react-native-a11y-tree.git",
+    "directory": "packages/rn-a11y-host"
+  },
   "type": "module",
   "main": "./index.js",
   "types": "./index.d.ts",
@@ -21,11 +39,16 @@
     "host-version.json",
     "index.js",
     "index.d.ts",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Kudo/react-native-a11y-tree.git",
-    "directory": "packages/rn-a11y-host"
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "node -e \"const f='osx-bin/rn-a11y-host';if(!require('fs').existsSync(f)){console.error('rn-a11y-host: '+f+' is missing: run node scripts/release-host.mjs --pack in the repo root first');process.exit(1)}\""
   }
 }
