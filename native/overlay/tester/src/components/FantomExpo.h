@@ -83,9 +83,12 @@ bool dispatchExpoModifierEvent(const ShadowNode &shadowNode, const std::string &
 struct ExpoViewInfo {
   std::string type;
   folly::dynamic props;
-  // "emulated" for a Host sized by matchContents, "placeholder" for the
-  // other @expo/ui views (Yoga frames, not SwiftUI/Compose frames).
+  // "emulated" for a Host laid out by a layout engine and every node under it
+  // that got an engine frame; "placeholder" for the other @expo/ui views
+  // (their Yoga frames: no engine, or an unsupported view).
   std::string layout;
+  // On an emulated Host: "swiftui" or "compose".
+  std::string emulatedBy;
 };
 std::optional<ExpoViewInfo> getExpoViewInfo(const ShadowNode &shadowNode);
 

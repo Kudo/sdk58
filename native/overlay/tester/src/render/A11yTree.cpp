@@ -804,6 +804,9 @@ folly::dynamic renderNode(
     if (!expoInfo->layout.empty()) {
       result["layout"] = expoInfo->layout;
     }
+    if (!expoInfo->emulatedBy.empty()) {
+      result["emulatedBy"] = expoInfo->emulatedBy;
+    }
     // Accessibility from modifiers (SwiftUI accessibilityLabel/Hint/Value,
     // Compose semantics/testID) unless set as props.
     auto modifiers = expoInfo->props.get_ptr("modifiers");

@@ -106,6 +106,13 @@ describe('@expo/ui', () => {
       expect(frame.width).toBeCloseTo(width, 2);
       expect(frame.height).toBeCloseTo(height, 2);
     });
+    // Every node the engine laid out is "emulated"; the Host names the engine.
+    const host3 = findAll(t2, n => n.type === 'ExpoUI.HostView')[0];
+    expect(host3.layout).toBe('emulated');
+    expect(host3.emulatedBy).toBe('compose');
+    expect(findAll(host3, n => String(n.type).startsWith('ExpoUI.')).map(n => n.layout)).toEqual(
+      expected.map(() => 'emulated'),
+    );
     const button2 = findAll(t2, n => n.type === 'ExpoUI.Button')[0];
     const buttonBox = (() => {
       let result = null;
@@ -174,6 +181,8 @@ describe('@expo/ui', () => {
     const swiftFrames = findAll(tree(root), n => String(n.type).startsWith('ExpoUI.')).map(n => [n.type, n.frame]);
     console.log('SWIFT_FRAMES ' + JSON.stringify(swiftFrames));
     expect(swiftFrames[0][1]).toEqual({x: 0, y: 0, width: 390, height: 844});
+    const swiftHost = findAll(tree(root), n => n.type === 'ExpoUI.HostView')[0];
+    expect([swiftHost.layout, swiftHost.emulatedBy]).toEqual(['emulated', 'swiftui']);
     const text = findAll(t, n => n.type === 'ExpoUI.TextView')[0];
     expect(text.accessibilityLabel).toBe('Greeting');
     expect(text.accessibilityHint).toBe('Says hello');

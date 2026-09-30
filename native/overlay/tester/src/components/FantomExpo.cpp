@@ -64,6 +64,12 @@ bool isExpoView(const ShadowNode& shadowNode) {
   return expoProps(shadowNode) != nullptr;
 }
 
+// Which engine laid out each Expo view (tag -> "swiftui" | "compose"), from
+// the last layout of its Host: the Host and every node that got an engine
+// frame. Read by getExpoViewInfo.
+std::mutex gEmulatedMutex;
+std::unordered_map<Tag, std::string> gEmulated;
+
 /*
  * Writes the emulated frames into the Expo views under `parent`. Each child
  * with a frame is cloned (`clone({})`: a new, unsealed node; the ones from the
@@ -461,7 +467,8 @@ layout::Node engineRootOf(
 ExpoLayoutResult hookResultOf(
     const ShadowNode& host,
     const layout::LayoutResult& layoutResult,
-    const std::unordered_map<std::string, Tag>& paths) {
+    const std::unordered_map<std::string, Tag>& paths,
+    const char* engine) {
   ExpoLayoutResult result;
   result.contentSize = Size{
       static_cast<Float>(layoutResult.host.width), static_cast<Float>(layoutResult.host.height)};
@@ -523,6 +530,19 @@ ExpoLayoutResult hookResultOf(
     }
   }
   relative(host, Point{0, 0});
+  {
+    // "emulated" for the Host and the nodes with an engine frame; the others
+    // (unsupported views without laid-out children) keep "placeholder".
+    std::lock_guard<std::mutex> lock(gEmulatedMutex);
+    gEmulated[host.getTag()] = engine;
+    for (const auto& [tag, frame] : result.frames) {
+      if (absolute.count(tag) != 0) {
+        gEmulated[tag] = engine;
+      } else {
+        gEmulated.erase(tag);
+      }
+    }
+  }
   return result;
 }
 
@@ -535,7 +555,7 @@ ExpoLayoutResult layoutSwiftUIHost(const ShadowNode& host, Size proposal) {
   auto metrics = gExpoUIMacOS.load() ? layout::ControlMetrics::macos() : layout::ControlMetrics::ios();
   metrics.pixelScale = scale;
   HostTextMeasurer measurer(scale);
-  return hookResultOf(host, layout::layout(hostSpecOf(host, proposal), root, measurer, metrics), paths);
+  return hookResultOf(host, layout::layout(hostSpecOf(host, proposal), root, measurer, metrics), paths, "swiftui");
 }
 
 #ifdef FANTOM_EXPO_UI_COMPOSE_ENGINE
@@ -553,7 +573,7 @@ ExpoLayoutResult layoutComposeHost(const ShadowNode& host, Size proposal) {
   metrics.fontScale = 1;
   metrics.touchTarget = true;
   static FantomComposeTextMeasurer measurer;
-  return hookResultOf(host, expoui::compose::layout(hostSpecOf(host, proposal), root, measurer, metrics), paths);
+  return hookResultOf(host, expoui::compose::layout(hostSpecOf(host, proposal), root, measurer, metrics), paths, "compose");
 }
 #endif
 #endif
@@ -670,10 +690,19 @@ std::optional<ExpoViewInfo> getExpoViewInfo(const ShadowNode& shadowNode) {
   ExpoViewInfo info;
   if (startsWith(name, kExpoUIPrefix)) {
     info.type = "ExpoUI." + std::string(name.substr(kExpoUIPrefix.size()));
-    if (name == kExpoUIHostName &&
-        (propIsTrue(*props, "matchContentsHorizontal") ||
-         propIsTrue(*props, "matchContentsVertical"))) {
+    std::string engine;
+    {
+      std::lock_guard<std::mutex> lock(gEmulatedMutex);
+      auto it = gEmulated.find(shadowNode.getTag());
+      if (it != gEmulated.end()) {
+        engine = it->second;
+      }
+    }
+    if (!engine.empty()) {
       info.layout = "emulated";
+      if (name == kExpoUIHostName) {
+        info.emulatedBy = engine;
+      }
     } else if (name != kExpoUIHostName) {
       info.layout = "placeholder";
     }
