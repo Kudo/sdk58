@@ -11,7 +11,12 @@ use it directly: `react-native-a11y-tree` depends on it and runs it.
 
 ## Platforms
 
-Version 0.1.0 has a binary for **macOS arm64 only** (`osx-bin/rn-a11y-host`).
+- **0.1.1:** a **universal macOS binary** (arm64 + x86_64, joined with
+  `lipo`) in `osx-bin/rn-a11y-host`. The release workflow cross-builds the
+  x86_64 slice on its arm64 runner and renders an example with it on an
+  Intel runner before packing.
+- **0.1.0:** a binary for **macOS arm64 only** (`osx-bin/rn-a11y-host`).
+
 The `linux64-bin/` and `win64-bin/` slots of the layout are empty.
 
 ## API
@@ -26,8 +31,8 @@ getHostVersionPath(); // <package>/host-version.json
 `getHostPath(platform?, arch?)` returns the path for `darwin` (any arch:
 `osx-bin/rn-a11y-host`), `linux` x64 (`linux64-bin/rn-a11y-host`) and
 `win32` x64 (`win64-bin/rn-a11y-host.exe`). The file can be missing (the
-Linux and Windows slots in 0.1.0; also Intel Macs, because the 0.1.0 binary
-is arm64 only): check it with `fs.existsSync()`. For any other platform it
+Linux and Windows slots; in 0.1.0 also on Intel Macs, because that binary is
+arm64 only): check it with `fs.existsSync()`. For any other platform it
 throws `HostUnavailableError` with `code: 'HOST_UNAVAILABLE'`, `platform`
 and `arch`. `react-native-a11y-tree` then looks for other hosts
 (`RN_A11Y_HOST_BIN`, a download with `RN_A11Y_HOST_BASE_URL`), else stops

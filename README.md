@@ -931,6 +931,16 @@ With the default static host (Hermes and JSI linked in), the
 binary links only system libraries (`otool -L`: libobjc, CoreFoundation,
 AppKit, CoreText, Foundation, libc++, libSystem).
 
+`RN_A11Y_HOST_ARCH=arm64|x86_64|universal` (default: the build machine's
+architecture) selects the host architecture. A foreign architecture (x86_64
+on an arm64 Mac) is cross-built with its own Hermes build into
+`native/dist/x86_64/`; `universal` builds both slices and joins them with
+`lipo` into `native/dist/universal/`. `release-host.mjs --pack` makes a
+universal `osx-bin/rn-a11y-host` when both `native/dist/arm64` and
+`native/dist/x86_64` exist. An x86_64 slice cannot run on an arm64 Mac
+without Rosetta; the release workflow checks it on a `macos-15-intel`
+runner.
+
 ### Prebuilt host
 
 `node scripts/release-host.mjs [--out release] [--pin]` packages
