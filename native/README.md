@@ -543,7 +543,10 @@ Native:
   resolves to Android's font (`tests/FantomRoboto-itest.js`: "Hello world"
   at 14 pt is 70.33 wide, 72.67 in the system font). Other weights map to
   the nearest face (100-450 Regular, 500 Medium, 600-900 Bold); every italic
-  uses Italic. `FANTOM_FONTS_DIR` overrides the fonts directory (default
+  uses Italic (Roboto-MediumItalic and -BoldItalic are not embedded, about
+  460 KB more gzipped), so italic text at weight 500 or more is measured with
+  the regular Italic: 1-2 px narrower than on Android at 14 sp (compose-ref,
+  densities 1 to 3.5). `FANTOM_FONTS_DIR` overrides the fonts directory (default
   `<node_modules>/../native/fonts`).
 - Host `matchContents` (`matchContentsHorizontal`/`matchContentsVertical`
   props): after every mount (and on `updateNativeStates`) the host dispatches
