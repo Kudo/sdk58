@@ -90,6 +90,32 @@ ScrollView / AndroidTextInput). Like the node-based Fantom methods, they only
 enqueue: call `NativeFantom.flushEventQueue()` and then `Fantom.runWorkLoop()`
 (this is what `Fantom.runOnUIThread` + `runWorkLoop` do).
 
+## Host protocol and host info
+
+`getCapabilities()` contains `"protocolVersion:<n>"` (currently
+`"protocolVersion:1"`), and `NativeFantom.getHostInfo()` returns a JSON
+string:
+
+```json
+{"protocolVersion": 1, "rnVersion": "0.88.0-rc.3", "buildType": "Release",
+ "sanitize": false, "engines": {"swiftui": true, "compose": true},
+ "fonts": {"roboto": true}}
+```
+
+`buildType` is the tester's `CMAKE_BUILD_TYPE`; `sanitize` is true in an
+AddressSanitizer / UndefinedBehaviorSanitizer build; `engines` are the
+@expo/ui layout engines compiled in; `fonts.roboto` says whether the embedded
+Roboto registered (calling `getHostInfo()` registers it if needed). The CLI
+compares `protocolVersion` with `host-version.json` / `SUPPORTED_PROTOCOL` in
+`src/host.ts`.
+
+`protocolVersion` (`kHostProtocolVersion` in `tester/src/NativeFantom.cpp`)
+is bumped when a change is incompatible for the CLI: a NativeFantom method is
+removed or renamed, its arguments or return value change meaning, or the
+`getA11yTree` node shape changes (a field removed, renamed or with another
+type). New methods, new capabilities and new optional node fields do not bump
+it; they are announced through `getCapabilities()`.
+
 ## Mounted values in getA11yTree
 
 `getA11yTree` serializes the shadow tree. Some changes only reach the mounted

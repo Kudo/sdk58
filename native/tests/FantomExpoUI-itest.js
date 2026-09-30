@@ -248,6 +248,15 @@ describe('@expo/ui', () => {
     const capabilities = JSON.parse(Native.getCapabilities());
     expect(capabilities).toContain('expoUI.swiftUILayout');
     expect(capabilities).not.toContain('expoUI.fakeLayout');
+    expect(capabilities).toContain('protocolVersion:1');
+    const hostInfo = JSON.parse(Native.getHostInfo());
+    console.log('HOST_INFO ' + JSON.stringify(hostInfo));
+    expect(hostInfo.protocolVersion).toBe(1);
+    expect(hostInfo.engines).toEqual({swiftui: true, compose: true});
+    expect(hostInfo.fonts).toEqual({roboto: true});
+    expect(hostInfo.rnVersion.startsWith('0.88.')).toBe(true);
+    expect(typeof hostInfo.buildType).toBe('string');
+    expect(typeof hostInfo.sanitize).toBe('boolean');
 
     const presses: Array<string> = [];
     const root = Fantom.createRoot({viewportWidth: 390, viewportHeight: 844});

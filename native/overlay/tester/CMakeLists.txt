@@ -460,6 +460,8 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/oss/*.cpp
 )
 add_executable(fantom_tester ${SOURCES})
+# For NativeFantom.getHostInfo().
+target_compile_definitions(fantom_tester PRIVATE "FANTOM_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\"")
 
 # Sanitizer builds (scripts/build-host.sh RN_A11Y_HOST_SANITIZE=1): with
 # AddressSanitizer folly calls its leak annotations, which live in a file the
@@ -490,7 +492,8 @@ if(FANTOM_WITH_EXPO_UI)
         ${FANTOM_EXPO_UI_COMPOSE_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/components/FantomComposeText.mm)
     target_link_libraries(fantom_tester PRIVATE fantom_embedded_fonts)
-    target_compile_definitions(fantom_tester PRIVATE FANTOM_EXPO_UI_COMPOSE_ENGINE=1)
+    target_compile_definitions(fantom_tester
+      PRIVATE FANTOM_EXPO_UI_COMPOSE_ENGINE=1 FANTOM_WITH_EMBEDDED_FONTS=1)
   endif()
 endif()
 

@@ -10,6 +10,7 @@
 #include <hermes/hermes.h>
 #include <jsi/JSIDynamic.h>
 #include <react/bridging/Bridging.h>
+#include <cxxreact/ReactNativeVersion.h>
 #include <react/debug/flags.h>
 #include <react/renderer/components/modal/ModalHostViewShadowNode.h>
 #include <react/renderer/components/scrollview/ScrollViewShadowNode.h>
@@ -25,6 +26,9 @@
 #include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
 #include "components/FantomTextInput.h"
+#ifdef FANTOM_WITH_EMBEDDED_FONTS
+#include "platform/macos/EmbeddedFonts.h"
+#endif
 #include "render/A11yTree.h"
 #include "render/HitTest.h"
 #include "render/RenderFormatOptions.h"
@@ -308,6 +312,54 @@ jsi::Value setExpoUIPlatformHostFunction(
   return jsi::Value::undefined();
 }
 
+// The host protocol: bumped when a NativeFantom method signature or the
+// getA11yTree node shape changes incompatibly (native/README.md). The CLI
+// checks it against host-version.json / SUPPORTED_PROTOCOL in src/host.ts.
+constexpr int kHostProtocolVersion = 1;
+
+// getHostInfo(): string (JSON {protocolVersion, rnVersion, buildType,
+// sanitize, engines: {swiftui, compose}, fonts: {roboto}})
+jsi::Value getHostInfoHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& /*turboModule*/,
+    const jsi::Value* /*args*/,
+    size_t /*count*/) {
+  std::string rnVersion = std::to_string(ReactNativeVersion.Major) + "." +
+      std::to_string(ReactNativeVersion.Minor) + "." + std::to_string(ReactNativeVersion.Patch);
+  if (!ReactNativeVersion.Prerelease.empty()) {
+    rnVersion += "-" + std::string(ReactNativeVersion.Prerelease);
+  }
+#ifdef FANTOM_BUILD_TYPE
+  std::string buildType = FANTOM_BUILD_TYPE;
+#else
+  std::string buildType = "unknown";
+#endif
+  bool sanitize = false;
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(undefined_behavior_sanitizer)
+  sanitize = true;
+#endif
+#endif
+  bool swiftui = false;
+  bool compose = false;
+#ifdef FANTOM_EXPO_UI_LAYOUT_ENGINE
+  swiftui = true;
+#endif
+#ifdef FANTOM_EXPO_UI_COMPOSE_ENGINE
+  compose = true;
+#endif
+  bool roboto = false;
+#ifdef FANTOM_WITH_EMBEDDED_FONTS
+  // Registers the embedded fonts if not done yet (once per process).
+  roboto = registerEmbeddedFonts() > 0;
+#endif
+  folly::dynamic info = folly::dynamic::object("protocolVersion", kHostProtocolVersion)(
+      "rnVersion", rnVersion)("buildType", buildType)("sanitize", sanitize)(
+      "engines", folly::dynamic::object("swiftui", swiftui)("compose", compose))(
+      "fonts", folly::dynamic::object("roboto", roboto));
+  return jsi::String::createFromUtf8(runtime, folly::toJson(info));
+}
+
 // getCapabilities(): string (JSON array of the host's feature strings)
 jsi::Value getCapabilitiesHostFunction(
     jsi::Runtime& runtime,
@@ -327,7 +379,9 @@ jsi::Value getCapabilitiesHostFunction(
       "switch",
       "shadowTreeRevision",
       "mountedRevision",
-      "effectiveBackground");
+      "effectiveBackground",
+      "getHostInfo",
+      "protocolVersion:" + std::to_string(kHostProtocolVersion));
 #ifdef FANTOM_WITH_EXPO_UI
   capabilities.push_back("expoUI");
   capabilities.push_back("expoModifierEvents");
@@ -439,6 +493,8 @@ NativeFantom::NativeFantom(
       .argCount = 1, .invoker = setExpoUIPlatformHostFunction};
   methodMap_["getCapabilities"] = MethodMetadata{
       .argCount = 0, .invoker = getCapabilitiesHostFunction};
+  methodMap_["getHostInfo"] = MethodMetadata{
+      .argCount = 0, .invoker = getHostInfoHostFunction};
   methodMap_["updateNativeStates"] = MethodMetadata{
       .argCount = 1, .invoker = updateScreenStatesHostFunction};
   methodMap_["setSafeAreaInsets"] = MethodMetadata{
