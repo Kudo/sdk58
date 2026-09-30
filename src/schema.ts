@@ -34,8 +34,13 @@ export type A11yInfo = {
 };
 
 export type TreeNode = {
-  /** Stable id within one render: `n0`, `n1`, ... in pre-order. */
+  /** Id within one tree: `n0`, `n1`, ... in pre-order (changes when the tree changes). */
   ref: string;
+  /**
+   * Stable key: `testID` when set, else `<parent key>/<type>:<n>` (n = index
+   * among siblings of the same type); the root is its type.
+   */
+  key: string;
   /** Host component name: `View`, `Paragraph`, `Image`, `Text` (text fragment, mounted source only), ... */
   type: string;
   /**
@@ -223,6 +228,8 @@ export type ShadowNodeJSON = {
 export type StepNode = {
   tag: number | null;
   ref: string | null;
+  /** Stable key (see TreeNode.key). */
+  key?: string | null;
   testID: string | null;
   type: string;
   /** Absolute box in dp; null when the host hit test found a node that is not in the tree. */
@@ -250,6 +257,8 @@ export type Step = {
   via?: {hitTest: 'native' | 'js' | null; events: 'native' | 'js' | null};
   warnings?: string[];
   error?: string;
+  /** With `run --diff` / session `diff: true`: changes made by this step. */
+  diff?: import('./diff.ts').TreeDiff;
 };
 
 export type RunResult = {
@@ -274,6 +283,8 @@ export type HostRunPayload = {
   /** JS fallbacks the runner used, e.g. `hitTest: js`, `scrollOffset: dom`. */
   fallbacks?: string[];
   capabilities?: string[];
+  /** With `--diff`: the tree before the first step and after each step. */
+  stepTrees?: ShadowNodeJSON[];
 };
 
 /** Payload the JS entry prints inside `{"type":"rn-a11y-tree-result","rnA11yTree":...}`. */

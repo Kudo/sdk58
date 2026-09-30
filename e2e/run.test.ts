@@ -81,6 +81,19 @@ test(
     assert.ok(echo, 'echo node not found: onChangeText did not fire');
     assert.equal(echo.text, 'a@b.c');
 
+    // --diff: each step reports what it changed, by stable key.
+    const withDiff = spawnSync(
+      process.execPath,
+      [CLI, 'run', APP, '--platform', 'android', '--script', SCRIPT, '--diff'],
+      {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: hostBin}, maxBuffer: 64 * 1024 * 1024},
+    );
+    assert.equal(withDiff.status, 0, withDiff.stderr);
+    const diffed = JSON.parse(withDiff.stdout) as RunResult;
+    assert.ok(diffed.steps[0].diff?.added.some(n => n.key === 'echo'), 'type step did not add echo');
+    assert.ok(diffed.steps[0].diff?.changed.some(c => c.key === 'email' && c.after.text === 'a@b.c'));
+    assert.deepEqual(diffed.steps[1].diff?.changed.map(c => [c.key, c.after.state]), [['remember', {checked: false}]]);
+    assert.deepEqual(diffed.steps[2].diff?.added.map(n => n.key), ['status']);
+
     // The Switch starts on (see App.tsx); the tap flips it.
     const [remember] = findAll(final, n => n.testID === 'remember');
     assert.equal(remember.a11y.state?.checked, false);

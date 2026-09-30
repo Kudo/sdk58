@@ -59,6 +59,8 @@ export type BundleOptions = {
   tapMode?: TapMode;
   /** Build a bundle for `session` (host --interactive mode). */
   session?: boolean;
+  /** `run` options embedded in the bundle. */
+  runOptions?: {diff?: boolean};
   /** Host settings applied before the first render (runtime/hostConfig.js). */
   hostConfig?: HostConfig;
   /** Metro platform (required): `android`, `ios`, or an out-of-tree name such as `a11ytree`. */
@@ -116,6 +118,7 @@ export function renderEntry(options: {
   tapMode?: TapMode;
   session?: boolean;
   hostConfig?: HostConfig;
+  runOptions?: {diff?: boolean};
 }): string {
   const template = fs.readFileSync(
     path.join(RUNTIME_DIR, 'entry-template.js'),
@@ -137,7 +140,8 @@ export function renderEntry(options: {
     .replaceAll('__SCRIPT__', () => JSON.stringify(options.script ?? null))
     .replaceAll('__TAP_MODE__', () => JSON.stringify(options.tapMode ?? 'touch'))
     .replaceAll('__SESSION__', String(options.session === true))
-    .replaceAll('__HOST_CONFIG__', () => JSON.stringify(options.hostConfig ?? {}));
+    .replaceAll('__HOST_CONFIG__', () => JSON.stringify(options.hostConfig ?? {}))
+    .replaceAll('__RUN_OPTIONS__', () => JSON.stringify(options.runOptions ?? {}));
 }
 
 function isInside(file: string, dir: string): boolean {
@@ -316,6 +320,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     tapMode: options.tapMode,
     session: options.session,
     hostConfig: options.hostConfig,
+    runOptions: options.runOptions,
   });
   const root = cacheRoot(projectRoot);
   const key = bundleKey({entry, platform, dev, minify, projectRoot});

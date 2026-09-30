@@ -187,6 +187,7 @@ export function createRunner({root, tapMode}) {
     const result = {
       tag: entry.tag,
       ref: entry.ref,
+      key: entry.key ?? null,
       testID: entry.testID,
       type: entry.type,
       box: entry.box,
@@ -553,18 +554,22 @@ export function createRunner({root, tapMode}) {
 }
 
 /** Runs a whole `--script` (the `run` command). */
-export function runActions({root, script, tapMode}) {
+export function runActions({root, script, tapMode, diff = false}) {
   const runner = createRunner({root, tapMode});
   try {
     const steps = [];
     const snapshots = {};
+    // With `diff`, the tree before the first step and after every step (the
+    // CLI diffs consecutive trees).
+    const stepTrees = diff ? [runner.readTree()] : undefined;
     script.forEach((action, index) => {
       const {step, snapshot} = runner.runStep(action, index);
       if (snapshot !== undefined) snapshots[action.snapshot] = snapshot;
       steps.push(step);
+      if (stepTrees) stepTrees.push(runner.readTree());
     });
     const final = runner.readTree();
-    return {steps, snapshots, final, fallbacks: runner.getFallbacks()};
+    return {steps, snapshots, final, fallbacks: runner.getFallbacks(), stepTrees};
   } finally {
     runner.dispose();
   }

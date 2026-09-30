@@ -114,9 +114,22 @@ test('session: tree requests accept format/select/depth (fake host)', {timeout: 
   ]);
   assert.equal(proc.status, 0, proc.stderr);
   const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
-  assert.match(out[1].tree, /^n\d+ View #submit role=button "Submit"/);
+  assert.match(out[1].tree, /^submit View #submit role=button "Submit"/);
   assert.equal(out[2].tree.length, 1);
   assert.equal(out[2].tree[0].children.length, 1);
   assert.match(out[3].error, /"format" must be one of/);
   assert.match(out[4].error, /invalid selector/);
+});
+
+test('session: diff on action requests (fake host)', {timeout: 120_000}, () => {
+  const proc = runSession([
+    {id: 1, action: {tap: {testID: 'submit'}}, diff: true},
+    {id: 2, tree: true, diff: true},
+    {id: 3, quit: true},
+  ]);
+  assert.equal(proc.status, 0, proc.stderr);
+  const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
+  assert.deepEqual(out[1].diff.added.map((n: {key: string}) => n.key), ['status']);
+  assert.equal(out[1].diffTrees, undefined);
+  assert.match(out[2].error, /"diff" must be true or false, on action requests/);
 });

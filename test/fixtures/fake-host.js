@@ -39,6 +39,10 @@ if (args.includes('--interactive')) {
       return;
     } else if (request.action?.tap?.testID === 'boom') {
       console.log(JSON.stringify({type: 'repl-error', message: 'boom from JS', stack: ''}));
+    } else if (request.action && request.diff) {
+      const after = structuredClone(shadow);
+      after.children[0].children.push({type: 'Paragraph', testID: 'status', text: 'Done', frame: {x: 0, y: 800, width: 390, height: 20}, children: []});
+      respond({id, ok: true, step: {index: 0, action: Object.keys(request.action)[0], target: null, hit: null, events: []}, diffTrees: [shadow, after]});
     } else if (request.action) {
       const name = Object.keys(request.action)[0];
       respond({

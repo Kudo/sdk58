@@ -27,6 +27,13 @@ test('runtime/tree-index.js refs and boxes match src/tree.ts', () => {
     entries.map(e => [e.ref, e.type, e.testID]),
     nodes.map(n => [n.ref, n.type, n.testID]),
   );
+  // Keys and selectors (used by action targets) match too.
+  assert.deepEqual(
+    (entries as Array<Entry & {key: string; sel: string}>).map(e => [e.key, e.sel]),
+    nodes.map(n => [n.key, n.sel]),
+  );
+  assert.equal(findEntry(entries, {key: 'submit/Paragraph:1'}).type, 'Paragraph');
+  assert.equal(findEntry(entries, {sel: '#submit'}).testID, 'submit');
   const round = (n: number) => Math.round(n * 1000) / 1000;
   assert.deepEqual(
     entries.map(e => [round(e.box.x), round(e.box.y), round(e.box.width), round(e.box.height)]),

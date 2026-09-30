@@ -19,6 +19,7 @@ import readline from 'node:readline';
 import {getHostBin, hostArgs} from './host.ts';
 import type {ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
+import {diffTrees} from './diff.ts';
 import {type Format, FORMATS, formatRender, parseSelector} from './format.ts';
 import type {TreeNode} from './schema.ts';
 import {convertShadowTree, convertStep} from './tree.ts';
@@ -37,6 +38,7 @@ type HostResponse = {
   fallbacks?: string[];
   capabilities?: string[];
   timings?: Record<string, number | undefined>;
+  diffTrees?: ShadowNodeJSON[];
 };
 
 type Frame = {
@@ -191,6 +193,10 @@ export async function runSession(options: {
     if (response.error != null) out.error = response.error;
     if (response.step != null) out.step = convertStep(response.step);
     if (response.tree != null) out.tree = formatSessionTree(convertShadowTree(response.tree), request);
+    if (response.diffTrees != null) {
+      const [before, after] = response.diffTrees.map(convertShadowTree);
+      out.diff = diffTrees(before, after);
+    }
     if (response.fallbacks != null && response.fallbacks.length > 0) {
       out.fallbacks = response.fallbacks;
     }
@@ -320,6 +326,9 @@ export function validateRequest(request: unknown): string | null {
   const kinds = ['action', 'tree', 'quit'].filter(k => k in r);
   if (kinds.length !== 1) {
     return 'request needs exactly one of "action", "tree" or "quit"';
+  }
+  if ('diff' in r && (kinds[0] !== 'action' || typeof r.diff !== 'boolean')) {
+    return '"diff" must be true or false, on action requests';
   }
   if ('format' in r && !FORMATS.includes(r.format as Format)) {
     return `"format" must be one of: ${FORMATS.join(', ')}`;

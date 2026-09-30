@@ -17,7 +17,7 @@ there is no host binary. Unit and CLI tests against a fake host are in
   - every Paragraph box is taller than 10 (CoreText measurement);
   - `email` (TextInput): role `textbox`, height > 18, `style.placeholder === 'Email'`;
   - `remember` (Switch): role `switch`, name "Remember me", `a11y.state.checked === true`, box 51x31.
-- `render --format text --select role=button` prints exactly one line: `n<i> View #submit role=button "Submit" {24,…,342x48}`.
+- `render --format text --select role=button` prints exactly one line: `submit View #submit role=button "Submit" {24,…,342x48}`.
 
 ## `e2e/run.test.ts` — `examples/basic/actions.json`, `run`
 
@@ -29,6 +29,7 @@ Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 - `email.text === 'a@b.c'` when the host reflects typed text (`setTextInputTextByTag`).
 - `echo` shows "a@b.c" (`onChangeText` fired).
 - `remember` `a11y.state.checked === false` (the Switch toggled from on).
+- `run --diff`: the `type` step adds `echo` and changes `email.text` to "a@b.c"; the Switch tap changes only `remember` (`state: {checked: false}`); the Submit tap adds `status`.
 
 ## `e2e/scrolling.test.ts` — `examples/scrolling/actions.json`, `run`
 

@@ -4,7 +4,7 @@
  * runtime/actions.js and the README "Interactions" section.
  */
 
-export type Target = {testID: string} | {ref: string};
+export type Target = {testID: string} | {ref: string} | {key: string} | {sel: string};
 export type Point = {x: number; y: number};
 
 export type Action =
@@ -59,18 +59,19 @@ function checkKeys(
   }
 }
 
-/** Exactly one of `testID` / `ref`. */
+const TARGET_KEYS = ['testID', 'ref', 'key', 'sel'];
+
+/** Exactly one of `testID` / `ref` / `key` / `sel`. */
 function checkTarget(spec: Record<string, unknown>, fail: (msg: string) => never) {
-  const hasTestID = 'testID' in spec;
-  const hasRef = 'ref' in spec;
-  if (hasTestID === hasRef) {
-    fail('needs exactly one of "testID" or "ref"');
+  const present = TARGET_KEYS.filter(k => k in spec);
+  if (present.length !== 1) {
+    fail('needs exactly one of "testID", "ref", "key" or "sel"');
   }
-  if (hasTestID && !nonEmptyString(spec.testID)) {
-    fail('"testID" must be a non-empty string');
-  }
-  if (hasRef && !(typeof spec.ref === 'string' && /^n\d+$/.test(spec.ref))) {
-    fail('"ref" must look like "n5"');
+  const [k] = present;
+  if (k === 'ref') {
+    if (!(typeof spec.ref === 'string' && /^n\d+$/.test(spec.ref))) fail('"ref" must look like "n5"');
+  } else if (!nonEmptyString(spec[k])) {
+    fail(`"${k}" must be a non-empty string`);
   }
 }
 
@@ -106,7 +107,7 @@ export function validateScript(value: unknown): Action[] {
             failIn('"x" and "y" must both be numbers');
           }
         } else {
-          checkKeys(s, ['testID', 'ref'], failIn);
+          checkKeys(s, TARGET_KEYS, failIn);
           checkTarget(s, failIn);
         }
         break;
@@ -114,7 +115,7 @@ export function validateScript(value: unknown): Action[] {
       case 'type': {
         if (!isObject(spec)) failIn('must be an object');
         const s = spec as Record<string, unknown>;
-        checkKeys(s, ['testID', 'ref', 'text', 'submit'], failIn);
+        checkKeys(s, [...TARGET_KEYS, 'text', 'submit'], failIn);
         checkTarget(s, failIn);
         if (typeof s.text !== 'string') failIn('"text" must be a string');
         if ('submit' in s && typeof s.submit !== 'boolean') {
@@ -125,7 +126,7 @@ export function validateScript(value: unknown): Action[] {
       case 'scroll': {
         if (!isObject(spec)) failIn('must be an object');
         const s = spec as Record<string, unknown>;
-        checkKeys(s, ['testID', 'ref', 'x', 'y'], failIn);
+        checkKeys(s, [...TARGET_KEYS, 'x', 'y'], failIn);
         checkTarget(s, failIn);
         for (const key of ['x', 'y']) {
           if (key in s && !isFiniteNumber(s[key])) failIn(`"${key}" must be a number`);
@@ -142,7 +143,7 @@ export function validateScript(value: unknown): Action[] {
             failIn('"x" and "y" must both be numbers');
           }
         } else {
-          checkKeys(s, ['testID', 'ref', ...extras], failIn);
+          checkKeys(s, [...TARGET_KEYS, ...extras], failIn);
           checkTarget(s, failIn);
         }
         for (const key of ['dx', 'dy', 'durationMs']) {
@@ -158,7 +159,7 @@ export function validateScript(value: unknown): Action[] {
       case 'pinch': {
         if (!isObject(spec)) failIn('must be an object');
         const s = spec as Record<string, unknown>;
-        checkKeys(s, ['testID', 'ref', 'scale', 'steps', 'durationMs'], failIn);
+        checkKeys(s, [...TARGET_KEYS, 'scale', 'steps', 'durationMs'], failIn);
         checkTarget(s, failIn);
         if (!isFiniteNumber(s.scale) || s.scale <= 0) failIn('"scale" must be a number > 0');
         if ('durationMs' in s && !(isFiniteNumber(s.durationMs) && s.durationMs > 0)) {

@@ -1,3 +1,4 @@
+import {diffTrees} from './diff.ts';
 import type {
   A11yInfo,
   A11yState,
@@ -23,13 +24,13 @@ export function toRenderResult(payload: HostPayload): RenderResult {
     return {
       viewport: payload.viewport,
       source: 'shadowTree',
-      root: convertShadowNode(payload.tree, ORIGIN, '', nextRef, null),
+      root: withKeys(convertShadowNode(payload.tree, ORIGIN, '', nextRef, null)),
     };
   }
   return {
     viewport: payload.viewport,
     source: 'mounted',
-    root: convertMountedNode(payload.tree, ORIGIN, '', nextRef, null),
+    root: withKeys(convertMountedNode(payload.tree, ORIGIN, '', nextRef, null)),
   };
 }
 
@@ -39,10 +40,17 @@ export function toRunResult(payload: HostRunPayload): RunResult {
   for (const [name, tree] of Object.entries(payload.snapshots)) {
     snapshots[name] = convertShadowTree(tree);
   }
+  const steps = payload.steps.map(convertStep);
+  if (payload.stepTrees != null) {
+    const trees = payload.stepTrees.map(convertShadowTree);
+    steps.forEach((step, i) => {
+      if (trees[i] != null && trees[i + 1] != null) step.diff = diffTrees(trees[i], trees[i + 1]);
+    });
+  }
   return {
     viewport: payload.viewport,
     source: 'shadowTree',
-    steps: payload.steps.map(convertStep),
+    steps,
     snapshots,
     final: convertShadowTree(payload.final),
     fallbacks: payload.fallbacks ?? [],
@@ -70,7 +78,37 @@ function roundStepNode(node: StepNode | null): StepNode | null {
 
 /** Converts one typed getA11yTree root. Refs start at `n0` for each tree. */
 export function convertShadowTree(tree: ShadowNodeJSON): TreeNode {
-  return convertShadowNode(tree, ORIGIN, '', refCounter(), null);
+  return withKeys(convertShadowNode(tree, ORIGIN, '', refCounter(), null));
+}
+
+/**
+ * Stable node keys: the `testID` when set (a repeated testID gets `:2`,
+ * `:3`, ... in tree order), else `<parent key>/<type>:<n>` with `n` the
+ * 1-based index among siblings of the same type; the root is its type.
+ * Unlike `ref`, a key does not change when unrelated parts of the tree
+ * change. Must match runtime/tree-index.js `assignKeys`.
+ */
+export function withKeys(root: TreeNode): TreeNode {
+  const seen = new Map<string, number>();
+  const visit = (node: TreeNode, parentKey: string | null, index: number): TreeNode => {
+    let key: string;
+    if (node.testID) {
+      const count = (seen.get(node.testID) ?? 0) + 1;
+      seen.set(node.testID, count);
+      key = count === 1 ? node.testID : `${node.testID}:${count}`;
+    } else {
+      key = parentKey == null ? node.type : `${parentKey}/${node.type}:${index}`;
+    }
+    const typeCount = new Map<string, number>();
+    const children = node.children.map(child => {
+      const n = (typeCount.get(child.type) ?? 0) + 1;
+      typeCount.set(child.type, n);
+      return visit(child, key, n);
+    });
+    const {ref, key: _placeholder, ...rest} = node;
+    return {ref, key, ...rest, children};
+  };
+  return visit(root, null, 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -582,6 +620,7 @@ function convertShadowNode(
 
   const result: TreeNode = {
     ref,
+    key: '', // set by withKeys
     type: node.type,
     sel,
     role,
@@ -793,6 +832,7 @@ function convertMountedNode(
 
   return {
     ref,
+    key: '', // set by withKeys
     type: node.type,
     sel,
     role,

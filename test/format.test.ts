@@ -57,10 +57,11 @@ test('compact drops defaults, empties, style and a11y.raw', () => {
 
 test('text line: key, type, testID, role, name, box, flags', () => {
   const [toggle] = queryTree(tree, {select: ['type=AndroidSwitch']});
-  assert.match(textLine(toggle), /^n\d+ AndroidSwitch #remember role=switch "Remember me" \{24,\d+(\.\d)?,51x31\} \[disabled, checked\]$/);
+  assert.match(textLine(toggle), /^remember AndroidSwitch #remember role=switch "Remember me" \{24,\d+(\.\d)?,51x31\} \[disabled, checked\]$/);
   const text = formatRender(render, {format: 'text'});
-  assert.equal(text.split('\n')[0], 'n0 RootView {0,0,390x844}');
-  assert.match(text, /^ {4}n\d+ View #submit role=button "Submit"/m);
+  assert.equal(text.split('\n')[0], 'RootView RootView {0,0,390x844}');
+  assert.match(text, /^ {4}submit View #submit role=button "Submit"/m);
+  assert.match(text, /^ {6}submit\/Paragraph:1 Paragraph role=text "Submit"/m);
 });
 
 test('formats of a render result', () => {
@@ -74,7 +75,8 @@ test('formats of a render result', () => {
   const lines = formatRender(render, {format: 'ndjson'}).trim().split('\n').map(l => JSON.parse(l));
   assert.equal(lines[0].depth, 0);
   assert.equal(lines[0].parent, null);
-  assert.equal(lines[1].parent, 'n0');
+  assert.equal(lines[1].parent, 'RootView');
+  assert.equal(lines[1].key, 'RootView/View:1');
 });
 
 test('formats of a run result', () => {
@@ -93,7 +95,7 @@ test('formats of a run result', () => {
   const text = formatRun(run, {format: 'text', select: ['testID=submit'], depth: 0});
   assert.match(text, /^step 0 tap #submit hit=Paragraph \[touchStart, touchEnd\]$/m);
   assert.match(text, /^step 1 tap \[\] ERROR Target not found$/m);
-  assert.match(text, /^snapshot after:\nn\d+ View #submit/m);
+  assert.match(text, /^snapshot after:\nsubmit View #submit/m);
   const nd = formatRun(run, {format: 'ndjson', select: ['testID=submit'], depth: 0}).trim().split('\n').map(l => JSON.parse(l));
   assert.equal(nd[0].step.action, 'tap');
   assert.deepEqual(nd.filter(l => l.tree).map(l => l.tree), ['after', 'final']);
@@ -106,7 +108,7 @@ test('CLI: --format text --select (fake host)', {timeout: 120_000}, () => {
     {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.js'), FAKE_HOST_MODE: 'shadow-tree'}},
   );
   assert.equal(proc.status, 0, proc.stderr);
-  assert.match(proc.stdout.trim(), /^n\d+ View #submit role=button "Submit" \{24,154,342x48\}$/);
+  assert.match(proc.stdout.trim(), /^submit View #submit role=button "Submit" \{24,154,342x48\}$/);
   const bad = spawnSync(
     process.execPath,
     [path.join(ROOT, 'bin', 'rn-a11y-tree.js'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'xml'],

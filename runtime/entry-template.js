@@ -42,6 +42,8 @@ registerRender(() => {
   // `run --script`: array of actions (see runtime/actions.js), else null.
   const script = __SCRIPT__;
   const tapMode = __TAP_MODE__;
+  // `run` options, e.g. {diff: true} (send the tree after every step).
+  const runOptions = __RUN_OPTIONS__;
   // Host settings applied before the first render (runtime/hostConfig.js).
   const hostConfig = __HOST_CONFIG__;
   // `session`: install globalThis.__rnA11y for the host's --interactive mode
@@ -86,10 +88,11 @@ registerRender(() => {
         );
       }
       const {runActions} = require('__RUNTIME_DIR__/actions');
-      const {steps, snapshots, final, fallbacks} = runActions({
+      const {steps, snapshots, final, fallbacks, stepTrees} = runActions({
         root,
         script,
         tapMode,
+        diff: runOptions.diff === true,
       });
       mark('actionsEnd');
       mark('dumpEnd');
@@ -101,6 +104,7 @@ registerRender(() => {
         snapshots,
         final,
         fallbacks,
+        stepTrees,
         capabilities: require('__RUNTIME_DIR__/capabilities').getCapabilities(),
         timings: summarize(),
       });

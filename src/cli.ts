@@ -81,7 +81,7 @@ function write(text: string, out: string | undefined) {
 const PLATFORM_REQUIRED_MESSAGE = `--platform <name> is required. Known values: android, ios, a11ytree. Any Metro platform name is accepted.
 Note: React Native core components branch on Platform.OS (e.g. TextInput, Switch), so use android or ios for them to render.`;
 
-type RunOptions = RenderOptions & {script?: string; tapMode: string; timeout?: number};
+type RunOptions = RenderOptions & {script?: string; tapMode: string; timeout?: number; diff?: boolean};
 
 const TAP_MODES: TapMode[] = ['touch', 'click', 'both'];
 
@@ -193,7 +193,7 @@ function printTiming(timing: Timing) {
 async function execute<T>(
   file: string,
   options: RenderOptions,
-  extra: {script?: unknown[]; tapMode?: TapMode},
+  extra: {script?: unknown[]; tapMode?: TapMode; runOptions?: {diff?: boolean}},
   timing?: Timing,
 ): Promise<T | undefined> {
   const platform = requirePlatform(options.platform);
@@ -305,7 +305,7 @@ async function run(file: string, options: RunOptions) {
   const payload = await execute<HostRunPayload>(
     file,
     options,
-    {script, tapMode: options.tapMode as TapMode},
+    {script, tapMode: options.tapMode as TapMode, runOptions: options.diff ? {diff: true} : undefined},
     timing,
   );
   if (payload) {
@@ -459,6 +459,7 @@ addCommonOptions(addOutputOptions(program.command('run')))
   .description('render the component, run a script of actions, print steps and trees')
   .option('--script <json>', 'JSON file with an array of actions (required)')
   .option('--tap-mode <mode>', 'events for taps: touch, click or both', 'touch')
+  .option('--diff', 'add to each step the changes it made ({added, removed, changed} by key)', false)
   .action(run);
 
 program

@@ -85,6 +85,7 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--debug-props` | `render` | off | Add raw host debug props to each node (`debugProps`) |
 | `--script <json>` | `run` | required | JSON file with an array of actions |
 | `--tap-mode <mode>` | `run`, `session` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
+| `--diff` | `run` | off | Add `diff: {added, removed, changed}` (by `key`) to each step |
 | `--timeout <ms>` | `session` | `30000` | Per-request timeout; on timeout the host is killed and the exit code is 1 |
 
 ## Caching
@@ -161,7 +162,8 @@ TypeScript types: [`src/schema.ts`](src/schema.ts).
   "viewport": {"width": 390, "height": 844},
   "source": "shadowTree",      // or "mounted", see "Tree sources"
   "root": {
-    "ref": "n0",               // pre-order id within this render
+    "ref": "n0",               // pre-order id within this tree (changes when the tree changes)
+    "key": "RootView",         // stable: testID, else <parent key>/<type>:<n>; root = its type
     "type": "RootView",        // host component name from the shadow tree
     "sel": "RootView",         // "#testID" or a type path, e.g. "RootView>View>Paragraph:2"
     "role": null,              // role, else accessibilityRole, else implicit (Paragraph/Text: "text", Image: "image",
@@ -292,8 +294,17 @@ step index.
 
 Rules:
 
-- Targets: `testID` or `ref`. A `ref` is resolved against the tree at the
-  time of the step (refs can change after the UI changes).
+- Targets: `testID`, `key`, `sel` or `ref`. `key` is stable (the
+  `testID`, else `<parent key>/<type>:<n>`, `n` = index among siblings of
+  the same type); `ref` is resolved against the tree at the time of the step
+  and changes when the UI changes.
+- Diffs: `run --diff`, or `"diff": true` on a session action request, adds
+  `diff: {added, removed, changed: [{key, before, after}]}` to the step:
+  nodes matched by `key`; compared fields `box`, `visualBox`, `text`,
+  `name`, `role`, `state`, `hidden`, `effectiveOpacity`. `--format text`
+  prints them under the step as `+ key …`, `- key …`, `~ key field: a -> b`.
+  Unkeyed nodes after an inserted sibling of the same type get new keys, so
+  give important nodes a `testID`.
 - Target taps hit-test at the center of the target's box. If the hit node is
   not the target or inside it, the step gets a "Target is covered" warning.
   Touch events go to the hit node (the responder system bubbles them).

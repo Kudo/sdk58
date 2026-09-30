@@ -74,8 +74,10 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
       report({id, ok: true, ready: true, tree, capabilities: getCapabilities(), timings: summarize()});
     } else if (request.action != null) {
       requireStarted();
+      const before = request.diff === true ? runner.readTree() : undefined;
       const {step, snapshot} = runner.runStep(request.action, nextIndex++);
       const response = {id, ok: step.error == null, step};
+      if (before !== undefined) response.diffTrees = [before, runner.readTree()];
       if (step.error != null) response.error = step.error;
       if (snapshot !== undefined) response.tree = snapshot;
       report(response);

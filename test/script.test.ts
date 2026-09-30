@@ -8,6 +8,8 @@ test('accepts every action form', () => {
     {tap: {x: 10, y: 20}},
     {tap: {testID: 'submit'}},
     {tap: {ref: 'n5'}},
+    {tap: {key: 'submit/Paragraph:1'}},
+    {tap: {sel: '#submit'}},
     {longPress: {testID: 'submit'}},
     {type: {testID: 'email', text: 'a@b.c', submit: true}},
     {scroll: {testID: 'list', x: 0, y: 300}},
@@ -24,7 +26,7 @@ test('reports the step index and the problem', () => {
   const cases: Array<[unknown, RegExp]> = [
     [{}, /must be a JSON array/],
     [[{tap: {x: 1}}], /step 0: tap: "x" and "y" must both be numbers/],
-    [[{wait: 1}, {tap: {}}], /step 1: tap: needs exactly one of "testID" or "ref"/],
+    [[{wait: 1}, {tap: {}}], /step 1: tap: needs exactly one of "testID", "ref", "key" or "sel"/],
     [[{tap: {testID: 'a', ref: 'n1'}}], /needs exactly one of/],
     [[{tap: {ref: 'five'}}], /"ref" must look like "n5"/],
     [[{type: {testID: 'email'}}], /step 0: type: "text" must be a string/],

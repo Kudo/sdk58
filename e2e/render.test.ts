@@ -93,6 +93,6 @@ test(
       {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: hostBin}},
     );
     assert.equal(text.status, 0, text.stderr);
-    assert.match(text.stdout.trim(), /^n\d+ View #submit role=button "Submit" \{24,[\d.]+,342x48\}$/);
+    assert.match(text.stdout.trim(), /^submit View #submit role=button "Submit" \{24,[\d.]+,342x48\}$/);
   },
 );

@@ -162,10 +162,46 @@ export function indexTree(root) {
   }
 
   visit(root, {x: 0, y: 0}, null, null, null);
+  assignKeysAndSelectors(entries[0]);
   return entries;
 }
 
+/**
+ * Adds `key` and `sel` to every entry, with the same rules as src/tree.ts
+ * (`withKeys`, `selectors`).
+ */
+function assignKeysAndSelectors(root) {
+  const seen = new Map();
+  const visit = (entry, parentKey, parentPath, index, siblingCount) => {
+    if (entry.testID) {
+      const count = (seen.get(entry.testID) ?? 0) + 1;
+      seen.set(entry.testID, count);
+      entry.key = count === 1 ? entry.testID : `${entry.testID}:${count}`;
+    } else {
+      entry.key = parentKey == null ? entry.type : `${parentKey}/${entry.type}:${index}`;
+    }
+    const typeSel = siblingCount > 1 ? `${entry.type}:${index}` : entry.type;
+    const pathSel = parentPath ? `${parentPath}>${typeSel}` : typeSel;
+    entry.sel = entry.testID ? `#${entry.testID}` : pathSel;
+    const counts = new Map();
+    for (const c of entry.children) counts.set(c.type, (counts.get(c.type) ?? 0) + 1);
+    const seenType = new Map();
+    for (const c of entry.children) {
+      const n = (seenType.get(c.type) ?? 0) + 1;
+      seenType.set(c.type, n);
+      visit(c, entry.key, pathSel, n, counts.get(c.type));
+    }
+  };
+  if (root != null) visit(root, null, '', 1, 1);
+}
+
 export function findEntry(entries, target) {
+  if (target.key != null) {
+    return entries.find(e => e.key === target.key) ?? null;
+  }
+  if (target.sel != null) {
+    return entries.find(e => e.sel === target.sel) ?? null;
+  }
   if (target.ref != null) {
     return entries.find(e => e.ref === target.ref) ?? null;
   }

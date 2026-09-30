@@ -236,7 +236,7 @@ export function formatRun(result: RunResult, options: FormatOptions): string {
       );
     }
     case 'text': {
-      const out = result.steps.map(stepLine);
+      const out = result.steps.flatMap(step => [stepLine(step), ...diffLines(step.diff)]);
       for (const [name, tree] of Object.entries(result.snapshots)) {
         out.push(`snapshot ${name}:`, textTree(q(tree)).trimEnd());
       }
@@ -252,6 +252,24 @@ export function formatRun(result: RunResult, options: FormatOptions): string {
       return lines.join('\n') + '\n';
     }
   }
+}
+
+/** `+ key type "name"`, `- key type`, `~ key field: before -> after` */
+export function diffLines(diff: RunResult['steps'][number]['diff']): string[] {
+  if (diff == null) return [];
+  const label = (n: {key: string; type: string; name?: string}) =>
+    `${n.key} ${n.type}${n.name ? ' ' + JSON.stringify(n.name) : ''}`;
+  const value = (v: unknown) => {
+    if (v != null && typeof v === 'object' && 'width' in (v as object)) return fmtBox(v as Box);
+    return JSON.stringify(v);
+  };
+  return [
+    ...diff.added.map(n => `  + ${label(n)}`),
+    ...diff.removed.map(n => `  - ${label(n)}`),
+    ...diff.changed.map(
+      c => `  ~ ${c.key} ${Object.keys(c.after).map(k => `${k}: ${value(c.before[k])} -> ${value(c.after[k])}`).join(', ')}`,
+    ),
+  ];
 }
 
 function compactStep(step: RunResult['steps'][number]): Record<string, unknown> {
