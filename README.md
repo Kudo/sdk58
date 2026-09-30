@@ -31,7 +31,7 @@ macOS arm64 only (the host is built by `yarn build:host`).
 | react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
 | react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner; worklet callbacks through Reanimated | `e2e/gestures.test.ts` | No v3 Reanimated detector events, virtual detectors, or transforms in `absoluteToLocal` |
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
-| `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | No SwiftUI/Compose layout yet (frames are placeholders or the fake layout); other Expo native modules are not emulated |
+| `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); other Expo native modules are not emulated |
 
 ## Quick start
 
@@ -588,8 +588,13 @@ may need it.
 
 - `expo`: the props the native view received (`modifiers` verbatim;
   modifier callbacks are `"eventListener": null`);
-- `layout`: `emulated` (a Host sized from its content) or `placeholder`
-  (the other views: not the drawn SwiftUI/Compose frame);
+- `layout`: `emulated` when a SwiftUI/Compose layout engine laid out the
+  node (the Host and its descendants), `placeholder` when no engine handled
+  the subtree (the frame is not the drawn one). Hosts built before this
+  label change mark only the Host `emulated` and its descendants
+  `placeholder`, even when an engine laid them out;
+- `emulatedBy` (on the Host): `swiftui` or `compose`, the engine that laid
+  out the subtree;
 - `role` from the view name: `Button`/`*Button` → `button` (`ToggleButton`
   → `togglebutton`, `RadioButton` → `radio`), `SwitchView`/`ToggleView` →
   `switch`, `CheckboxView` → `checkbox`, `SliderView` → `adjustable`,
@@ -631,7 +636,8 @@ else from the view name:
 the layout emulation. `expoUI.fakeLayout`: the frames are the fake layout
 (each child a full-width row, 40 high), not SwiftUI/Compose layout.
 `expoUI.swiftUILayout` / `expoUI.composeLayout`: that engine lays out the
-Hosts of its kind. `e2e/expo-ui.test.ts` checks modifier callbacks only with
+Hosts of its kind (`@expo/ui/swift-ui` views: SwiftUI; Compose views:
+Compose). `e2e/expo-ui.test.ts` checks modifier callbacks only with
 `expoModifierEvents`, and boxes only with the engine of the screen's kind
 (Compose: 14sp Text 16 dp high, Button 66x48, Switch 52x48; SwiftUI: body
 Text 20.333 dp high).

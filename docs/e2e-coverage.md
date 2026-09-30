@@ -49,12 +49,12 @@ Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 
 Actions: tap `go`, tap `remember`, tap `greeting`, snapshot. Capability gating: modifier callbacks need `expoModifierEvents`; boxes need `expoModifierEvents` and the engine of the screen's kind (`expoUI.composeLayout` for `App.tsx`, `expoUI.swiftUILayout` for `SwiftUIScreen.tsx`); the test prints a diagnostic when it skips them. Skipped without `expoUI`.
 
-- `App.tsx` (universal `@expo/ui`, `--platform android`): Host tree is `ExpoUI.HostView > ExpoUI.ColumnView > [ExpoUI.TextView, ExpoUI.Button > ExpoUI.TextView, ExpoUI.RowView > [ExpoUI.TextView, ExpoUI.SwitchView]]`; Host `layout: emulated`, Column `placeholder`.
+- `App.tsx` (universal `@expo/ui`, `--platform android`): Host tree is `ExpoUI.HostView > ExpoUI.ColumnView > [ExpoUI.TextView, ExpoUI.Button > ExpoUI.TextView, ExpoUI.RowView > [ExpoUI.TextView, ExpoUI.SwitchView]]`; Host `layout: emulated`; descendants `emulated` or `placeholder` (both accepted; with `emulatedBy` on the Host it must be `compose`, and with `expoUI.composeLayout` every descendant must be `emulated`).
   - `go`: role `button`, name "Go", `expo.modifiers` `[{$type: testID}]`; `greeting`: role `text`, name/text "Hello", a `clickable` modifier; `remember`: role `switch`.
   - Step events `buttonPressed`, `checkedChange`; `status` = "Pressed", `remember-state` = "Remember: off", `remember` `a11y.state.checked === false`.
   - With `expoModifierEvents`: step 2 event `modifier:clickable`, `taps` = "Taps: 1"; else the step warns that the host has no `dispatchExpoModifierEvent`.
   - With `expoUI.composeLayout`: Host height > 0, `greeting` Text height 16 ± 2 (14sp, M3 default), `go` Button 66x48 ± 1, `remember` Switch 52x48 ± 1 (48 dp touch target).
-- `SwiftUIScreen.tsx` (`@expo/ui/swift-ui`, `--platform android`): `ExpoUI.HostView > ExpoUI.VStackView > [ExpoUI.TextView, ExpoUI.Button, ExpoUI.ToggleView]`; VStack `expo.modifiers` `[{$type: padding, all: 8}]`; `greeting` name "Greeting" (accessibilityLabel modifier), text "Hello"; `go` `frame` modifier; `remember` role `switch`, name "Remember".
+- `SwiftUIScreen.tsx` (`@expo/ui/swift-ui`, `--platform android`): `ExpoUI.HostView > ExpoUI.VStackView > [ExpoUI.TextView, ExpoUI.Button, ExpoUI.ToggleView]` (layout labels as above, engine `swiftui`); VStack `expo.modifiers` `[{$type: padding, all: 8}]`; `greeting` name "Greeting" (accessibilityLabel modifier), text "Hello"; `go` `frame` modifier; `remember` role `switch`, name "Remember".
   - Step events `buttonPress`, `isOnChange`; `status` = "Pressed", `remember-state` = "Remember: off", `remember` unchecked.
   - With `expoModifierEvents`: `modifier:onTapGesture`, `taps` = "Taps: 1".
   - With `expoUI.swiftUILayout`: Host height > 0, `greeting` Text height 20.333 ± 1 (body).

@@ -57,6 +57,23 @@ function gates(result: RunResult, t: {diagnostic: (m: string) => void}, kind: 's
   return {modifierEvents, realLayout};
 }
 
+/**
+ * `layout` labels: the Host is `emulated`. Newer hosts also label the
+ * engine-laid-out descendants `emulated` and set `emulatedBy` on the Host;
+ * older ones label descendants `placeholder`. Both are accepted.
+ */
+function checkLayoutLabels(host: TreeNode, engine: 'swiftui' | 'compose', realLayout: boolean) {
+  assert.equal(host.layout, 'emulated');
+  const descendants = findAll(host, n => n !== host && n.type.startsWith('ExpoUI.'));
+  for (const n of descendants) assert.ok(n.layout === 'emulated' || n.layout === 'placeholder', `${n.key}: ${n.layout}`);
+  if (host.emulatedBy != null) {
+    assert.equal(host.emulatedBy, engine);
+    if (realLayout) {
+      assert.deepEqual(descendants.filter(n => n.layout !== 'emulated').map(n => n.key), []);
+    }
+  }
+}
+
 const skip = hostBin ? false : `no host binary: run \`yarn build:host\` or set RN_A11Y_HOST_BIN`;
 
 test('expo-ui: universal @expo/ui (Compose views) — tree, roles, button, switch, clickable Text', {skip, timeout: 180_000}, t => {
@@ -78,8 +95,7 @@ test('expo-ui: universal @expo/ui (Compose views) — tree, roles, button, switc
       },
     ],
   });
-  assert.equal(host.layout, 'emulated');
-  assert.equal(host.children[0].layout, 'placeholder');
+  checkLayoutLabels(host, 'compose', realLayout);
 
   const go = byKey(result.final, 'go');
   assert.deepEqual([go.role, go.name], ['button', 'Go']);
@@ -127,6 +143,7 @@ test('expo-ui: @expo/ui/swift-ui (SwiftUI views) — tree, modifiers, button, to
   assert.deepEqual(shape(host), {
     'ExpoUI.HostView': [{'ExpoUI.VStackView': ['ExpoUI.TextView', 'ExpoUI.Button', 'ExpoUI.ToggleView']}],
   });
+  checkLayoutLabels(host, 'swiftui', realLayout);
   assert.deepEqual(host.children[0].expo?.modifiers, [{$type: 'padding', all: 8}]);
   const greeting = byKey(result.final, 'greeting');
   assert.deepEqual([greeting.role, greeting.name, greeting.text], ['text', 'Greeting', 'Hello']);

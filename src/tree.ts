@@ -673,6 +673,9 @@ function convertShadowNode(
   if (node.layout != null) {
     result.layout = node.layout;
   }
+  if (node.emulatedBy != null) {
+    result.emulatedBy = node.emulatedBy;
+  }
   if (node.debugProps) {
     result.debugProps = node.debugProps;
   }

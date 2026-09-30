@@ -44,6 +44,9 @@ export type A11yInfo = {
   raw?: Record<string, unknown>;
 };
 
+/** Layout engine of an Expo Host (`emulatedBy`). */
+export type ExpoLayoutEngine = 'swiftui' | 'compose';
+
 export type TreeNode = {
   /** Id within one tree: `n0`, `n1`, ... in pre-order (changes when the tree changes). */
   ref: string;
@@ -103,10 +106,14 @@ export type TreeNode = {
    */
   expo?: Record<string, unknown>;
   /**
-   * Expo module views: `emulated` (a Host sized from its content) or
-   * `placeholder` (the frame is not the drawn SwiftUI/Compose frame).
+   * Expo module views: `emulated` when a SwiftUI/Compose layout engine (or
+   * the Host's content sizing) produced the frame, `placeholder` when no
+   * engine handled the subtree (the frame is not the drawn one). Hosts
+   * before the label change mark only the Host `emulated`.
    */
   layout?: 'emulated' | 'placeholder';
+  /** On an Expo Host: the engine that laid out its subtree. */
+  emulatedBy?: ExpoLayoutEngine;
   /** Raw debug props from the host; only with `--debug-props` and the `shadowTree` source. */
   debugProps?: Record<string, string>;
   children: TreeNode[];
@@ -255,6 +262,7 @@ export type ShadowNodeJSON = {
   // Expo module views
   expo?: Record<string, unknown>;
   layout?: 'emulated' | 'placeholder';
+  emulatedBy?: ExpoLayoutEngine;
   debugProps?: Record<string, string>;
   children?: ShadowNodeJSON[];
 };

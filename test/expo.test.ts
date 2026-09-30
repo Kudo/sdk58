@@ -57,6 +57,7 @@ test('tree: ExpoUI nodes get role, name, text, state, expo and layout', () => {
         tag: 2,
         frame,
         layout: 'emulated',
+        emulatedBy: 'compose',
         expo: {matchContentsVertical: true},
         children: [
           {
@@ -101,6 +102,8 @@ test('tree: ExpoUI nodes get role, name, text, state, expo and layout', () => {
   const byTag = (type: string, i = 0) => all.filter(n => n.type === type)[i];
   const host = byTag('ExpoUI.HostView');
   assert.equal(host.layout, 'emulated');
+  assert.equal(host.emulatedBy, 'compose');
+  assert.equal(byTag('ExpoUI.ColumnView').emulatedBy, undefined);
   assert.deepEqual(host.expo, {matchContentsVertical: true});
   assert.equal(host.role, null);
   const hello = byTag('ExpoUI.TextView');

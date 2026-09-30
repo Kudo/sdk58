@@ -1097,7 +1097,11 @@
               "emulated",
               "placeholder"
             ],
-            "description": "Expo module views: `emulated` (a Host sized from its content) or `placeholder` (the frame is not the drawn SwiftUI/Compose frame)."
+            "description": "Expo module views: `emulated` when a SwiftUI/Compose layout engine (or the Host's content sizing) produced the frame, `placeholder` when no engine handled the subtree (the frame is not the drawn one). Hosts before the label change mark only the Host `emulated`."
+          },
+          "emulatedBy": {
+            "$ref": "#/definitions/ExpoLayoutEngine",
+            "description": "On an Expo Host: the engine that laid out its subtree."
           },
           "debugProps": {
             "type": "object",
@@ -1185,6 +1189,14 @@
           }
         },
         "additionalProperties": false
+      },
+      "ExpoLayoutEngine": {
+        "type": "string",
+        "enum": [
+          "swiftui",
+          "compose"
+        ],
+        "description": "Layout engine of an Expo Host (`emulatedBy`)."
       },
       "LogEntry": {
         "type": "object",

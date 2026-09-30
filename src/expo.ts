@@ -88,3 +88,4 @@ export function expoState(view: string, props: Props): A11yState | undefined {
 export function expoGroupsChildren(role: string | null): boolean {
   return role === 'button' || role === 'togglebutton' || role === 'link';
 }
+
