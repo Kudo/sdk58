@@ -33,7 +33,8 @@ The first commit that adds this directory has the unmodified files, so
   undefined`, `React.Node` -> `React.ReactNode`, `MixedElement` ->
   `ReactElement`, object spread types -> intersections), typed `require`
   casts (`require(...) as typeof import(...)`). The Flow enum
-  `NativeEventCategory` is a TypeScript enum with the same values. Runtime
+  `NativeEventCategory` is a `const` object (`as const`, erasable syntax)
+  plus a type of its values, with the same values. Runtime
   behavior is unchanged. Where TypeScript needs help: an `isArray` guard in
   `getFantomRenderedOutput.tsx` (`Array.isArray` does not narrow a
   `ReadonlyArray` union) and one `@ts-expect-error` on `ReactFabric.render`

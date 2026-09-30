@@ -19,16 +19,16 @@ export type RenderFormatOptions = {
 };
 
 // match RawEvent.h
-export enum NativeEventCategory {
+export const NativeEventCategory = {
   /*
    * Start of a continuous event. To be used with touchStart.
    */
-  ContinuousStart = 0,
+  ContinuousStart: 0,
 
   /*
    * End of a continuous event. To be used with touchEnd.
    */
-  ContinuousEnd = 1,
+  ContinuousEnd: 1,
 
   /*
    * Priority for this event will be determined from other events in the
@@ -36,26 +36,27 @@ export enum NativeEventCategory {
    * default. If it is not triggered by continuous event, its priority will be
    * discrete.
    */
-  Unspecified = 2,
+  Unspecified: 2,
 
   /*
    * Forces discrete type for the event. Regardless if continuous event is
    * ongoing.
    */
-  Discrete = 3,
+  Discrete: 3,
 
   /*
    * Forces continuous type for the event. Regardless if continuous event
    * isn't ongoing.
    */
-  Continuous = 4,
+  Continuous: 4,
 
   /*
    * Priority for events that can be processed in idle times or in the
    * background.
    */
-  Idle = 5,
-}
+  Idle: 5,
+} as const;
+export type NativeEventCategory = (typeof NativeEventCategory)[keyof typeof NativeEventCategory];
 
 export type ScrollOptions = {
   x: number;

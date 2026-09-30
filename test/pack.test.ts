@@ -17,7 +17,7 @@ function packFiles(dir: string): Array<{path: string; size: number}> {
   return json[0].files;
 }
 
-test('npm pack of the CLI: exactly the whitelisted 49 files, no release archives', {skip: !hasNpm && 'npm is not available', timeout: 300_000}, () => {
+test('npm pack of the CLI: exactly the whitelisted 48 files, no release archives', {skip: !hasNpm && 'npm is not available', timeout: 300_000}, () => {
   // Release archives next to the package must never be packed (v0.1.0 shipped
   // dist/release/*.tar.gz inside the CLI tarball).
   const planted = [
@@ -42,11 +42,11 @@ test('npm pack of the CLI: exactly the whitelisted 49 files, no release archives
       'README.md': 1,
       dist: 1,
       'package.json': 1,
-      runtime: 29,
+      runtime: 28,
       schema: 10,
       tools: 6,
     });
-    assert.equal(files.length, 49);
+    assert.equal(files.length, 48);
     assert.ok(files.includes('dist/rn-a11y-tree.js'));
   } finally {
     for (const file of planted) fs.rmSync(file, {force: true});
