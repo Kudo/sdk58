@@ -1,19 +1,12 @@
 import assert from 'node:assert/strict';
-import {spawnSync} from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 import {test} from 'node:test';
-import {fileURLToPath} from 'node:url';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
+import {cli, E2E_PRESETS, get, hostSkip, ROOT} from './helpers.ts';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
 const APP = path.join(ROOT, 'examples', 'reanimated', 'App.tsx');
 const SCRIPT = path.join(ROOT, 'examples', 'reanimated', 'actions.json');
-
-const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
-const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
 
 // Signs that the host has no worklets/reanimated native side. Today the app
 // fails at import with "Cannot read property 'loadUnpackersWithCode' of
@@ -22,40 +15,9 @@ const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_
 const NO_REANIMATED =
   /__workletsModuleProxy|WorkletsModule|ReanimatedModule|NativeWorklets|installUnpackers|loadUnpackersWith|Worklets|Reanimated/;
 
-function find(node: TreeNode, testID: string): TreeNode | undefined {
-  if (node.testID === testID) return node;
-  for (const child of node.children) {
-    const found = find(child, testID);
-    if (found) return found;
-  }
-  return undefined;
-}
-
-function get(snapshot: TreeNode, testID: string): TreeNode {
-  const node = find(snapshot, testID);
-  assert.ok(node, `${testID} not found`);
-  return node;
-}
-
-test(
-  'run examples/reanimated/actions.json',
-  {
-    skip: hostBin
-      ? false
-      : `no host binary: run \`bun run build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
-    timeout: 180_000,
-  },
-  t => {
-    const proc = spawnSync(
-      process.execPath,
-      [CLI, 'run', APP, '--platform', 'android', '--script', SCRIPT],
-      {
-        cwd: ROOT,
-        encoding: 'utf8',
-        env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
-        maxBuffer: 64 * 1024 * 1024,
-      },
-    );
+for (const preset of E2E_PRESETS) {
+  test(`[${preset.name}] run examples/reanimated/actions.json`, {skip: hostSkip, timeout: 180_000}, t => {
+    const proc = cli(['run', APP, '--script', SCRIPT], preset);
     if (proc.status !== 0) {
       if (NO_REANIMATED.test(proc.stderr)) {
         const first = proc.stderr.split('\n').find(l => l.startsWith('rn-a11y-tree:')) ?? '';
@@ -100,5 +62,5 @@ test(
 
     // runOnUI -> runOnJS roundtrip.
     assert.equal(get(s.ui, 'label').text, 'from-ui');
-  },
-);
+  });
+}

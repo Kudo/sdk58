@@ -1,39 +1,16 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import {test} from 'node:test';
-import {fileURLToPath} from 'node:url';
 
-import type {TreeNode} from '../src/schema.ts';
+import {CLI, E2E_PRESETS, find, hostBin, hostSkip, ROOT} from './helpers.ts';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 
-const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
-const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
-
-function find(node: TreeNode, testID: string): TreeNode | undefined {
-  if (node.testID === testID) return node;
-  for (const child of node.children) {
-    const found = find(child, testID);
-    if (found) return found;
-  }
-  return undefined;
-}
-
-test(
-  'session: start, tap submit, tree shows Submitted, quit',
-  {
-    skip: hostBin
-      ? false
-      : `no host binary: run \`bun run build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
-    timeout: 180_000,
-  },
-  async () => {
-    const child = spawn(process.execPath, [CLI, 'session', APP, '--platform', 'android'], {
+for (const preset of E2E_PRESETS) {
+  test(`[${preset.name}] session: start, tap submit, tree shows Submitted, quit`, {skip: hostSkip, timeout: 180_000}, async () => {
+    const child = spawn(process.execPath, [CLI, 'session', APP, '--preset', preset.name], {
       cwd: ROOT,
       env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -56,6 +33,7 @@ test(
 
     const ready = await next();
     assert.equal(ready.ready, true, JSON.stringify(ready));
+    assert.equal(ready.tree.box.width, preset.width);
     assert.equal(find(ready.tree, 'status'), undefined);
 
     const tap = await request({id: 1, action: {tap: {testID: 'submit'}}});
@@ -71,5 +49,5 @@ test(
     assert.deepEqual(quit, {id: 3, ok: true});
     child.stdin.end();
     assert.equal(await exit, 0, stderr);
-  },
-);
+  });
+}

@@ -27,7 +27,7 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | Tap, long press, typing | Host `hitTest` + by-tag native events, Pressable responder events, `setTextInputTextByTag` | `e2e/run.test.ts` | No multi-touch responder events; `click` does not bubble |
 | Scrolling, FlatList | Host scroll events and ScrollView state; `onLayout` delivered by settling the event queue | `e2e/scrolling.test.ts` | One scroll event per `scroll` action (no fling) |
 | Session mode | Host `--interactive` mode, one bundle | `e2e/session.test.ts` | No recovery after a host crash |
-| react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No transitions; `--platform ios` fails in the navigation example (see Platform) |
+| react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No transitions |
 | react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
 | react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner; worklet callbacks through Reanimated | `e2e/gestures.test.ts` | No v3 Reanimated detector events, virtual detectors, or transforms in `absoluteToLocal` |
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
@@ -729,7 +729,10 @@ and native v3 detector are replaced in the bundle (`src/bundle.ts`
 
 `runtime/turboModuleStubs.js` adds JS stand-ins for core TurboModules the
 host lacks but libraries require at import time: `StatusBarManager` (RNGH
-imports `DrawerLayoutAndroid`, which imports `StatusBar`).
+imports `DrawerLayoutAndroid`, which imports `StatusBar`), and for
+`--platform ios` `KeyboardObserver` (`Keyboard` creates a
+`NativeEventEmitter` with it) and `LinkingManager` (`Linking`; React
+Navigation imports it).
 
 ## Session mode
 
@@ -855,9 +858,11 @@ Base: `getDefaultConfig(projectRoot)` from `expo/metro-config`. Overrides:
   Android native components (`AndroidTextInput`, `AndroidSwitch`), so this
   is the value to use for TextInput and Switch.
 - `ios`: resolves `.ios.*` files. react-native then uses the iOS native
-  components (for example `Switch`, `RCTSinglelineTextInputView`), which the
-  host does not implement yet, and iOS-only core native modules: the
-  navigation example fails with `Got unexpected null` in `LinkingImpl`.
+  components (`Switch`, `TextInput`) and iOS-only core native modules
+  (`KeyboardObserver`, `LinkingManager`; JS stand-ins in
+  `runtime/turboModuleStubs.js`). Every example renders and runs with
+  `--preset ios-phone` (the e2e suites run under it). Hosts without the
+  `iosInputs` capability render TextInput and Switch as 0-size nodes.
 - `a11ytree`: out-of-tree platform mode. Files named `.a11ytree.*` are used
   when they exist; all other platform files resolve as `android`.
 
@@ -1005,6 +1010,7 @@ bun run check            # all of the below: typecheck, unit tests, e2e
 bun run typecheck        # tsc --noEmit
 bun run test             # unit tests + CLI tests against a fake host (test/fixtures/fake-host.js)
 bun run test:e2e         # real host; skipped if there is no native/dist binary and no RN_A11Y_HOST_BIN
+RN_A11Y_E2E_PRESETS=android-phone bun run test:e2e   # presets to run the e2e suites under (default android-phone,ios-phone)
 bun run rn-a11y-tree render examples/basic/App.tsx --platform android --bundle-only
 ```
 

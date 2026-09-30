@@ -1,23 +1,46 @@
 # E2E coverage
 
 Each e2e test runs the CLI against the real host (`native/dist/<arch>/rn-a11y-host`
-or `RN_A11Y_HOST_BIN`) with `--platform android`, and skips with a reason when
-there is no host binary. Unit and CLI tests against a fake host are in
-`test/` (`bun run test`); the native Fantom itests are in `native/tests/` (see
+or `RN_A11Y_HOST_BIN`) and skips with a reason when there is no host binary.
+The suites run once per preset in `RN_A11Y_E2E_PRESETS` (default
+`android-phone,ios-phone`; `e2e/helpers.ts`), and every test name starts with
+`[<preset>]`. Expectations that legitimately differ between the platforms
+use the preset's values (viewport, safe area insets, header height) or name
+them in the table. Unit and CLI tests against a fake host are in `test/`
+(`bun run test`); the native Fantom itests are in `native/tests/` (see
 [`native/README.md`](../native/README.md)).
+
+| Test | Example | `--preset` | Per-preset differences |
+| --- | --- | --- | --- |
+| `e2e/render.test.ts` | basic | android-phone, ios-phone (+ one android-tablet line) | viewport 412x915 / 393x852; `email` `AndroidTextInput` / `TextInput`, `remember` `AndroidSwitch` / `Switch`; iOS input sizes need `iosInputs` |
+| `e2e/run.test.ts` | basic | android-phone, ios-phone | iOS typing needs `iosInputs` |
+| `e2e/check.test.ts` | basic | android-phone, ios-phone | iOS email/remember touch targets need `iosInputs` |
+| `e2e/schema.test.ts` | every example | android-phone, ios-phone | none |
+| `e2e/session.test.ts` | basic | android-phone, ios-phone | ready tree width = preset width |
+| `e2e/scrolling.test.ts` | scrolling | android-phone, ios-phone | none |
+| `e2e/navigation-stack.test.ts` | navigation-stack | android-phone, ios-phone | header at y 24 / 59, height 56 / 44 |
+| `e2e/gestures.test.ts` | gestures | android-phone, ios-phone | root `RNGestureHandlerRootView` / `View` |
+| `e2e/reanimated.test.ts` | reanimated | android-phone, ios-phone | none |
+| `e2e/expo-ui.test.ts` | expo-ui | android-phone (App.tsx Compose + SwiftUIScreen.tsx), ios-phone (App.tsx SwiftUI) | Compose screen on android, SwiftUI screen on ios |
+| `e2e/package.test.ts` | basic (scratch project) | android-phone | none |
+
+`iosInputs`: the host capability for iOS-named TextInput/Switch shadow nodes.
+Without it, `--platform ios` bundles get 0-size interop nodes for them, and
+the assertions on their sizes, typing and touch targets are skipped with
+"host lacks iOS TextInput/Switch".
 
 ## `e2e/render.test.ts` — `examples/basic/App.tsx`, `render`
 
-- Exit code 0; `viewport` is 390x844; the root box width is 390.
-- `submit` (Pressable) exists and has a non-empty box.
+- Exit code 0; `viewport` and the root box are the preset's (412x915 android-phone, 393x852 ios-phone).
+- `submit` (Pressable) is at x 24, width = viewport width - 48, height 48.
 - A Paragraph has the text "Sign in".
 - `shadowTree` source only:
   - the container View has children (full hierarchy, no view flattening);
   - `submit` has `role === 'button'` (from the ARIA `role` prop) and a Paragraph child;
   - every Paragraph box is taller than 10 (CoreText measurement);
-  - `email` (TextInput): role `textbox`, height > 18, `style.placeholder === 'Email'`;
-  - `remember` (Switch): role `switch`, name "Remember me", `a11y.state.checked === true`, box 51x31.
-- `render --format text --select role=button` prints exactly one line: `submit View #submit role=button "Submit" {24,…,342x48}`.
+  - `email` (TextInput, type `AndroidTextInput` / `TextInput`): role `textbox`; with real inputs: height > 18, `style.placeholder === 'Email'`;
+  - `remember` (Switch, type `AndroidSwitch` / `Switch`): role `switch`, name "Remember me", `a11y.state.checked === true`; with real inputs: box 51x31.
+- `render --format text --select role=button` prints exactly one line: `submit View #submit role=button "Submit" {24,…,<width - 48>x48}`.
 - `render --preset android-tablet` (no `--platform`) gives the same line with width 752 (800 - 2 x 24).
 
 ## `e2e/run.test.ts` — `examples/basic/actions.json`, `run`
@@ -25,6 +48,7 @@ there is no host binary. Unit and CLI tests against a fake host are in
 Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 
 - Steps are `type, tap, tap, snapshot`; no step has an error or warnings; every non-snapshot step has a `hit`.
+- Without `iosInputs` (ios-phone): the `type` step and the `email`/`echo` assertions are skipped; the Switch tap and Submit still count.
 - Snapshot `after-submit` exists.
 - `status` shows "Submitted" (Pressable `onPress` fired).
 - `email.text === 'a@b.c'` when the host reflects typed text (`setTextInputTextByTag`).
@@ -36,6 +60,7 @@ Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 
 - `--rules examples/basic/rules-fail.json`: exit code 2, `ok: false`. The violations are exactly: touchTarget `email` height (36.3), touchTarget `remember` height (31), tokens `submit` backgroundColor (#1e6fff is not a token), contrast `submit/Paragraph:1` (4.4, #ffffff on #1e6fff, `bgFrom: "host"`).
 - `email` passes `names` through its placeholder ("Email", `from: "placeholder"`).
+- Without `iosInputs` (ios-phone): only the non-input violations (tokens, contrast) are compared, and the `--script` check is skipped (its `type` step fails).
 - `--rules examples/basic/rules-pass.json`: exit code 0, `ok: true`, no violations.
 - `--rules rules-pass.json --script actions.json --format text`: exit code 0; the final tree (with `echo` and `status`) passes.
 
@@ -97,7 +122,8 @@ React Navigation native stack on react-native-screens. Actions: snapshot
 - Skips when `RNSScreen` has no size or the Home header has no `title` (host without screens support).
 - No step has an error.
 - `details`: `RNSScreenStack` has 2 `RNSScreen` children; the second has the stack's box and contains `details-text` = "Details 42".
-- The second screen's `RNSScreenStackHeaderConfig`: `style.title` and `name` "Details", `role` null, box `{0,0,390,56}`; `details-text` is at y ≥ 56 (below the header).
+- `RNSScreenStack` fills the viewport.
+- The second screen's `RNSScreenStackHeaderConfig`: `style.title` and `name` "Details", `role` null, box `{0, insets.top, width, headerHeight}` (android-phone `{0,24,412,56}`, ios-phone `{0,59,393,44}`); `RNSScreenContentWrapper` starts at `insets.top + headerHeight` and ends at the screen bottom; `details-text` is below the header.
 - `back`: 1 `RNSScreen`; `go-details` present with a non-empty box.
 
 ## `e2e/gestures.test.ts` — `examples/gestures/actions.json`, `run`
@@ -107,7 +133,7 @@ react-native-gesture-handler: `Gesture.Race(pan, longPress, tap)` (v2,
 gestures on `drag-ui`. Actions: tap `drag`, pan `drag` by dx 100, long press
 `drag`, tap `rect`, pan `drag-ui` by dx 80, wait 100, tap `drag-ui`.
 
-- Skips when `RNGestureHandlerRootView` has no size.
+- The root's child is `RNGestureHandlerRootView` (android) or `View` (ios: GestureHandlerRootView is a plain View); skips when it has no size.
 - No step has an error; every gesture step reached at least one handler (`gestureHandlers > 0`).
 - `tap-out` = "tapped".
 - `drag` moved right by exactly the reported `pos-out` translation, and 70 < dx ≤ 100 (RNGH resets the pan start at activation, after the 15 dp slop).

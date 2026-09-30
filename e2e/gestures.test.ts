@@ -1,62 +1,31 @@
 import assert from 'node:assert/strict';
-import {spawnSync} from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 import {test} from 'node:test';
-import {fileURLToPath} from 'node:url';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
+import {cli, E2E_PRESETS, get, hostSkip, isIOS, ROOT} from './helpers.ts';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
 const APP = path.join(ROOT, 'examples', 'gestures', 'App.tsx');
 const SCRIPT = path.join(ROOT, 'examples', 'gestures', 'actions.json');
-
-const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
-const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
 
 // RNGH's default pan activation distance (web/constants.ts DEFAULT_TOUCH_SLOP).
 // RNGH resets the start point when the pan activates, so translationX is
 // dx minus the distance moved before activation (<= slop + one step).
 const TOUCH_SLOP = 15;
 
-function findAll(node: TreeNode, pred: (n: TreeNode) => boolean): TreeNode[] {
-  const out = pred(node) ? [node] : [];
-  for (const child of node.children) out.push(...findAll(child, pred));
-  return out;
-}
-const get = (root: TreeNode, testID: string) => {
-  const node = findAll(root, n => n.testID === testID)[0];
-  assert.ok(node, `${testID} not found`);
-  return node;
-};
-
-test(
-  'run examples/gestures/actions.json',
-  {
-    skip: hostBin
-      ? false
-      : `no host binary: run \`bun run build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
-    timeout: 180_000,
-  },
-  t => {
-    const proc = spawnSync(
-      process.execPath,
-      [CLI, 'run', APP, '--platform', 'android', '--script', SCRIPT],
-      {
-        cwd: ROOT,
-        encoding: 'utf8',
-        env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
-        maxBuffer: 64 * 1024 * 1024,
-      },
-    );
+for (const preset of E2E_PRESETS) {
+  test(`[${preset.name}] run examples/gestures/actions.json`, {skip: hostSkip, timeout: 180_000}, t => {
+    const proc = cli(['run', APP, '--script', SCRIPT], preset);
     assert.equal(proc.status, 0, `CLI failed:\n${proc.stderr}`);
     const result = JSON.parse(proc.stdout) as RunResult;
 
     // Without the RNGH component descriptors the root view falls back to an
-    // interop view with no size.
-    const rootView = findAll(result.final, n => n.type === 'RNGestureHandlerRootView')[0];
-    if (rootView == null || rootView.box.width === 0) {
+    // interop view with no size. On iOS GestureHandlerRootView is a plain
+    // View (RNGestureHandlerRootView is an Android component).
+    const rootType = isIOS(preset) ? 'View' : 'RNGestureHandlerRootView';
+    const rootView = result.final.children.find(n => n.type === rootType);
+    assert.ok(rootView, `the root has no ${rootType} child`);
+    if (rootView.box.width === 0) {
       t.skip('host lacks react-native-gesture-handler support (RNGestureHandlerRootView has no size)');
       return;
     }
@@ -89,5 +58,5 @@ test(
     assert.ok(uiDx > 80 - 2 * TOUCH_SLOP && uiDx <= 80, `drag-ui moved by ${uiDx}`);
     // runOnJS from the tap worklet.
     assert.equal(get(s['after-ui-tap'], 'ui-tap-out').text, 'ui-tapped');
-  },
-);
+  });
+}

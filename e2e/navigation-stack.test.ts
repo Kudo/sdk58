@@ -1,52 +1,21 @@
 import assert from 'node:assert/strict';
-import {spawnSync} from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 import {test} from 'node:test';
-import {fileURLToPath} from 'node:url';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
+import {cliJson, E2E_PRESETS, findAll, hostSkip, ROOT} from './helpers.ts';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
 const APP = path.join(ROOT, 'examples', 'navigation-stack', 'App.tsx');
 const SCRIPT = path.join(ROOT, 'examples', 'navigation-stack', 'actions.json');
-
-const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
-const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
-
-function findAll(node: TreeNode, pred: (n: TreeNode) => boolean): TreeNode[] {
-  const out = pred(node) ? [node] : [];
-  for (const child of node.children) out.push(...findAll(child, pred));
-  return out;
-}
 
 const byType = (root: TreeNode, type: string) => findAll(root, n => n.type === type);
 const byTestID = (root: TreeNode, testID: string) => findAll(root, n => n.testID === testID)[0];
 
-test(
-  'run examples/navigation-stack/actions.json',
-  {
-    skip: hostBin
-      ? false
-      : `no host binary: run \`bun run build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`,
-    timeout: 180_000,
-  },
-  t => {
-    const proc = spawnSync(
-      process.execPath,
-      [CLI, 'run', APP, '--platform', 'android', '--script', SCRIPT],
-      {
-        cwd: ROOT,
-        encoding: 'utf8',
-        env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
-        maxBuffer: 64 * 1024 * 1024,
-      },
-    );
-    assert.equal(proc.status, 0, `CLI failed:\n${proc.stderr}`);
-    const result = JSON.parse(proc.stdout) as RunResult;
+for (const preset of E2E_PRESETS) {
+  test(`[${preset.name}] run examples/navigation-stack/actions.json`, {skip: hostSkip, timeout: 180_000}, t => {
+    const result = cliJson<RunResult>(['run', APP, '--script', SCRIPT], preset);
     for (const step of result.steps) {
-      assert.equal(step.error, undefined, `step ${step.index} failed: ${step.error}`);
+      assert.equal(step.error, undefined, `step ${step.index} failed: ${JSON.stringify(step.error)}`);
     }
     const {home, details, back} = result.snapshots;
 
@@ -65,21 +34,28 @@ test(
     // details: two screens in the stack; the top one fills the stack.
     const [stack] = byType(details, 'RNSScreenStack');
     assert.ok(stack, 'RNSScreenStack not found');
+    assert.deepEqual(stack.box, {x: 0, y: 0, width: preset.width, height: preset.height});
     const screens = stack.children.filter(c => c.type === 'RNSScreen');
     assert.equal(screens.length, 2);
     assert.deepEqual(screens[1].box, stack.box);
-    assert.ok(byTestID(screens[1], 'details-text'), 'details-text is not in the second screen');
     assert.equal(byTestID(screens[1], 'details-text').text, 'Details 42');
 
-    // The top screen's native header: title "Details", 56 dp (Android
-    // toolbar) at the top; the screen content starts below it.
+    // The top screen's native header: title "Details", below the status bar
+    // (safe area top) and as high as the platform's bar (Android toolbar 56,
+    // iOS navigation bar 44); the screen content starts below it.
     const header = screens[1].children.find(c => c.type === 'RNSScreenStackHeaderConfig');
     assert.ok(header, 'RNSScreenStackHeaderConfig not found in the second screen');
     assert.equal(header.style.title, 'Details');
     assert.equal(header.name, 'Details');
     assert.equal(header.role, null);
-    assert.deepEqual(header.box, {x: 0, y: 0, width: 390, height: 56});
-    assert.ok(byTestID(screens[1], 'details-text').box.y >= 56, 'content is not below the header');
+    const top = preset.safeAreaInsets.top;
+    assert.deepEqual(header.box, {x: 0, y: top, width: preset.width, height: preset.headerHeight});
+    const content = screens[1].children.find(c => c.type === 'RNSScreenContentWrapper');
+    assert.ok(content, 'RNSScreenContentWrapper not found');
+    assert.equal(content.box.y, top + preset.headerHeight);
+    // The content area ends at the screen bottom.
+    assert.equal(content.box.y + content.box.height, preset.height);
+    assert.ok(byTestID(screens[1], 'details-text').box.y >= top + preset.headerHeight, 'content is not below the header');
 
     // back: one screen again, Home content visible.
     const [backStack] = byType(back, 'RNSScreenStack');
@@ -87,5 +63,5 @@ test(
     const goDetails = byTestID(back, 'go-details');
     assert.ok(goDetails, 'go-details not found after going back');
     assert.ok(goDetails.box.width > 0 && goDetails.box.height > 0);
-  },
-);
+  });
+}

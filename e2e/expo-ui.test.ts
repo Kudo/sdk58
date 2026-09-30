@@ -1,35 +1,15 @@
 import assert from 'node:assert/strict';
-import {spawnSync} from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
-import {test} from 'node:test';
-import {fileURLToPath} from 'node:url';
+import {test, type TestContext} from 'node:test';
 
 import type {RunResult, TreeNode} from '../src/schema.ts';
+import {cliJson, E2E_PRESETS, findAll, hostSkip, isIOS, type Preset, ROOT} from './helpers.ts';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'bin', 'rn-a11y-tree.js');
 const EXAMPLE = path.join(ROOT, 'examples', 'expo-ui');
 const SCRIPT = path.join(EXAMPLE, 'actions.json');
 
-const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
-const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
-
-function run(file: string): RunResult {
-  const proc = spawnSync(process.execPath, [CLI, 'run', path.join(EXAMPLE, file), '--platform', 'android', '--script', SCRIPT], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  assert.equal(proc.status, 0, proc.stderr);
-  return JSON.parse(proc.stdout) as RunResult;
-}
-
-function findAll(node: TreeNode, pred: (n: TreeNode) => boolean): TreeNode[] {
-  const out = pred(node) ? [node] : [];
-  for (const child of node.children) out.push(...findAll(child, pred));
-  return out;
+function run(file: string, preset: Preset): RunResult {
+  return cliJson<RunResult>(['run', path.join(EXAMPLE, file), '--script', SCRIPT], preset);
 }
 
 const byKey = (tree: TreeNode, key: string) => findAll(tree, n => n.key === key)[0];
@@ -74,14 +54,8 @@ function checkLayoutLabels(host: TreeNode, engine: 'swiftui' | 'compose', realLa
   }
 }
 
-const skip = hostBin ? false : `no host binary: run \`bun run build:host\` or set RN_A11Y_HOST_BIN`;
-
-test('expo-ui: universal @expo/ui (Compose views) — tree, roles, button, switch, clickable Text', {skip, timeout: 180_000}, t => {
-  const result = run('App.tsx');
-  if (!result.capabilities.includes('expoUI')) {
-    t.skip('host has no expoUI capability');
-    return;
-  }
+/** Universal @expo/ui with Compose views: tree, roles, button, switch, clickable Text. */
+function checkCompose(result: RunResult, t: TestContext) {
   const {modifierEvents, realLayout} = gates(result, t, 'compose');
   const host = findAll(result.final, n => n.type === 'ExpoUI.HostView')[0];
   assert.deepEqual(shape(host), {
@@ -130,14 +104,10 @@ test('expo-ui: universal @expo/ui (Compose views) — tree, roles, button, switc
     );
   }
   assert.ok(result.snapshots.after);
-});
+}
 
-test('expo-ui: @expo/ui/swift-ui (SwiftUI views) — tree, modifiers, button, toggle, onTapGesture', {skip, timeout: 180_000}, t => {
-  const result = run('SwiftUIScreen.tsx');
-  if (!result.capabilities.includes('expoUI')) {
-    t.skip('host has no expoUI capability');
-    return;
-  }
+/** @expo/ui/swift-ui with SwiftUI views: tree, modifiers, button, toggle, onTapGesture. */
+function checkSwiftUI(result: RunResult, t: TestContext) {
   const {modifierEvents, realLayout} = gates(result, t, 'swiftUI');
   const host = findAll(result.final, n => n.type === 'ExpoUI.HostView')[0];
   assert.deepEqual(shape(host), {
@@ -168,4 +138,28 @@ test('expo-ui: @expo/ui/swift-ui (SwiftUI views) — tree, modifiers, button, to
     assert.ok(host.box.height > 0);
     assert.ok(Math.abs(greeting.box.height - 20.333) <= 1, `Text height ${greeting.box.height}`);
   }
-});
+}
+
+// App.tsx picks the screen by platform: universal (Compose views) on
+// android, the SwiftUI screen on ios. SwiftUIScreen.tsx renders SwiftUI views
+// on any platform (checked once, under android).
+for (const preset of E2E_PRESETS) {
+  const cases: Array<[string, 'compose' | 'swiftUI']> = isIOS(preset)
+    ? [['App.tsx', 'swiftUI']]
+    : [
+        ['App.tsx', 'compose'],
+        ['SwiftUIScreen.tsx', 'swiftUI'],
+      ];
+  for (const [file, kind] of cases) {
+    const title = kind === 'compose' ? 'universal @expo/ui (Compose views)' : '@expo/ui/swift-ui (SwiftUI views)';
+    test(`[${preset.name}] expo-ui ${file}: ${title}`, {skip: hostSkip, timeout: 180_000}, t => {
+      const result = run(file, preset);
+      if (!result.capabilities.includes('expoUI')) {
+        t.skip('host has no expoUI capability');
+        return;
+      }
+      if (kind === 'compose') checkCompose(result, t);
+      else checkSwiftUI(result, t);
+    });
+  }
+}
