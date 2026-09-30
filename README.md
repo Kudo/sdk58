@@ -925,7 +925,7 @@ From Fantom's `tester/src` (`main.cpp`, `AppSettings.cpp`,
    `@executable_path/lib` (binary) and `@loader_path` (dylibs), and the files
    are ad-hoc signed again. The folder can be moved.
 
-With the default static host (Hermes, JSI and libcrypto linked in), the
+With the default static host (Hermes and JSI linked in), the
 binary links only system libraries (`otool -L`: libobjc, CoreFoundation,
 AppKit, CoreText, Foundation, libc++, libSystem).
 

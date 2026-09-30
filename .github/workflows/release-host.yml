@@ -63,7 +63,7 @@ jobs:
           "$SDKMANAGER" --install "cmake;3.30.5"
 
       - name: Homebrew packages
-        run: brew install cmake ninja openssl@3
+        run: brew install cmake ninja
 
       - name: Install JS dependencies
         run: bun install --frozen-lockfile
@@ -71,6 +71,16 @@ jobs:
       # A clean build: no host cache for releases.
       - name: Build host
         run: bun run build:host
+
+      # x86_64 slice, cross-built on this arm64 runner (CMAKE_OSX_ARCHITECTURES);
+      # release-host.mjs then packs a universal binary (both native/dist/<arch>).
+      - name: Build host (x86_64 slice)
+        run: RN_A11Y_HOST_ARCH=x86_64 bun run build:host
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rn-a11y-host-x86_64
+          path: native/dist/x86_64/rn-a11y-host
 
       - name: Tests
         run: |
@@ -117,6 +127,40 @@ jobs:
         with:
           name: rn-a11y-host-release
           path: release/
+
+  # The x86_64 slice cannot run on the arm64 runner (no Rosetta): render with
+  # it on an Intel runner.
+  intel-check:
+    needs: release
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: rn-a11y-host-x86_64
+          path: x86_64-host
+
+      - name: Render with the x86_64 host
+        run: |
+          chmod +x x86_64-host/rn-a11y-host
+          uname -m
+          lipo -info x86_64-host/rn-a11y-host
+          RN_A11Y_HOST_BIN="$PWD/x86_64-host/rn-a11y-host" \
+            bun run rn-a11y-tree render examples/basic/App.tsx --preset android-phone --format text | tee render.txt
+          grep -q 'submit View #submit role=button "Submit"' render.txt
 
   # Later: publish both packages to npm from the release tarballs. Needs the
   # NPM_TOKEN secret (the user publishes 0.1.0 manually from these tarballs).

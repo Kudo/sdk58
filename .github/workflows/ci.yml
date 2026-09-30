@@ -64,8 +64,8 @@ jobs:
           "$SDKMANAGER" --install "cmake;3.30.5"
 
       - name: Homebrew packages
-        # openssl@3: the host links Homebrew libcrypto by absolute path.
-        run: brew install cmake ninja openssl@3
+        # No OpenSSL: the host hashes with a CommonCrypto shim (FANTOM_OPENSSL_SHIM).
+        run: brew install cmake ninja
 
       - name: Install JS dependencies
         run: bun install --frozen-lockfile
@@ -243,7 +243,7 @@ jobs:
           "$SDKMANAGER" --install "cmake;3.30.5"
 
       - name: Homebrew packages
-        run: brew install cmake ninja openssl@3
+        run: brew install cmake ninja
 
       - name: Install JS dependencies
         run: bun install --frozen-lockfile
