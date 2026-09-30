@@ -39,6 +39,12 @@ Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 - `--rules examples/basic/rules-pass.json`: exit code 0, `ok: true`, no violations.
 - `--rules rules-pass.json --script actions.json --format text`: exit code 0; the final tree (with `echo` and `status`) passes.
 
+## `e2e/schema.test.ts` — every example, `render`, `run --diff`, `check`
+
+- For each `examples/*/App.tsx`: `render` output validates against `schema/render-result.json`.
+- For each example with `actions.json`: `run --diff` output validates against `schema/run-result.json`.
+- `check --rules examples/basic/rules-fail.json` output (exit code 2) validates against `schema/check-result.json`.
+
 ## `e2e/scrolling.test.ts` — `examples/scrolling/actions.json`, `run`
 
 Actions: snapshot `before`, scroll `list` to y=600, snapshot `after`, tap

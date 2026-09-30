@@ -1,0 +1,1083 @@
+{
+  "name": "check",
+  "description": "Render a component (optionally after actions) and check accessibility and design rules: accessible names, touch target size, focusable elements in hidden subtrees, text contrast (WCAG), and design tokens (colors, spacing grid, fonts, font sizes). Returns per-node results and a list of violations; ok=false (exit code 2) when a rule fails.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "rules": {
+        "$ref": "#/definitions/Rules",
+        "description": "The rules; default: `rules` in a11y-tree.json."
+      },
+      "actions": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Action"
+        },
+        "description": "Run these actions first and check the final tree."
+      },
+      "tapMode": {
+        "type": "string",
+        "enum": [
+          "touch",
+          "click",
+          "both"
+        ]
+      },
+      "subtree": {
+        "type": "string",
+        "description": "Check only this subtree."
+      },
+      "format": {
+        "type": "string",
+        "enum": [
+          "json",
+          "text"
+        ]
+      },
+      "file": {
+        "type": "string",
+        "description": "Component file (default export or `App` named export)."
+      },
+      "preset": {
+        "type": "string",
+        "enum": [
+          "android-phone",
+          "ios-phone",
+          "android-tablet",
+          "ios-tablet"
+        ],
+        "description": "Device preset: platform, viewport, safe area insets, header height."
+      },
+      "platform": {
+        "type": "string",
+        "description": "Metro platform (`android`, `ios`, `a11ytree`, ...). Required unless a preset or a11y-tree.json sets it."
+      },
+      "width": {
+        "type": "number",
+        "description": "Viewport width in dp."
+      },
+      "height": {
+        "type": "number",
+        "description": "Viewport height in dp."
+      },
+      "safeAreaInsets": {
+        "type": "object",
+        "properties": {
+          "top": {
+            "type": "number"
+          },
+          "left": {
+            "type": "number"
+          },
+          "right": {
+            "type": "number"
+          },
+          "bottom": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "additionalProperties": false
+      },
+      "headerHeight": {
+        "type": "number",
+        "description": "react-native-screens native header height in dp."
+      },
+      "dev": {
+        "type": "boolean",
+        "description": "Development bundle (`__DEV__ = true`)."
+      },
+      "mounted": {
+        "type": "boolean",
+        "description": "Set false to skip mounted-view values (`visualBox`, `effectiveOpacity`)."
+      }
+    },
+    "required": [
+      "file"
+    ],
+    "definitions": {
+      "Rules": {
+        "type": "object",
+        "properties": {
+          "names": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "ignore": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            ],
+            "description": "Focusable nodes and images need an accessible name."
+          },
+          "touchTarget": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ignore": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "min": {
+                    "type": "number"
+                  }
+                }
+              }
+            ],
+            "description": "Interactive nodes are at least `min` x `min` dp (default 48)."
+          },
+          "hiddenFocusable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "ignore": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            ],
+            "description": "No focusable node inside a hidden subtree."
+          },
+          "contrast": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ignore": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "min": {
+                    "type": "number"
+                  },
+                  "minLarge": {
+                    "type": "number"
+                  }
+                }
+              }
+            ],
+            "description": "Text contrast ratio (WCAG 2.x) at least `min` (default 4.5); `minLarge` for large text."
+          },
+          "tokens": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ignore": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "colors": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Allowed colors: a list, or token name -> color."
+              },
+              "spacing": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                ],
+                "description": "Margins, paddings and gaps: a grid step (multiple of) or a list of values."
+              },
+              "fonts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Allowed font families; `\"System\"` stands for no fontFamily."
+              },
+              "fontSizes": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "Allowed font sizes."
+              }
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "Action": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "tap": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Target"
+                  },
+                  {
+                    "$ref": "#/definitions/Point"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "tap"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "longPress": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Target"
+                  },
+                  {
+                    "$ref": "#/definitions/Point"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "longPress"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "submit": {
+                        "type": "boolean"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "testID",
+                      "text"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "submit": {
+                        "type": "boolean"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "text"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "submit": {
+                        "type": "boolean"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "text"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "submit": {
+                        "type": "boolean"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sel",
+                      "text"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scroll": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "testID"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sel"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "scroll"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "pan": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "testID"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sel"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "pan"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "pinch": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "scale": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "scale",
+                      "testID"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "scale": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "scale"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "scale": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "scale"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "scale": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "scale",
+                      "sel"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "pinch"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "wait": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "wait"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "snapshot": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "snapshot"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Target": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "testID": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "testID"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ref"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "sel": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sel"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "description": "Validation of `run --script` files. Runs in the CLI before bundling so errors are reported with the step index. Keep in sync with runtime/actions.js and the README \"Interactions\" section."
+      },
+      "Point": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CheckResult",
+    "type": "object",
+    "properties": {
+      "ok": {
+        "type": "boolean"
+      },
+      "viewport": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "additionalProperties": false
+      },
+      "source": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "number"
+          },
+          "checked": {
+            "type": "number"
+          },
+          "violations": {
+            "type": "number"
+          },
+          "byRule": {
+            "type": "object",
+            "properties": {
+              "names": {
+                "type": "number"
+              },
+              "touchTarget": {
+                "type": "number"
+              },
+              "hiddenFocusable": {
+                "type": "number"
+              },
+              "contrast": {
+                "type": "number"
+              },
+              "tokens": {
+                "type": "number"
+              },
+              "step": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "nodes",
+          "checked",
+          "violations",
+          "byRule"
+        ],
+        "additionalProperties": false
+      },
+      "nodes": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/CheckedNode"
+        }
+      },
+      "violations": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Violation"
+        }
+      },
+      "logs": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/LogEntry"
+        }
+      }
+    },
+    "required": [
+      "ok",
+      "viewport",
+      "source",
+      "summary",
+      "nodes",
+      "violations"
+    ],
+    "additionalProperties": false,
+    "definitions": {
+      "CheckedNode": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "sel": {
+            "type": "string"
+          },
+          "props": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/PropCheck"
+            }
+          }
+        },
+        "required": [
+          "ref",
+          "key",
+          "sel",
+          "props"
+        ],
+        "additionalProperties": false
+      },
+      "PropCheck": {
+        "type": "object",
+        "properties": {
+          "rule": {
+            "$ref": "#/definitions/RuleName"
+          },
+          "got": {},
+          "want": {},
+          "wantToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "wantResolved": {},
+          "pass": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rule",
+          "got",
+          "pass"
+        ],
+        "additionalProperties": {},
+        "description": "One evaluated property: what the node has, what the rule wants, and the verdict."
+      },
+      "RuleName": {
+        "type": "string",
+        "enum": [
+          "names",
+          "touchTarget",
+          "hiddenFocusable",
+          "contrast",
+          "tokens"
+        ]
+      },
+      "Violation": {
+        "type": "object",
+        "properties": {
+          "rule": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/RuleName"
+              },
+              {
+                "type": "string",
+                "const": "step"
+              }
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "sel": {
+            "type": "string"
+          },
+          "prop": {
+            "type": "string"
+          },
+          "expected": {},
+          "actual": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule",
+          "key",
+          "sel",
+          "expected",
+          "actual",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "LogEntry": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "known": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "level",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "examples": [
+    {
+      "input": {
+        "file": "examples/basic/App.tsx",
+        "platform": "android",
+        "rules": {
+          "names": true,
+          "touchTarget": {
+            "min": 48
+          },
+          "contrast": {
+            "min": 4.5
+          },
+          "tokens": {
+            "spacing": 8
+          }
+        }
+      },
+      "argv": [
+        "rn-a11y-tree",
+        "check",
+        "examples/basic/App.tsx",
+        "--platform",
+        "android",
+        "--rules",
+        "{\"rules\":{\"names\":true,\"touchTarget\":{\"min\":48},\"contrast\":{\"min\":4.5},\"tokens\":{\"spacing\":8}}}"
+      ]
+    }
+  ],
+  "x-cli": {
+    "command": "check",
+    "outputSchemaFiles": [
+      "schema/check-result.json"
+    ],
+    "note": "Output matches outputSchema with format \"json\" (the default). Errors: schema/error-output.json.",
+    "exitCodes": {
+      "0": "ok",
+      "1": "USAGE",
+      "2": "CHECK_FAILED",
+      "3": "BUNDLE_FAILED",
+      "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED",
+      "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_CRASHED"
+    }
+  }
+}

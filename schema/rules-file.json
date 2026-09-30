@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RulesFile",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "rules": {
+      "$ref": "#/definitions/Rules"
+    }
+  },
+  "required": [
+    "rules"
+  ],
+  "additionalProperties": false,
+  "description": "`check --rules` file.",
+  "definitions": {
+    "Rules": {
+      "type": "object",
+      "properties": {
+        "names": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "ignore": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Focusable nodes and images need an accessible name."
+        },
+        "touchTarget": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "ignore": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "min": {
+                  "type": "number"
+                }
+              }
+            }
+          ],
+          "description": "Interactive nodes are at least `min` x `min` dp (default 48)."
+        },
+        "hiddenFocusable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "ignore": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "No focusable node inside a hidden subtree."
+        },
+        "contrast": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "ignore": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "min": {
+                  "type": "number"
+                },
+                "minLarge": {
+                  "type": "number"
+                }
+              }
+            }
+          ],
+          "description": "Text contrast ratio (WCAG 2.x) at least `min` (default 4.5); `minLarge` for large text."
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ignore": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "colors": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Allowed colors: a list, or token name -> color."
+            },
+            "spacing": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                }
+              ],
+              "description": "Margins, paddings and gaps: a grid step (multiple of) or a list of values."
+            },
+            "fonts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Allowed font families; `\"System\"` stands for no fontFamily."
+            },
+            "fontSizes": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Allowed font sizes."
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ErrorOutput",
+  "type": "object",
+  "properties": {
+    "error": {
+      "$ref": "#/definitions/ErrorInfo"
+    }
+  },
+  "required": [
+    "error"
+  ],
+  "additionalProperties": false,
+  "description": "Any failure: `{\"error\": {...}}` (stderr; stdout with an explicit `--format json`).",
+  "definitions": {
+    "ErrorInfo": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/definitions/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "USAGE",
+        "CHECK_FAILED",
+        "BUNDLE_FAILED",
+        "APP_THREW",
+        "TARGET_NOT_FOUND",
+        "TARGET_COVERED",
+        "TIMEOUT",
+        "HOST_MISSING",
+        "HOST_UNAVAILABLE",
+        "HOST_CRASHED"
+      ],
+      "description": "Machine-readable errors: `{code, message, hint?, details?}`, with one exit code per class of failure.\n\n| exit | meaning | | --- | --- | | 0 | ok | | 1 | usage (bad arguments, script, selector) | | 2 | check failed (`check` command) | | 3 | bundle failed (Metro) | | 4 | app error (the app threw while loading or rendering) | | 5 | host (missing, unavailable, crashed, timeout) |"
+    }
+  }
+}

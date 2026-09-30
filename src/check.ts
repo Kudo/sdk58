@@ -9,7 +9,7 @@
 
 import fs from 'node:fs';
 
-import {usage} from './errors.ts';
+import {type LogEntry, usage} from './errors.ts';
 import {parseSelector} from './format.ts';
 import type {TreeNode} from './schema.ts';
 
@@ -75,7 +75,7 @@ export type CheckResult = {
   summary: {nodes: number; checked: number; violations: number; byRule: Partial<Record<RuleName | 'step', number>>};
   nodes: CheckedNode[];
   violations: Violation[];
-  logs?: Array<{level: string; message: string; known?: true}>;
+  logs?: LogEntry[];
 };
 
 // --- rules file -------------------------------------------------------------
@@ -164,14 +164,16 @@ function validateTokens(tokens: Record<string, unknown>, fail: (m: string) => Er
   }
 }
 
-/** Reads a rules file: `{"rules": {...}}`. */
+/** Reads a rules file: `{"rules": {...}}`. A value that starts with `{` is the JSON itself. */
 export function readRulesFile(file: string): Rules {
+  const inline = file.trimStart().startsWith('{');
   let text: string;
   try {
-    text = fs.readFileSync(file, 'utf8');
+    text = inline ? file : fs.readFileSync(file, 'utf8');
   } catch (error) {
     throw usage(`cannot read ${file}: ${(error as Error).message}`);
   }
+  if (inline) file = '--rules';
   let json: unknown;
   try {
     json = JSON.parse(text);

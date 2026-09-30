@@ -1,0 +1,1219 @@
+{
+  "name": "diff",
+  "description": "Render a component, run actions, and return what each action changed in the tree (nodes added, removed, and changed box/text/name/role/state/hidden/opacity, by stable key). Use it to verify that an interaction has the expected effect.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "actions": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Action"
+        },
+        "description": "The actions to run; each step reports what it changed."
+      },
+      "tapMode": {
+        "type": "string",
+        "enum": [
+          "touch",
+          "click",
+          "both"
+        ]
+      },
+      "format": {
+        "type": "string",
+        "enum": [
+          "json",
+          "text"
+        ],
+        "description": "`text` gives one line per change (`+ key`, `- key`, `~ key field: before -> after`)."
+      },
+      "file": {
+        "type": "string",
+        "description": "Component file (default export or `App` named export)."
+      },
+      "preset": {
+        "type": "string",
+        "enum": [
+          "android-phone",
+          "ios-phone",
+          "android-tablet",
+          "ios-tablet"
+        ],
+        "description": "Device preset: platform, viewport, safe area insets, header height."
+      },
+      "platform": {
+        "type": "string",
+        "description": "Metro platform (`android`, `ios`, `a11ytree`, ...). Required unless a preset or a11y-tree.json sets it."
+      },
+      "width": {
+        "type": "number",
+        "description": "Viewport width in dp."
+      },
+      "height": {
+        "type": "number",
+        "description": "Viewport height in dp."
+      },
+      "safeAreaInsets": {
+        "type": "object",
+        "properties": {
+          "top": {
+            "type": "number"
+          },
+          "left": {
+            "type": "number"
+          },
+          "right": {
+            "type": "number"
+          },
+          "bottom": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "additionalProperties": false
+      },
+      "headerHeight": {
+        "type": "number",
+        "description": "react-native-screens native header height in dp."
+      },
+      "dev": {
+        "type": "boolean",
+        "description": "Development bundle (`__DEV__ = true`)."
+      },
+      "mounted": {
+        "type": "boolean",
+        "description": "Set false to skip mounted-view values (`visualBox`, `effectiveOpacity`)."
+      }
+    },
+    "required": [
+      "actions",
+      "file"
+    ],
+    "definitions": {
+      "Action": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "tap": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Target"
+                  },
+                  {
+                    "$ref": "#/definitions/Point"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "tap"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "longPress": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Target"
+                  },
+                  {
+                    "$ref": "#/definitions/Point"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "longPress"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "submit": {
+                        "type": "boolean"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "testID",
+                      "text"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "submit": {
+                        "type": "boolean"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "text"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "submit": {
+                        "type": "boolean"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "text"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "submit": {
+                        "type": "boolean"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sel",
+                      "text"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scroll": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "testID"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sel"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "scroll"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "pan": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "testID"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sel"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "dx": {
+                        "type": "number"
+                      },
+                      "dy": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "pan"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "pinch": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "scale": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "scale",
+                      "testID"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "scale": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "scale"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "scale": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "scale"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "scale": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "scale",
+                      "sel"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "pinch"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "wait": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "wait"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "snapshot": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "snapshot"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Target": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "testID": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "testID"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ref"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "sel": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sel"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "description": "Validation of `run --script` files. Runs in the CLI before bundling so errors are reported with the step index. Keep in sync with runtime/actions.js and the README \"Interactions\" section."
+      },
+      "Point": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "RunResult",
+    "type": "object",
+    "properties": {
+      "viewport": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "additionalProperties": false
+      },
+      "source": {
+        "type": "string",
+        "const": "shadowTree"
+      },
+      "steps": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Step"
+        }
+      },
+      "snapshots": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/definitions/TreeNode"
+        }
+      },
+      "final": {
+        "$ref": "#/definitions/TreeNode"
+      },
+      "fallbacks": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "JS fallbacks used because the host lacks native methods (empty when none)."
+      },
+      "capabilities": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Optional host features found (NativeFantom methods and getCapabilities())."
+      },
+      "logs": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/LogEntry"
+        }
+      }
+    },
+    "required": [
+      "viewport",
+      "source",
+      "steps",
+      "snapshots",
+      "final",
+      "fallbacks",
+      "capabilities"
+    ],
+    "additionalProperties": false,
+    "definitions": {
+      "Step": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "number"
+          },
+          "action": {
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/StepNode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The node the action was aimed at (for coordinate taps: the hit node)."
+          },
+          "hit": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/StepNode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The node the host (or JS fallback) hit test found at the tap point."
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Native events sent, in order (plus `wait <n>ms` markers; `gh:down` / `gh:move xN` / `gh:up` for pointer samples fed to react-native-gesture-handler)."
+          },
+          "gestureHandlers": {
+            "type": "number",
+            "description": "Number of react-native-gesture-handler handlers that received the pointer."
+          },
+          "via": {
+            "type": "object",
+            "properties": {
+              "hitTest": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "native",
+                  "js",
+                  null
+                ]
+              },
+              "events": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "native",
+                  "js",
+                  null
+                ]
+              }
+            },
+            "required": [
+              "hitTest",
+              "events"
+            ],
+            "additionalProperties": false,
+            "description": "Which implementation was used: host methods (`native`) or the JS fallback (`js`)."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StepError"
+              }
+            ],
+            "description": "Runtime payloads carry a string; the CLI output has {code, message}."
+          },
+          "diff": {
+            "$ref": "#/definitions/TreeDiff",
+            "description": "With `run --diff` / session `diff: true`: changes made by this step."
+          }
+        },
+        "required": [
+          "index",
+          "action",
+          "target",
+          "hit",
+          "events"
+        ],
+        "additionalProperties": false
+      },
+      "StepNode": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stable key (see TreeNode.key)."
+          },
+          "testID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "box": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Box"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute box in dp; null when the host hit test found a node that is not in the tree."
+          },
+          "viaHitSlop": {
+            "type": "boolean",
+            "description": "Only on `hit` from the host hit test: the point was outside the node's frame but inside its hitSlop."
+          }
+        },
+        "required": [
+          "tag",
+          "ref",
+          "testID",
+          "type",
+          "box"
+        ],
+        "additionalProperties": false,
+        "description": "One executed action of `run --script` (built in runtime/actions.js)."
+      },
+      "Box": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "description": "Absolute position in the viewport, in dp."
+          },
+          "y": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "additionalProperties": false
+      },
+      "StepError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "TreeDiff": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/NodeSummary"
+            }
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/NodeSummary"
+            }
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "before": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "after": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "key",
+                "before",
+                "after"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "added",
+          "removed",
+          "changed"
+        ],
+        "additionalProperties": false
+      },
+      "NodeSummary": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "TreeNode": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "Id within one tree: `n0`, `n1`, ... in pre-order (changes when the tree changes)."
+          },
+          "key": {
+            "type": "string",
+            "description": "Stable key: `testID` when set, else `<parent key>/<type>:<n>` (n = index among siblings of the same type); the root is its type."
+          },
+          "type": {
+            "type": "string",
+            "description": "Host component name: `View`, `Paragraph`, `Image`, `Text` (text fragment, mounted source only), ..."
+          },
+          "sel": {
+            "type": "string",
+            "description": "Selector for this node. `#testID` when a testID is set, otherwise a path of types with 1-based sibling indices, e.g. `RootView>View>Paragraph:2`."
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Accessibility role: `role` prop, else `accessibilityRole`, else the component default; `null` if none."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Accessible name: label, else aria-label, else own text, else descendant text if accessible."
+          },
+          "a11y": {
+            "$ref": "#/definitions/A11yInfo"
+          },
+          "box": {
+            "$ref": "#/definitions/Box",
+            "description": "On-screen frame in dp: sum of parent frames, minus the `contentOffset` of ancestor ScrollViews (`shadowTree` source)."
+          },
+          "style": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Other props reported by the host: visual style, flattened Yoga style, font props (Paragraph), component props (Image sources, TextInput placeholder, ...). Strings for the `mounted` source."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Text content (Paragraph, Text fragment, TextInput value), else `null`."
+          },
+          "testID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "virtual": {
+            "type": "boolean",
+            "description": "`true` when the host node has no frame of its own (nested `<Text>` span kept for its a11y props, or another virtual node). `box` is then the parent's box. Only for the `shadowTree` source."
+          },
+          "visualBox": {
+            "$ref": "#/definitions/Box",
+            "description": "Where the node is drawn, when it differs from `box`: the bounding box of the (mounted) frame after the transforms of the node and its ancestors (`shadowTree` source). Absent when there is no transform or mounted frame override on the path."
+          },
+          "effectiveOpacity": {
+            "type": "number",
+            "description": "Product of the node's and its ancestors' opacity (mounted opacity when the host reports one). Present only when below 1."
+          },
+          "debugProps": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Raw debug props from the host; only with `--debug-props` and the `shadowTree` source."
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/TreeNode"
+            }
+          }
+        },
+        "required": [
+          "ref",
+          "key",
+          "type",
+          "sel",
+          "role",
+          "name",
+          "a11y",
+          "box",
+          "style",
+          "text",
+          "testID",
+          "children"
+        ],
+        "additionalProperties": false
+      },
+      "A11yInfo": {
+        "type": "object",
+        "properties": {
+          "accessible": {
+            "type": "boolean",
+            "description": "`accessible` prop (or `true` for elements that are accessible by default)."
+          },
+          "label": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/definitions/A11yState"
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "`importantForAccessibility` / `aria-hidden` / `accessibilityElementsHidden`."
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Raw accessibility-related props as reported by the host. Strings for the `mounted` source; typed values for the `shadowTree` source."
+          }
+        },
+        "additionalProperties": false
+      },
+      "A11yState": {
+        "type": "object",
+        "properties": {
+          "disabled": {
+            "type": "boolean"
+          },
+          "selected": {
+            "type": "boolean"
+          },
+          "checked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "const": "mixed"
+              }
+            ]
+          },
+          "busy": {
+            "type": "boolean"
+          },
+          "expanded": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LogEntry": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "known": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "level",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "examples": [
+    {
+      "input": {
+        "file": "examples/basic/App.tsx",
+        "platform": "android",
+        "actions": [
+          {
+            "tap": {
+              "testID": "remember"
+            }
+          }
+        ],
+        "format": "text"
+      },
+      "argv": [
+        "rn-a11y-tree",
+        "run",
+        "examples/basic/App.tsx",
+        "--platform",
+        "android",
+        "--script",
+        "[{\"tap\":{\"testID\":\"remember\"}}]",
+        "--format",
+        "text",
+        "--diff"
+      ]
+    }
+  ],
+  "x-cli": {
+    "command": "run",
+    "outputSchemaFiles": [
+      "schema/run-result.json"
+    ],
+    "note": "Output matches outputSchema with format \"json\" (the default). Errors: schema/error-output.json.",
+    "exitCodes": {
+      "0": "ok",
+      "1": "USAGE",
+      "2": "CHECK_FAILED",
+      "3": "BUNDLE_FAILED",
+      "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED",
+      "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_CRASHED"
+    }
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "name": "render",
+  "description": "Render a React Native component headlessly (real Metro bundle, Fabric layout, Hermes) and return its accessibility/layout tree: for each node the type, stable key, role, accessible name, state, on-screen box (dp), text and style. Use it to see what a screen shows and where.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "format": {
+        "$ref": "#/definitions/TreeFormat",
+        "description": "Output format. `json` matches the output schema; `compact`/`text`/`ndjson` are smaller."
+      },
+      "style": {
+        "type": "boolean",
+        "description": "Keep `style` in `compact`/`ndjson`."
+      },
+      "file": {
+        "type": "string",
+        "description": "Component file (default export or `App` named export)."
+      },
+      "preset": {
+        "type": "string",
+        "enum": [
+          "android-phone",
+          "ios-phone",
+          "android-tablet",
+          "ios-tablet"
+        ],
+        "description": "Device preset: platform, viewport, safe area insets, header height."
+      },
+      "platform": {
+        "type": "string",
+        "description": "Metro platform (`android`, `ios`, `a11ytree`, ...). Required unless a preset or a11y-tree.json sets it."
+      },
+      "width": {
+        "type": "number",
+        "description": "Viewport width in dp."
+      },
+      "height": {
+        "type": "number",
+        "description": "Viewport height in dp."
+      },
+      "safeAreaInsets": {
+        "type": "object",
+        "properties": {
+          "top": {
+            "type": "number"
+          },
+          "left": {
+            "type": "number"
+          },
+          "right": {
+            "type": "number"
+          },
+          "bottom": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "additionalProperties": false
+      },
+      "headerHeight": {
+        "type": "number",
+        "description": "react-native-screens native header height in dp."
+      },
+      "dev": {
+        "type": "boolean",
+        "description": "Development bundle (`__DEV__ = true`)."
+      },
+      "mounted": {
+        "type": "boolean",
+        "description": "Set false to skip mounted-view values (`visualBox`, `effectiveOpacity`)."
+      }
+    },
+    "required": [
+      "file"
+    ],
+    "definitions": {
+      "TreeFormat": {
+        "type": "string",
+        "enum": [
+          "json",
+          "compact",
+          "text",
+          "ndjson"
+        ]
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "RenderResult",
+    "type": "object",
+    "properties": {
+      "viewport": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "additionalProperties": false
+      },
+      "source": {
+        "$ref": "#/definitions/TreeSource"
+      },
+      "root": {
+        "$ref": "#/definitions/TreeNode"
+      },
+      "logs": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/LogEntry"
+        },
+        "description": "App console output (only when there was any); `known: true` marks common React Native noise."
+      }
+    },
+    "required": [
+      "viewport",
+      "source",
+      "root"
+    ],
+    "additionalProperties": false,
+    "definitions": {
+      "TreeSource": {
+        "type": "string",
+        "enum": [
+          "shadowTree",
+          "mounted"
+        ],
+        "description": "Where the tree comes from:\n- `shadowTree`: the host's `getA11yTree` (committed ShadowTree, full   hierarchy, typed values).\n- `mounted`: Fantom's `getRenderedOutput` (mounted views after view   flattening, debug-string props)."
+      },
+      "TreeNode": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "Id within one tree: `n0`, `n1`, ... in pre-order (changes when the tree changes)."
+          },
+          "key": {
+            "type": "string",
+            "description": "Stable key: `testID` when set, else `<parent key>/<type>:<n>` (n = index among siblings of the same type); the root is its type."
+          },
+          "type": {
+            "type": "string",
+            "description": "Host component name: `View`, `Paragraph`, `Image`, `Text` (text fragment, mounted source only), ..."
+          },
+          "sel": {
+            "type": "string",
+            "description": "Selector for this node. `#testID` when a testID is set, otherwise a path of types with 1-based sibling indices, e.g. `RootView>View>Paragraph:2`."
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Accessibility role: `role` prop, else `accessibilityRole`, else the component default; `null` if none."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Accessible name: label, else aria-label, else own text, else descendant text if accessible."
+          },
+          "a11y": {
+            "$ref": "#/definitions/A11yInfo"
+          },
+          "box": {
+            "$ref": "#/definitions/Box",
+            "description": "On-screen frame in dp: sum of parent frames, minus the `contentOffset` of ancestor ScrollViews (`shadowTree` source)."
+          },
+          "style": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Other props reported by the host: visual style, flattened Yoga style, font props (Paragraph), component props (Image sources, TextInput placeholder, ...). Strings for the `mounted` source."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Text content (Paragraph, Text fragment, TextInput value), else `null`."
+          },
+          "testID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "virtual": {
+            "type": "boolean",
+            "description": "`true` when the host node has no frame of its own (nested `<Text>` span kept for its a11y props, or another virtual node). `box` is then the parent's box. Only for the `shadowTree` source."
+          },
+          "visualBox": {
+            "$ref": "#/definitions/Box",
+            "description": "Where the node is drawn, when it differs from `box`: the bounding box of the (mounted) frame after the transforms of the node and its ancestors (`shadowTree` source). Absent when there is no transform or mounted frame override on the path."
+          },
+          "effectiveOpacity": {
+            "type": "number",
+            "description": "Product of the node's and its ancestors' opacity (mounted opacity when the host reports one). Present only when below 1."
+          },
+          "debugProps": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Raw debug props from the host; only with `--debug-props` and the `shadowTree` source."
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/TreeNode"
+            }
+          }
+        },
+        "required": [
+          "ref",
+          "key",
+          "type",
+          "sel",
+          "role",
+          "name",
+          "a11y",
+          "box",
+          "style",
+          "text",
+          "testID",
+          "children"
+        ],
+        "additionalProperties": false
+      },
+      "A11yInfo": {
+        "type": "object",
+        "properties": {
+          "accessible": {
+            "type": "boolean",
+            "description": "`accessible` prop (or `true` for elements that are accessible by default)."
+          },
+          "label": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/definitions/A11yState"
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "`importantForAccessibility` / `aria-hidden` / `accessibilityElementsHidden`."
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Raw accessibility-related props as reported by the host. Strings for the `mounted` source; typed values for the `shadowTree` source."
+          }
+        },
+        "additionalProperties": false
+      },
+      "A11yState": {
+        "type": "object",
+        "properties": {
+          "disabled": {
+            "type": "boolean"
+          },
+          "selected": {
+            "type": "boolean"
+          },
+          "checked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "const": "mixed"
+              }
+            ]
+          },
+          "busy": {
+            "type": "boolean"
+          },
+          "expanded": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Box": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "description": "Absolute position in the viewport, in dp."
+          },
+          "y": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "additionalProperties": false
+      },
+      "LogEntry": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "known": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "level",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "examples": [
+    {
+      "input": {
+        "file": "examples/basic/App.tsx",
+        "preset": "android-phone",
+        "format": "compact"
+      },
+      "argv": [
+        "rn-a11y-tree",
+        "render",
+        "examples/basic/App.tsx",
+        "--preset",
+        "android-phone",
+        "--format",
+        "compact"
+      ]
+    }
+  ],
+  "x-cli": {
+    "command": "render",
+    "outputSchemaFiles": [
+      "schema/render-result.json"
+    ],
+    "note": "Output matches outputSchema with format \"json\" (the default). Errors: schema/error-output.json.",
+    "exitCodes": {
+      "0": "ok",
+      "1": "USAGE",
+      "2": "CHECK_FAILED",
+      "3": "BUNDLE_FAILED",
+      "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED",
+      "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_CRASHED"
+    }
+  }
+}

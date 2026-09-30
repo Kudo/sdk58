@@ -86,9 +86,9 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--style` | `render`, `run` | off | Keep `style` in `compact`/`ndjson` |
 | `--bundle-only` | `render`, `run` | off | Build the bundle and stop (no host needed) |
 | `--debug-props` | `render` | off | Add raw host debug props to each node (`debugProps`) |
-| `--script <json>` | `run`, `check` | required for `run` | JSON file with an array of actions (`check`: run them, then check the final tree) |
+| `--script <json>` | `run`, `check` | required for `run` | JSON file with an array of actions, or the array itself (a value that starts with `[`). `check`: run them, then check the final tree |
 | `--tap-mode <mode>` | `run`, `session`, `check` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
-| `--rules <json>` | `check` | `rules` in `a11y-tree.json` | Rules file `{"rules": {...}}` (see [Check](#check)) |
+| `--rules <json>` | `check` | `rules` in `a11y-tree.json` | Rules file `{"rules": {...}}`, or that JSON itself (a value that starts with `{`) (see [Check](#check)) |
 | `--diff` | `run` | off | Add `diff: {added, removed, changed}` (by `key`) to each step |
 | `--timeout <ms>` | `session` | `30000` | Per-request timeout; on timeout the host is killed and the exit code is 1 |
 
@@ -207,6 +207,42 @@ Output:
 
 A passing token color has `token: <name>`. With `--script`, each failed step
 adds a violation with `rule: "step"` and `key: "step:<index>"`.
+
+## Schemas and tool descriptors
+
+- `schema/*.json`: JSON Schema (draft-07) for the outputs and input files.
+  They are generated from the types in `src/schema.ts` with
+  `ts-json-schema-generator` (`yarn schema`; `yarn check` fails when they
+  are out of date). Objects do not allow unknown keys.
+
+  | File | Type |
+  | --- | --- |
+  | `render-result.json` | `render` (`--format json`) |
+  | `query-result.json` | `render --select` (`--format json`) |
+  | `run-result.json` | `run` (`--format json`, no `--select`/`--subtree`/`--depth`) |
+  | `check-result.json` | `check` (`--format json`) |
+  | `error-output.json` | `{"error": {code, message, hint?, details?}}` |
+  | `session-request.json` / `session-output-line.json` | `session` stdin / stdout lines |
+  | `script.json` | `--script` files |
+  | `rules-file.json` | `--rules` files |
+  | `a11y-tree-config.json` | `a11y-tree.json` |
+
+- `tools/*.json`: MCP-style tool descriptors `{name, description,
+  inputSchema, outputSchema, examples: [{input, argv}], x-cli}` for
+  `render`, `query`, `act` (`run`), `diff` (`run --diff`), `check` and
+  `session` (with `x-protocol` for the stdin/stdout lines). Input types are
+  in `src/tools.ts`; `toolArgv(name, input)` maps an input to CLI arguments
+  (`actions` and `rules` are passed inline as JSON). Example:
+
+  ```sh
+  rn-a11y-tree run examples/basic/App.tsx --platform android \
+    --script '[{"type":{"testID":"email","text":"a@b.c"}},{"tap":{"testID":"submit"}}]' --format compact
+  ```
+
+`test/schema.test.ts` validates CLI output (fake host), the example
+scripts and rules files, and each tool example (input, argv, and the output
+of the argv) against these files. `e2e/schema.test.ts` validates the real
+host output of every example.
 
 ## Caching
 

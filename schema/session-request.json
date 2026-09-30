@@ -1,0 +1,685 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SessionRequest",
+  "anyOf": [
+    {
+      "$ref": "#/definitions/SessionActionRequest"
+    },
+    {
+      "$ref": "#/definitions/SessionTreeRequest"
+    },
+    {
+      "$ref": "#/definitions/SessionQuitRequest"
+    }
+  ],
+  "description": "One line on the session's stdin.",
+  "definitions": {
+    "SessionActionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "action": {
+          "$ref": "#/definitions/Action"
+        },
+        "diff": {
+          "type": "boolean"
+        },
+        "format": {
+          "$ref": "#/definitions/Format"
+        },
+        "select": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "depth": {
+          "type": "number"
+        },
+        "subtree": {
+          "type": "string"
+        },
+        "style": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action",
+        "id"
+      ]
+    },
+    "RequestId": {
+      "type": [
+        "string",
+        "number",
+        "null"
+      ],
+      "description": "Echoed in the response."
+    },
+    "Action": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "tap": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Target"
+                },
+                {
+                  "$ref": "#/definitions/Point"
+                }
+              ]
+            }
+          },
+          "required": [
+            "tap"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "longPress": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Target"
+                },
+                {
+                  "$ref": "#/definitions/Point"
+                }
+              ]
+            }
+          },
+          "required": [
+            "longPress"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "submit": {
+                      "type": "boolean"
+                    },
+                    "testID": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "testID",
+                    "text"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "submit": {
+                      "type": "boolean"
+                    },
+                    "ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ref",
+                    "text"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "submit": {
+                      "type": "boolean"
+                    },
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "text"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "submit": {
+                      "type": "boolean"
+                    },
+                    "sel": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "sel",
+                    "text"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "scroll": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "testID": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "testID"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ref"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "sel": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "sel"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "scroll"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "pan": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dx": {
+                      "type": "number"
+                    },
+                    "dy": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "testID": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "testID"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dx": {
+                      "type": "number"
+                    },
+                    "dy": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ref"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dx": {
+                      "type": "number"
+                    },
+                    "dy": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dx": {
+                      "type": "number"
+                    },
+                    "dy": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "sel": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "sel"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dx": {
+                      "type": "number"
+                    },
+                    "dy": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "pan"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "pinch": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "scale": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "testID": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "scale",
+                    "testID"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "scale": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ref",
+                    "scale"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "scale": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "scale"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "scale": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "number"
+                    },
+                    "durationMs": {
+                      "type": "number"
+                    },
+                    "sel": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "scale",
+                    "sel"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "pinch"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "wait": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "wait"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "snapshot": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "snapshot"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Target": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "testID": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "testID"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ref"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "sel"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Validation of `run --script` files. Runs in the CLI before bundling so errors are reported with the step index. Keep in sync with runtime/actions.js and the README \"Interactions\" section."
+    },
+    "Point": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "Format": {
+      "type": "string",
+      "enum": [
+        "json",
+        "compact",
+        "text",
+        "ndjson"
+      ]
+    },
+    "SessionTreeRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "tree": {
+          "type": "boolean",
+          "const": true
+        },
+        "format": {
+          "$ref": "#/definitions/Format"
+        },
+        "select": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "depth": {
+          "type": "number"
+        },
+        "subtree": {
+          "type": "string"
+        },
+        "style": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "tree"
+      ]
+    },
+    "SessionQuitRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "quit": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "id",
+        "quit"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

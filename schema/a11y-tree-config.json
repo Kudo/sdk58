@@ -1,0 +1,226 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProjectConfigFile",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "preset": {
+      "$ref": "#/definitions/PresetName"
+    },
+    "rules": {
+      "$ref": "#/definitions/Rules"
+    },
+    "platform": {
+      "type": "string"
+    },
+    "width": {
+      "type": "number"
+    },
+    "height": {
+      "type": "number"
+    },
+    "safeAreaInsets": {
+      "$ref": "#/definitions/Insets"
+    },
+    "headerHeight": {
+      "type": "number"
+    },
+    "tapMode": {
+      "type": "string"
+    },
+    "format": {
+      "type": "string"
+    }
+  },
+  "description": "`a11y-tree.json` in the project root.",
+  "definitions": {
+    "PresetName": {
+      "type": "string",
+      "enum": [
+        "android-phone",
+        "ios-phone",
+        "android-tablet",
+        "ios-tablet"
+      ]
+    },
+    "Rules": {
+      "type": "object",
+      "properties": {
+        "names": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "ignore": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Focusable nodes and images need an accessible name."
+        },
+        "touchTarget": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "ignore": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "min": {
+                  "type": "number"
+                }
+              }
+            }
+          ],
+          "description": "Interactive nodes are at least `min` x `min` dp (default 48)."
+        },
+        "hiddenFocusable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "ignore": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "No focusable node inside a hidden subtree."
+        },
+        "contrast": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "ignore": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "min": {
+                  "type": "number"
+                },
+                "minLarge": {
+                  "type": "number"
+                }
+              }
+            }
+          ],
+          "description": "Text contrast ratio (WCAG 2.x) at least `min` (default 4.5); `minLarge` for large text."
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ignore": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "colors": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Allowed colors: a list, or token name -> color."
+            },
+            "spacing": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                }
+              ],
+              "description": "Margins, paddings and gaps: a grid step (multiple of) or a list of values."
+            },
+            "fonts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Allowed font families; `\"System\"` stands for no fontFamily."
+            },
+            "fontSizes": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Allowed font sizes."
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Insets": {
+      "type": "object",
+      "properties": {
+        "top": {
+          "type": "number"
+        },
+        "left": {
+          "type": "number"
+        },
+        "right": {
+          "type": "number"
+        },
+        "bottom": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "top",
+        "left",
+        "right",
+        "bottom"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

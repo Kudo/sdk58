@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CheckResult",
+  "type": "object",
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "viewport": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "number"
+        },
+        "checked": {
+          "type": "number"
+        },
+        "violations": {
+          "type": "number"
+        },
+        "byRule": {
+          "type": "object",
+          "properties": {
+            "names": {
+              "type": "number"
+            },
+            "touchTarget": {
+              "type": "number"
+            },
+            "hiddenFocusable": {
+              "type": "number"
+            },
+            "contrast": {
+              "type": "number"
+            },
+            "tokens": {
+              "type": "number"
+            },
+            "step": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "nodes",
+        "checked",
+        "violations",
+        "byRule"
+      ],
+      "additionalProperties": false
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CheckedNode"
+      }
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Violation"
+      }
+    },
+    "logs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/LogEntry"
+      }
+    }
+  },
+  "required": [
+    "ok",
+    "viewport",
+    "source",
+    "summary",
+    "nodes",
+    "violations"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "CheckedNode": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "sel": {
+          "type": "string"
+        },
+        "props": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/PropCheck"
+          }
+        }
+      },
+      "required": [
+        "ref",
+        "key",
+        "sel",
+        "props"
+      ],
+      "additionalProperties": false
+    },
+    "PropCheck": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/RuleName"
+        },
+        "got": {},
+        "want": {},
+        "wantToken": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "wantResolved": {},
+        "pass": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "rule",
+        "got",
+        "pass"
+      ],
+      "additionalProperties": {},
+      "description": "One evaluated property: what the node has, what the rule wants, and the verdict."
+    },
+    "RuleName": {
+      "type": "string",
+      "enum": [
+        "names",
+        "touchTarget",
+        "hiddenFocusable",
+        "contrast",
+        "tokens"
+      ]
+    },
+    "Violation": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RuleName"
+            },
+            {
+              "type": "string",
+              "const": "step"
+            }
+          ]
+        },
+        "key": {
+          "type": "string"
+        },
+        "sel": {
+          "type": "string"
+        },
+        "prop": {
+          "type": "string"
+        },
+        "expected": {},
+        "actual": {},
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule",
+        "key",
+        "sel",
+        "expected",
+        "actual",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "LogEntry": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "known": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "level",
+        "message"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

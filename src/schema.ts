@@ -1,6 +1,17 @@
 /**
- * Output schema of `rn-a11y-tree render`. Keep in sync with README.md.
+ * Output schema of `rn-a11y-tree` (render, run, check, session, errors).
+ * Keep in sync with README.md. `yarn schema` generates `schema/*.json` from
+ * the exported types listed in scripts/gen-schema.ts.
  */
+
+import type {CheckResult, Rules} from './check.ts';
+import type {TreeDiff} from './diff.ts';
+import type {ErrorInfo, LogEntry} from './errors.ts';
+import type {Format} from './format.ts';
+import type {ProjectConfig} from './presets.ts';
+import type {Action} from './script.ts';
+
+export type {Action, CheckResult, ErrorInfo, LogEntry, ProjectConfig, Rules, TreeDiff};
 
 export type Box = {
   /** Absolute position in the viewport, in dp. */
@@ -104,7 +115,7 @@ export type RenderResult = {
   source: TreeSource;
   root: TreeNode;
   /** App console output (only when there was any); `known: true` marks common React Native noise. */
-  logs?: Array<{level: string; message: string; known?: true}>;
+  logs?: LogEntry[];
 };
 
 export type StepError = {code: string; message: string};
@@ -269,7 +280,7 @@ export type Step = {
   /** Runtime payloads carry a string; the CLI output has {code, message}. */
   error?: string | StepError;
   /** With `run --diff` / session `diff: true`: changes made by this step. */
-  diff?: import('./diff.ts').TreeDiff;
+  diff?: TreeDiff;
 };
 
 export type RunResult = {
@@ -282,7 +293,7 @@ export type RunResult = {
   fallbacks: string[];
   /** Optional host features found (NativeFantom methods and getCapabilities()). */
   capabilities: string[];
-  logs?: Array<{level: string; message: string; known?: true}>;
+  logs?: LogEntry[];
 };
 
 /** Payload printed by the entry for `run --script`. */
@@ -312,3 +323,71 @@ export type HostPayload =
       source?: 'mounted';
       tree: FantomNode;
     };
+
+// --- other outputs and inputs -------------------------------------------------------
+
+/** `render --select ...` (JSON format): the matching nodes. */
+export type QueryResult = {
+  viewport: {width: number; height: number};
+  source: TreeSource;
+  matches: TreeNode[];
+  logs?: LogEntry[];
+};
+
+/** Any failure: `{"error": {...}}` (stderr; stdout with an explicit `--format json`). */
+export type ErrorOutput = {error: ErrorInfo};
+
+/** `run --script` file: the actions, in order. */
+export type Script = Action[];
+
+/** `check --rules` file. */
+export type RulesFile = {$schema?: string; rules: Rules};
+
+/** `a11y-tree.json` in the project root. */
+export type ProjectConfigFile = ProjectConfig & {$schema?: string};
+
+// --- session -------------------------------------------------------------------------
+
+/** Echoed in the response. */
+export type RequestId = string | number | null;
+
+/** Output options for the tree in `tree` and `snapshot` responses. */
+export type SessionTreeOptions = {
+  format?: Format;
+  select?: string | string[];
+  depth?: number;
+  subtree?: string;
+  style?: boolean;
+};
+
+export type SessionActionRequest = SessionTreeOptions & {id: RequestId; action: Action; diff?: boolean};
+export type SessionTreeRequest = SessionTreeOptions & {id: RequestId; tree: true};
+export type SessionQuitRequest = {id: RequestId; quit: true};
+
+/** One line on the session's stdin. */
+export type SessionRequest = SessionActionRequest | SessionTreeRequest | SessionQuitRequest;
+
+/** First line on the session's stdout. */
+export type SessionReady =
+  | {ready: true; tree: TreeNode | null; capabilities: string[]; logs?: LogEntry[]}
+  | {ready: false; error: ErrorInfo; logs?: LogEntry[]};
+
+/** One line on the session's stdout per request. */
+export type SessionResponse = {
+  id: RequestId;
+  ok: boolean;
+  error?: ErrorInfo;
+  step?: Step;
+  /**
+   * `tree` requests and `snapshot` actions: a TreeNode (`json`), a list of
+   * matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`).
+   */
+  tree?: TreeNode | TreeNode[] | Record<string, unknown> | Array<Record<string, unknown>> | string;
+  /** Action requests with `diff: true`. */
+  diff?: TreeDiff;
+  fallbacks?: string[];
+  logs?: LogEntry[];
+};
+
+/** Any line on the session's stdout. */
+export type SessionOutputLine = SessionReady | SessionResponse;

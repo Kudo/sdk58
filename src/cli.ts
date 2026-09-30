@@ -135,12 +135,15 @@ function readScript(scriptPath: string | undefined) {
   if (scriptPath == null || scriptPath === '') {
     throw usage('--script <json> is required');
   }
+  // A value that starts with `[` is the script itself (inline JSON).
+  const inline = scriptPath.trimStart().startsWith('[');
   let text: string;
   try {
-    text = fs.readFileSync(scriptPath, 'utf8');
+    text = inline ? scriptPath : fs.readFileSync(scriptPath, 'utf8');
   } catch (error) {
     throw usage(`cannot read ${scriptPath}: ${(error as Error).message}`);
   }
+  if (inline) scriptPath = '--script';
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -590,15 +593,15 @@ addCommonOptions(addOutputOptions(program.command('render')))
 
 addCommonOptions(addOutputOptions(program.command('run')))
   .description('render the component, run a script of actions, print steps and trees')
-  .option('--script <json>', 'JSON file with an array of actions (required)')
+  .option('--script <json>', 'JSON file with an array of actions, or the array itself (required)')
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option('--diff', 'add to each step the changes it made ({added, removed, changed} by key)', false)
   .action(run);
 
 addCommonOptions(program.command('check'))
   .description('render (or run a script), then evaluate accessibility and design-token rules; exit 2 on violations')
-  .option('--rules <json>', 'rules file {"rules": {...}} (default: "rules" in a11y-tree.json)')
-  .option('--script <json>', 'run these actions first and check the final tree')
+  .option('--rules <json>', 'rules file {"rules": {...}}, or that JSON itself (default: "rules" in a11y-tree.json)')
+  .option('--script <json>', 'run these actions first (file or inline JSON array) and check the final tree')
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option('--format <format>', 'json (default) or text (one line per violation)')
   .option('--subtree <selector>', 'check only the first node matching the selector and its descendants')
