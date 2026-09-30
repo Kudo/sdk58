@@ -31,6 +31,7 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | `tester/scripts/codegen-lib.sh` (new) | Runs React Native codegen for a native library (used by CMake for the native libraries). |
 | `tester/src/stubs/StubComponentRegistryFactory.h` | Registers the TextInput/Switch descriptors above and the native library descriptors. |
 | `tester/src/TesterAppDelegate.cpp` | Adds the react-native-screens context entry and runs the screens and safe-area updates after every mount. With reanimated: provides its TurboModules, sets its clock and produces its frames (see Reanimated). `loadScript` flushes the message queue until the JS runtime pointer is set (at most 30 s, then a fatal error). Upstream flushes once; when the runtime task was queued after that flush, `loadScriptAndRunTests` crashed with SIGSEGV (null `runtime_`, `TesterAppDelegate.cpp:187`). |
+| `tester/src/TesterMountingManager.h`, `TesterMountingManager.cpp` | Records the number of the last mounted transaction per surface (`getMountedRevision`). |
 | `tester/src/render/HitTest.h`, `HitTest.cpp` (new) | Hit testing with `hitSlop`, and tag lookup in the shadow tree. |
 | `tester/src/NativeFantom.h`, `NativeFantom.cpp` | Adds `getA11yTree`, `hitTest`, `enqueueNativeEventByTag`, `enqueueScrollEventByTag`, `setTextInputTextByTag`, `updateScreenStates` (also registered as `updateNativeStates`), `setScreensHeaderHeight`, `setSafeAreaInsets` and `getCapabilities`. They are registered in `methodMap_` in the constructor, not in the codegen spec, so the overlay does not need a change to `packages/react-native`. |
 
@@ -69,10 +70,16 @@ setScreensHeaderHeight: (height: number) => void;
 setSafeAreaInsets: (insets: {top?: number, left?: number, right?: number, bottom?: number}) => void;
 // JSON array of feature strings: always "getA11yTree", "getA11yTree.mounted",
 // "mountedProps", "hitTest", "eventsByTag", "setTextInputText",
-// "updateNativeStates", "statusBarManager", "textInput", "switch"; and, when
+// "updateNativeStates", "statusBarManager", "textInput", "switch",
+// "shadowTreeRevision", "mountedRevision", "effectiveBackground"; and, when
 // built in, "textLayout" (macOS text measurement), "safeArea", "screens",
 // "gestureHandler", "worklets", "reanimated".
 getCapabilities: () => string;
+// Number of the surface's current shadow tree revision (increases on every
+// commit, including state updates) and of the last mounted transaction (-1
+// before the first mount). Equal numbers: everything committed is mounted.
+getShadowTreeRevision: (surfaceId: RootTag) => number;
+getMountedRevision: (surfaceId: RootTag) => number;
 ```
 
 The by-tag methods throw a `JSError` if the tag is not in the surface's
@@ -99,6 +106,19 @@ the shadow tree) and `mounted: {opacity: 0.5}`; when the animation is done,
 
 `hitTest` uses the shadow tree only (not the mounted values), so a view in the
 middle of a layout animation is hit at its final layout.
+
+## effectiveBackground in getA11yTree
+
+`effectiveBackground` (`rgba(r, g, b, a)`) is the background behind a node's
+content: the `backgroundColor` of every ancestor and of the node (the mounted
+value when it differs, see above), alpha-composited (source over) in order,
+starting from the window background, white `rgba(255, 255, 255, 1)`. Opacity,
+images, gradients, borders and shadows are not included. It is emitted on
+every `Paragraph` and on other laid-out nodes when it differs from the node's
+own `backgroundColor` (so an opaque background is not repeated). Example:
+white text in a `#1e6fff` button has `effectiveBackground`
+`rgba(30, 111, 255, 1)`; a `rgba(0, 0, 255, 0.5)` view on white gives
+`rgba(127, 127, 255, 1)`.
 
 ## Interactions
 
@@ -199,10 +219,14 @@ The host emulates them after every mount (and on `updateScreenStates`):
   else (0, 0). The top inset is the part of the safe area top inset
   (`setSafeAreaInsets`) that overlaps the screen: the status bar above the
   native bar.
-  The library's descriptor applies `frameSize` as the Yoga size; the offset is
-  the screen's content origin offset (like iOS, the screen covers the whole
-  stack and its content starts below the header, so the content wrapper
-  extends one header height below the screen).
+  `frameSize` is the Yoga size; the offset is the screen's content origin
+  offset (like iOS, the screen covers the whole stack and its content starts
+  below the header). The host registers its own `RNSScreen` descriptor (the
+  library's non-Android `adopt` plus a bottom padding of `contentOffset.y`),
+  so the content wrapper ends at the bottom of the screen: its height is the
+  screen height minus the offset (844 - 103 = 741 with a 47 dp top inset and
+  a 56 dp header), the area shown below the header. No padding when the
+  offset is 0 (translucent, large title, hidden header).
 - `RNSScreenStackHeaderConfig` (visible, in a stack): `frameSize` = (screen
   width, header height), no edge insets, `frameOrigin` = (0, top inset -
   contentOffset), so the header is below the status bar at the top of the

@@ -122,4 +122,48 @@ describe('getA11yTree', () => {
     expect(capabilities).toContain('getA11yTree');
     expect(capabilities).toContain('getA11yTree.mounted');
   });
+
+  it('reports shadow tree and mounted revisions, effectiveBackground', () => {
+    const root = Fantom.createRoot({viewportWidth: 390, viewportHeight: 844});
+    const surfaceId = root.getRootTag();
+    const revisions = () => ({
+      // $FlowFixMe[prop-missing] registered natively
+      shadow: NativeFantom.getShadowTreeRevision(surfaceId),
+      // $FlowFixMe[prop-missing] registered natively
+      mounted: NativeFantom.getMountedRevision(surfaceId),
+    });
+    const r0 = revisions();
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{backgroundColor: 'rgba(0, 0, 255, 0.5)', padding: 10}}>
+          <Text>Half blue</Text>
+        </View>,
+      );
+    });
+    const r1 = revisions();
+    Fantom.runTask(() => {
+      root.render(
+        <View style={{backgroundColor: 'rgba(0, 0, 255, 0.5)', padding: 20}}>
+          <Text>Half blue</Text>
+        </View>,
+      );
+    });
+    const r2 = revisions();
+    const r3 = revisions();
+    const tree = getA11yTree(root);
+    const paragraph = find(tree, n => n.type === 'Paragraph');
+    const view = find(tree, n => n.type === 'View');
+    console.log('REVISIONS ' + JSON.stringify({r0, r1, r2, r3}));
+    console.log(
+      'EFFECTIVE ' +
+        JSON.stringify({
+          view: [view.backgroundColor, view.effectiveBackground],
+          paragraph: paragraph.effectiveBackground,
+        }),
+    );
+    expect(r2.shadow).toBeGreaterThan(r1.shadow);
+    expect(r3).toEqual(r2);
+    expect(r2.mounted).toBe(r2.shadow);
+    expect(paragraph.effectiveBackground).toBe('rgba(127, 127, 255, 1)');
+  });
 });

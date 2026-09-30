@@ -180,6 +180,29 @@ jsi::Value setTextInputTextByTagHostFunction(
   return jsi::Value::undefined();
 }
 
+// getShadowTreeRevision(surfaceId): number
+jsi::Value getShadowTreeRevisionHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& turboModule,
+    const jsi::Value* args,
+    size_t count) {
+  auto surfaceId = surfaceIdArg(runtime, args, count, "getShadowTreeRevision");
+  return jsi::Value(static_cast<double>(
+      static_cast<NativeFantom&>(turboModule)
+          .getShadowTreeRevision(runtime, surfaceId)));
+}
+
+// getMountedRevision(surfaceId): number
+jsi::Value getMountedRevisionHostFunction(
+    jsi::Runtime& runtime,
+    TurboModule& turboModule,
+    const jsi::Value* args,
+    size_t count) {
+  auto surfaceId = surfaceIdArg(runtime, args, count, "getMountedRevision");
+  return jsi::Value(static_cast<double>(
+      static_cast<NativeFantom&>(turboModule).getMountedRevision(surfaceId)));
+}
+
 // getCapabilities(): string (JSON array of the host's feature strings)
 jsi::Value getCapabilitiesHostFunction(
     jsi::Runtime& runtime,
@@ -196,7 +219,10 @@ jsi::Value getCapabilitiesHostFunction(
       "updateNativeStates",
       "statusBarManager",
       "textInput",
-      "switch");
+      "switch",
+      "shadowTreeRevision",
+      "mountedRevision",
+      "effectiveBackground");
 #ifdef FANTOM_WITH_MACOS_TEXT_LAYOUT
   capabilities.push_back("textLayout");
 #endif
@@ -285,6 +311,10 @@ NativeFantom::NativeFantom(
       .argCount = 1, .invoker = updateScreenStatesHostFunction};
   methodMap_["setScreensHeaderHeight"] = MethodMetadata{
       .argCount = 1, .invoker = setScreensHeaderHeightHostFunction};
+  methodMap_["getShadowTreeRevision"] = MethodMetadata{
+      .argCount = 1, .invoker = getShadowTreeRevisionHostFunction};
+  methodMap_["getMountedRevision"] = MethodMetadata{
+      .argCount = 1, .invoker = getMountedRevisionHostFunction};
   methodMap_["getCapabilities"] = MethodMetadata{
       .argCount = 0, .invoker = getCapabilitiesHostFunction};
   methodMap_["updateNativeStates"] = MethodMetadata{
@@ -512,6 +542,29 @@ void NativeFantom::setTextInputTextByTag(
         "setTextInputTextByTag: node " + std::to_string(tag) +
             " is not a TextInput");
   }
+}
+
+int64_t NativeFantom::getShadowTreeRevision(
+    jsi::Runtime& runtime,
+    SurfaceId surfaceId) {
+  auto uiManagerBinding = UIManagerBinding::getBinding(runtime);
+  if (uiManagerBinding == nullptr) {
+    throw jsi::JSError(runtime, "UIManagerBinding is not available");
+  }
+  std::optional<int64_t> number;
+  uiManagerBinding->getUIManager().getShadowTreeRegistry().visit(
+      surfaceId, [&](const ShadowTree& shadowTree) {
+        number = shadowTree.getCurrentRevision().number;
+      });
+  if (!number.has_value()) {
+    throw jsi::JSError(
+        runtime, "No shadow tree for surface " + std::to_string(surfaceId));
+  }
+  return *number;
+}
+
+int64_t NativeFantom::getMountedRevision(SurfaceId surfaceId) {
+  return appDelegate_.mountingManager_->getMountedRevision(surfaceId);
 }
 
 int NativeFantom::updateScreenStates(

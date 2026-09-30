@@ -50,6 +50,36 @@ Float getScreensHeaderHeight() {
 
 #ifdef FANTOM_WITH_RNSCREENS
 
+namespace {
+
+/*
+ * RNSScreen descriptor: the non-Android branch of the library's
+ * RNSScreenComponentDescriptor (Yoga size = state.frameSize), plus a bottom
+ * padding of state.contentOffset.y. The children (the content wrapper) are
+ * laid out below the header offset, so the content area ends at the bottom of
+ * the screen instead of one header height below it (the area the platform
+ * shows below the header). With a translucent or large-title header the
+ * offset is 0 (see updateScreen), so there is no padding.
+ */
+class FantomRNSScreenComponentDescriptor final
+    : public ConcreteComponentDescriptor<RNSScreenShadowNode> {
+ public:
+  using ConcreteComponentDescriptor::ConcreteComponentDescriptor;
+
+  void adopt(ShadowNode& shadowNode) const override {
+    auto& screenShadowNode = static_cast<RNSScreenShadowNode&>(shadowNode);
+    const auto& stateData = screenShadowNode.getStateData();
+    if (stateData.frameSize.width != 0 && stateData.frameSize.height != 0) {
+      screenShadowNode.setSize(stateData.frameSize);
+      screenShadowNode.setPadding(
+          {.left = 0, .top = 0, .right = 0, .bottom = stateData.contentOffset.y});
+    }
+    ConcreteComponentDescriptor::adopt(shadowNode);
+  }
+};
+
+} // namespace
+
 void registerScreensComponentDescriptors(
     const std::shared_ptr<ComponentDescriptorProviderRegistry>&
         providerRegistry) {
@@ -63,7 +93,7 @@ void registerScreensComponentDescriptors(
   providerRegistry->add(
       concreteComponentDescriptorProvider<RNSSafeAreaViewComponentDescriptor>());
   providerRegistry->add(
-      concreteComponentDescriptorProvider<RNSScreenComponentDescriptor>());
+      concreteComponentDescriptorProvider<FantomRNSScreenComponentDescriptor>());
   providerRegistry->add(
       concreteComponentDescriptorProvider<
           RNSScreenStackHeaderConfigComponentDescriptor>());

@@ -136,6 +136,11 @@ class NativeFantom : public NativeFantomCxxSpec<NativeFantom> {
   // `updateNativeStates`.
   int updateScreenStates(jsi::Runtime &runtime, SurfaceId surfaceId);
 
+  // Number of the current shadow tree revision of the surface (increases on
+  // every commit) and of the last mounted one (-1 if none).
+  int64_t getShadowTreeRevision(jsi::Runtime &runtime, SurfaceId surfaceId);
+  int64_t getMountedRevision(SurfaceId surfaceId);
+
   void reportTestSuiteResultsJSON(jsi::Runtime &runtime, const std::string &testSuiteResultsJSON);
 
   void enqueueNativeEvent(

@@ -595,12 +595,77 @@ folly::dynamic mountedDifferences(
   return mounted.empty() ? folly::dynamic(nullptr) : mounted;
 }
 
+// Color with float components (0-255 for rgb, 0-1 for alpha).
+struct Rgba {
+  double r{0};
+  double g{0};
+  double b{0};
+  double a{0};
+};
+
+// The window background the composition starts from (white, like the default
+// window background of both platforms).
+constexpr Rgba kWindowBackground{255, 255, 255, 1};
+
+// Source-over compositing of `color` on top of `below`.
+Rgba compositeOver(const Rgba& below, const SharedColor& color) {
+  if (!color) {
+    return below;
+  }
+  Rgba top{
+      static_cast<double>(redFromColor(color)),
+      static_cast<double>(greenFromColor(color)),
+      static_cast<double>(blueFromColor(color)),
+      alphaFromColor(color) / 255.0};
+  double a = top.a + below.a * (1 - top.a);
+  if (a <= 0) {
+    return Rgba{};
+  }
+  auto channel = [&](double topChannel, double belowChannel) {
+    return (topChannel * top.a + belowChannel * below.a * (1 - top.a)) / a;
+  };
+  return Rgba{
+      channel(top.r, below.r), channel(top.g, below.g), channel(top.b, below.b), a};
+}
+
+std::string rgbaToString(const Rgba& color) {
+  std::ostringstream stream;
+  stream << "rgba(" << static_cast<int>(std::lround(color.r)) << ", "
+         << static_cast<int>(std::lround(color.g)) << ", "
+         << static_cast<int>(std::lround(color.b)) << ", "
+         << std::setprecision(3) << color.a << ")";
+  return stream.str();
+}
+
+// The node's background color: the mounted one when it differs (for example a
+// Reanimated animation), else the shadow node's.
+SharedColor backgroundColorOf(
+    const ShadowNode& node,
+    const MountedViews* mountedViews) {
+  SharedColor color;
+  if (const auto* props =
+          dynamic_cast<const BaseViewProps*>(node.getProps().get())) {
+    color = props->backgroundColor;
+  }
+  if (mountedViews != nullptr) {
+    auto it = mountedViews->find(node.getTag());
+    if (it != mountedViews->end()) {
+      if (const auto* mountedProps =
+              dynamic_cast<const BaseViewProps*>(it->second->props.get())) {
+        color = mountedProps->backgroundColor;
+      }
+    }
+  }
+  return color;
+}
+
 folly::dynamic renderNode(
     const ShadowNode& node,
     const A11yTreeOptions& options,
     const MountedViews* mountedViews,
     Tag parentTag,
-    bool isRoot) {
+    bool isRoot,
+    const Rgba& parentBackground) {
   folly::dynamic result = folly::dynamic::object("type", node.getComponentName())(
       "tag", node.getTag());
 
@@ -797,6 +862,22 @@ folly::dynamic renderNode(
     }
   }
 
+  // effectiveBackground: the ancestors' and the node's background colors
+  // composited over the window background. Emitted on every Paragraph and on
+  // layoutable nodes where it differs from the node's own backgroundColor.
+  auto ownBackground = backgroundColorOf(node, mountedViews);
+  auto effectiveBackground = compositeOver(parentBackground, ownBackground);
+  if (layoutMetrics != nullptr) {
+    auto effectiveString = rgbaToString(effectiveBackground);
+    bool isParagraph =
+        dynamic_cast<const ParagraphProps*>(props.get()) != nullptr;
+    if (isParagraph ||
+        !ownBackground ||
+        effectiveString != colorToString(ownBackground)) {
+      result["effectiveBackground"] = effectiveString;
+    }
+  }
+
 #if RN_DEBUG_STRING_CONVERTIBLE
   if (options.includeDebugProps) {
     folly::dynamic debugProps = folly::dynamic::object();
@@ -815,7 +896,13 @@ folly::dynamic renderNode(
     folly::dynamic childArray = folly::dynamic::array();
     for (const auto& child : children) {
       childArray.push_back(
-          renderNode(*child, options, mountedViews, node.getTag(), false));
+          renderNode(
+              *child,
+              options,
+              mountedViews,
+              node.getTag(),
+              false,
+              effectiveBackground));
     }
     result["children"] = childArray;
   }
@@ -831,9 +918,16 @@ folly::dynamic renderA11yTree(
   if (options.mountedViewTree != nullptr) {
     MountedViews mountedViews;
     collectMountedViews(options.mountedViewTree->getRootStubView(), mountedViews);
-    return renderNode(rootShadowNode, options, &mountedViews, NO_VIEW_TAG, true);
+    return renderNode(
+        rootShadowNode,
+        options,
+        &mountedViews,
+        NO_VIEW_TAG,
+        true,
+        kWindowBackground);
   }
-  return renderNode(rootShadowNode, options, nullptr, NO_VIEW_TAG, true);
+  return renderNode(
+      rootShadowNode, options, nullptr, NO_VIEW_TAG, true, kWindowBackground);
 }
 
 } // namespace facebook::react
