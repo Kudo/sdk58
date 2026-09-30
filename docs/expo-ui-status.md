@@ -121,7 +121,7 @@ Commands: `native/tools/swiftui-layout-test/build.sh && node native/tools/swiftu
 | TextField slots | Compose | not laid out | Only `label` and `placeholder` are modeled; leading/trailing icons, prefix, suffix, supporting text, focused state, `textFieldMinSize` are not |
 | Icon painters | Compose | 24 dp | The size of a real painter (its intrinsic size) is not known; every Icon is 24 x 24 dp |
 | Body text height with macOS metrics in the host | SwiftUI, `setExpoUIPlatform('macos')` | 16.667 vs 16 | The host measures with the React Native TextLayoutManager at the Host's scale (3), which rounds up to 1/3 pt; SwiftUI on macOS rounds up to whole points |
-| Letter spacing in the host | both | small | The host TextLayoutManager applies letter spacing as `NSKernAttributeName` (kerning off); the test measurers use tracking |
+| Letter spacing in the host | SwiftUI | small | `measureExpoText` goes through the React Native TextLayoutManager, which applies letter spacing as `NSKernAttributeName` (kerning off); the test measurer and the Compose text path (`FantomComposeText`) use tracking |
 | Symbols not in the iOS table | SwiftUI, host | varies | 1.2 x 1.1 times the point size |
 | List/Form rows below the viewport | SwiftUI, iOS reference | n/a | iOS lays them out lazily; reference frames there are estimates, so test trees keep rows on screen |
 
