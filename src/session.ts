@@ -34,6 +34,7 @@ type HostResponse = {
   tree?: ShadowNodeJSON;
   fallbacks?: string[];
   capabilities?: string[];
+  timings?: Record<string, number | undefined>;
 };
 
 type Frame = {
@@ -56,11 +57,14 @@ export async function runSession(options: {
   verbose?: boolean;
   /** Per-request timeout in ms; on timeout the host is killed and the session ends with code 1. */
   timeoutMs?: number;
+  /** Print startup timings and per-request latency as JSON on stderr. */
+  timing?: boolean;
   io: SessionIO;
 }): Promise<number> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   let timedOut = false;
   const {io} = options;
+  const spawnedAt = performance.now();
   const child: ChildProcess = spawn(
     getHostBin(),
     [
@@ -217,6 +221,18 @@ export async function runSession(options: {
     await finish();
     return 1;
   }
+  if (options.timing) {
+    const toReady = Math.round((performance.now() - spawnedAt) * 1000) / 1000;
+    const js = start.timings;
+    io.log(
+      `rn-a11y-tree timing: ${JSON.stringify({
+        hostSpawnToReadyMs: toReady,
+        hostStartupMs:
+          js?.jsTotalMs != null ? Math.round((toReady - js.jsTotalMs) * 1000) / 1000 : undefined,
+        js,
+      })}`,
+    );
+  }
   writeLine({
     ready: true,
     tree: start.tree ? convertShadowTree(start.tree) : null,
@@ -241,8 +257,14 @@ export async function runSession(options: {
       writeLine({id: request?.id ?? null, ok: false, error: problem});
       continue;
     }
+    const requestStart = performance.now();
     const response = await send(request);
     writeLine(convert(response));
+    if (options.timing) {
+      io.log(
+        `rn-a11y-tree timing: ${JSON.stringify({id: request.id, requestMs: Math.round((performance.now() - requestStart) * 1000) / 1000})}`,
+      );
+    }
     if (timedOut) break;
     if (request.quit === true) {
       quitSent = true;

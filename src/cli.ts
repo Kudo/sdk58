@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {Command, InvalidArgumentError} from 'commander';
 
 import {bundle, type HostConfig, type TapMode} from './bundle.ts';
-import {getHostBin, HostError, runHost} from './host.ts';
+import {getHostBin, HostError, type HostTiming, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
 import {DEFAULT_TIMEOUT_MS, runSession} from './session.ts';
@@ -30,6 +30,8 @@ type HostConfigOptions = {
 };
 
 type RenderOptions = HostConfigOptions & {
+  timing?: boolean;
+  resetCache?: boolean;
   width: number;
   height: number;
   platform?: string;
@@ -120,16 +122,39 @@ function readScript(scriptPath: string | undefined) {
  * Bundles the app (with an optional script), runs the host and returns the
  * payload. Returns undefined for --bundle-only.
  */
+/** Phase timings for `--timing` (ms, performance.now() in the CLI). */
+type Timing = {
+  metroMs?: number;
+  bundleBytes?: number;
+  hostSpawnToResultMs?: number;
+  hostSpawnToExitMs?: number;
+  hostStartupMs?: number;
+  js?: Record<string, number | undefined>;
+  convertMs?: number;
+  outputBytes?: number;
+  totalMs?: number;
+};
+
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
+
+function printTiming(timing: Timing) {
+  // performance.now() counts from process start, so this includes Node/tsx startup.
+  timing.totalMs = round3(performance.now());
+  process.stderr.write(`rn-a11y-tree timing: ${JSON.stringify(timing)}\n`);
+}
+
 async function execute<T>(
   file: string,
   options: RenderOptions,
   extra: {script?: unknown[]; tapMode?: TapMode},
+  timing?: Timing,
 ): Promise<T | undefined> {
   const platform = requirePlatform(options.platform);
   if (!options.bundleOnly) {
     // Fail before spending time on Metro.
     getHostBin();
   }
+  const metroStart = performance.now();
   const result = await bundle({
     appPath: file,
     viewportWidth: options.width,
@@ -139,8 +164,13 @@ async function execute<T>(
     includeDebugProps: options.debugProps,
     verbose: options.verbose,
     hostConfig: hostConfigFor(platform, options),
+    resetCache: options.resetCache,
     ...extra,
   });
+  if (timing) {
+    timing.metroMs = round3(performance.now() - metroStart);
+    timing.bundleBytes = result.sizeBytes;
+  }
   const cleanUp = () => {
     if (!options.keepBundle && !options.bundleOnly) {
       fs.rmSync(result.workDir, {recursive: true, force: true});
@@ -156,23 +186,49 @@ async function execute<T>(
     return undefined;
   }
 
+  const hostTiming: HostTiming = {};
   try {
-    return await runHost<T>({
+    const payload = await runHost<T>({
       bundlePath: result.bundlePath,
       windowWidth: options.width,
       windowHeight: options.height,
       verbose: options.verbose,
+      timing: hostTiming,
     });
+    if (timing && hostTiming.spawn != null) {
+      const js = (payload as {timings?: Record<string, number | undefined>}).timings;
+      if (hostTiming.result != null) {
+        timing.hostSpawnToResultMs = round3(hostTiming.result - hostTiming.spawn);
+        if (js?.jsTotalMs != null) {
+          // Host process start until the bundle starts evaluating (Hermes,
+          // Fabric, TurboModules), plus reading the bundle.
+          timing.hostStartupMs = round3(timing.hostSpawnToResultMs - js.jsTotalMs);
+        }
+      }
+      if (hostTiming.exit != null) {
+        timing.hostSpawnToExitMs = round3(hostTiming.exit - hostTiming.spawn);
+      }
+      timing.js = js;
+    }
+    return payload;
   } finally {
     cleanUp();
   }
 }
 
 async function render(file: string, options: RenderOptions) {
-  const payload = await execute<HostPayload>(file, options, {});
+  const timing: Timing | undefined = options.timing ? {} : undefined;
+  const payload = await execute<HostPayload>(file, options, {}, timing);
   if (payload) {
-    write(JSON.stringify(toRenderResult(payload), null, 2) + '\n', options.out);
+    const convertStart = performance.now();
+    const text = JSON.stringify(toRenderResult(payload), null, 2) + '\n';
+    if (timing) {
+      timing.convertMs = round3(performance.now() - convertStart);
+      timing.outputBytes = Buffer.byteLength(text);
+    }
+    write(text, options.out);
   }
+  if (timing) printTiming(timing);
 }
 
 async function run(file: string, options: RunOptions) {
@@ -182,10 +238,13 @@ async function run(file: string, options: RunOptions) {
   }
   // Validate before bundling.
   const script = readScript(options.script);
-  const payload = await execute<HostRunPayload>(file, options, {
-    script,
-    tapMode: options.tapMode as TapMode,
-  });
+  const timing: Timing | undefined = options.timing ? {} : undefined;
+  const payload = await execute<HostRunPayload>(
+    file,
+    options,
+    {script, tapMode: options.tapMode as TapMode},
+    timing,
+  );
   if (payload) {
     const fallbacks = [
       ...new Set([...(payload.fallbacks ?? []), ...describeFallbacks(payload.steps)]),
@@ -195,8 +254,15 @@ async function run(file: string, options: RunOptions) {
         `rn-a11y-tree: warning: JS fallbacks used because the host lacks native methods: ${fallbacks.join(', ')}\n`,
       );
     }
-    write(JSON.stringify(toRunResult(payload), null, 2) + '\n', options.out);
+    const convertStart = performance.now();
+    const text = JSON.stringify(toRunResult(payload), null, 2) + '\n';
+    if (timing) {
+      timing.convertMs = round3(performance.now() - convertStart);
+      timing.outputBytes = Buffer.byteLength(text);
+    }
+    write(text, options.out);
   }
+  if (timing) printTiming(timing);
 }
 
 async function session(file: string, options: RunOptions) {
@@ -215,6 +281,7 @@ async function session(file: string, options: RunOptions) {
     tapMode: options.tapMode as TapMode,
     session: true,
     hostConfig: hostConfigFor(platform, options),
+    resetCache: options.resetCache,
   });
   if (options.keepBundle || options.verbose) {
     process.stderr.write(`Bundle: ${result.bundlePath} (${result.sizeBytes} bytes)\n`);
@@ -226,6 +293,7 @@ async function session(file: string, options: RunOptions) {
       windowHeight: options.height,
       verbose: options.verbose,
       timeoutMs: options.timeout,
+      timing: options.timing,
       io: {
         input: process.stdin,
         output: process.stdout,
@@ -272,6 +340,8 @@ function addCommonOptions(command: Command): Command {
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
     .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
+    .option('--timing', 'print phase timings as JSON on stderr', false)
+    .option('--reset-cache', 'ignore the Metro transform cache (cold bundle)', false)
     .option(
       '--header-height <dp>',
       'react-native-screens native header height (default: 44 for --platform ios, else the host default 56)',
@@ -322,6 +392,8 @@ program
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
   .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
+  .option('--timing', 'print phase timings as JSON on stderr', false)
+  .option('--reset-cache', 'ignore the Metro transform cache (cold bundle)', false)
   .option(
     '--header-height <dp>',
     'react-native-screens native header height (default: 44 for --platform ios, else the host default 56)',

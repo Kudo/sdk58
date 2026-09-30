@@ -22,7 +22,11 @@ export type HostOptions = {
   featureFlags?: Record<string, unknown>;
   /** Forward the host's stderr (glog) and console logs to our stderr. */
   verbose?: boolean;
+  /** Filled with performance.now() timestamps (ms): spawn, result line, exit. */
+  timing?: HostTiming;
 };
+
+export type HostTiming = {spawn?: number; result?: number; exit?: number};
 
 export class HostError extends Error {
   constructor(
@@ -96,6 +100,7 @@ type HostLine =
  */
 export async function runHost<T = HostPayload>(options: HostOptions): Promise<T> {
   const bin = getHostBin();
+  if (options.timing) options.timing.spawn = performance.now();
   const child = spawn(bin, hostArgs(options), {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -121,6 +126,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
       return;
     }
     if (parsed?.type === RESULT_TYPE && 'rnA11yTree' in parsed) {
+      if (options.timing) options.timing.result = performance.now();
       result = parsed.rnA11yTree as T;
     } else if (parsed?.type === ERROR_TYPE && 'error' in parsed) {
       jsError = parsed.error as {message: string; stack?: string};
@@ -138,7 +144,10 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   const [exitCode, signal] = await new Promise<[number | null, NodeJS.Signals | null]>(
     (resolve, reject) => {
       child.on('error', reject);
-      child.on('close', (code, sig) => resolve([code, sig]));
+      child.on('close', (code, sig) => {
+        if (options.timing) options.timing.exit = performance.now();
+        resolve([code, sig]);
+      });
     },
   );
   const stderr = Buffer.concat(stderrChunks).toString('utf8');

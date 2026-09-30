@@ -293,7 +293,30 @@ function enqueueOnElement(element, type, payload) {
  * `useEvent(..., ['onGestureHandlerStateChange', 'onGestureHandlerEvent'])`
  * worklet registered for that view on the UI runtime.
  */
+/**
+ * Android hands these events to Reanimated directly, so React never sees
+ * them. Here they are Fabric events and also reach React, which throws on
+ * event types no view config declares ("Unsupported top level event type")
+ * unless an RNGestureHandlerDetector (which declares them) is rendered.
+ * Declare them once; React then finds no listener and ignores them.
+ */
+let reanimatedEventTypesRegistered = false;
+function registerReanimatedEventTypes() {
+  if (reanimatedEventTypesRegistered) return;
+  reanimatedEventTypesRegistered = true;
+  const {customDirectEventTypes} = require('react-native/Libraries/Renderer/shims/ReactNativeViewConfigRegistry');
+  for (const [top, registrationName] of [
+    ['topGestureHandlerEvent', 'onGestureHandlerEvent'],
+    ['topGestureHandlerStateChange', 'onGestureHandlerStateChange'],
+  ]) {
+    if (customDirectEventTypes[top] == null) {
+      customDirectEventTypes[top] = {registrationName};
+    }
+  }
+}
+
 function viewEventProps(element) {
+  registerReanimatedEventTypes();
   const send = type => event => {
     enqueueOnElement(element, type, event.nativeEvent);
     pendingReanimatedEvents++;

@@ -56,6 +56,8 @@ export type BundleOptions = {
   minify?: boolean;
   /** Print Metro progress to stderr. */
   verbose?: boolean;
+  /** Ignore Metro's transform cache (cold build). */
+  resetCache?: boolean;
 };
 
 export type BundleResult = {
@@ -299,6 +301,11 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   );
 
   const config = createMetroConfig({projectRoot, workDir, platform});
+  if (options.resetCache) {
+    // Metro reads resetCache from the config: it clears the cache stores
+    // before building.
+    (config as {resetCache: boolean}).resetCache = true;
+  }
   const Metro = require('metro') as typeof import('metro');
 
   const showProgress = options.verbose === true && process.stderr.isTTY;

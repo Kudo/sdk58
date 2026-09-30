@@ -439,6 +439,25 @@ export function createRunner({root, tapMode}) {
     // VirtualizedList multiplies item offsets by it (0 makes FlatList think
     // the whole list is above the viewport).
     const options = {x: spec.x ?? 0, y: spec.y ?? 0, zoomScale: 1};
+    // Real scroll views stop at their content edges; Fantom's scroll event
+    // does not clamp. Clamp to [0, contentSize - size] when the host reports
+    // contentSize.
+    const contentSize = target.node.contentSize;
+    if (contentSize != null) {
+      const maxX = Math.max(0, contentSize.width - target.box.width);
+      const maxY = Math.max(0, contentSize.height - target.box.height);
+      const clamped = {
+        x: Math.min(Math.max(options.x, 0), maxX),
+        y: Math.min(Math.max(options.y, 0), maxY),
+      };
+      if (clamped.x !== options.x || clamped.y !== options.y) {
+        (step.warnings ??= []).push(
+          `scroll clamped to (${clamped.x}, ${clamped.y}) by the content size`,
+        );
+        options.x = clamped.x;
+        options.y = clamped.y;
+      }
+    }
     if (has('enqueueScrollEventByTag')) {
       via.events = 'native';
       NativeFantom.enqueueScrollEventByTag(surfaceId, target.tag, options);

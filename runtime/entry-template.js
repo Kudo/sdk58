@@ -16,6 +16,7 @@
  */
 
 import {registerRender} from '__RUNTIME_DIR__/fantom/setup';
+import {count, mark, summarize} from '__RUNTIME_DIR__/timings';
 
 registerRender(() => {
   // Before anything loads TurboModuleRegistry (see runtime/turboModuleStubs.js).
@@ -47,6 +48,8 @@ registerRender(() => {
   // (see runtime/session.js). The host never calls $$RunTests$$ then.
   const session = __SESSION__;
 
+  mark('setupEnd');
+
   if (session) {
     require('__RUNTIME_DIR__/session').installSession({
       React,
@@ -62,15 +65,18 @@ registerRender(() => {
 
   return () => {
     require('__RUNTIME_DIR__/hostConfig').applyHostConfig(hostConfig);
+    mark('renderStart');
     const root = Fantom.createRoot({viewportWidth, viewportHeight});
     require('__RUNTIME_DIR__/gh/hostContext').setRootTag(root.getRootTag());
     Fantom.runTask(() => {
       root.render(React.createElement(App));
     });
+    mark('rendered');
 
     const rootTag = root.getRootTag();
     // Deliver onLayout and other queued events until the UI is stable.
-    require('__RUNTIME_DIR__/settle').settle(rootTag);
+    count('settleRounds', require('__RUNTIME_DIR__/settle').settle(rootTag));
+    mark('settled');
     const viewport = {width: viewportWidth, height: viewportHeight};
 
     if (script != null) {
@@ -85,6 +91,8 @@ registerRender(() => {
         script,
         tapMode,
       });
+      mark('actionsEnd');
+      mark('dumpEnd');
       root.destroy();
       return JSON.stringify({
         viewport,
@@ -94,11 +102,13 @@ registerRender(() => {
         final,
         fallbacks,
         capabilities: require('__RUNTIME_DIR__/capabilities').getCapabilities(),
+        timings: summarize(),
       });
     }
 
     let source;
     let tree;
+    mark('dumpStart');
     if (typeof NativeFantom.getA11yTree === 'function') {
       // Typed JSON dump of the committed ShadowTree (hierarchy before view
       // flattening, numbers/booleans instead of debug strings).
@@ -114,11 +124,12 @@ registerRender(() => {
         includeLayoutMetrics: true,
       });
     }
+    mark('dumpEnd');
     root.destroy();
 
     // `tree` is already a JSON string; splice it in as-is.
     return `{"viewport":${JSON.stringify(viewport)},"source":${JSON.stringify(
       source,
-    )},"tree":${tree}}`;
+    )},"timings":${JSON.stringify(summarize())},"tree":${tree}}`;
   };
 });

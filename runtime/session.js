@@ -22,6 +22,7 @@ import {getCapabilities} from './capabilities';
 import {setRootTag} from './gh/hostContext';
 import {applyHostConfig} from './hostConfig';
 import {settle} from './settle';
+import {mark, summarize} from './timings';
 
 const Fantom = require('./fantom/index');
 const NativeFantom = require('./fantom/specs/NativeFantom').default;
@@ -59,12 +60,18 @@ export function installSession({React, App, viewport, tapMode, hostConfig}) {
         viewportHeight: viewport.height,
       });
       setRootTag(root.getRootTag());
+      mark('renderStart');
       Fantom.runTask(() => {
         root.render(React.createElement(App));
       });
+      mark('rendered');
       settle(root.getRootTag());
+      mark('settled');
       runner = createRunner({root, tapMode});
-      report({id, ok: true, ready: true, tree: runner.readTree(), capabilities: getCapabilities()});
+      mark('dumpStart');
+      const tree = runner.readTree();
+      mark('dumpEnd');
+      report({id, ok: true, ready: true, tree, capabilities: getCapabilities(), timings: summarize()});
     } else if (request.action != null) {
       requireStarted();
       const {step, snapshot} = runner.runStep(request.action, nextIndex++);
