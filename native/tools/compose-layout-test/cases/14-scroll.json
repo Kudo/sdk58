@@ -1,0 +1,368 @@
+{
+ "host": {
+  "width": 360,
+  "height": 600
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 8
+   }
+  },
+  "children": [
+   {
+    "type": "Column",
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 100
+     },
+     {
+      "$type": "verticalScroll"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row 0"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 30
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row 1"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 30
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row 2"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 30
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row 3"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 30
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row 4"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 30
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row 5"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 30
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row 6"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 30
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Row 7"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 30
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 4
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "horizontalScroll"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 0"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 1"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 2"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 3"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 4"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 5"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 6"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 7"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "horizontalScroll"
+     }
+    ],
+    "children": [
+     {
+      "type": "Slider",
+      "props": {
+       "value": 0.5
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "after slider"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "horizontalScroll"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "fillMaxWidth in scroll"
+      },
+      "modifiers": [
+       {
+        "$type": "fillMaxWidth"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "weighted in scroll"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Column",
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 80
+     },
+     {
+      "$type": "verticalScroll"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "fillMaxHeight in vertical scroll"
+      },
+      "modifiers": [
+       {
+        "$type": "fillMaxHeight"
+       }
+      ]
+     },
+     {
+      "type": "Spacer",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "end"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 60
+     },
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Column",
+      "modifiers": [
+       {
+        "$type": "verticalScroll"
+       }
+      ],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "x"
+        },
+        "modifiers": [
+         {
+          "$type": "height",
+          "height": 500
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

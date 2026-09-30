@@ -1,0 +1,167 @@
+{
+ "host": {
+  "width": 390,
+  "height": 700
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 8
+   }
+  },
+  "children": [
+   {
+    "type": "TextField",
+    "props": {
+     "value": "Jane"
+    },
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "label"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Name"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "TextField",
+    "props": {
+     "variant": "outlined",
+     "value": "Jane"
+    },
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "label"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Name"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "TextField",
+    "props": {
+     "value": ""
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "label"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Email"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "TextField",
+    "props": {
+     "value": "",
+     "singleLine": true
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     },
+     {
+      "$type": "padding",
+      "start": 16,
+      "top": 0,
+      "end": 16,
+      "bottom": 0
+     }
+    ],
+    "children": [
+     {
+      "type": "Slot",
+      "props": {
+       "name": "placeholder"
+      },
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Search"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "TextField",
+    "props": {
+     "value": "A value that is quite a bit longer than the minimum width"
+    },
+    "children": []
+   },
+   {
+    "type": "Row",
+    "props": {
+     "verticalAlignment": "center"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "TextField",
+      "props": {
+       "value": "weighted"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ],
+      "children": []
+     },
+     {
+      "type": "Button",
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Send"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

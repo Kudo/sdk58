@@ -1,0 +1,317 @@
+{
+ "host": {
+  "width": 391.5,
+  "height": 500
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 3
+   }
+  },
+  "children": [
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 100
+     }
+    ],
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 3
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 101
+     }
+    ],
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 33.7,
+      "height": 12.2
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "padding 7.9"
+    },
+    "modifiers": [
+     {
+      "$type": "paddingAll",
+      "all": 7.9
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": "spaceEvenly"
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 99
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "a"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "b"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "c"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": "center"
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 77
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "a"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "b"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth",
+      "fraction": 0.33
+     },
+     {
+      "$type": "height",
+      "height": 5
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "props": {
+     "contentAlignment": "center"
+    },
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 55,
+      "height": 33
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "c"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Column",
+    "props": {
+     "verticalArrangement": "center"
+    },
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 51
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "x"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "defaultMinSize",
+      "minWidth": 12.5,
+      "minHeight": 7.25
+     }
+    ]
+   }
+  ]
+ }
+}

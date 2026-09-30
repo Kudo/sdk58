@@ -1,0 +1,453 @@
+{
+ "host": {
+  "width": 390,
+  "height": 700,
+  "layoutDirection": "rightToLeft"
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "horizontalAlignment": "start"
+  },
+  "children": [
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "A"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "BBB"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "CC"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 10
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "A"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "BBB"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "CC"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": "spaceBetween"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "A"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "BBB"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "CC"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": "end"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "A"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "B"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": "spaceBetween"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "single"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "padding start 30 end 5"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "start": 30,
+      "top": 0,
+      "end": 5,
+      "bottom": 0
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "offset x 20"
+    },
+    "modifiers": [
+     {
+      "$type": "offset",
+      "x": 20,
+      "y": 0
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "wrap start"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     },
+     {
+      "$type": "wrapContentWidth",
+      "alignment": "start"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "align end"
+    },
+    "modifiers": [
+     {
+      "$type": "align",
+      "alignment": "end"
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 200,
+      "height": 50
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "topStart"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottomEnd"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "bottomEnd"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "horizontalScroll"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 0"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 1"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 2"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 3"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 4"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 5"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 6"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Item 7"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 10
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 8
+     }
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Kotlin"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 4
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Compose"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 4
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Multiplatform"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 4
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Desktop"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 4
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Expo"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 4
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "UI"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 4
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "A much longer chip label"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 4
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Go"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Checkbox",
+    "props": {
+     "value": true
+    }
+   }
+  ]
+ }
+}

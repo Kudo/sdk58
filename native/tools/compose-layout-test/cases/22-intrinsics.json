@@ -1,0 +1,222 @@
+{
+ "host": {
+  "width": 360,
+  "height": 600
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 6
+   }
+  },
+  "children": [
+   {
+    "type": "Column",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": "min"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "min width column"
+      },
+      "modifiers": [
+       {
+        "$type": "fillMaxWidth"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "widest-single-word-here"
+      },
+      "modifiers": [
+       {
+        "$type": "fillMaxWidth"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Column",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": "max"
+     }
+    ],
+    "children": [
+     {
+      "type": "Button",
+      "modifiers": [
+       {
+        "$type": "fillMaxWidth"
+       }
+      ],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Short"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Button",
+      "modifiers": [
+       {
+        "$type": "fillMaxWidth"
+       }
+      ],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "A longer button"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": "max"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "left side text"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "r"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Column",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": "max"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "padded"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 12
+       },
+       {
+        "$type": "fillMaxWidth"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "x"
+      },
+      "modifiers": [
+       {
+        "$type": "fillMaxWidth"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": "max"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "a"
+      }
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "width",
+        "width": 10
+       },
+       {
+        "$type": "fillMaxHeight"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "b",
+       "typography": "headlineLarge"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Column",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": "max"
+     }
+    ],
+    "children": [
+     {
+      "type": "Switch",
+      "props": {
+       "value": true
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "under switch"
+      },
+      "modifiers": [
+       {
+        "$type": "fillMaxWidth"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

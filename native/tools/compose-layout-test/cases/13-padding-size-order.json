@@ -1,0 +1,197 @@
+{
+ "host": {
+  "width": 390,
+  "height": 500
+ },
+ "root": {
+  "type": "Column",
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "padding then size"
+    },
+    "modifiers": [
+     {
+      "$type": "paddingAll",
+      "all": 10
+     },
+     {
+      "$type": "size",
+      "width": 100,
+      "height": 40
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "size then padding"
+    },
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 100,
+      "height": 40
+     },
+     {
+      "$type": "paddingAll",
+      "all": 10
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "padding then fillMaxWidth"
+    },
+    "modifiers": [
+     {
+      "$type": "padding",
+      "start": 20,
+      "top": 0,
+      "end": 40,
+      "bottom": 0
+     },
+     {
+      "$type": "fillMaxWidth"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "fillMaxWidth then padding"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     },
+     {
+      "$type": "padding",
+      "start": 20,
+      "top": 0,
+      "end": 40,
+      "bottom": 0
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "offset then padding"
+    },
+    "modifiers": [
+     {
+      "$type": "offset",
+      "x": 10,
+      "y": 5
+     },
+     {
+      "$type": "paddingAll",
+      "all": 8
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "padding then offset"
+    },
+    "modifiers": [
+     {
+      "$type": "paddingAll",
+      "all": 8
+     },
+     {
+      "$type": "offset",
+      "x": 10,
+      "y": 5
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "width then height then padding"
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 150
+     },
+     {
+      "$type": "height",
+      "height": 30
+     },
+     {
+      "$type": "padding",
+      "start": 1,
+      "top": 2,
+      "end": 3,
+      "bottom": 4
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "double padding"
+    },
+    "modifiers": [
+     {
+      "$type": "paddingAll",
+      "all": 4
+     },
+     {
+      "$type": "paddingAll",
+      "all": 6
+     },
+     {
+      "$type": "size",
+      "width": 80,
+      "height": 20
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "size wins over later size"
+    },
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 80,
+      "height": 20
+     },
+     {
+      "$type": "size",
+      "width": 200,
+      "height": 60
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "wrapContentWidth then size"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     },
+     {
+      "$type": "wrapContentWidth",
+      "alignment": "end"
+     },
+     {
+      "$type": "size",
+      "width": 120,
+      "height": 20
+     }
+    ]
+   }
+  ]
+ }
+}

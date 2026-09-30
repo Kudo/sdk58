@@ -1,0 +1,243 @@
+{
+ "host": {
+  "width": 390,
+  "height": 600
+ },
+ "root": {
+  "type": "Column",
+  "children": [
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 300,
+      "height": 120
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "topStart"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "topStart"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "topCenter"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "topCenter"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "topEnd"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "topEnd"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "centerStart"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "centerStart"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "center"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "center"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "centerEnd"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "centerEnd"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottomStart"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "bottomStart"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottomCenter"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "bottomCenter"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottomEnd"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "bottomEnd"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "props": {
+     "contentAlignment": "centerEnd"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     },
+     {
+      "$type": "height",
+      "height": 140
+     }
+    ],
+    "children": [
+     {
+      "type": "Box",
+      "props": {
+       "contentAlignment": "center"
+      },
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 150,
+        "height": 100
+       }
+      ],
+      "children": [
+       {
+        "type": "Box",
+        "props": {
+         "contentAlignment": "bottomEnd"
+        },
+        "modifiers": [
+         {
+          "$type": "size",
+          "width": 60,
+          "height": 40
+         }
+        ],
+        "children": [
+         {
+          "type": "Text",
+          "props": {
+           "text": "inner"
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "props": {
+     "contentAlignment": "center"
+    },
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 200,
+      "height": 60
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "default topStart"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "overridden"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "bottomCenter"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "props": {
+     "contentAlignment": "bottomEnd"
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "a"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 30
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "b"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

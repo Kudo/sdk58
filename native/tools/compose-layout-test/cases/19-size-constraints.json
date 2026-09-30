@@ -1,0 +1,207 @@
+{
+ "host": {
+  "width": 300,
+  "height": 700
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 2
+   }
+  },
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "size bigger than parent"
+    },
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 500,
+      "height": 20
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "requiredSize bigger"
+    },
+    "modifiers": [
+     {
+      "$type": "requiredSize",
+      "width": 400,
+      "height": 20
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 100,
+      "height": 20
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "required inside box"
+      },
+      "modifiers": [
+       {
+        "$type": "requiredSize",
+        "width": 150,
+        "height": 30
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "sizeIn"
+    },
+    "modifiers": [
+     {
+      "$type": "sizeIn",
+      "minWidth": 50,
+      "maxWidth": 120,
+      "minHeight": 30
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "sizeIn max caps text"
+    },
+    "modifiers": [
+     {
+      "$type": "sizeIn",
+      "maxWidth": 60
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "defaultMinSize under fixed"
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 80
+     },
+     {
+      "$type": "defaultMinSize",
+      "minWidth": 200,
+      "minHeight": 40
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "wrapContentSize unbounded"
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 50
+     },
+     {
+      "$type": "wrapContentSize",
+      "alignment": "centerStart",
+      "unbounded": true
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     },
+     {
+      "$type": "aspectRatio",
+      "ratio": 3
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 40
+     },
+     {
+      "$type": "aspectRatio",
+      "ratio": 2,
+      "matchHeightConstraintsFirst": true
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 30
+     }
+    ],
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "aspectRatio",
+        "ratio": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "aspect in row"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "requiredWidth"
+    },
+    "modifiers": [
+     {
+      "$type": "requiredWidth",
+      "width": 20
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "height then requiredHeight"
+    },
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 10
+     },
+     {
+      "$type": "requiredHeight",
+      "height": 40
+     }
+    ]
+   }
+  ]
+ }
+}

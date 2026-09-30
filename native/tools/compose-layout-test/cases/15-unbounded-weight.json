@@ -1,0 +1,86 @@
+{
+ "host": {
+  "width": 390,
+  "height": 844,
+  "matchContents": {
+   "vertical": true
+  }
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 4
+   }
+  },
+  "modifiers": [
+   {
+    "$type": "paddingAll",
+    "all": 12
+   }
+  ],
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "before"
+    }
+   },
+   {
+    "type": "Spacer",
+    "modifiers": [
+     {
+      "$type": "weight",
+      "weight": 1
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "weighted text"
+    },
+    "modifiers": [
+     {
+      "$type": "weight",
+      "weight": 1
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "row weight"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "fixed"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "after"
+    }
+   }
+  ]
+ }
+}

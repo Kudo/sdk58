@@ -1,0 +1,130 @@
+{
+ "host": {
+  "width": 300,
+  "height": 800
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 4
+   }
+  },
+  "children": [
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running across the field"
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running across the field"
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 120
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running across the field",
+     "maxLines": 2,
+     "overflow": "ellipsis"
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "short",
+     "minLines": 3
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running across the field",
+     "softWrap": false
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "centered",
+     "textAlign": "center"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running across the field",
+     "lineHeight": 30
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running across the field",
+     "letterSpacing": 2
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "Supercalifragilisticexpialidocious-and-more-and-more"
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 100
+     }
+    ]
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "bold title",
+     "fontWeight": "bold",
+     "fontSize": 24
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "italic medium",
+     "fontStyle": "italic",
+     "fontWeight": "500"
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running across the field",
+     "typography": "bodySmall"
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "The quick brown fox jumps over the lazy dog and keeps running across the field",
+     "typography": "titleLarge"
+    }
+   },
+   {
+    "type": "Text",
+    "props": {
+     "text": "line one\nline two\nline three"
+    }
+   }
+  ]
+ }
+}

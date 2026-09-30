@@ -1,0 +1,271 @@
+{
+ "host": {
+  "width": 360,
+  "height": 400
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 6
+   }
+  },
+  "children": [
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 8
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "a"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bb"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 2
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "fixed"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "c"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 5
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 100
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "one"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "two"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "three"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 100
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "x"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "y"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "z"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Column",
+    "props": {
+     "verticalArrangement": {
+      "spacedBy": 10
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 150
+     },
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "top"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "mid"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "bottom"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 3
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 12
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 0.5
+       },
+       {
+        "$type": "height",
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Spacer",
+      "modifiers": [
+       {
+        "$type": "width",
+        "width": 40
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

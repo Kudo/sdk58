@@ -1,0 +1,153 @@
+{
+ "host": {
+  "width": 300,
+  "height": 400,
+  "layoutDirection": "rightToLeft"
+ },
+ "root": {
+  "type": "Column",
+  "children": [
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": "center"
+    },
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 200,
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 150,
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 50,
+        "height": 10
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": "end"
+    },
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 200,
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 150,
+        "height": 10
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 10
+     }
+    },
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 200,
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 150,
+        "height": 10
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": "spaceAround",
+     "verticalArrangement": "spaceBetween"
+    },
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 80
+     }
+    ],
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 120,
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 100,
+        "height": 20
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 90,
+        "height": 10
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

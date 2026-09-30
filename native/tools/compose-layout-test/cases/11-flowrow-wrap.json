@@ -1,0 +1,485 @@
+{
+ "host": {
+  "width": 320,
+  "height": 700
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 12
+   }
+  },
+  "children": [
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 8
+     },
+     "verticalArrangement": {
+      "spacedBy": 4
+     }
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Kotlin"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Compose"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Multiplatform"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Desktop"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Expo"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "UI"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "A much longer chip label"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "x"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Layout"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Engine"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": "spaceBetween"
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Kotlin"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Compose"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Multiplatform"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Desktop"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Expo"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "UI"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "A much longer chip label"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "x"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Layout"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Engine"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": "center",
+     "verticalArrangement": {
+      "spacedBy": 10
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Kotlin"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Compose"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Multiplatform"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Desktop"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Expo"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "UI"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 6
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 10
+     }
+    },
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 90,
+        "height": 20
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 90,
+        "height": 40
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 90,
+        "height": 30
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 90,
+        "height": 10
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 90,
+        "height": 50
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "FlowRow",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 6
+     }
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Kotlin",
+       "typography": "headlineSmall"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Compose"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "bottom"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Multiplatform",
+       "typography": "headlineSmall"
+      }
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Desktop"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "bottom"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Expo",
+       "typography": "headlineSmall"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

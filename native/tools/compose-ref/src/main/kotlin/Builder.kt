@@ -26,6 +26,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
@@ -256,6 +262,25 @@ private fun applyModifiers(node: Node, scope: ChildScope, ctx: Context): Modifie
       }
       "matchParentSize" -> scope.box?.run { Modifier.matchParentSize() }
         ?: Modifier.also { ctx.frames.unsupported("modifier:matchParentSize(no Box scope)", node.path) }
+      // Test-only extensions: not in @expo/ui sdk-58. They are here so that the
+      // C++ engine (native/tools/compose-layout-test) can be checked against them.
+      "sizeIn" -> Modifier.sizeIn(
+        minWidth = params.floatOrNull("minWidth")?.dp ?: androidx.compose.ui.unit.Dp.Unspecified,
+        minHeight = params.floatOrNull("minHeight")?.dp ?: androidx.compose.ui.unit.Dp.Unspecified,
+        maxWidth = params.floatOrNull("maxWidth")?.dp ?: androidx.compose.ui.unit.Dp.Unspecified,
+        maxHeight = params.floatOrNull("maxHeight")?.dp ?: androidx.compose.ui.unit.Dp.Unspecified
+      )
+      "requiredSize" -> Modifier.requiredSize(params.float("width", 0f).dp, params.float("height", 0f).dp)
+      "requiredWidth" -> Modifier.requiredWidth(params.float("width", 0f).dp)
+      "requiredHeight" -> Modifier.requiredHeight(params.float("height", 0f).dp)
+      "aspectRatio" -> Modifier.aspectRatio(
+        params.float("ratio", 1f),
+        matchHeightConstraintsFirst = params.bool("matchHeightConstraintsFirst", false)
+      )
+      "wrapContentSize" -> Modifier.wrapContentSize(
+        align = alignment2d(params.str("alignment")) ?: Alignment.Center,
+        unbounded = params.bool("unbounded", false)
+      )
       "verticalScroll" -> Modifier.verticalScroll(rememberScrollState())
       "horizontalScroll" -> Modifier.horizontalScroll(rememberScrollState())
       in NON_LAYOUT_MODIFIERS -> Modifier
@@ -306,7 +331,9 @@ fun RenderNode(node: Node, scope: ChildScope, ctx: Context) {
         ?: Alignment.TopStart.also {
           props.str("contentAlignment")?.let { frames.unsupported("prop:contentAlignment=$it", node.path) }
         },
-      modifier = modifier
+      modifier = modifier,
+      // Test-only extension, as above.
+      propagateMinConstraints = props.bool("propagateMinConstraints", false)
     ) {
       Children(node, ChildScope(box = this), ctx)
     }

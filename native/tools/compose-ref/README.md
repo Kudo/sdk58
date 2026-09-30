@@ -99,6 +99,15 @@ Button `contentPadding` are floats.
 | | `border` `{borderWidth, borderColor}` | drawn, no layout effect |
 | | `background`, `clip`, `testID`, `semantics`, `alpha`, `shadow`, `rotate`, `zIndex`, `clickable`, ... | accepted; no layout effect. `testID` is copied to the node |
 
+Test-only extensions (not in `@expo/ui` sdk-58; they exist so that the C++
+engine in [`../compose-layout-test`](../compose-layout-test) can be checked):
+modifiers `sizeIn` `{minWidth, minHeight, maxWidth, maxHeight}`, `requiredSize`
+`{width, height}`, `requiredWidth`, `requiredHeight`, `aspectRatio` `{ratio,
+matchHeightConstraintsFirst}`, `wrapContentSize` `{alignment, unbounded}`, and
+the Box prop `propagateMinConstraints`. An input may also have a top-level
+`args` array (for example `["--no-touch-target"]`); compose-ref ignores it and
+the comparison script passes it to both tools.
+
 Other types render nothing; other modifiers are skipped. Both are listed in
 `unsupported`, with the scope-dependent modifiers that `@expo/ui` ignores
 (for example `weight` outside a Row or Column).

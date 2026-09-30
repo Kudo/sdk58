@@ -1,0 +1,202 @@
+{
+ "host": {
+  "width": 360,
+  "height": 600
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 6
+   }
+  },
+  "children": [
+   {
+    "type": "Box",
+    "props": {
+     "propagateMinConstraints": true
+    },
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 150,
+      "height": 60
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "propagated min"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "props": {
+     "propagateMinConstraints": true
+    },
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 150,
+      "height": 60
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "propagate, required"
+      },
+      "modifiers": [
+       {
+        "$type": "requiredSize",
+        "width": 40,
+        "height": 20
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "sizer"
+      },
+      "modifiers": [
+       {
+        "$type": "paddingAll",
+        "all": 20
+       }
+      ]
+     },
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "matchParentSize"
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "mp text"
+      },
+      "modifiers": [
+       {
+        "$type": "matchParentSize"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 80,
+      "height": 30
+     }
+    ],
+    "children": [
+     {
+      "type": "Box",
+      "modifiers": [
+       {
+        "$type": "matchParentSize"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "sizer"
+      },
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 100,
+        "height": 50
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "align outer wins"
+      },
+      "modifiers": [
+       {
+        "$type": "align",
+        "alignment": "bottomEnd"
+       },
+       {
+        "$type": "matchParentSize"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "sizer"
+      },
+      "modifiers": [
+       {
+        "$type": "size",
+        "width": 100,
+        "height": 50
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "matchParentSize outer wins"
+      },
+      "modifiers": [
+       {
+        "$type": "matchParentSize"
+       },
+       {
+        "$type": "align",
+        "alignment": "bottomEnd"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Box",
+    "modifiers": [
+     {
+      "$type": "size",
+      "width": 40,
+      "height": 40
+     }
+    ],
+    "children": []
+   },
+   {
+    "type": "Box",
+    "children": []
+   }
+  ]
+ }
+}

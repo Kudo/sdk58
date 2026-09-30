@@ -1,0 +1,233 @@
+{
+ "host": {
+  "width": 360,
+  "height": 700
+ },
+ "root": {
+  "type": "Column",
+  "props": {
+   "verticalArrangement": {
+    "spacedBy": 4
+   }
+  },
+  "children": [
+   {
+    "type": "Button",
+    "children": [
+     {
+      "type": "Icon",
+      "props": {
+       "size": 18
+      }
+     },
+     {
+      "type": "Spacer",
+      "modifiers": [
+       {
+        "$type": "width",
+        "width": 8
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "Add item"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Full width"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "left"
+      },
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ]
+     },
+     {
+      "type": "Text",
+      "props": {
+       "text": "right"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Row",
+    "props": {
+     "horizontalArrangement": {
+      "spacedBy": 8
+     }
+    },
+    "modifiers": [
+     {
+      "$type": "fillMaxWidth"
+     }
+    ],
+    "children": [
+     {
+      "type": "OutlinedButton",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "Cancel"
+        }
+       }
+      ]
+     },
+     {
+      "type": "Button",
+      "modifiers": [
+       {
+        "$type": "weight",
+        "weight": 1
+       }
+      ],
+      "children": [
+       {
+        "type": "Text",
+        "props": {
+         "text": "OK"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "contentPadding": {
+      "start": 4,
+      "end": 4
+     }
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "pad"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "props": {
+     "contentPadding": {
+      "start": 40,
+      "top": 20,
+      "end": 40,
+      "bottom": 20
+     }
+    },
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "pad 40"
+      }
+     }
+    ]
+   },
+   {
+    "type": "TextButton",
+    "modifiers": [
+     {
+      "$type": "width",
+      "width": 150
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "A text button with a long label that has to wrap"
+      }
+     }
+    ]
+   },
+   {
+    "type": "Button",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "tall"
+      },
+      "modifiers": [
+       {
+        "$type": "height",
+        "height": 60
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "ElevatedButton",
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Elevated"
+      }
+     }
+    ]
+   },
+   {
+    "type": "FilledTonalButton",
+    "modifiers": [
+     {
+      "$type": "height",
+      "height": 30
+     }
+    ],
+    "children": [
+     {
+      "type": "Text",
+      "props": {
+       "text": "Tonal"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}
