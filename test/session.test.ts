@@ -62,13 +62,16 @@ test('session: JSON lines over the interactive host protocol (fake host)', {time
   );
   assert.equal(out[2].id, 2);
   assert.equal(out[2].tree.type, 'RootView');
-  assert.deepEqual(out[3], {id: 3, ok: false, error: 'boom from JS'});
+  assert.deepEqual(out[3], {id: 3, ok: false, error: {code: 'APP_THREW', message: 'boom from JS'}, logs: [{level: 'info', message: 'request {"id":3,"action":{"tap":{"testID":"boom"}}}'}]});
   assert.equal(out[4].ok, false);
-  assert.match(out[4].error, /invalid JSON/);
-  assert.deepEqual(out[5], {id: 4, ok: false, error: 'unknown action "swipe" (one of: tap, longPress, type, scroll, pan, pinch, wait, snapshot)'});
-  assert.deepEqual(out[6], {id: 5, ok: true});
-  // App console output goes to stderr with an [app] prefix.
-  assert.match(proc.stderr, /\[app\] request \{"id":1,/);
+  assert.equal(out[4].error.code, 'USAGE');
+  assert.match(out[4].error.message, /invalid JSON/);
+  assert.deepEqual(out[5], {id: 4, ok: false, error: {code: 'USAGE', message: 'unknown action "swipe" (one of: tap, longPress, type, scroll, pan, pinch, wait, snapshot)'}});
+  assert.deepEqual({id: out[6].id, ok: out[6].ok}, {id: 5, ok: true});
+  // App console output is in each response's `logs`; not on stderr (quiet
+  // is the default when stdout is not a terminal).
+  assert.deepEqual(out[1].logs, [{level: 'info', message: 'request {"id":1,"action":{"tap":{"testID":"submit"}}}'}]);
+  assert.doesNotMatch(proc.stderr, /\[app\]/);
 });
 
 test('session: end of input without quit exits 0', {timeout: 120_000}, () => {
@@ -76,7 +79,7 @@ test('session: end of input without quit exits 0', {timeout: 120_000}, () => {
   assert.equal(proc.status, 0, proc.stderr);
   const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
   assert.equal(out.length, 2);
-  assert.match(proc.stderr, /\[app\] request \{"id":null,"quit":true\}/);
+  assert.doesNotMatch(proc.stderr, /\[app\]/);
 });
 
 test('session: requires --platform', {timeout: 120_000}, () => {
@@ -90,16 +93,17 @@ test('session: requires --platform', {timeout: 120_000}, () => {
   assert.match(proc.stderr, /--platform <name> is required/);
 });
 
-test('session: per-request timeout kills the host and exits 1', {timeout: 120_000}, () => {
+test('session: per-request timeout kills the host and exits 5', {timeout: 120_000}, () => {
   const started = Date.now();
   const proc = runSession(
     [{id: 1, tree: true}, {id: 2, action: {tap: {testID: 'SLOW'}}}, {id: 3, tree: true}],
     ['--timeout', '1500'],
   );
-  assert.equal(proc.status, 1, proc.stderr);
+  assert.equal(proc.status, 5, proc.stderr);
   const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
   assert.equal(out.length, 3); // ready, id 1, id 2 (timeout); id 3 is not handled
-  assert.deepEqual(out[2], {id: 2, ok: false, error: 'timeout'});
+  assert.deepEqual(out[2].error, {code: 'TIMEOUT', message: 'timeout'});
+  assert.equal(out[2].ok, false);
   assert.match(proc.stderr, /request timed out after 1500 ms; host killed/);
   assert.ok(Date.now() - started < 60_000);
 });
@@ -117,8 +121,8 @@ test('session: tree requests accept format/select/depth (fake host)', {timeout: 
   assert.match(out[1].tree, /^submit View #submit role=button "Submit"/);
   assert.equal(out[2].tree.length, 1);
   assert.equal(out[2].tree[0].children.length, 1);
-  assert.match(out[3].error, /"format" must be one of/);
-  assert.match(out[4].error, /invalid selector/);
+  assert.match(out[3].error.message, /"format" must be one of/);
+  assert.match(out[4].error.message, /invalid selector/);
 });
 
 test('session: diff on action requests (fake host)', {timeout: 120_000}, () => {
@@ -131,5 +135,5 @@ test('session: diff on action requests (fake host)', {timeout: 120_000}, () => {
   const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
   assert.deepEqual(out[1].diff.added.map((n: {key: string}) => n.key), ['status']);
   assert.equal(out[1].diffTrees, undefined);
-  assert.match(out[2].error, /"diff" must be true or false, on action requests/);
+  assert.match(out[2].error.message, /"diff" must be true or false, on action requests/);
 });

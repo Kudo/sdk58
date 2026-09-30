@@ -103,7 +103,11 @@ export type RenderResult = {
   viewport: {width: number; height: number};
   source: TreeSource;
   root: TreeNode;
+  /** App console output (only when there was any); `known: true` marks common React Native noise. */
+  logs?: Array<{level: string; message: string; known?: true}>;
 };
+
+export type StepError = {code: string; message: string};
 
 /** Raw shape produced by Fantom's native `RenderOutput::renderView` (`mounted`). */
 export type FantomNode = {
@@ -256,7 +260,8 @@ export type Step = {
   /** Which implementation was used: host methods (`native`) or the JS fallback (`js`). */
   via?: {hitTest: 'native' | 'js' | null; events: 'native' | 'js' | null};
   warnings?: string[];
-  error?: string;
+  /** Runtime payloads carry a string; the CLI output has {code, message}. */
+  error?: string | StepError;
   /** With `run --diff` / session `diff: true`: changes made by this step. */
   diff?: import('./diff.ts').TreeDiff;
 };
@@ -271,6 +276,7 @@ export type RunResult = {
   fallbacks: string[];
   /** Optional host features found (NativeFantom methods and getCapabilities()). */
   capabilities: string[];
+  logs?: Array<{level: string; message: string; known?: true}>;
 };
 
 /** Payload printed by the entry for `run --script`. */

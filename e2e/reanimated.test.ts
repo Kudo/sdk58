@@ -66,8 +66,9 @@ test(
     }
     const result = JSON.parse(proc.stdout) as RunResult;
     const stepErrors = result.steps.filter(s => s.error);
-    if (stepErrors.some(s => NO_REANIMATED.test(s.error ?? ''))) {
-      t.skip(`host lacks reanimated support (${stepErrors[0].error})`);
+    const errorText = (e: unknown) => (typeof e === 'string' ? e : ((e as {message?: string})?.message ?? ''));
+    if (stepErrors.some(s => NO_REANIMATED.test(errorText(s.error)))) {
+      t.skip(`host lacks reanimated support (${errorText(stepErrors[0].error)})`);
       return;
     }
     assert.deepEqual(stepErrors, []);

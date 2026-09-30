@@ -20,6 +20,7 @@ import {getHostBin, hostArgs} from './host.ts';
 import type {ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
+import {type ErrorCode, EXIT_CODES, type LogEntry, logEntry, stepErrorCode} from './errors.ts';
 import {type Format, FORMATS, formatRender, parseSelector} from './format.ts';
 import type {TreeNode} from './schema.ts';
 import {convertShadowTree, convertStep} from './tree.ts';
@@ -63,6 +64,8 @@ export async function runSession(options: {
   timeoutMs?: number;
   /** Print startup timings and per-request latency as JSON on stderr. */
   timing?: boolean;
+  /** Do not echo app console output as [app] lines (it is in each response's `logs`). */
+  quiet?: boolean;
   io: SessionIO;
 }): Promise<number> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -90,6 +93,13 @@ export async function runSession(options: {
   });
 
   let current: Frame | null = null;
+  // App console output since the last response.
+  let pendingLogs: LogEntry[] = [];
+  const takeLogs = () => {
+    const logs = pendingLogs;
+    pendingLogs = [];
+    return logs;
+  };
   let exited = false;
   const exitPromise = new Promise<number>(resolve => {
     child.on('close', code => {
@@ -130,9 +140,12 @@ export async function runSession(options: {
         frame?.resolve();
         break;
       }
-      case 'console-log':
-        io.log(`[app] ${message.message}`);
+      case 'console-log': {
+        const entry = logEntry(String(message.level ?? 'info'), String(message.message));
+        pendingLogs.push(entry);
+        if (!options.quiet) io.log(`[app] ${entry.message}`);
         break;
+      }
       default:
         if (options.verbose) io.log(`[host] ${line}`);
     }
@@ -190,8 +203,14 @@ export async function runSession(options: {
 
   const convert = (response: HostResponse, request: Record<string, unknown>) => {
     const out: Record<string, unknown> = {id: response.id, ok: response.ok};
-    if (response.error != null) out.error = response.error;
-    if (response.step != null) out.step = convertStep(response.step);
+    const step = response.step != null ? convertStep(response.step) : null;
+    if (response.error != null) {
+      out.error =
+        step?.error != null && typeof step.error === 'object'
+          ? step.error
+          : {code: responseErrorCode(response.error), message: response.error};
+    }
+    if (step != null) out.step = step;
     if (response.tree != null) out.tree = formatSessionTree(convertShadowTree(response.tree), request);
     if (response.diffTrees != null) {
       const [before, after] = response.diffTrees.map(convertShadowTree);
@@ -200,6 +219,8 @@ export async function runSession(options: {
     if (response.fallbacks != null && response.fallbacks.length > 0) {
       out.fallbacks = response.fallbacks;
     }
+    const logs = takeLogs();
+    if (logs.length > 0) out.logs = logs;
     return out;
   };
 
@@ -208,26 +229,29 @@ export async function runSession(options: {
     const code = await exitPromise;
     if (timedOut) {
       io.log(`request timed out after ${timeoutMs} ms; host killed`);
-      return 1;
+      return EXIT_CODES.TIMEOUT;
     }
     if (code !== 0) {
       io.log(`host exited with code ${code}`);
       const stderr = Buffer.concat(stderrChunks).toString('utf8');
       if (stderr && !options.verbose) io.log(stderr.trimEnd());
+      return EXIT_CODES.HOST_CRASHED;
     }
-    return code;
+    return 0;
   };
 
   // Initial render.
   const start = await send({id: null, start: true});
   if (timedOut) {
-    writeLine({ready: false, error: 'timeout'});
+    writeLine({ready: false, error: {code: 'TIMEOUT', message: 'timeout'}});
     return finish();
   }
   if (!start.ok) {
-    writeLine({ready: false, error: start.error});
+    const code = exited ? 'HOST_CRASHED' : 'APP_THREW';
+    const logs = takeLogs();
+    writeLine({ready: false, error: {code, message: start.error}, ...(logs.length > 0 ? {logs} : {})});
     await finish();
-    return 1;
+    return EXIT_CODES[code];
   }
   if (options.timing) {
     const toReady = Math.round((performance.now() - spawnedAt) * 1000) / 1000;
@@ -241,10 +265,12 @@ export async function runSession(options: {
       })}`,
     );
   }
+  const readyLogs = takeLogs();
   writeLine({
     ready: true,
     tree: start.tree ? convertShadowTree(start.tree) : null,
     capabilities: start.capabilities ?? [],
+    ...(readyLogs.length > 0 ? {logs: readyLogs} : {}),
   });
 
   // Requests, one at a time, in order.
@@ -257,12 +283,12 @@ export async function runSession(options: {
     try {
       request = JSON.parse(line);
     } catch (error) {
-      writeLine({id: null, ok: false, error: `invalid JSON: ${(error as Error).message}`});
+      writeLine({id: null, ok: false, error: {code: 'USAGE', message: `invalid JSON: ${(error as Error).message}`}});
       continue;
     }
     const problem = validateRequest(request);
     if (problem != null) {
-      writeLine({id: request?.id ?? null, ok: false, error: problem});
+      writeLine({id: request?.id ?? null, ok: false, error: {code: 'USAGE', message: problem}});
       continue;
     }
     const requestStart = performance.now();
@@ -315,6 +341,13 @@ function formatSessionTree(tree: TreeNode, request: Record<string, unknown>): un
 }
 
 const OUTPUT_KEYS = ['format', 'select', 'depth', 'subtree', 'style'];
+
+function responseErrorCode(message: string): ErrorCode {
+  if (message === 'timeout') return 'TIMEOUT';
+  if (/host (has )?exited/.test(message)) return 'HOST_CRASHED';
+  if (/Session is not started|Unknown request/.test(message)) return 'USAGE';
+  return stepErrorCode(message);
+}
 
 /** Returns an error message, or null if the request is valid. */
 export function validateRequest(request: unknown): string | null {

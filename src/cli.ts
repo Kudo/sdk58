@@ -1,11 +1,12 @@
 import fs from 'node:fs';
 
-import {Command, InvalidArgumentError} from 'commander';
+import {Command, CommanderError, InvalidArgumentError} from 'commander';
 
 import {bundle, type BundleResult, type HostConfig, type TapMode} from './bundle.ts';
 import {type Format, type FormatOptions, FORMATS, formatRender, formatRun} from './format.ts';
 import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
-import {getHostBin, HostError, type HostTiming, runHost} from './host.ts';
+import {CliError, EXIT_CODES, type LogEntry, usage} from './errors.ts';
+import {getHostBin, type HostTiming, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
 import {DEFAULT_TIMEOUT_MS, runSession} from './session.ts';
@@ -42,7 +43,7 @@ type OutputOptions = {
 function formatOptions(options: OutputOptions): FormatOptions {
   const format = (options.format ?? 'json') as Format;
   if (!FORMATS.includes(format)) {
-    throw new Error(`--format must be one of: ${FORMATS.join(', ')}`);
+    throw usage(`--format must be one of: ${FORMATS.join(', ')}`);
   }
   return {
     format,
@@ -53,7 +54,13 @@ function formatOptions(options: OutputOptions): FormatOptions {
   };
 }
 
+/** --quiet is the default when stdout is not a terminal (agents, pipes). */
+function isQuiet(options: {quiet?: boolean}): boolean {
+  return options.quiet ?? !process.stdout.isTTY;
+}
+
 type RenderOptions = HostConfigOptions & OutputOptions & {
+  quiet?: boolean;
   timing?: boolean;
   resetCache?: boolean;
   /** --no-cache sets false. */
@@ -117,31 +124,31 @@ function hostConfigFor(platform: string, options: HostConfigOptions): HostConfig
 
 function requirePlatform(platform: string | undefined): string {
   if (platform == null || platform === '') {
-    throw new Error(PLATFORM_REQUIRED_MESSAGE);
+    throw usage(PLATFORM_REQUIRED_MESSAGE, 'Pass --platform android (or ios, a11ytree), or a --preset.');
   }
   return platform;
 }
 
 function readScript(scriptPath: string | undefined) {
   if (scriptPath == null || scriptPath === '') {
-    throw new ScriptError('--script <json> is required');
+    throw usage('--script <json> is required');
   }
   let text: string;
   try {
     text = fs.readFileSync(scriptPath, 'utf8');
   } catch (error) {
-    throw new ScriptError(`cannot read ${scriptPath}: ${(error as Error).message}`);
+    throw usage(`cannot read ${scriptPath}: ${(error as Error).message}`);
   }
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch (error) {
-    throw new ScriptError(`${scriptPath} is not valid JSON: ${(error as Error).message}`);
+    throw usage(`${scriptPath} is not valid JSON: ${(error as Error).message}`);
   }
   try {
     return validateScript(json);
   } catch (error) {
-    throw new ScriptError(`${scriptPath}: ${(error as Error).message}`);
+    throw usage(`${scriptPath}: ${(error as Error).message}`);
   }
 }
 
@@ -171,9 +178,21 @@ const BYTECODE_MODES: BytecodeMode[] = ['auto', 'on', 'off'];
 function bytecodeMode(value: string | undefined): BytecodeMode {
   const mode = (value ?? 'auto') as BytecodeMode;
   if (!BYTECODE_MODES.includes(mode)) {
-    throw new Error(`--bytecode must be one of: ${BYTECODE_MODES.join(', ')}`);
+    throw usage(`--bytecode must be one of: ${BYTECODE_MODES.join(', ')}`);
   }
   return mode;
+}
+
+/** Metro errors become BUNDLE_FAILED; usage errors pass through. */
+async function bundleOrFail(options: Parameters<typeof bundle>[0]): Promise<BundleResult> {
+  try {
+    return await bundle(options);
+  } catch (error) {
+    if (error instanceof CliError) throw error;
+    throw new CliError('BUNDLE_FAILED', (error as Error).message, {
+      hint: 'Fix the error in the app code or its imports; see the message for the file and line.',
+    });
+  }
 }
 
 function describeBundle(result: BundleResult): string {
@@ -195,6 +214,7 @@ async function execute<T>(
   options: RenderOptions,
   extra: {script?: unknown[]; tapMode?: TapMode; runOptions?: {diff?: boolean}},
   timing?: Timing,
+  logs?: LogEntry[],
 ): Promise<T | undefined> {
   const platform = requirePlatform(options.platform);
   if (!options.bundleOnly) {
@@ -202,7 +222,7 @@ async function execute<T>(
     getHostBin();
   }
   const metroStart = performance.now();
-  const result = await bundle({
+  const result = await bundleOrFail({
     appPath: file,
     viewportWidth: options.width,
     viewportHeight: options.height,
@@ -241,6 +261,8 @@ async function execute<T>(
     windowHeight: options.height,
     verbose: options.verbose,
     timing: hostTiming,
+    logs,
+    quiet: isQuiet(options),
   };
   try {
     let payload: T;
@@ -249,7 +271,7 @@ async function execute<T>(
     } catch (error) {
       // A bytecode file the host cannot load (e.g. a Hermes bytecode version
       // mismatch) makes the host fail before any JS runs: drop it and use JS.
-      const jsError = error instanceof HostError && error.message.startsWith('Render failed in JS');
+      const jsError = error instanceof CliError && error.code === 'APP_THREW';
       if (!result.bytecode || jsError || result.cacheDir == null) throw error;
       discardBytecode(result.cacheDir);
       process.stderr.write('rn-a11y-tree: warning: the host could not load the bytecode bundle; using JS\n');
@@ -280,10 +302,13 @@ async function execute<T>(
 async function render(file: string, options: RenderOptions) {
   const output = formatOptions(options);
   const timing: Timing | undefined = options.timing ? {} : undefined;
-  const payload = await execute<HostPayload>(file, options, {}, timing);
+  const logs: LogEntry[] = [];
+  const payload = await execute<HostPayload>(file, options, {}, timing, logs);
   if (payload) {
     const convertStart = performance.now();
-    const text = formatRender(toRenderResult(payload), output);
+    const result = toRenderResult(payload);
+    if (logs.length > 0) result.logs = logs;
+    const text = formatRender(result, output);
     if (timing) {
       timing.convertMs = round3(performance.now() - convertStart);
       timing.outputBytes = Buffer.byteLength(text);
@@ -296,29 +321,33 @@ async function render(file: string, options: RenderOptions) {
 async function run(file: string, options: RunOptions) {
   requirePlatform(options.platform);
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
-    throw new Error(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
+    throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
   }
   // Validate before bundling.
   const output = formatOptions(options);
   const script = readScript(options.script);
   const timing: Timing | undefined = options.timing ? {} : undefined;
+  const logs: LogEntry[] = [];
   const payload = await execute<HostRunPayload>(
     file,
     options,
     {script, tapMode: options.tapMode as TapMode, runOptions: options.diff ? {diff: true} : undefined},
     timing,
+    logs,
   );
   if (payload) {
     const fallbacks = [
       ...new Set([...(payload.fallbacks ?? []), ...describeFallbacks(payload.steps)]),
     ].sort();
-    if (fallbacks.length > 0) {
+    if (fallbacks.length > 0 && !isQuiet(options)) {
       process.stderr.write(
         `rn-a11y-tree: warning: JS fallbacks used because the host lacks native methods: ${fallbacks.join(', ')}\n`,
       );
     }
     const convertStart = performance.now();
-    const text = formatRun(toRunResult(payload), output);
+    const result = toRunResult(payload);
+    if (logs.length > 0) result.logs = logs;
+    const text = formatRun(result, output);
     if (timing) {
       timing.convertMs = round3(performance.now() - convertStart);
       timing.outputBytes = Buffer.byteLength(text);
@@ -331,10 +360,10 @@ async function run(file: string, options: RunOptions) {
 async function session(file: string, options: RunOptions) {
   const platform = requirePlatform(options.platform);
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
-    throw new Error(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
+    throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
   }
   getHostBin();
-  const result = await bundle({
+  const result = await bundleOrFail({
     appPath: file,
     viewportWidth: options.width,
     viewportHeight: options.height,
@@ -359,6 +388,7 @@ async function session(file: string, options: RunOptions) {
       verbose: options.verbose,
       timeoutMs: options.timeout,
       timing: options.timing,
+      quiet: isQuiet(options),
       io: {
         input: process.stdin,
         output: process.stdout,
@@ -389,7 +419,10 @@ const program = new Command()
   .name('rn-a11y-tree')
   .description(
     'Render a React Native component headlessly and print its accessibility/layout tree as JSON',
-  );
+  )
+  // Commander errors become USAGE errors (reportError); subcommands inherit this.
+  .exitOverride()
+  .configureOutput({writeErr: () => {}});
 
 function addCommonOptions(command: Command): Command {
   return command
@@ -404,6 +437,8 @@ function addCommonOptions(command: Command): Command {
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
+    .option('-q, --quiet', 'no app console output or warnings on stderr (default when stdout is not a terminal)')
+    .option('--no-quiet', 'print app console errors/warnings and CLI warnings on stderr')
     .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
     .option('--timing', 'print phase timings as JSON on stderr', false)
     .option('--reset-cache', 'ignore the Metro transform cache and the bundle cache (cold bundle)', false)
@@ -483,6 +518,8 @@ program
   )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
+  .option('-q, --quiet', 'no app console output on stderr (default when stdout is not a terminal)')
+  .option('--no-quiet', 'print app console output on stderr as [app] lines')
   .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
   .option('--timing', 'print phase timings as JSON on stderr', false)
   .option('--reset-cache', 'ignore the Metro transform cache and the bundle cache (cold bundle)', false)
@@ -504,15 +541,49 @@ program
 try {
   await program.parseAsync(process.argv);
 } catch (error) {
-  const err = error as Error;
-  process.stderr.write(`rn-a11y-tree: ${err.message}\n`);
-  if (err instanceof HostError) {
-    if (err.details?.stack) process.stderr.write(`${err.details.stack}\n`);
-    if (err.details?.stderr) {
-      process.stderr.write(`--- host stderr ---\n${err.details.stderr}\n`);
-    }
-  } else if (process.env.DEBUG && err.stack) {
-    process.stderr.write(`${err.stack}\n`);
+  reportError(error);
+}
+
+function toCliError(error: unknown): CliError | null {
+  if (error instanceof CommanderError) {
+    // --help / --version exit normally.
+    if (error.exitCode === 0) return null;
+    return usage(error.message.replace(/^error: /, ''));
   }
-  process.exitCode = 1;
+  if (error instanceof CliError) return error;
+  if (error instanceof ScriptError) return usage(error.message);
+  const err = error as Error;
+  return new CliError('HOST_CRASHED', err?.message ?? String(error), {
+    details: process.env.DEBUG && err?.stack ? {stack: err.stack} : undefined,
+  });
+}
+
+/**
+ * Errors go to stdout as {"error": …} with an explicit --format json;
+ * otherwise to stderr: JSON when stderr is not a terminal or with --quiet,
+ * else a readable message.
+ */
+function reportError(error: unknown) {
+  const cliError = toCliError(error);
+  if (cliError == null) {
+    process.exitCode = 0;
+    return;
+  }
+  const info = cliError.toJSON();
+  const argv = process.argv.slice(2);
+  const explicitJson = argv.some((a, i) => a === '--format=json' || (a === '--format' && argv[i + 1] === 'json'));
+  const quiet = argv.includes('-q') || argv.includes('--quiet');
+  if (explicitJson) {
+    process.stdout.write(JSON.stringify({error: info}, null, 2) + '\n');
+  } else if (quiet || !process.stderr.isTTY) {
+    process.stderr.write(JSON.stringify({error: info}) + '\n');
+  } else {
+    process.stderr.write(`rn-a11y-tree: error [${info.code}]: ${info.message}\n`);
+    if (info.hint) process.stderr.write(`  hint: ${info.hint}\n`);
+    const stack = info.details?.stack;
+    if (typeof stack === 'string') process.stderr.write(`${stack}\n`);
+    const tail = info.details?.stderrTail;
+    if (typeof tail === 'string') process.stderr.write(`--- host stderr (last lines) ---\n${tail}\n`);
+  }
+  process.exitCode = EXIT_CODES[info.code];
 }

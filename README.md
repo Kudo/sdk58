@@ -75,6 +75,7 @@ failure, with the message on stderr; stdout has only the JSON.
 | `--dev` | all | off | Development bundle (`__DEV__ = true`) |
 | `--keep-bundle` | all | off | Keep the bundle and print its path to stderr |
 | `-v, --verbose` | all | off | Metro progress, host glog and console output on stderr |
+| `-q, --quiet` / `--no-quiet` | all | quiet when stdout is not a terminal | No app console output or CLI warnings on stderr (they are in `logs` / `fallbacks`) |
 | `--out <file>` | `render`, `run` | stdout | Write the output to a file |
 | `--format <f>` | `render`, `run` | `json` | `json`, `compact` (no defaults/empties, no `style`), `text` (one line per node), `ndjson` (one node per line) |
 | `--select <sel>` | `render`, `run` | all | Only nodes matching `field=value` or `field~text` (fields: `testID`, `role`, `name`, `type`, `key`, `ref`, `sel`, `text`); repeat to AND. Matches only, unless `--depth` |
@@ -120,6 +121,30 @@ Medium example, Release host, median of 5 (`render --timing`):
 
 (Before caching: 1.3 s warm, Metro 0.86 s, bundle eval 150 ms; with bytecode
 bundle eval is 13 ms.)
+
+## Errors and exit codes
+
+Errors are `{"error": {code, message, hint?, details?}}`: on stdout with an
+explicit `--format json`, else on stderr (one JSON line when stderr is not a
+terminal or with `--quiet`, a readable message otherwise).
+
+| Exit | Codes | Meaning |
+| --- | --- | --- |
+| 0 | | ok (step errors inside a `run` are reported in the steps) |
+| 1 | `USAGE` | bad arguments, script, selector, unknown option |
+| 2 | `CHECK_FAILED` | `check` found violations |
+| 3 | `BUNDLE_FAILED` | Metro failed (syntax error, missing import) |
+| 4 | `APP_THREW` | the app threw while loading or rendering (`details.stack`) |
+| 5 | `HOST_MISSING`, `HOST_UNAVAILABLE`, `HOST_CRASHED`, `TIMEOUT` | host problems (`details.stderrTail`) |
+
+- Step errors are `{code, message}` with `TARGET_NOT_FOUND`,
+  `TARGET_COVERED`, `TIMEOUT` or `APP_THREW`; session error responses use the
+  same object (`USAGE` for invalid requests).
+- App console output is returned in `logs: [{level, message, known?}]`
+  (render/run output, and each session response). `known: true` marks
+  common noise (`getViewManagerConfig('RNCMaskedView')`, deprecation
+  warnings). With `--no-quiet`, errors and warnings that are not known noise
+  are also printed on stderr.
 
 ## Formats and queries
 

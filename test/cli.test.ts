@@ -41,8 +41,11 @@ test('requires --platform and lists the known values', {timeout: 120_000}, () =>
 
 test('fails with a clear message when the host binary is missing', {timeout: 120_000}, () => {
   const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: '/nonexistent/rn-a11y-host'});
-  assert.equal(proc.status, 1);
-  assert.match(proc.stderr, /RN_A11Y_HOST_BIN points to a missing file/);
+  assert.equal(proc.status, 5);
+  const {error} = JSON.parse(proc.stderr.trim().split('\n').pop()!);
+  assert.equal(error.code, 'HOST_MISSING');
+  assert.match(error.message, /RN_A11Y_HOST_BIN points to a missing file/);
+  assert.match(error.hint, /yarn build:host/);
   assert.equal(proc.stdout, '');
 });
 
@@ -83,8 +86,11 @@ test('reports JS errors from the host', {timeout: 120_000}, () => {
     RN_A11Y_HOST_BIN: FAKE_HOST,
     FAKE_HOST_MODE: 'js-error',
   });
-  assert.equal(proc.status, 1);
-  assert.match(proc.stderr, /Render failed in JS: boom/);
+  assert.equal(proc.status, 4);
+  const {error} = JSON.parse(proc.stderr.trim().split('\n').pop()!);
+  assert.equal(error.code, 'APP_THREW');
+  assert.match(error.message, /Render failed in JS: boom/);
+  assert.match(error.details.stack, /at App/);
 });
 
 function writeScript(script: unknown): string {
@@ -123,7 +129,7 @@ test('run: validates the script before bundling', {timeout: 120_000}, () => {
 
 test('run: reports steps, snapshots and the final tree (fake host)', {timeout: 120_000}, () => {
   const file = writeScript([{tap: {testID: 'submit'}}, {tap: {testID: 'missing'}}, {snapshot: 'after'}]);
-  const proc = run(['run', APP, '--platform', 'android', '--script', file], {
+  const proc = run(['run', APP, '--platform', 'android', '--script', file, '--no-quiet'], {
     RN_A11Y_HOST_BIN: FAKE_HOST,
     FAKE_HOST_MODE: 'run',
   });
@@ -134,7 +140,7 @@ test('run: reports steps, snapshots and the final tree (fake host)', {timeout: 1
   assert.equal(result.steps.length, 3);
   assert.equal(result.steps[0].target?.box?.y, 154); // rounded
   assert.equal(result.steps[0].hit?.type, 'Paragraph');
-  assert.match(result.steps[1].error ?? '', /Target not found/);
+  assert.deepEqual(result.steps[1].error, {code: 'TARGET_NOT_FOUND', message: 'Target not found: {"testID":"missing"}'});
   assert.match(
     proc.stderr,
     /warning: JS fallbacks used because the host lacks native methods: events: js, hitTest: js/,

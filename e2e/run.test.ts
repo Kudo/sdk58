@@ -47,9 +47,11 @@ test(
     assert.equal(proc.status, 0, `CLI failed:\n${proc.stderr}`);
     const result = JSON.parse(proc.stdout) as RunResult;
 
-    const hitErrors = result.steps.filter(s => s.error && /hitTest|hittable/.test(s.error));
+    const hitErrors = result.steps.filter(
+      s => s.error && typeof s.error === 'object' && s.error.code === 'TARGET_COVERED',
+    );
     if (hitErrors.length > 0) {
-      t.skip(`host cannot hit test: ${hitErrors[0].error}`);
+      t.skip(`host cannot hit test: ${JSON.stringify(hitErrors[0].error)}`);
       return;
     }
 

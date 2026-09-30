@@ -1,4 +1,5 @@
 import {diffTrees} from './diff.ts';
+import {stepErrorCode} from './errors.ts';
 import type {
   A11yInfo,
   A11yState,
@@ -60,11 +61,15 @@ export function toRunResult(payload: HostRunPayload): RunResult {
 
 /** Rounds the boxes in a step reported by the runtime. */
 export function convertStep(step: Step): Step {
-  return {
+  const out: Step = {
     ...step,
     target: roundStepNode(step.target),
     hit: roundStepNode(step.hit),
   };
+  if (typeof step.error === 'string') {
+    out.error = {code: stepErrorCode(step.error), message: step.error};
+  }
+  return out;
 }
 
 function roundStepNode(node: StepNode | null): StepNode | null {

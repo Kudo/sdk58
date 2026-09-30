@@ -5,6 +5,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import {fileURLToPath} from 'node:url';
 
+import {CliError, type ErrorCode, type LogEntry, logEntry} from './errors.ts';
 import type {HostPayload} from './schema.ts';
 
 export const HOST_BIN_ENV = 'RN_A11Y_HOST_BIN';
@@ -24,19 +25,32 @@ export type HostOptions = {
   verbose?: boolean;
   /** Filled with performance.now() timestamps (ms): spawn, result line, exit. */
   timing?: HostTiming;
+  /** Collects the app's console output. */
+  logs?: LogEntry[];
+  /** Do not echo app console output to stderr. */
+  quiet?: boolean;
 };
 
 export type HostTiming = {spawn?: number; result?: number; exit?: number};
 
-export class HostError extends Error {
+/** Host or app failure; `code` is APP_THREW, HOST_MISSING or HOST_CRASHED. */
+export class HostError extends CliError {
   constructor(
+    code: ErrorCode,
     message: string,
-    readonly details?: {stack?: string; stderr?: string; exitCode?: number | null},
+    readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null},
+    hint?: string,
   ) {
-    super(message);
+    const details: Record<string, unknown> = {};
+    if (hostDetails?.stack) details.stack = hostDetails.stack;
+    if (hostDetails?.exitCode != null) details.exitCode = hostDetails.exitCode;
+    if (hostDetails?.stderr) details.stderrTail = hostDetails.stderr.trimEnd().split('\n').slice(-20).join('\n');
+    super(code, message, {hint, details});
     this.name = 'HostError';
   }
 }
+
+const BUILD_HINT = 'Run `yarn build:host`, or set RN_A11Y_HOST_BIN to the path of a host binary.';
 
 /** `native/dist/<arch>/rn-a11y-host`, produced by `yarn build:host`. */
 export const DEFAULT_HOST_BIN = path.join(
@@ -52,14 +66,12 @@ export function getHostBin(): string {
   const fromEnv = process.env[HOST_BIN_ENV];
   if (fromEnv != null && fromEnv !== '') {
     if (!fs.existsSync(fromEnv)) {
-      throw new HostError(`${HOST_BIN_ENV} points to a missing file: ${fromEnv}`);
+      throw new HostError('HOST_MISSING', `${HOST_BIN_ENV} points to a missing file: ${fromEnv}`, undefined, BUILD_HINT);
     }
     return fromEnv;
   }
   if (!fs.existsSync(DEFAULT_HOST_BIN)) {
-    throw new HostError(
-      `Host binary not found at ${DEFAULT_HOST_BIN}. Run \`yarn build:host\`, or set ${HOST_BIN_ENV} to the path of a host binary.`,
-    );
+    throw new HostError('HOST_MISSING', `Host binary not found at ${DEFAULT_HOST_BIN}`, undefined, BUILD_HINT);
   }
   return DEFAULT_HOST_BIN;
 }
@@ -131,9 +143,12 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     } else if (parsed?.type === ERROR_TYPE && 'error' in parsed) {
       jsError = parsed.error as {message: string; stack?: string};
     } else if (parsed?.type === 'console-log') {
-      // console.error/warn from the app are always shown; info only if verbose.
       const {level, message} = parsed as {level: string; message: string};
-      if (options.verbose || level === 'error' || level === 'warn') {
+      const entry = logEntry(level, message);
+      options.logs?.push(entry);
+      // Unless quiet: errors and warnings that are not known noise, or
+      // everything with --verbose.
+      if (options.verbose || (!options.quiet && !entry.known && (level === 'error' || level === 'warn'))) {
         process.stderr.write(`[console.${level}] ${message}\n`);
       }
     } else if (options.verbose) {
@@ -153,23 +168,23 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   const stderr = Buffer.concat(stderrChunks).toString('utf8');
 
   if (jsError) {
-    throw new HostError(`Render failed in JS: ${jsError.message}`, {
+    throw new HostError('APP_THREW', `Render failed in JS: ${jsError.message}`, {
       stack: jsError.stack,
-      stderr,
       exitCode,
     });
   }
   if (exitCode !== 0) {
     throw new HostError(
+      'HOST_CRASHED',
       `Host exited with ${signal ? `signal ${signal}` : `code ${exitCode}`}`,
       {stderr, exitCode},
     );
   }
   if (!result) {
-    throw new HostError(
-      'Host exited without printing a rn-a11y-tree result',
-      {stderr, exitCode},
-    );
+    throw new HostError('HOST_CRASHED', 'Host exited without printing a rn-a11y-tree result', {
+      stderr,
+      exitCode,
+    });
   }
   return result;
 }
