@@ -72,19 +72,6 @@ export function hostCapabilities(preset: Preset): string[] {
   return result.capabilities;
 }
 
-/**
- * iOS-named TextInput/Switch shadow nodes (`iosInputs` capability). Without
- * them, `--platform ios` bundles render those components as 0-size interop
- * nodes, so their assertions are skipped with this reason.
- */
-export const IOS_INPUTS = 'iosInputs';
-export const NO_IOS_INPUTS = 'host lacks iOS TextInput/Switch';
-
-/** False when the inputs are real for this preset, else the skip reason. */
-export function inputsSkip(preset: Preset): string | false {
-  return isIOS(preset) && !hostCapabilities(preset).includes(IOS_INPUTS) ? NO_IOS_INPUTS : false;
-}
-
 export function findAll(node: TreeNode, pred: (n: TreeNode) => boolean): TreeNode[] {
   const out = pred(node) ? [node] : [];
   for (const child of node.children) out.push(...findAll(child, pred));

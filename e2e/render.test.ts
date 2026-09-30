@@ -3,12 +3,12 @@ import path from 'node:path';
 import {test} from 'node:test';
 
 import type {RenderResult} from '../src/schema.ts';
-import {cli, cliJson, E2E_PRESETS, findAll, get, hostSkip, inputsSkip, isIOS, ROOT} from './helpers.ts';
+import {cli, cliJson, E2E_PRESETS, findAll, get, hostSkip, isIOS, ROOT} from './helpers.ts';
 
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 
 for (const preset of E2E_PRESETS) {
-  test(`[${preset.name}] render examples/basic/App.tsx`, {skip: hostSkip, timeout: 180_000}, t => {
+  test(`[${preset.name}] render examples/basic/App.tsx`, {skip: hostSkip, timeout: 180_000}, () => {
     const result = cliJson<RenderResult>(['render', APP], preset);
     const {width, height} = preset;
     assert.deepEqual(result.viewport, {width, height});
@@ -34,8 +34,8 @@ for (const preset of E2E_PRESETS) {
       assert.ok(text.box.height > 10, `Paragraph "${text.text}" has height ${text.box.height}`);
     }
 
-    // TextInput and Switch: the platform's own components. Roles and names
-    // come from the JS props on both platforms.
+    // TextInput and Switch: the platform's own components (AndroidTextInput /
+    // AndroidSwitch, TextInput / Switch). Roles and names come from the JS props.
     const email = get(result.root, 'email');
     const remember = get(result.root, 'remember');
     assert.equal(email.type, isIOS(preset) ? 'TextInput' : 'AndroidTextInput');
@@ -44,14 +44,10 @@ for (const preset of E2E_PRESETS) {
     assert.equal(remember.role, 'switch');
     assert.equal(remember.name, 'Remember me');
     assert.equal(remember.a11y.state?.checked, true);
-    const skipInputs = inputsSkip(preset);
-    if (skipInputs) {
-      t.diagnostic(`TextInput/Switch sizes and placeholder not checked: ${skipInputs}`);
-    } else {
-      assert.ok(email.box.height > 18, `email has height ${email.box.height}`);
-      assert.equal(email.style.placeholder, 'Email');
-      assert.deepEqual([remember.box.width, remember.box.height], [51, 31]);
-    }
+    // Both platforms measure TextInput with CoreText; the Switch is 51x31.
+    assert.equal(email.box.height, 36.333);
+    assert.equal(email.style.placeholder, 'Email');
+    assert.deepEqual([remember.box.width, remember.box.height], [51, 31]);
 
     // Agent formats on the real host.
     const text = cli(['render', APP, '--format', 'text', '--select', 'role=button'], preset);

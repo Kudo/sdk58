@@ -861,8 +861,8 @@ Base: `getDefaultConfig(projectRoot)` from `expo/metro-config`. Overrides:
   components (`Switch`, `TextInput`) and iOS-only core native modules
   (`KeyboardObserver`, `LinkingManager`; JS stand-ins in
   `runtime/turboModuleStubs.js`). Every example renders and runs with
-  `--preset ios-phone` (the e2e suites run under it). Hosts without the
-  `iosInputs` capability render TextInput and Switch as 0-size nodes.
+  `--preset ios-phone` (the e2e suites run under it). The host registers
+  ReactCommon's iOS `TextInput` (CoreText measured) and a 51x31 `Switch`.
 - `a11ytree`: out-of-tree platform mode. Files named `.a11ytree.*` are used
   when they exist; all other platform files resolve as `android`.
 

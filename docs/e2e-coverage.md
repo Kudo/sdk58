@@ -12,9 +12,9 @@ them in the table. Unit and CLI tests against a fake host are in `test/`
 
 | Test | Example | `--preset` | Per-preset differences |
 | --- | --- | --- | --- |
-| `e2e/render.test.ts` | basic | android-phone, ios-phone (+ one android-tablet line) | viewport 412x915 / 393x852; `email` `AndroidTextInput` / `TextInput`, `remember` `AndroidSwitch` / `Switch`; iOS input sizes need `iosInputs` |
-| `e2e/run.test.ts` | basic | android-phone, ios-phone | iOS typing needs `iosInputs` |
-| `e2e/check.test.ts` | basic | android-phone, ios-phone | iOS email/remember touch targets need `iosInputs` |
+| `e2e/render.test.ts` | basic | android-phone, ios-phone (+ one android-tablet line) | viewport 412x915 / 393x852; `email` `AndroidTextInput` / `TextInput`, `remember` `AndroidSwitch` / `Switch` (same sizes: 36.333 high, 51x31) |
+| `e2e/run.test.ts` | basic | android-phone, ios-phone | none |
+| `e2e/check.test.ts` | basic | android-phone, ios-phone | none (same violations) |
 | `e2e/schema.test.ts` | every example | android-phone, ios-phone | none |
 | `e2e/session.test.ts` | basic | android-phone, ios-phone | ready tree width = preset width |
 | `e2e/scrolling.test.ts` | scrolling | android-phone, ios-phone | none |
@@ -23,11 +23,6 @@ them in the table. Unit and CLI tests against a fake host are in `test/`
 | `e2e/reanimated.test.ts` | reanimated | android-phone, ios-phone | none |
 | `e2e/expo-ui.test.ts` | expo-ui | android-phone (App.tsx Compose + SwiftUIScreen.tsx), ios-phone (App.tsx SwiftUI) | Compose screen on android, SwiftUI screen on ios |
 | `e2e/package.test.ts` | basic (scratch project) | android-phone | none |
-
-`iosInputs`: the host capability for iOS-named TextInput/Switch shadow nodes.
-Without it, `--platform ios` bundles get 0-size interop nodes for them, and
-the assertions on their sizes, typing and touch targets are skipped with
-"host lacks iOS TextInput/Switch".
 
 ## `e2e/render.test.ts` — `examples/basic/App.tsx`, `render`
 
@@ -38,8 +33,8 @@ the assertions on their sizes, typing and touch targets are skipped with
   - the container View has children (full hierarchy, no view flattening);
   - `submit` has `role === 'button'` (from the ARIA `role` prop) and a Paragraph child;
   - every Paragraph box is taller than 10 (CoreText measurement);
-  - `email` (TextInput, type `AndroidTextInput` / `TextInput`): role `textbox`; with real inputs: height > 18, `style.placeholder === 'Email'`;
-  - `remember` (Switch, type `AndroidSwitch` / `Switch`): role `switch`, name "Remember me", `a11y.state.checked === true`; with real inputs: box 51x31.
+  - `email` (TextInput, type `AndroidTextInput` / `TextInput`): role `textbox`, height 36.333, `style.placeholder === 'Email'`;
+  - `remember` (Switch, type `AndroidSwitch` / `Switch`): role `switch`, name "Remember me", `a11y.state.checked === true`, box 51x31.
 - `render --format text --select role=button` prints exactly one line: `submit View #submit role=button "Submit" {24,…,<width - 48>x48}`.
 - `render --preset android-tablet` (no `--platform`) gives the same line with width 752 (800 - 2 x 24).
 
@@ -48,10 +43,9 @@ the assertions on their sizes, typing and touch targets are skipped with
 Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 
 - Steps are `type, tap, tap, snapshot`; no step has an error or warnings; every non-snapshot step has a `hit`.
-- Without `iosInputs` (ios-phone): the `type` step and the `email`/`echo` assertions are skipped; the Switch tap and Submit still count.
 - Snapshot `after-submit` exists.
 - `status` shows "Submitted" (Pressable `onPress` fired).
-- `email.text === 'a@b.c'` when the host reflects typed text (`setTextInputTextByTag`).
+- No JS fallbacks; `email.text === 'a@b.c'` (`setTextInputTextByTag`).
 - `echo` shows "a@b.c" (`onChangeText` fired).
 - `remember` `a11y.state.checked === false` (the Switch toggled from on).
 - `run --diff`: the `type` step adds `echo` and changes `email.text` to "a@b.c"; the Switch tap changes only `remember` (`state: {checked: false}`); the Submit tap adds `status`.
@@ -60,7 +54,6 @@ Actions: type "a@b.c" into `email`, tap `remember`, tap `submit`, snapshot.
 
 - `--rules examples/basic/rules-fail.json`: exit code 2, `ok: false`. The violations are exactly: touchTarget `email` height (36.3), touchTarget `remember` height (31), tokens `submit` backgroundColor (#1e6fff is not a token), contrast `submit/Paragraph:1` (4.4, #ffffff on #1e6fff, `bgFrom: "host"`).
 - `email` passes `names` through its placeholder ("Email", `from: "placeholder"`).
-- Without `iosInputs` (ios-phone): only the non-input violations (tokens, contrast) are compared, and the `--script` check is skipped (its `type` step fails).
 - `--rules examples/basic/rules-pass.json`: exit code 0, `ok: true`, no violations.
 - `--rules rules-pass.json --script actions.json --format text`: exit code 0; the final tree (with `echo` and `status`) passes.
 
