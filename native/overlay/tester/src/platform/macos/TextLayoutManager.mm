@@ -21,6 +21,10 @@
 #include <react/renderer/textlayoutmanager/TextLayoutManager.h>
 #include <react/renderer/textlayoutmanager/TextMeasurementRounding.h>
 
+#if FANTOM_WITH_EMBEDDED_FONTS
+#include "EmbeddedFonts.h"
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -345,6 +349,13 @@ CGFloat effectiveFontSizeMultiplier(const TextAttributes &textAttributes)
 
 NSFont *effectiveFont(const TextAttributes &textAttributes)
 {
+#if FANTOM_WITH_EMBEDDED_FONTS
+  // Roboto (native/fonts/roboto) for `fontFamily: "Roboto"`, as on Android. Registered on first
+  // use: inflating and registering the faces takes about 6 ms.
+  if (textAttributes.fontFamily.rfind("Roboto", 0) == 0) {
+    registerEmbeddedFonts();
+  }
+#endif
   FontProperties properties;
   properties.family = [NSString stringWithUTF8String:textAttributes.fontFamily.c_str()];
   properties.size = textAttributes.fontSize;

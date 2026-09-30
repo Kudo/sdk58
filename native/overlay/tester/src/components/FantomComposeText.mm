@@ -1,39 +1,51 @@
-// See RobotoTextMeasurer.h.
-//
-// Widths and line counts only; the engine computes paragraph heights from the line count and
-// composeFontHeight (ascent + descent). Observed with compose-ref: the width is the advance sum
-// with kerning, plus letterSpacing after every glyph (CoreText tracking does the same).
+/*
+ * See FantomComposeText.h.
+ *
+ * Widths and line counts only; the Compose engine computes paragraph heights
+ * from the line count and composeFontHeight (ascent + descent). Observed with
+ * compose-ref (Skia): the width is the advance sum with kerning, plus the
+ * letter spacing after every glyph, which is what CoreText tracking does
+ * (kCTKernAttributeName = 0 would turn the font's kerning off).
+ */
+
+#include "FantomComposeText.h"
 
 #import <CoreText/CoreText.h>
 #import <Foundation/Foundation.h>
 
-#include "RobotoTextMeasurer.h"
-
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <mutex>
 #include <vector>
 
-namespace expoui::compose {
+#include "platform/macos/EmbeddedFonts.h"
+
+namespace facebook::react {
 
 namespace {
 
-std::string postScriptName(int weight, bool italic) {
-  // Font matching over the Roboto faces (CSS order: lighter first below 400, heavier above 500).
-  const char* face = weight <= 200   ? "Thin"
-                     : weight <= 300 ? "Light"
-                     : weight <= 400 ? "Regular"
-                     : weight <= 500 ? "Medium"
-                     : weight <= 700 ? "Bold"
-                                     : "Black";
-  std::string name = std::string("Roboto-") + face;
+using expoui::compose::ResolvedTextStyle;
+
+/// The embedded faces are Regular, Medium, Bold and Italic (native/fonts/roboto). Font matching
+/// as in CSS: below 400 lighter first, else heavier first; italic has one weight.
+std::string postScriptName(int weight, bool italic)
+{
   if (italic) {
-    name = std::string(face) == "Regular" ? "Roboto-Italic" : name + "Italic";
+    return "Roboto-Italic";
   }
-  return name;
+  if (weight <= 450) {
+    return "Roboto-Regular";
+  }
+  if (weight <= 500) {
+    return "Roboto-Medium";
+  }
+  return "Roboto-Bold";
 }
 
-CTFontRef font(const ResolvedTextStyle& style) {
+CTFontRef font(const ResolvedTextStyle &style)
+{
+  static std::mutex mutex;
   static std::map<std::pair<std::string, float>, CTFontRef> cache;
   std::string name;
   if (style.fontFamily == "serif") {
@@ -45,6 +57,7 @@ CTFontRef font(const ResolvedTextStyle& style) {
   } else {
     name = postScriptName(style.fontWeight, style.italic);
   }
+  std::lock_guard<std::mutex> lock(mutex);
   auto key = std::make_pair(name, style.fontSizePx);
   auto it = cache.find(key);
   if (it != cache.end()) {
@@ -57,18 +70,18 @@ CTFontRef font(const ResolvedTextStyle& style) {
   return f;
 }
 
-CFAttributedStringRef attributed(const std::string& text, const ResolvedTextStyle& style) {
+CFAttributedStringRef attributed(const std::string &text, const ResolvedTextStyle &style)
+{
   CFStringRef s = CFStringCreateWithCString(nullptr, text.c_str(), kCFStringEncodingUTF8);
-  if (!s) {
+  if (s == nullptr) {
     s = CFSTR("");
   }
-  // Letter spacing as tracking: kCTKernAttributeName = 0 would turn the font's kerning off.
   CGFloat tracking = style.letterSpacingPx;
   CFNumberRef trackingNumber = CFNumberCreate(nullptr, kCFNumberCGFloatType, &tracking);
-  const void* keys[] = {kCTFontAttributeName, kCTTrackingAttributeName};
-  const void* values[] = {font(style), trackingNumber};
-  CFDictionaryRef attrs = CFDictionaryCreate(nullptr, keys, values, tracking != 0 ? 2 : 1,
-                                             &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+  const void *keys[] = {kCTFontAttributeName, kCTTrackingAttributeName};
+  const void *values[] = {font(style), trackingNumber};
+  CFDictionaryRef attrs = CFDictionaryCreate(
+      nullptr, keys, values, tracking != 0 ? 2 : 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
   CFAttributedStringRef a = CFAttributedStringCreate(nullptr, s, attrs);
   CFRelease(attrs);
   CFRelease(trackingNumber);
@@ -76,7 +89,8 @@ CFAttributedStringRef attributed(const std::string& text, const ResolvedTextStyl
   return a;
 }
 
-float lineWidth(const std::string& text, const ResolvedTextStyle& style) {
+float lineWidth(const std::string &text, const ResolvedTextStyle &style)
+{
   if (text.empty()) {
     return 0;
   }
@@ -88,7 +102,8 @@ float lineWidth(const std::string& text, const ResolvedTextStyle& style) {
   return static_cast<float>(w);
 }
 
-std::vector<std::string> split(const std::string& text, char sep) {
+std::vector<std::string> split(const std::string &text, char sep)
+{
   std::vector<std::string> out;
   size_t start = 0;
   while (true) {
@@ -101,10 +116,18 @@ std::vector<std::string> split(const std::string& text, char sep) {
   }
 }
 
-ResolvedTextStyle fromFontSpec(const layout::FontSpec& spec) {
+ResolvedTextStyle fromFontSpec(const expoui::layout::FontSpec &spec)
+{
   static const std::map<std::string, int> weights = {
-      {"thin", 100}, {"ultraLight", 200}, {"light", 300},  {"regular", 400}, {"medium", 500},
-      {"semibold", 600}, {"bold", 700},   {"heavy", 800}, {"black", 900},
+      {"thin", 100},
+      {"ultraLight", 200},
+      {"light", 300},
+      {"regular", 400},
+      {"medium", 500},
+      {"semibold", 600},
+      {"bold", 700},
+      {"heavy", 800},
+      {"black", 900},
   };
   ResolvedTextStyle style;
   style.fontSizePx = static_cast<float>(spec.pointSize);
@@ -120,35 +143,19 @@ ResolvedTextStyle fromFontSpec(const layout::FontSpec& spec) {
   return style;
 }
 
-}  // namespace
+} // namespace
 
-bool RobotoTextMeasurer::registerFonts(const std::string& fontsDir) {
-  NSString* dir = [NSString stringWithUTF8String:fontsDir.c_str()];
-  NSArray<NSString*>* files = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:dir error:nil];
-  int count = 0;
-  for (NSString* file in files) {
-    if (![file hasPrefix:@"Roboto-"] || ![file hasSuffix:@".ttf"]) {
-      continue;
-    }
-    NSURL* url = [NSURL fileURLWithPath:[dir stringByAppendingPathComponent:file]];
-    CFErrorRef error = nullptr;
-    if (CTFontManagerRegisterFontsForURL((__bridge CFURLRef)url, kCTFontManagerScopeProcess, &error)) {
-      count++;
-    } else if (error) {
-      // Already registered is fine.
-      CFRelease(error);
-      count++;
-    }
-  }
-  return count > 0;
-}
+FantomComposeTextMeasurer::FantomComposeTextMeasurer() : hasRoboto_(registerEmbeddedFonts() > 0) {}
 
-layout::TextMeasurement RobotoTextMeasurer::measureComposeText(const std::string& text, const ResolvedTextStyle& style,
-                                                               double maxWidth, int maxLines) {
-  layout::TextMeasurement m;
+expoui::layout::TextMeasurement FantomComposeTextMeasurer::measureComposeText(
+    const std::string &text,
+    const ResolvedTextStyle &style,
+    double maxWidth,
+    int maxLines)
+{
   int lines = 0;
   float widest = 0;
-  for (const auto& paragraph : split(text, '\n')) {
+  for (const auto &paragraph : split(text, '\n')) {
     if (paragraph.empty() || std::isinf(maxWidth)) {
       widest = std::max(widest, lineWidth(paragraph, style));
       lines++;
@@ -176,6 +183,7 @@ layout::TextMeasurement RobotoTextMeasurer::measureComposeText(const std::string
   if (maxLines > 0) {
     lines = std::min(lines, maxLines);
   }
+  expoui::layout::TextMeasurement m;
   m.lines = std::max(lines, 1);
   m.width = widest;
   CTFontRef f = font(style);
@@ -184,22 +192,29 @@ layout::TextMeasurement RobotoTextMeasurer::measureComposeText(const std::string
   return m;
 }
 
-double RobotoTextMeasurer::composeFontHeight(const ResolvedTextStyle& style) {
+double FantomComposeTextMeasurer::composeFontHeight(const ResolvedTextStyle &style)
+{
   CTFontRef f = font(style);
   return CTFontGetAscent(f) + CTFontGetDescent(f);
 }
 
-layout::TextMeasurement RobotoTextMeasurer::measureText(const std::string& text, const layout::FontSpec& spec,
-                                                        double maxWidth, int maxLines) {
+expoui::layout::TextMeasurement FantomComposeTextMeasurer::measureText(
+    const std::string &text,
+    const expoui::layout::FontSpec &spec,
+    double maxWidth,
+    int maxLines)
+{
   return measureComposeText(text, fromFontSpec(spec), maxWidth, maxLines);
 }
 
-double RobotoTextMeasurer::lineHeight(const layout::FontSpec& spec) {
+double FantomComposeTextMeasurer::lineHeight(const expoui::layout::FontSpec &spec)
+{
   return composeFontHeight(fromFontSpec(spec));
 }
 
-layout::Size RobotoTextMeasurer::measureSymbol(const std::string&, const layout::FontSpec&) {
+expoui::layout::Size FantomComposeTextMeasurer::measureSymbol(const std::string &, const expoui::layout::FontSpec &)
+{
   return {};
 }
 
-}  // namespace expoui::compose
+} // namespace facebook::react

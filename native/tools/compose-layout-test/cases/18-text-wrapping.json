@@ -100,9 +100,8 @@
    {
     "type": "Text",
     "props": {
-     "text": "italic medium",
-     "fontStyle": "italic",
-     "fontWeight": "500"
+     "text": "italic",
+     "fontStyle": "italic"
     }
    },
    {

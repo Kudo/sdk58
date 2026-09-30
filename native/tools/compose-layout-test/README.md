@@ -12,9 +12,14 @@ node compare.mjs --tolerance 0 --densities 1,2.75,2.625,3.5 -v 17-rtl
 ```
 
 `build/compose-layout` has compose-ref's interface (`--density`,
-`--font-scale`, `--no-touch-target`, `--fonts DIR`; JSON on stdin, the same
-output JSON), plus `--shared-measurer` (see Text below). It links the SwiftUI
-engine's `layout/Layout.cpp` for the shared types. `compare.mjs` runs both tools on
+`--font-scale`, `--no-touch-target`; JSON on stdin, the same output JSON), plus
+`--shared-measurer` (see Text below). It is built from the host's own files:
+the engine, the SwiftUI engine's `layout/Layout.cpp` (shared types), the host
+text adapter `tester/src/components/FantomComposeText.mm` and the embedded
+Roboto (`native/fonts/roboto`, generated with `tester/cmake/embed-files.cmake`,
+registered by `tester/src/platform/macos/EmbeddedFonts.mm`). So the comparison
+also checks the host's text path. compose-ref still reads its own Roboto from
+`../compose-ref/fonts` (`fetch-fonts.sh`, all 12 faces). `compare.mjs` runs both tools on
 `../compose-ref/examples/*.json` and `cases/*.json`, compares `host`, every
 node's `frame` and `contentFrame` in px, the node set and the `unsupported`
 keys. compose-ref takes about 2.7 s per run, so its results are cached in
@@ -73,10 +78,9 @@ integer px:
 - `ControlMetrics` holds the Material 3 sizes; `TextMeasurer` is the text
   interface; `materialTypography` has the CMP material3 1.10 type scale.
 
-`RobotoTextMeasurer.mm` is the test measurer (both interfaces): CoreText with
-the Roboto files from `compose-ref/fonts` (registered with
-`CTFontManagerRegisterFontsForURL`). Observed rules, in the engine, that make
-it equal to Skia: line height `round(ascent + descent)` per line; with a `lineHeight` and `LineHeightStyle.Trim.Both` (the
+`FantomComposeText.mm` is the measurer (both interfaces): CoreText with the
+embedded Roboto Regular, Medium, Bold and Italic. Observed rules, in the engine,
+that make it equal to Skia: line height `round(ascent + descent)` per line; with a `lineHeight` and `LineHeightStyle.Trim.Both` (the
 `TextStyle.Default`): `(lines - 1) * lineHeight + ascent + descent`; with the
 Material typography (Trim.None): `lines * lineHeight`. In the measurer: letter
 spacing as `kCTTrackingAttributeName` (`kCTKernAttributeName = 0` would turn off the
@@ -123,6 +127,11 @@ titleMedium tracking 0.2 sp). The text line-height rules are observed, not
 from source.
 
 Not modeled (the engine reports them in `unsupported` or ignores them):
+
+- Roboto faces other than Regular, Medium, Bold and Italic are not embedded:
+  weight 100-300 uses Regular, 600-900 Bold, and every italic uses Italic
+  (Android has all faces). Italic Medium is 1-2 px narrower than compose-ref at
+  14 sp; `18-text-wrapping` therefore uses plain italic.
 
 - TextField slots other than `label` and `placeholder` (leading / trailing
   icons, prefix, suffix, supporting text), the focused state, `textFieldMinSize`

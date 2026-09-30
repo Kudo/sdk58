@@ -1,6 +1,8 @@
 // compose-layout: the C++ Compose engine as a CLI with compose-ref's interface.
 //
-//   build/compose-layout [--density N] [--font-scale N] [--no-touch-target] [--fonts DIR] < input.json
+//   build/compose-layout [--density N] [--font-scale N] [--no-touch-target] [--shared-measurer] < input.json
+//
+// Text goes through the host adapter (FantomComposeText.mm) with the embedded Roboto.
 
 #import <Foundation/Foundation.h>
 
@@ -8,8 +10,8 @@
 #include <iterator>
 #include <string>
 
-#include "ComposeLayout.h"
-#include "RobotoTextMeasurer.h"
+#include "expoui/compose/ComposeLayout.h"
+#include "components/FantomComposeText.h"
 
 using namespace expoui;
 
@@ -38,8 +40,6 @@ class SharedOnly : public layout::TextMeasurer {
 int main(int argc, char** argv) {
   @autoreleasepool {
     compose::ControlMetrics metrics;
-    std::string exe = [[[NSBundle mainBundle] executablePath] UTF8String];
-    std::string fonts = exe.substr(0, exe.rfind('/')) + "/../../compose-ref/fonts";
     bool sharedOnly = false;
     for (int i = 1; i < argc; i++) {
       std::string arg = argv[i];
@@ -58,21 +58,19 @@ int main(int argc, char** argv) {
         metrics.touchTarget = false;
       } else if (arg == "--shared-measurer") {
         sharedOnly = true;
-      } else if (arg == "--fonts") {
-        fonts = value();
       } else {
         std::cerr << "compose-layout: unknown argument " << arg << "\n";
         return 1;
       }
     }
-    if (!compose::RobotoTextMeasurer::registerFonts(fonts)) {
-      std::cerr << "compose-layout: no Roboto-*.ttf in " << fonts << " (run compose-ref/fetch-fonts.sh)\n";
-      return 1;
-    }
     std::string input((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
     try {
       layout::Value json = layout::Value::parse(input);
-      compose::RobotoTextMeasurer roboto;
+      facebook::react::FantomComposeTextMeasurer roboto;
+      if (!roboto.hasRoboto()) {
+        std::cerr << "compose-layout: the embedded Roboto did not register\n";
+        return 1;
+      }
       SharedOnly shared(roboto);
       layout::TextMeasurer& text = sharedOnly ? static_cast<layout::TextMeasurer&>(shared) : roboto;
       layout::LayoutResult result = compose::layout(layout::HostSpec::fromValue(json["host"]),
