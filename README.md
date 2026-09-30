@@ -516,7 +516,10 @@ Rules:
   methods: events: js, hitTest: js, scrollOffset: dom`. The payload also
   lists them in `fallbacks`. Host methods are always used when present.
 - After the initial render and after every step, queued native events are
-  delivered (`flushEventQueue` + work loop) until the tree stops changing.
+  delivered (`flushEventQueue` + work loop) until the host's shadow tree and
+  mounted revisions (`getShadowTreeRevision` / `getMountedRevision`) stop
+  changing (at most 10 rounds; hosts without them: until the tree dump stops
+  changing).
   Fabric emits `onLayout` into the event queue from a commit hook; without
   this, `onLayout` never reaches JS and FlatList cannot compute its window.
   This also applies to `render`.
