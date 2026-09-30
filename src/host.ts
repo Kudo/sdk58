@@ -6,6 +6,7 @@ import readline from 'node:readline';
 import {fileURLToPath} from 'node:url';
 
 import {CliError, type ErrorCode, type LogEntry, logEntry} from './errors.ts';
+import {BASE_URL_ENV, downloadHost} from './hostDownload.ts';
 import type {HostPayload} from './schema.ts';
 
 export const HOST_BIN_ENV = 'RN_A11Y_HOST_BIN';
@@ -50,7 +51,8 @@ export class HostError extends CliError {
   }
 }
 
-const BUILD_HINT = 'Run `yarn build:host`, or set RN_A11Y_HOST_BIN to the path of a host binary.';
+const BUILD_HINT =
+  'Run `yarn build:host`, set RN_A11Y_HOST_BIN to the path of a host binary, or set RN_A11Y_HOST_BASE_URL to download a prebuilt host.';
 
 /** `native/dist/<arch>/rn-a11y-host`, produced by `yarn build:host`. */
 export const DEFAULT_HOST_BIN = path.join(
@@ -62,7 +64,39 @@ export const DEFAULT_HOST_BIN = path.join(
   'rn-a11y-host',
 );
 
+/** Set by ensureHost(). */
+let resolvedHostBin: string | null = null;
+
+/**
+ * Finds the host binary: RN_A11Y_HOST_BIN, then (with RN_A11Y_HOST_BASE_URL)
+ * the prebuilt host for host-version.json, downloaded once into
+ * ~/.cache/rn-a11y-tree/host/<version>/, then native/dist. Call before
+ * getHostBin() / runHost().
+ */
+export async function ensureHost(options: {quiet?: boolean} = {}): Promise<string> {
+  const log = (line: string) => {
+    if (!options.quiet) process.stderr.write(line + '\n');
+  };
+  const fromEnv = process.env[HOST_BIN_ENV];
+  const baseUrl = process.env[BASE_URL_ENV];
+  if ((fromEnv == null || fromEnv === '') && baseUrl) {
+    try {
+      resolvedHostBin = await downloadHost({baseUrl, log});
+      return resolvedHostBin;
+    } catch (error) {
+      const reason = (error as Error).message;
+      if (!fs.existsSync(DEFAULT_HOST_BIN)) {
+        throw new HostError('HOST_MISSING', `Prebuilt host download failed: ${reason}`, undefined, BUILD_HINT);
+      }
+      log(`rn-a11y-tree: warning: prebuilt host download failed (${reason}); using ${DEFAULT_HOST_BIN}`);
+    }
+  }
+  resolvedHostBin = getHostBin();
+  return resolvedHostBin;
+}
+
 export function getHostBin(): string {
+  if (resolvedHostBin != null) return resolvedHostBin;
   const fromEnv = process.env[HOST_BIN_ENV];
   if (fromEnv != null && fromEnv !== '') {
     if (!fs.existsSync(fromEnv)) {

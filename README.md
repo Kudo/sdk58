@@ -40,11 +40,12 @@ git clone --recurse-submodules --shallow-submodules <this repo>
 yarn install
 yarn build:host        # builds native/dist/<arch>/rn-a11y-host
 yarn rn-a11y-tree render examples/basic/App.tsx --platform android
-yarn check             # tsc --noEmit && yarn test && yarn test:e2e
+yarn check             # tsc --noEmit, yarn schema --check, yarn test, yarn test:e2e
 ```
 
 The CLI uses `native/dist/<arch>/rn-a11y-host`. Set `RN_A11Y_HOST_BIN` to use
-another host binary.
+another host binary, or `RN_A11Y_HOST_BASE_URL` to download a prebuilt host
+(see [Prebuilt host](#prebuilt-host)).
 
 ## CLI reference
 
@@ -769,9 +770,54 @@ From Fantom's `tester/src` (`main.cpp`, `AppSettings.cpp`,
    `@executable_path/lib` (binary) and `@loader_path` (dylibs), and the files
    are ad-hoc signed again. The folder can be moved.
 
-Known limitation: the binary links Homebrew OpenSSL by absolute path
-(`/opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib`), so the machine needs
-`brew install openssl@3`.
+With the default static host (Hermes, JSI and libcrypto linked in), the
+binary links only system libraries (`otool -L`: libobjc, CoreFoundation,
+AppKit, CoreText, Foundation, libc++, libSystem).
+
+### Prebuilt host
+
+`node scripts/release-host.mjs [--out dist/release] [--pin]` packages
+`native/dist/<arch>/rn-a11y-host`:
+
+- `rn-a11y-host-<version>-<platform>-<arch>.tar.gz` (the binary and
+  `host-version.json`), and its `.sha256`;
+- `host-version.json`: `version`, `reactNative`, `submoduleCommit`,
+  `overlayHash` (sha256 over every file in `native/overlay`, which is what
+  `build-host.sh` copies), `overlayDirty` (uncommitted overlay changes),
+  `nativeLibs` (versions of the npm packages compiled in, plus
+  `hermes-compiler`), `repoCommit`, and `assets: {"<platform>-<arch>":
+  {file, sha256, size}}`. `version` is `<react-native
+  version>-<12 hex of sha256(submodule commit, overlay hash, native libs)>`.
+  A second run for another arch into the same directory adds its asset.
+- `--pin` also writes `host-version.json` to the repo root. That is the
+  host the CLI downloads.
+
+The script warns when `native/overlay` has uncommitted changes or files
+newer than the binary.
+
+The CLI looks for the host in this order:
+
+1. `RN_A11Y_HOST_BIN`.
+2. With `RN_A11Y_HOST_BASE_URL` set: `~/.cache/rn-a11y-tree/host/<version>/rn-a11y-host`
+   (`RN_A11Y_HOST_CACHE_DIR`, else `$XDG_CACHE_HOME/rn-a11y-tree/host`)
+   when its `.sha256` marker matches the manifest. Else it downloads
+   `<base>/<file>` (`https://` or `file://`), checks the sha256 against the
+   manifest, unpacks it and writes the marker. The manifest is
+   `host-version.json` in the package root, or `RN_A11Y_HOST_MANIFEST`.
+3. `native/dist/<arch>/rn-a11y-host`. If the download failed, the CLI
+   prints a warning (unless `--quiet`) and uses this file.
+4. Else `HOST_MISSING` (exit 5), with the download error when there was one.
+
+The download adds about 200 ms to the first run (3.7 MB tarball from
+`file://`, Release host); later runs use the cache.
+
+`.github/workflows/release-host.yml` runs on tags `v*`. It builds the host,
+runs the tests, packages the host, renders `examples/basic` with the
+packaged host downloaded from `file://`, and uploads the files to the
+GitHub release of the tag. Use them with
+`RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>`
+and that release's `host-version.json` (commit it to the repo root, or set
+`RN_A11Y_HOST_MANIFEST`).
 
 `third_party/react-native` is React Native `0.88-stable` at `6007151`
 (a shallow submodule).
@@ -804,6 +850,9 @@ cache miss it runs `yarn build:host`. Then: `yarn tsc --noEmit`,
 submodule, with the npm libraries installed there too, and run with
 `yarn fantom`, with `GITHUB_ACTIONS` unset because Fantom treats it as Meta
 CI).
+
+`.github/workflows/release-host.yml` packages and publishes the host on
+tags (see [Prebuilt host](#prebuilt-host)).
 
 ## Milestones
 

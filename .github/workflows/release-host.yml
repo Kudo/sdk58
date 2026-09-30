@@ -1,0 +1,98 @@
+name: Release host
+
+# On a tag v*: build the host, test it, package it with
+# scripts/release-host.mjs and attach the tarball, its .sha256 and
+# host-version.json to the GitHub release for the tag. The CLI downloads it
+# with RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>
+# and the host-version.json of that release (commit it to the repo root, or
+# point RN_A11Y_HOST_MANIFEST at it).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Same image and toolchain as ci.yml.
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Android SDK
+        run: |
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            brew install --cask android-commandlinetools
+            echo "ANDROID_HOME=$(brew --prefix)/share/android-commandlinetools" >> "$GITHUB_ENV"
+          fi
+
+      - name: Android SDK CMake 3.30.5
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' | head -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "cmake;3.30.5"
+
+      - name: Homebrew packages
+        run: brew install cmake ninja openssl@3
+
+      - name: Install JS dependencies
+        run: |
+          corepack enable
+          yarn install --immutable
+
+      # A clean build: no host cache for releases.
+      - name: Build host
+        run: yarn build:host
+
+      - name: Tests
+        run: |
+          yarn tsc --noEmit
+          yarn test
+          yarn test:e2e
+
+      - name: Package host
+        run: node scripts/release-host.mjs --out dist/release
+
+      - name: Test the packaged host (download from file://)
+        run: |
+          RN_A11Y_HOST_BASE_URL="file://$PWD/dist/release" \
+          RN_A11Y_HOST_MANIFEST="$PWD/dist/release/host-version.json" \
+          RN_A11Y_HOST_CACHE_DIR="$RUNNER_TEMP/host-cache" \
+          RN_A11Y_HOST_BIN= \
+            yarn rn-a11y-tree render examples/basic/App.tsx --platform android --format text --no-quiet 2> stderr.txt
+          cat stderr.txt
+          # Fails if the CLI fell back to native/dist.
+          grep -q 'downloading host' stderr.txt
+          if grep -q 'download failed' stderr.txt; then exit 1; fi
+
+      - name: Upload to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          gh release view "$tag" > /dev/null 2>&1 || gh release create "$tag" --title "$tag" --notes "Prebuilt rn-a11y-host (see host-version.json)."
+          gh release upload "$tag" dist/release/* --clobber
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rn-a11y-host-release
+          path: dist/release/

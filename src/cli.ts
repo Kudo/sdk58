@@ -8,7 +8,7 @@ import {type Format, type FormatOptions, FORMATS, formatRender, formatRun} from 
 import {type BytecodeMode, discardBytecode} from './bundleCache.ts';
 import {addStepViolations, type CheckResult, checkText, checkTree, readRulesFile, type Rules} from './check.ts';
 import {CliError, EXIT_CODES, type LogEntry, usage} from './errors.ts';
-import {getHostBin, type HostTiming, runHost} from './host.ts';
+import {ensureHost, type HostTiming, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, Step} from './schema.ts';
 import {ScriptError, validateScript} from './script.ts';
 import {DEFAULT_TIMEOUT_MS, runSession} from './session.ts';
@@ -223,8 +223,8 @@ async function execute<T>(
 ): Promise<T | undefined> {
   const platform = requirePlatform(options.platform);
   if (!options.bundleOnly) {
-    // Fail before spending time on Metro.
-    getHostBin();
+    // Fail (or download) before spending time on Metro.
+    await ensureHost({quiet: isQuiet(options)});
   }
   const metroStart = performance.now();
   const result = await bundleOrFail({
@@ -406,7 +406,7 @@ async function session(file: string, options: RunOptions) {
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
     throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
   }
-  getHostBin();
+  await ensureHost({quiet: isQuiet(options)});
   const result = await bundleOrFail({
     appPath: file,
     viewportWidth: options.width,
