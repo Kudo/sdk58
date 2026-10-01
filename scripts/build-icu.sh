@@ -103,7 +103,8 @@ if [[ "$WINDOWS" == "1" ]]; then
         --enable-static --disable-shared --with-data-packaging=static \\
         --disable-tests --disable-samples --disable-extras --disable-icuio --disable-layoutex >/dev/null \\
         || { sed -n '/C compiler version/,/^## ----------------/p' config.log | head -n 80; exit 1; }
-      make -j$(nproc) >/dev/null
+      make -j$(nproc) >make.log 2>&1 \\
+        || { grep -i -E ' error |fatal error|: error' make.log | head -n 40; tail -n 40 make.log; exit 1; }
       make install >/dev/null"
   echo "$STAMP_VALUE" >"$STAMP"
   log "done: $(ls "$PREFIX/lib"/*.lib | tr '\n' ' ')($(wc -c <"$PREFIX/lib/sicudt.lib") bytes of data)"
