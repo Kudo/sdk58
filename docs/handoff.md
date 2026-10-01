@@ -87,7 +87,10 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
   `docs/research/linux-feasibility.md` there. Packaging of all platforms:
   `release-host.ts --pack --bin <slot>=<file> | --artifacts <dir>` and
   `release-host.yml` (`host-macos`, `host-linux`, `package`, `verify-macos`,
-  `intel-check`, `publish`). Windows: spike on `ci/windows-host`.
+  `host-windows`, `verify-macos`, `verify-windows`, `intel-check`,
+  `publish`). Windows x64 host: `.github/workflows/windows-host.yml` (branch
+  `ci/windows-host`, see `native/README.md` "Windows"). All three platforms
+  are integrated on branch `ci/release-all` (not on `main` yet).
 - GitHub: the repository is temporarily public as `Kudo/sdk58` (for free
   Actions minutes; user decision 2026-10-01). Do not change `origin` or any
   URL in the repo; push with `git push https://github.com/Kudo/sdk58.git
@@ -233,7 +236,7 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 
 - Released hosts exist for macOS only (arm64 built and tested; x86_64 slice
   built, verified only on CI). Linux x64: done on `ci/linux-host` (see State),
-  not released. Windows: none.
+  not released. Windows x64: done on `ci/windows-host`, not released.
 - Text metrics are macOS CoreText with SF / embedded Roboto, not iOS/Android
   renderers. `@expo/ui` engines: SwiftUI 42/43 cases within 0.5 pt on macOS,
   41/43 on the iOS simulator; Compose 112/112 exact. Unsupported `@expo/ui`
@@ -257,6 +260,6 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
    the host with `TZ=UTC` (Hermes on Linux passes the current time-zone
    abbreviation to ICU, which does not know DST names such as `PDT`/`CEST`
    and then formats in GMT; asked the user).
-4. Windows spike (ReactCxxPlatform + folly under MSVC).
+4. Windows host: done on `ci/windows-host`; merge `ci/release-all` (all three platforms) to `main`.
 5. Later: SwiftUI symbol table growth, `lineLimit` edge cases, Reanimated
    sensors/keyboard, `check` rule additions (design tokens per project).

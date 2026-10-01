@@ -12,9 +12,14 @@ on:
     branches: [main, ci/windows-host]
   pull_request:
   workflow_dispatch:
+  # release-host.yml calls this workflow for its Windows binary (artifact
+  # rn-a11y-host-win64).
+  workflow_call:
 
 concurrency:
-  group: windows-host-${{ github.ref }}
+  # github.workflow is the caller's name when called: a release run does not
+  # cancel (or wait for) the standalone run of the same ref.
+  group: windows-host-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -143,7 +148,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: rn-a11y-host-windows-x64
+          name: rn-a11y-host-win64
           path: ${{ env.HOST_DIR }}
           if-no-files-found: error
 
@@ -186,7 +191,7 @@ jobs:
 
       - uses: actions/download-artifact@v7
         with:
-          name: rn-a11y-host-windows-x64
+          name: rn-a11y-host-win64
           path: ${{ env.HOST_DIR }}
 
       - name: Smoke render (examples/basic)

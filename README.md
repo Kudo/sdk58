@@ -1046,16 +1046,16 @@ npm package of the host, see [Install](#install)) on any OS:
   `binaries: {"<dir>/<file>": {archs, sha256, size}}` for every binary.
 
 `.github/workflows/release-host.yml` (tags `v*`; also on push to
-`ci/linux-host`, without the GitHub release): `host-macos` (universal host,
+`ci/release-all`, without the GitHub release): `host-macos` (universal host,
 tests), `host-linux` (calls `linux-host.yml`: the manylinux_2_28 build and its
-tests), then `package` (ubuntu): the tarballs of every platform and arch, `--pack
+tests), `host-windows` (calls `windows-host.yml`: the windows-2025 build and
+its tests), then `package` (ubuntu): the tarballs of every platform and arch, `--pack
 --artifacts`, `npm pack` of both packages, `scripts/verify-packages.sh` (a
 scratch project installs both tarballs and renders `examples/basic` with the
 Linux host from the package) and the `file://` download; `verify-macos` (the
-same install on macOS), `intel-check` (the x86_64 slice on an Intel runner),
-and `publish` (the GitHub release, tags only). A Windows job plugs in as one
-more job that uploads `rn-a11y-host-win64` (see the comment in the
-workflow).
+same install on macOS), `verify-windows` (the same install on windows-2025),
+`intel-check` (the x86_64 slice on an Intel runner), and `publish` (the
+GitHub release, tags only).
 
 The CLI looks for the host in this order:
 

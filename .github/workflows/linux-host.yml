@@ -11,9 +11,7 @@ name: Linux host
 #   CLI on the runner through `docker run` (smoke render and e2e).
 on:
   push:
-    # ci/windows-host: the Windows branch merges ci/linux-host and changes the
-    # shared overlay; the Linux host must keep passing there.
-    branches: [main, ci/linux-host, ci/windows-host]
+    branches: [main, ci/linux-host]
   pull_request:
   workflow_dispatch:
   # release-host.yml calls this workflow for its Linux binary (artifact

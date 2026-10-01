@@ -6,22 +6,23 @@ name: Release host
 #   rn-a11y-host-osx-slices (arm64/, x86_64/);
 # - host-linux: linux-host.yml (built in manylinux_2_28, tested on
 #   ubuntu-24.04, debian:10, ubuntu:20.04); artifact rn-a11y-host-linux64;
-# - host-windows: not yet (see the comment below);
+# - host-windows: windows-host.yml (built on windows-2025 with MSVC/clang-cl,
+#   tested there); artifact rn-a11y-host-win64;
 # - package: release tarballs per platform (release-host.ts), the
 #   rn-a11y-host package with every binary (release-host.ts --pack
 #   --artifacts), npm pack of both packages, and a scratch-project install
 #   that renders with the packaged Linux host; also the file:// download;
-# - verify-macos / intel-check: the same install on macOS, and the x86_64
-#   slice on an Intel runner;
+# - verify-macos / verify-windows / intel-check: the same install on macOS
+#   and Windows, and the x86_64 slice on an Intel runner;
 # - publish: on a tag v*, the GitHub release with every asset. The CLI
 #   downloads with RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>
 #   and the host-version.json of that release.
-# On push to ci/linux-host everything but publish runs.
+# On push to ci/release-all everything but publish runs.
 
 on:
   push:
     tags: ['v*']
-    branches: [ci/linux-host]
+    branches: [ci/release-all]
   workflow_dispatch:
 
 permissions:
@@ -108,14 +109,11 @@ jobs:
   host-linux:
     uses: ./.github/workflows/linux-host.yml
 
-  # Windows x64: when ci/windows-host lands, add a job `host-windows` that
-  # uploads its binary as the artifact rn-a11y-host-win64 (file
-  # rn-a11y-host.exe), and add it to `needs` of `package`. release-host.ts
-  # --pack --artifacts picks it up (win64-bin/rn-a11y-host.exe), and the
-  # tarball step below packs it when the artifact exists.
+  host-windows:
+    uses: ./.github/workflows/windows-host.yml
 
   package:
-    needs: [host-macos, host-linux]
+    needs: [host-macos, host-linux, host-windows]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -214,6 +212,31 @@ jobs:
       - name: Install the packages in a scratch project and render (macOS host from the package)
         run: bash scripts/verify-packages.sh release
 
+  verify-windows:
+    needs: package
+    runs-on: windows-2025
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: git config
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: release
+          path: release
+
+      - name: Install the packages in a scratch project and render (Windows host from the package)
+        run: bash scripts/verify-packages.sh release
+
   # The x86_64 slice cannot run on the arm64 runner (no Rosetta): render with
   # it on an Intel runner.
   intel-check:
@@ -249,7 +272,7 @@ jobs:
           grep -q 'submit View #submit role=button "Submit"' render.txt
 
   publish:
-    needs: [package, verify-macos, intel-check]
+    needs: [package, verify-macos, verify-windows, intel-check]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -273,7 +296,7 @@ jobs:
           # Release body: the CHANGELOG.md section of the tag's version.
           notes="$RUNNER_TEMP/release-notes.md"
           bun scripts/changelog-section.ts "$tag" > "$notes"
-          printf '\nAssets: the npm tarballs of react-native-a11y-tree and rn-a11y-host (macOS, Linux x64), and the prebuilt hosts (tar.gz + .sha256 per platform, host-version.json).\n' >> "$notes"
+          printf '\nAssets: the npm tarballs of react-native-a11y-tree and rn-a11y-host (macOS, Linux x64, Windows x64), and the prebuilt hosts (tar.gz + .sha256 per platform, host-version.json).\n' >> "$notes"
           if gh release view "$tag" > /dev/null 2>&1; then
             gh release edit "$tag" --notes-file "$notes"
           else
