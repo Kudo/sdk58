@@ -137,6 +137,11 @@ it:
   `__rctDeviceEventEmitter` (TurboModule::emitDeviceEvent), so `Dimensions`
   listeners and `useWindowDimensions()` update.
 - The safe-area `initialWindowMetrics` frame uses the same metrics.
+- `startSurface` / surface constraint updates pass the font scale as the
+  surface's `LayoutContext::fontSizeMultiplier` (`TesterAppDelegate.cpp`), so
+  text without `allowFontScaling={false}` is measured at `fontSize *
+  fontScale` (both text layouts; `maxFontSizeMultiplier` caps it). Set the
+  metrics before the surface starts: a later change does not re-measure.
 - `getCapabilities()` has `"deviceMetrics"`.
 
 `tests/FantomDeviceMetrics-itest.js`: default 390x844 scale 3 for a 390x844

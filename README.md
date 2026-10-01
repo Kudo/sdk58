@@ -110,7 +110,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--header-height <dp>` | all | preset, else 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
 | `--safe-area-insets <t,l,r,b>` | all | preset, else `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
 | `--scale <n>` | all | preset, else 3 | Device pixel ratio: `PixelRatio.get()` and the `scale` of `Dimensions` / `useWindowDimensions()` |
-| `--font-scale <n>` | all | preset (1), else 1 | `PixelRatio.getFontScale()` and `fontScale` of `Dimensions` |
+| `--font-scale <n>` | all | preset (1), else 1 | `PixelRatio.getFontScale()`, `fontScale` of `Dimensions`, and the text size multiplier (`<Text>` without `allowFontScaling={false}`) |
 | `--no-mounted` | all | mounted on | Do not read mounted-view values (`getA11yTree` `includeMountedProps`; used for `visualBox`, `effectiveOpacity`) |
 | `--timing` | all | off | Print phase timings as JSON on stderr (see [`docs/perf-analysis.md`](docs/perf-analysis.md)) |
 | `--reset-cache` | all | off | Ignore Metro's caches and the bundle cache (cold bundle) |

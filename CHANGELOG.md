@@ -34,6 +34,9 @@ share one version.
 
 ### Fixed
 
+- `--font-scale` now scales text (the surface's `fontSizeMultiplier`), as
+  the device font size does; before it only changed `PixelRatio` and
+  `Dimensions`.
 - `Dimensions` / `PixelRatio` reported 1280x720 and scale 0 under every
   preset.
 - `check`: the contrast rule skips the iOS `TextInput` like `AndroidTextInput`.
