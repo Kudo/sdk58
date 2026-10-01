@@ -14,6 +14,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'packages/react-native-a11y-tree', 'dist');
 
 fs.rmSync(DIST, {recursive: true, force: true});
+const licenses = ['commander', 'get-tsconfig', 'resolve-pkg-maps'].map(name =>
+  `/*! Bundled ${name} license:\n${fs.readFileSync(path.join(ROOT, 'node_modules', name, 'LICENSE'), 'utf8')}*/`,
+).join('\n');
 const args = [
   'build',
   path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts'),
@@ -22,7 +25,7 @@ const args = [
   '--format',
   'esm',
   '--banner',
-  `#!/usr/bin/env node\n/*! Bundled Commander.js license:\n${fs.readFileSync(path.join(ROOT, 'node_modules', 'commander', 'LICENSE'), 'utf8')}*/`,
+  `#!/usr/bin/env node\n${licenses}`,
   '--outfile',
   path.join(DIST, 'rn-a11y-tree.js'),
 ];

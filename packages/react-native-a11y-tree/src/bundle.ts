@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import type {ConfigT, InputConfigT} from 'metro-config';
 
 import {usage} from './errors.ts';
+import {loadProjectPaths, type ProjectPaths} from './tsconfigPaths.ts';
 import {
   BUNDLE_FILE,
   BYTECODE_FILE,
@@ -250,8 +251,10 @@ export function createMetroConfig(options: {
   projectRoot: string;
   workDir: string;
   platform: string;
+  projectPaths?: ProjectPaths;
 }): ConfigT {
   const {projectRoot, workDir, platform} = options;
+  const projectPaths = options.projectPaths ?? loadProjectPaths(projectRoot);
   const {getDefaultConfig} = projectRequire<{getDefaultConfig: (projectRoot: string) => ConfigT}>(
     projectRoot,
     'expo/metro-config',
@@ -296,6 +299,7 @@ export function createMetroConfig(options: {
       ...new Set(
         [
           ...(base.watchFolders ?? []),
+          ...projectPaths.watchFolders,
           projectRoot,
           RUNTIME_DIR,
           ...toolNodeModules,
@@ -329,6 +333,19 @@ export function createMetroConfig(options: {
         // react-native, flow-enums-runtime, ...) resolve from the user's
         // project first so there is a single copy of react / react-native.
         const origin = context.originModulePath;
+        // App aliases must not rewrite imports inside dependencies or our runtime.
+        if (isBareSpecifier(moduleName) && !origin.includes(`${path.sep}node_modules${path.sep}`)
+          && !isInside(origin, RUNTIME_DIR) && !isInside(origin, workDir)) {
+          for (const candidate of projectPaths.match(moduleName)) {
+            if (candidate.endsWith('.d.ts')) continue;
+            try {
+              return applyAliases(resolveForPlatform(context, candidate, requestPlatform));
+            } catch (error) {
+              // Only missing candidates allow another paths entry / normal resolution.
+              if (!(error instanceof Error) || !/^FailedToResolve(Name|Path|Unsupported)Error$/.test(error.constructor.name)) throw error;
+            }
+          }
+        }
         if (
           isBareSpecifier(moduleName) &&
           (isInside(origin, RUNTIME_DIR) || isInside(origin, workDir))
@@ -417,7 +434,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     expoPolyfill: expoPolyfillPath(projectRoot),
   });
   const root = cacheRoot(projectRoot);
-  const key = bundleKey({entry, platform, dev, minify, projectRoot});
+  const projectPaths = loadProjectPaths(projectRoot);
+  const key = bundleKey({entry, platform, dev, minify, projectRoot, resolutionConfig: projectPaths.key});
   const dir = entryDir(root, key);
 
   const result = (cache: BundleResult['cache'], jsPath: string, workDir: string | null): BundleResult => {
@@ -462,7 +480,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   const outDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-')));
   const bundlePath = path.resolve(options.out ?? path.join(outDir, 'index.bundle.js'));
 
-  const config = createMetroConfig({projectRoot, workDir: fs.realpathSync(workDir), platform});
+  const config = createMetroConfig({projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths});
   // Persistent Metro caches (transforms, file map) next to the bundle cache.
   const StoreClass = (config.cacheStores[0] as unknown as {constructor: new (o: {root: string}) => unknown})
     .constructor;

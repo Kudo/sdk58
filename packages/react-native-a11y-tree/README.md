@@ -1208,3 +1208,13 @@ from the root. To pack the CLI, run `npm pack` inside
 `packages/react-native-a11y-tree`; its prepack builds the single executable.
 Stage the optional binaries first with `bun scripts/release-host.ts --pack`
 and publish their tarballs before the CLI tarball, using the same version.
+
+### Project import aliases
+
+The renderer reads your project's `tsconfig.json` (or `jsconfig.json`) and
+resolves `compilerOptions.paths` and `baseUrl`, including JSON comments and
+`extends`. For example, `@/*: ["./src/*"]` and
+`@/assets/*: ["./assets/*"]` resolve Expo component and asset imports. The
+longest matching alias wins; Metro still selects `.ios`/`.android` variants
+and image scale variants. Aliases apply to app imports, not dependency internals.
+Changes to inherited configuration invalidate the finished bundle cache.

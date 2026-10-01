@@ -72,6 +72,7 @@ export function bundleKey(parts: {
   dev: boolean;
   minify: boolean;
   projectRoot: string;
+  resolutionConfig?: string;
 }): string {
   const versions = ['metro', 'expo', '@expo/metro-config', 'babel-preset-expo', 'react-native'].map(
     name => `${name}@${packageVersion(name)}`,
