@@ -34,6 +34,8 @@ registerRender(() => {
   // Environment setup must run before anything else from react-native.
   require('__RUNTIME_DIR__/fantom/setUpDefaultReactNativeEnvironment');
 
+  (require('__RUNTIME_DIR__/nativeComponentFallback') as typeof import('__RUNTIME_DIR__/nativeComponentFallback')).installNativeComponentFallback();
+
   const React = require('react') as typeof import('react');
   const Fantom = require('__RUNTIME_DIR__/fantom/index') as typeof FantomModule;
   const NativeFantom = (require('__RUNTIME_DIR__/fantom/specs/NativeFantom') as typeof NativeFantomModule).default;

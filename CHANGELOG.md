@@ -13,6 +13,7 @@ share one version.
 
 ### Added
 
+- Unsupported native components fall back to View, with one stderr warning per rendered component type; real react-native-svg and legacy-component end-to-end coverage.
 - Headless layout, props, accessibility and child-interaction coverage for Expo glass, blur and linear-gradient views; documented visual limitations.
 - Reproducible SDK 58 native-view inventory and a support matrix separating tested behavior from remaining native-module work.
 

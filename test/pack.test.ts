@@ -27,7 +27,7 @@ describe('pack', () => {
     expect(root.private).toBe(true);
     expect(root.bin).toBeUndefined();
   });
-  it('npm pack of the CLI: exactly the whitelisted 48 files, no release archives', {timeout: 300_000}, t => {
+  it('npm pack of the CLI: exactly the whitelisted 49 files, no release archives', {timeout: 300_000}, t => {
     if (!hasNpm) t.skip('npm is not available');
     // Release archives next to the package must never be packed (v0.1.0 shipped
     // dist/release/*.tar.gz inside the CLI tarball).
@@ -53,11 +53,11 @@ describe('pack', () => {
         'README.md': 1,
         dist: 1,
         'package.json': 1,
-        runtime: 28,
+        runtime: 29,
         schema: 10,
         tools: 6,
       });
-      expect(files.length).toBe(48);
+      expect(files.length).toBe(49);
       expect(files).toContain('dist/rn-a11y-tree.js');
       if (process.platform !== 'win32') expect(fs.statSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'dist/rn-a11y-tree.js')).mode & 0o111).toBeTruthy();
       const manifest = JSON.parse(fs.readFileSync(path.join(CLI_ROOT, 'package.json'), 'utf8'));

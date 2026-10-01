@@ -17,11 +17,16 @@
 #include <react/renderer/uimanager/UIManagerBinding.h>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 
 #include "TesterAppDelegate.h"
 
 #include <jsi/instrumentation.h>
 #include "components/FantomDeviceInfo.h"
+#include "components/FantomComponentRegistry.h"
+#ifndef RCT_REMOVE_LEGACY_COMPONENT_INTEROP
+#include <react/renderer/components/legacyviewmanagerinterop/UnstableLegacyViewManagerAutomaticComponentDescriptor.h>
+#endif
 #include "components/FantomExpo.h"
 #include "components/FantomExpoText.h"
 #include "components/FantomSafeArea.h"
@@ -406,6 +411,30 @@ jsi::Value setDeviceMetricsHostFunction(
   return jsi::Value::undefined();
 }
 
+// Probe the actual host registry, including lazily registered Expo views.
+// Automatic legacy interop descriptors only provide generic View behavior.
+jsi::Value hasNativeComponentHostFunction(
+    jsi::Runtime& runtime, TurboModule&, const jsi::Value* args, size_t count) {
+  auto name = stringArg(runtime, args, count, 0, "hasNativeComponent", "name");
+  ComponentDescriptorRegistry::Shared registry;
+  {
+    auto& state = fantomComponentRegistry();
+    std::lock_guard lock(state.mutex);
+    registry = state.registry.lock();
+  }
+  if (!registry) throw jsi::JSError(runtime, "Component registry is not initialized");
+  try {
+    const auto& descriptor = registry->at(name);
+#ifndef RCT_REMOVE_LEGACY_COMPONENT_INTEROP
+    if (dynamic_cast<const UnstableLegacyViewManagerAutomaticComponentDescriptor*>(&descriptor)) return false;
+#endif
+    return registry->getFallbackComponentDescriptor().get() != &descriptor;
+  } catch (const std::invalid_argument& error) {
+    if (std::string(error.what()).find("Unable to find componentDescriptor for ") == 0) return false;
+    throw;
+  }
+}
+
 // getCapabilities(): string (JSON array of the host's feature strings)
 jsi::Value getCapabilitiesHostFunction(
     jsi::Runtime& runtime,
@@ -427,6 +456,7 @@ jsi::Value getCapabilitiesHostFunction(
       "mountedRevision",
       "effectiveBackground",
       "getHostInfo",
+      "nativeComponentFallback",
       "deviceMetrics",
       "protocolVersion:" + std::to_string(kHostProtocolVersion));
 #ifdef FANTOM_WITH_EXPO_UI
@@ -546,6 +576,8 @@ NativeFantom::NativeFantom(
       .argCount = 0, .invoker = getCapabilitiesHostFunction};
   methodMap_["setDeviceMetrics"] = MethodMetadata{
       .argCount = 1, .invoker = setDeviceMetricsHostFunction};
+  methodMap_["hasNativeComponent"] = MethodMetadata{
+      .argCount = 1, .invoker = hasNativeComponentHostFunction};
   methodMap_["getHostInfo"] = MethodMetadata{
       .argCount = 0, .invoker = getHostInfoHostFunction};
   methodMap_["updateNativeStates"] = MethodMetadata{

@@ -152,7 +152,7 @@ export async function runSession(options: {
       case 'console-log': {
         const entry = logEntry(String(message.level ?? 'info'), String(message.message));
         pendingLogs.push(entry);
-        if (!options.quiet) io.log(`[app] ${entry.message}`);
+        if (!options.quiet || entry.message.startsWith('[NATIVE_COMPONENT_FALLBACK] ')) io.log(`[app] ${entry.message}`);
         break;
       }
       default:

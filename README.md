@@ -1227,3 +1227,18 @@ Glass availability APIs select the emulated glass branch on iOS and Expo's
 fallback on Android. Visual effects are not rendered. See the
 [SDK 58 support matrix](docs/expo-support.md) for tested behavior and the
 remaining native-module gaps across Expo's packages.
+
+### Unsupported native components
+
+With the 0.1.2 runtime, unsupported native components render as a plain React
+Native View. Standard View props (including style, testID and accessibility),
+children and child interactions are preserved. A `[NATIVE_COMPONENT_FALLBACK]`
+warning names each substituted component once when it is first rendered. Warnings
+go to stderr even with piped JSON or `--quiet`, and are retained in output logs.
+
+This allows screens using libraries such as `react-native-svg` to be inspected
+without their native renderer. SVG paths, fills, native geometry, custom events
+and native methods are not simulated. Missing TurboModules and application errors
+still surface normally. Supported native components keep their real descriptors.
+Older custom binaries without the registry probe retain their previous behavior;
+use the matching optional runtime package for fallback support.

@@ -162,6 +162,7 @@ interface Spec extends TurboModule {
   getCapabilities?: () => string;
   // JSON {protocolVersion, rnVersion, buildType, sanitize, engines, fonts}.
   getHostInfo?: () => string;
+  hasNativeComponent?: (name: string) => boolean;
   createShadowNodeReferenceCounter(
     shadowNode: unknown /* ShadowNode */,
   ): () => number;

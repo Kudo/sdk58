@@ -393,9 +393,9 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
       const {level, message} = parsed as {level: string; message: string};
       const entry = logEntry(level, message);
       options.logs?.push(entry);
-      // Unless quiet: errors and warnings that are not known noise, or
-      // everything with --verbose.
-      if (options.verbose || (!options.quiet && !entry.known && (level === 'error' || level === 'warn'))) {
+      // Fallback warnings always explain reduced fidelity. Otherwise, unless
+      // quiet: unknown errors/warnings, or everything with --verbose.
+      if (message.startsWith('[NATIVE_COMPONENT_FALLBACK] ') || options.verbose || (!options.quiet && !entry.known && (level === 'error' || level === 'warn'))) {
         process.stderr.write(`[console.${level}] ${message}\n`);
       }
     } else if (options.verbose) {

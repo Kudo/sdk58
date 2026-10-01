@@ -18,6 +18,7 @@
 #include <react/renderer/components/view/ViewComponentDescriptor.h>
 
 #include "components/FantomExpo.h"
+#include "components/FantomComponentRegistry.h"
 #include "components/FantomGestureHandler.h"
 #include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
@@ -57,7 +58,11 @@ inline ComponentRegistryFactory getDefaultComponentRegistryFactory()
       registerExpoViewComponentDescriptors(providerRegistry);
       return providerRegistry;
     }();
-    return providerRegistry->createComponentDescriptorRegistry({eventDispatcher, contextContainer, nullptr});
+    auto registry = providerRegistry->createComponentDescriptorRegistry({eventDispatcher, contextContainer, nullptr});
+    auto& state = fantomComponentRegistry();
+    std::lock_guard lock(state.mutex);
+    state.registry = registry;
+    return registry;
   };
 }
 
