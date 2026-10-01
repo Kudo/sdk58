@@ -367,7 +367,13 @@ if [[ "$OS" == "Windows" ]]; then
     -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
     -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF
     -DHERMES_USE_STATIC_ICU=ON
+    # FindICU by explicit paths: it would take the Windows SDK's icuuc.lib
+    # and icuin.lib (on LIB) before the static sicuuc.lib and sicuin.lib.
     -DICU_ROOT="$(cygpath -m "$ICU_ROOT")"
+    -DICU_INCLUDE_DIR="$(cygpath -m "$ICU_ROOT/include")"
+    -DICU_UC_LIBRARY_RELEASE="$(cygpath -m "$ICU_ROOT/lib/sicuuc.lib")"
+    -DICU_I18N_LIBRARY_RELEASE="$(cygpath -m "$ICU_ROOT/lib/sicuin.lib")"
+    -DICU_DATA_LIBRARY_RELEASE="$(cygpath -m "$ICU_ROOT/lib/sicudt.lib")"
   )
   HERMES_STAMP="$HERMES_BUILD/.rn-a11y-cmake-args"
   HERMES_HASH="$(printf '%s\n' "${HERMES_ARGS[@]}" | hash_stdin)"
