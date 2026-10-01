@@ -6,13 +6,13 @@ import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
 import {elf, machO, pe} from './fixtures/fake-binaries.ts';
+import {hasNpm, npmTool} from './fixtures/npm.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const hasNpm = spawnSync('npm', ['--version'], {stdio: 'ignore'}).status === 0;
 
 /** Files `npm pack --dry-run` would put into the tarball of `dir` (prepack runs). */
 function packFiles(dir: string): Array<{path: string; size: number}> {
-  const proc = spawnSync('npm', ['pack', '--dry-run', '--json'], {cwd: dir, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024});
+  const proc = npmTool('npm', ['pack', '--dry-run', '--json'], {cwd: dir, maxBuffer: 16 * 1024 * 1024});
   expect(proc.status, proc.stderr).toBe(0);
   // prepack output can precede the JSON.
   const json = JSON.parse(proc.stdout.slice(proc.stdout.indexOf('[')));

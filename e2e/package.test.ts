@@ -1,9 +1,12 @@
-import {execFileSync, spawnSync} from 'node:child_process';
+import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
+
+import {DEFAULT_HOST_BIN} from '../src/host.ts';
+import {hasNpm, npmTool} from '../test/fixtures/npm.ts';
 
 /**
  * The packages as users get them: `npm pack` of react-native-a11y-tree (with
@@ -12,22 +15,18 @@ import {fileURLToPath} from 'node:url';
  */
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
-
-function has(cmd: string): boolean {
-  return spawnSync(cmd, ['--version'], {stdio: 'ignore'}).status === 0;
-}
-
 // release-host --pack packs this machine's native/dist host (osx-bin/ on
-// macOS, linux64-bin/ on Linux).
-const skip = !has('npm')
+// macOS, linux64-bin/ on Linux, win64-bin/ on Windows).
+const skip = !hasNpm
   ? 'npm is not available'
-  : !fs.existsSync(DIST_BIN)
+  : !fs.existsSync(DEFAULT_HOST_BIN)
     ? 'no native/dist host to pack: run `bun run build:host`'
     : false;
 
 function run(cmd: string, args: string[], cwd: string, env: Record<string, string> = {}) {
-  const proc = spawnSync(cmd, args, {cwd, encoding: 'utf8', env: {...process.env, ...env}, maxBuffer: 64 * 1024 * 1024});
+  const options = {cwd, env: {...process.env, ...env}, maxBuffer: 64 * 1024 * 1024};
+  const proc =
+    cmd === 'npm' || cmd === 'npx' ? npmTool(cmd, args, options) : spawnSync(cmd, args, {...options, encoding: 'utf8'});
   expect(proc.status, `${cmd} ${args.join(' ')}\n${proc.stdout}\n${proc.stderr}`).toBe(0);
   return proc;
 }
@@ -53,7 +52,8 @@ describe('package', () => {
       expect(files.map(f => f.replace(/-\d+\.\d+\.\d+.*\.tgz$/, ''))).toStrictEqual(['react-native-a11y-tree', 'rn-a11y-host']);
       for (const f of files) t.annotate(`${f}: ${fs.statSync(path.join(tarballs, f)).size} bytes`);
 
-      const listing = run('tar', ['-tzf', path.join(tarballs, files[0])], work).stdout;
+      // A relative path: Git for Windows' tar reads `C:` as a remote host.
+      const listing = run('tar', ['-tzf', files[0]], tarballs).stdout;
       expect(listing).toMatch(/package\/dist\/rn-a11y-tree\.js/);
       expect(listing).not.toMatch(/package\/(src|native|test|e2e|examples|third_party)\//);
 
@@ -72,9 +72,8 @@ describe('package', () => {
       expect(render.stdout).toMatch(/^ {4}submit View #submit role=button "Submit" \{24,[\d.]+,364x48\}$/m);
 
       // The host came from the rn-a11y-host package, with its protocol version.
-      const session = spawnSync('npx', ['rn-a11y-tree', 'session', 'App.tsx', '--preset', 'android-phone'], {
+      const session = npmTool('npx', ['rn-a11y-tree', 'session', 'App.tsx', '--preset', 'android-phone'], {
         cwd: project,
-        encoding: 'utf8',
         input: '{"id":1,"quit":true}\n',
         env: {...process.env, ...env},
       });

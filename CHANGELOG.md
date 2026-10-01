@@ -29,6 +29,30 @@ share one version.
   background without `/bin/sh`. `RN_A11Y_HOST_RUNNER` starts the host through
   another program (tests: `bun` for the script fake host). CI:
   `.github/workflows/windows-host.yml`.
+- Linux x64 host: built in a `manylinux_2_28` container (runs on glibc 2.28
+  and newer: Debian 10+, RHEL 8+, Ubuntu 20.04+), `build-host.sh` Linux branch,
+  static libstdc++ and static ICU 74.2 (`scripts/build-icu.sh`) with the data
+  trimmed to what Hermes uses (`scripts/icu-data-filter.json`; 31 MB to 2 MB),
+  ICU's default locale fixed to `en_US` so `LANG` does not change the output,
+  a portable SHA-256 instead of OpenSSL. CI: `.github/workflows/linux-host.yml`
+  (also runs the e2e suite with the host inside debian:10 and ubuntu:20.04).
+- `rn-a11y-host` ships every platform: `osx-bin/` (universal), `linux64-bin/`
+  and `win64-bin/rn-a11y-host.exe`, one `host-version.json` listing them.
+  `release-host.ts --pack` runs on any OS (`--bin <slot>=<file>`,
+  `--artifacts <dir>`); the release workflow builds the three hosts, packs
+  both packages and installs them in a scratch project on Linux, macOS and
+  Windows. The package source is `index.ts` (`index.js` / `index.d.ts` are
+  built at pack time).
+- `--tz <zone>`: the host runs with `TZ=UTC` unless `--tz` says otherwise, so
+  date strings do not depend on the machine (the Windows host reads POSIX
+  values like `JST-9` only; an IANA name there gives a warning).
+- Script files: `{"$schema": ..., "actions": [...]}` (a bare array still
+  works); `run` / `check` / `session --help` list every action;
+  `rn-a11y-tree schema [name]` prints or lists the JSON schemas.
+- Agents: a target that is not found names the closest `testID` / `key` /
+  `sel` ("Did you mean ...") or the testIDs in the tree; `session --format`,
+  `--select`, `--depth`, `--subtree`, `--style` set the ready tree and the
+  default response trees.
 - Portable text layout for hosts without CoreText: `FANTOM_TEXT_LAYOUT=portable`
   (`RN_A11Y_TEXT_LAYOUT=portable` in `build-host.sh`) measures text with
   `stb_truetype` and the embedded Roboto, including the Compose engine's text;
@@ -36,6 +60,10 @@ share one version.
 
 ### Changed
 
+- The CLI package: `bin` is `dist/rn-a11y-tree.js` (one ES module built with
+  `bun build`); it ships `runtime/*.ts` (Metro compiles them). All sources are
+  TypeScript (`erasableSyntaxOnly`); scripts run with Bun; the tests run with
+  Vitest (`unit` and `e2e` projects). No `tsx`, no `bin/` wrapper.
 - The host no longer links Homebrew OpenSSL: a CommonCrypto shim provides the
   SHA-256 it needs.
 

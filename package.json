@@ -60,7 +60,7 @@
     "test": "vitest run --project unit",
     "test:e2e": "vitest run --project e2e",
     "check": "bun run typecheck && bun run schema --check && bun run test && bun run test:e2e",
-    "build": "rm -rf dist && bun build src/cli.ts --target node --format esm --packages external --banner '#!/usr/bin/env node' --outfile dist/rn-a11y-tree.js",
+    "build": "bun scripts/build.ts",
     "prepack": "bun run build && bun run schema --check"
   },
   "dependencies": {
