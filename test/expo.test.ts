@@ -143,7 +143,7 @@ describe('expo', () => {
     expect(without).not.toContain('__EXPO_PRELUDE__');
     const withPrelude = renderEntry({...options, expoPolyfill: '/x/dangerous-internal.ts'});
     expect(withPrelude).toMatch(/require\('\/x\/dangerous-internal\.ts'\)\.installExpoGlobalPolyfill\(\);/);
-    expect(withPrelude).toMatch(/runtime\/expo\/prelude'\)\.installExpoPrelude\(\);/);
+    expect(withPrelude).toMatch(/runtime[\\/]+expo[\\/]+prelude'\)\.installExpoPrelude\(\);/); // \\ (escaped) on Windows
   });
 
   it('runtime/expo/viewConfigs.json is generated from the native tables', {skip: !fs.existsSync(path.join(ROOT, 'native/tools/expo-view-configs/out/viewConfigs.json'))}, () => {

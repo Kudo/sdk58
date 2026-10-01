@@ -107,8 +107,8 @@ export async function downloadHost(options: {baseUrl: string; log?: (line: strin
     }
     const unpacked = path.join(tmp, 'host');
     fs.mkdirSync(unpacked);
-    // The archive by a relative path: GNU tar (Git for Windows) reads "C:..." as host:path.
-    execFileSync('tar', ['-xzf', asset.file, '-C', unpacked], {cwd: tmp});
+    // Relative paths only: GNU tar (Git for Windows) reads "C:..." as host:path.
+    execFileSync('tar', ['-xzf', path.join('..', asset.file)], {cwd: unpacked});
     const unpackedBin = path.join(unpacked, hostFileName());
     if (!fs.existsSync(unpackedBin)) throw new Error(`${asset.file} has no ${hostFileName()}`);
     fs.chmodSync(unpackedBin, 0o755);

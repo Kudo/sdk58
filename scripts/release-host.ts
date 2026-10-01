@@ -213,8 +213,10 @@ function main() {
     const manifest = {...info, assets: {} as Record<string, Asset> /* filled below */};
     fs.writeFileSync(path.join(stage, 'host-version.json'), JSON.stringify({...manifest, assets: undefined}, null, 2) + '\n');
     const tarPath = path.join(outDir, file);
-    // The archive by a relative path: GNU tar (Git for Windows) reads "C:..." as host:path.
-    execFileSync('tar', ['-czf', file, '-C', stage, hostFile, 'host-version.json'], {cwd: outDir});
+    // Relative paths only: GNU tar (Git for Windows) reads "C:..." as host:path.
+    // The archive is made in the stage directory, then moved.
+    execFileSync('tar', ['-czf', file, hostFile, 'host-version.json'], {cwd: stage});
+    fs.copyFileSync(path.join(stage, file), tarPath);
     const digest = sha256(fs.readFileSync(tarPath));
     fs.writeFileSync(`${tarPath}.sha256`, `${digest}  ${file}\n`);
     // Another arch packaged into the same directory for the same version: keep its asset.
