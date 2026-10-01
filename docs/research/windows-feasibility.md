@@ -3,6 +3,11 @@
 Date: 2026-10-01. Branch: `ci/windows-host`. Workflow:
 `.github/workflows/windows-feasibility.yml`.
 
+Follow-up (2026-10-01): the Windows host is built for real by
+`scripts/build-host.sh` and `.github/workflows/windows-host.yml` (portable
+text, `/MT`, static ICU); see native/README.md, section Windows. This report
+describes the spike with the stub text.
+
 ## Result
 
 The host builds, links and runs on Windows x64. Round 10 linked
