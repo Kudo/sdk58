@@ -83,9 +83,11 @@ const BUILD_HINT =
   'Reinstall with optional dependencies enabled (`npm install --include=optional`), run `bun run build:host`, set RN_A11Y_HOST_BIN to the path of a host binary, or set RN_A11Y_HOST_BASE_URL to download a prebuilt host.';
 
 /** `native/dist/<arch>/rn-a11y-host` (`.exe` on Windows), produced by `bun run build:host`. */
+export const IS_CHECKOUT = fs.existsSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'cli.ts'));
+
 export const DEFAULT_HOST_BIN = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
-  '..',
+  IS_CHECKOUT ? '../../..' : '..',
   'native',
   'dist',
   os.arch() === 'x64' ? 'x86_64' : os.arch(),
@@ -250,8 +252,6 @@ export function defaultProbes(log: (line: string) => void): HostProbes {
   };
 }
 
-/** Running from a repo checkout (src/cli.ts exists), not an installed package. */
-export const IS_CHECKOUT = fs.existsSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'cli.ts'));
 
 /** Set by ensureHost(). */
 let resolvedHost: HostInfo | null = null;

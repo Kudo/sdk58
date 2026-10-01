@@ -11,12 +11,12 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DIST = path.join(ROOT, 'dist');
+const DIST = path.join(ROOT, 'packages/react-native-a11y-tree', 'dist');
 
 fs.rmSync(DIST, {recursive: true, force: true});
 const args = [
   'build',
-  path.join(ROOT, 'src', 'cli.ts'),
+  path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts'),
   '--target',
   'node',
   '--format',
@@ -29,3 +29,8 @@ const args = [
 const proc = spawnSync(process.execPath, args, {cwd: ROOT, stdio: 'inherit'});
 if (proc.status !== 0) process.exit(proc.status ?? 1);
 fs.chmodSync(path.join(DIST, 'rn-a11y-tree.js'), 0o755);
+
+// Keep the published documentation in sync with the repository.
+for (const file of ['README.md', 'LICENSE']) {
+  fs.copyFileSync(path.join(ROOT, file), path.join(ROOT, 'packages/react-native-a11y-tree', file));
+}

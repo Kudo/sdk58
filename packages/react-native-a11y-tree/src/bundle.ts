@@ -43,6 +43,8 @@ export const PACKAGE_ROOT = fs.realpathSync(
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'),
 );
 export const RUNTIME_DIR = path.join(PACKAGE_ROOT, 'runtime');
+// Includes hoisted dependencies when running from a workspace checkout.
+const toolNodeModules = (require.resolve.paths('react') ?? []).filter(dir => fs.existsSync(dir));
 
 /**
  * Out-of-tree platform mode (e.g. `--platform a11ytree`): a platform that
@@ -289,14 +291,14 @@ export function createMetroConfig(options: {
 
   const overrides: InputConfigT = {
     projectRoot,
-    // Not the whole PACKAGE_ROOT: it contains third_party/react-native.
+    // Watch dependencies, not the repository and its React Native submodule.
     watchFolders: [
       ...new Set(
         [
           ...(base.watchFolders ?? []),
           projectRoot,
           RUNTIME_DIR,
-          path.join(PACKAGE_ROOT, 'node_modules'),
+          ...toolNodeModules,
           workDir,
         ].filter(dir => fs.existsSync(dir)),
       ),
@@ -312,7 +314,7 @@ export function createMetroConfig(options: {
         ...new Set([
           ...base.resolver.nodeModulesPaths,
           path.join(projectRoot, 'node_modules'),
-          path.join(PACKAGE_ROOT, 'node_modules'),
+          ...toolNodeModules,
         ]),
       ],
       // Disable dependency injection for the renderer (same as Fantom).

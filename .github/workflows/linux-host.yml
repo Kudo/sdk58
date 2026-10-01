@@ -242,7 +242,7 @@ jobs:
           {
             echo "### Smoke render: examples/basic, android-phone ($(. /etc/os-release && echo "$PRETTY_NAME"))"
             echo '```'
-            node src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
+            node packages/react-native-a11y-tree/src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
@@ -329,7 +329,7 @@ jobs:
           {
             echo "### Smoke render: examples/basic, android-phone, host in ${{ matrix.image }}"
             echo '```'
-            node src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
+            node packages/react-native-a11y-tree/src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 

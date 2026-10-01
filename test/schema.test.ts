@@ -6,16 +6,16 @@ import {fileURLToPath} from 'node:url';
 
 import {Ajv, type ValidateFunction} from 'ajv';
 
-import {generate, SCHEMAS} from '../src/genSchema.ts';
-import {type ToolName, TOOLS, toolArgv} from '../src/tools.ts';
+import {generate, SCHEMAS} from '../packages/react-native-a11y-tree/src/genSchema.ts';
+import {type ToolName, TOOLS, toolArgv} from '../packages/react-native-a11y-tree/src/tools.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'src', 'cli.ts');
+const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.ts');
 
 const ajv = new Ajv({strict: false, allErrors: true});
-const readJson = (file: string) => JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+const readJson = (file: string) => JSON.parse(fs.readFileSync(path.join(/^(schema|tools)\//.test(file) ? path.join(ROOT, 'packages/react-native-a11y-tree') : ROOT, file), 'utf8'));
 const validators = new Map<string, ValidateFunction>();
 function validator(file: string, pick?: (json: Record<string, unknown>) => unknown): ValidateFunction {
   const id = file + (pick ? '#' + pick.toString() : '');
@@ -46,7 +46,7 @@ describe('schema', () => {
     const files = generate();
     expect(files.size).toBe(Object.keys(SCHEMAS).length + TOOLS.length);
     for (const [file, content] of files) {
-      expect(fs.readFileSync(path.join(ROOT, file), 'utf8'), `${file} is out of date: run bun run schema`).toBe(content);
+      expect(fs.readFileSync(path.join(/^(schema|tools)\//.test(file) ? path.join(ROOT, 'packages/react-native-a11y-tree') : ROOT, file), 'utf8'), `${file} is out of date: run bun run schema`).toBe(content);
     }
   });
 

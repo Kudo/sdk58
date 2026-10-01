@@ -5,10 +5,10 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {CliError, EXIT_CODES, logEntry, stepErrorCode} from '../src/errors.ts';
+import {CliError, EXIT_CODES, logEntry, stepErrorCode} from '../packages/react-native-a11y-tree/src/errors.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'src', 'cli.ts');
+const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.ts');
 

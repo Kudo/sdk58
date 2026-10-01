@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {validateScript} from '../src/script.ts';
+import {validateScript} from '../packages/react-native-a11y-tree/src/script.ts';
 
 describe('script', () => {
   it('accepts every action form', () => {

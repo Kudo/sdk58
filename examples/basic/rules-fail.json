@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schema/rules-file.json",
+  "$schema": "../../packages/react-native-a11y-tree/schema/rules-file.json",
   "rules": {
     "names": true,
     "touchTarget": {"min": 48},

@@ -22,7 +22,7 @@
  *   --bin       package this file instead of native/dist/<arch>/rn-a11y-host
  *   --platform  darwin | linux | win32 (default: this machine): the asset key
  *               <platform>-<arch> and the file name (.exe on win32)
- *   --pin       also write host-version.json to the repo root (the version
+ *   --pin       also write host-version.json to the CLI package root (the version
  *               the CLI downloads by default).
  */
 
@@ -34,7 +34,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {hostFileName} from '../src/hostDownload.ts';
+import {hostFileName} from '../packages/react-native-a11y-tree/src/hostDownload.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RN_DIR = path.join(ROOT, 'third_party', 'react-native');
@@ -219,7 +219,7 @@ function packInputs(): Map<Slot, string[]> {
  */
 function pack() {
   const packagesDir = path.resolve(arg('--packages-dir', path.join(ROOT, 'packages')));
-  const cliMetadata = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const cliMetadata = JSON.parse(fs.readFileSync(path.join(ROOT, 'packages/react-native-a11y-tree/package.json'), 'utf8'));
   const inputs = packInputs();
   if (inputs.size === 0) {
     console.error('release-host: nothing to pack: no --bin/--artifacts and no native/dist/<arch>/rn-a11y-host (run `bun run build:host`)');
@@ -337,7 +337,7 @@ function main() {
     };
     const manifestText = JSON.stringify(manifest, null, 2) + '\n';
     fs.writeFileSync(path.join(outDir, 'host-version.json'), manifestText);
-    if (process.argv.includes('--pin')) fs.writeFileSync(path.join(ROOT, 'host-version.json'), manifestText);
+    if (process.argv.includes('--pin')) fs.writeFileSync(path.join(ROOT, 'packages/react-native-a11y-tree/host-version.json'), manifestText);
     console.log(manifestText.trimEnd());
     console.error(`release-host: wrote ${path.relative(ROOT, tarPath)} (${manifest.assets[assetKey].size} bytes)`);
   } finally {

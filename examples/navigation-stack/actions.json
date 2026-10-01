@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schema/script.json",
+  "$schema": "../../packages/react-native-a11y-tree/schema/script.json",
   "actions": [
     {"snapshot": "home"},
     {"tap": {"testID": "go-details"}},

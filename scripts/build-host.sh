@@ -558,7 +558,7 @@ fi
 
 if [[ "$SANITIZE" == "1" ]]; then
   log "sanitizer build (not copied to native/dist): $BIN"
-  log "run: RN_A11Y_HOST_BIN=$BIN ASAN_OPTIONS=detect_leaks=0 node src/cli.ts ..."
+  log "run: RN_A11Y_HOST_BIN=$BIN ASAN_OPTIONS=detect_leaks=0 node packages/react-native-a11y-tree/src/cli.ts ..."
   exit 0
 fi
 

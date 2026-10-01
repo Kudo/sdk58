@@ -3,8 +3,8 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import type {FantomNode, ShadowNodeJSON, TreeNode} from '../src/schema.ts';
-import {toRenderResult} from '../src/tree.ts';
+import type {FantomNode, ShadowNodeJSON, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
+import {toRenderResult} from '../packages/react-native-a11y-tree/src/tree.ts';
 
 const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const tree = JSON.parse(

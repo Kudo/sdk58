@@ -5,11 +5,11 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
-import {assetKey, downloadHost, hostFileName, type HostManifest} from '../src/hostDownload.ts';
-import {DEFAULT_HOST_BIN} from '../src/host.ts';
+import {assetKey, downloadHost, hostFileName, type HostManifest} from '../packages/react-native-a11y-tree/src/hostDownload.ts';
+import {DEFAULT_HOST_BIN} from '../packages/react-native-a11y-tree/src/host.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'src', 'cli.ts');
+const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.ts');
 

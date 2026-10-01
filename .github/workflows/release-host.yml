@@ -166,7 +166,7 @@ jobs:
         run: |
           bun scripts/release-host.ts --pack --artifacts artifacts
           bun run build
-          npm pack --pack-destination release
+          (cd packages/react-native-a11y-tree && npm pack --pack-destination ../../release)
           for pkg in packages/runtime-*; do
             (cd "$pkg" && npm pack --pack-destination ../../release)
           done

@@ -6,10 +6,10 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {getHostPath, HostUnavailableError, hostRelativePath} from '../src/runtimePackage.ts';
+import {getHostPath, HostUnavailableError, hostRelativePath} from '../packages/react-native-a11y-tree/src/runtimePackage.ts';
 
-import {CliError, EXIT_CODES} from '../src/errors.ts';
-import {checkProtocol, DEFAULT_TZ, findHost, hostEnv, type HostProbes, SUPPORTED_PROTOCOL} from '../src/host.ts';
+import {CliError, EXIT_CODES} from '../packages/react-native-a11y-tree/src/errors.ts';
+import {checkProtocol, DEFAULT_TZ, findHost, hostEnv, type HostProbes, SUPPORTED_PROTOCOL} from '../packages/react-native-a11y-tree/src/host.ts';
 import {HOST_PROTOCOL_VERSION} from '../scripts/release-host.ts';
 import {elf, machO, pe} from './fixtures/fake-binaries.ts';
 
@@ -174,7 +174,7 @@ describe('host-resolve', () => {
     const log = path.join(dir, 'host-stderr.log');
     const proc = spawnSync(
       'node',
-      [path.join(ROOT, 'src/cli.ts'), 'render', path.join(ROOT, 'examples/basic/App.tsx'), '--platform', 'android'],
+      [path.join(ROOT, 'packages/react-native-a11y-tree', 'src/cli.ts'), 'render', path.join(ROOT, 'examples/basic/App.tsx'), '--platform', 'android'],
       {
         cwd: ROOT,
         encoding: 'utf8',
@@ -189,7 +189,7 @@ describe('host-resolve', () => {
   });
 
   function cliRun(args: string[], env: Record<string, string>, input?: string) {
-    return spawnSync('node', [path.join(ROOT, 'src/cli.ts'), ...args], {
+    return spawnSync('node', [path.join(ROOT, 'packages/react-native-a11y-tree', 'src/cli.ts'), ...args], {
       cwd: ROOT,
       encoding: 'utf8',
       input,

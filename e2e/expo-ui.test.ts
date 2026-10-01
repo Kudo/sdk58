@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
-import type {RunResult, TreeNode} from '../src/schema.ts';
+import type {RunResult, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
 import {cliJson, e2ePreset, findAll, hostSkip, type Preset, ROOT} from './helpers.ts';
 
 const EXAMPLE = path.join(ROOT, 'examples', 'expo-ui');

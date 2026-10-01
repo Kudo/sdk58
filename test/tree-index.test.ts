@@ -3,9 +3,9 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {findEntry, hitTestEntries, indexTree, targetNotFoundMessage} from '../runtime/tree-index.ts';
-import type {ShadowNodeJSON, TreeNode} from '../src/schema.ts';
-import {convertShadowTree} from '../src/tree.ts';
+import {findEntry, hitTestEntries, indexTree, targetNotFoundMessage} from '../packages/react-native-a11y-tree/runtime/tree-index.ts';
+import type {ShadowNodeJSON, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
+import {convertShadowTree} from '../packages/react-native-a11y-tree/src/tree.ts';
 
 const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const tree = JSON.parse(

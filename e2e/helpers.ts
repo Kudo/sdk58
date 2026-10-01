@@ -12,12 +12,12 @@ import {fileURLToPath} from 'node:url';
 
 import {expect, type TestContext} from 'vitest';
 
-import {DEFAULT_HOST_BIN} from '../src/host.ts';
-import {type PresetName, PRESETS} from '../src/presets.ts';
-import type {TreeNode} from '../src/schema.ts';
+import {DEFAULT_HOST_BIN} from '../packages/react-native-a11y-tree/src/host.ts';
+import {type PresetName, PRESETS} from '../packages/react-native-a11y-tree/src/presets.ts';
+import type {TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const CLI = path.join(ROOT, 'src', 'cli.ts');
+export const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts');
 
 // native/dist/<arch>/rn-a11y-host (.exe on Windows).
 const DIST_BIN = DEFAULT_HOST_BIN;

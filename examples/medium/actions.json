@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schema/script.json",
+  "$schema": "../../packages/react-native-a11y-tree/schema/script.json",
   "actions": [
     {"type": {"testID": "name", "text": "Ada"}},
     {"scroll": {"testID": "list", "x": 0, "y": 1500}},

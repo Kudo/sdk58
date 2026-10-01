@@ -14,5 +14,5 @@
     "verbatimModuleSyntax": false,
     "erasableSyntaxOnly": true
   },
-  "include": ["src", "e2e", "test", "examples", "scripts", "native/tools/*/*.ts"]
+  "include": ["packages/react-native-a11y-tree/src", "e2e", "test", "examples", "scripts", "native/tools/*/*.ts"]
 }

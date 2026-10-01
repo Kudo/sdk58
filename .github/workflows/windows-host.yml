@@ -199,7 +199,7 @@ jobs:
           {
             echo "### Smoke render: examples/basic, android-phone (windows-2025)"
             echo '```'
-            node src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
+            node packages/react-native-a11y-tree/src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 

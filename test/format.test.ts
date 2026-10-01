@@ -11,9 +11,9 @@ import {
   parseSelector,
   queryTree,
   textLine,
-} from '../src/format.ts';
-import type {RunResult, ShadowNodeJSON, TreeNode} from '../src/schema.ts';
-import {convertShadowTree} from '../src/tree.ts';
+} from '../packages/react-native-a11y-tree/src/format.ts';
+import type {RunResult, ShadowNodeJSON, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
+import {convertShadowTree} from '../packages/react-native-a11y-tree/src/tree.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURES = path.join(ROOT, 'test', 'fixtures');
@@ -104,14 +104,14 @@ describe('format', () => {
   it('CLI: --format text --select (fake host)', {timeout: 120_000}, () => {
     const proc = spawnSync(
       'node',
-      [path.join(ROOT, 'src', 'cli.ts'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'text', '--select', 'role=button'],
+      [path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'text', '--select', 'role=button'],
       {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.ts'), RN_A11Y_HOST_RUNNER: 'bun', FAKE_HOST_MODE: 'shadow-tree'}},
     );
     expect(proc.status, proc.stderr).toBe(0);
     expect(proc.stdout.trim()).toMatch(/^submit View #submit role=button "Submit" \{24,154,342x48\}$/);
     const bad = spawnSync(
       'node',
-      [path.join(ROOT, 'src', 'cli.ts'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'xml'],
+      [path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'xml'],
       {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.ts'), RN_A11Y_HOST_RUNNER: 'bun'}},
     );
     expect(bad.status).toBe(1);

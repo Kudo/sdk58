@@ -3,10 +3,10 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {diffTrees, isEmptyDiff} from '../src/diff.ts';
-import {diffLines} from '../src/format.ts';
-import type {ShadowNodeJSON, TreeNode} from '../src/schema.ts';
-import {convertShadowTree} from '../src/tree.ts';
+import {diffTrees, isEmptyDiff} from '../packages/react-native-a11y-tree/src/diff.ts';
+import {diffLines} from '../packages/react-native-a11y-tree/src/format.ts';
+import type {ShadowNodeJSON, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
+import {convertShadowTree} from '../packages/react-native-a11y-tree/src/tree.ts';
 
 const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const shadow = JSON.parse(fs.readFileSync(path.join(FIXTURES, 'shadow-tree.json'), 'utf8')) as ShadowNodeJSON;

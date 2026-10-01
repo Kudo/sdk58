@@ -10,6 +10,8 @@ import {hasNpm, npmTool} from './fixtures/npm.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+const CLI_ROOT = path.join(ROOT, 'packages/react-native-a11y-tree');
+
 /** Files `npm pack --dry-run` would put into the tarball of `dir` (prepack runs). */
 function packFiles(dir: string): Array<{path: string; size: number}> {
   const proc = npmTool('npm', ['pack', '--dry-run', '--json'], {cwd: dir, maxBuffer: 16 * 1024 * 1024});
@@ -20,6 +22,11 @@ function packFiles(dir: string): Array<{path: string; size: number}> {
 }
 
 describe('pack', () => {
+  it('keeps the workspace root private', () => {
+    const root = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+    expect(root.private).toBe(true);
+    expect(root.bin).toBeUndefined();
+  });
   it('npm pack of the CLI: exactly the whitelisted 48 files, no release archives', {timeout: 300_000}, t => {
     if (!hasNpm) t.skip('npm is not available');
     // Release archives next to the package must never be packed (v0.1.0 shipped
@@ -27,17 +34,17 @@ describe('pack', () => {
     const planted = [
       path.join(ROOT, 'release', 'pack-test-host.tar.gz'),
       path.join(ROOT, 'release', 'pack-test.tgz'),
-      path.join(ROOT, 'dist', 'release', 'pack-test-host.tar.gz'),
-      path.join(ROOT, 'dist', 'release', 'host-version.json'),
-      path.join(ROOT, 'dist', 'pack-test.tgz'),
+      path.join(ROOT, 'packages/react-native-a11y-tree', 'dist', 'release', 'pack-test-host.tar.gz'),
+      path.join(ROOT, 'packages/react-native-a11y-tree', 'dist', 'release', 'host-version.json'),
+      path.join(ROOT, 'packages/react-native-a11y-tree', 'dist', 'pack-test.tgz'),
     ].filter(file => !fs.existsSync(file));
-    const createdDirs = [path.join(ROOT, 'release'), path.join(ROOT, 'dist', 'release')].filter(dir => !fs.existsSync(dir));
+    const createdDirs = [path.join(ROOT, 'release'), path.join(ROOT, 'packages/react-native-a11y-tree', 'dist', 'release')].filter(dir => !fs.existsSync(dir));
     try {
       for (const file of planted) {
         fs.mkdirSync(path.dirname(file), {recursive: true});
         fs.writeFileSync(file, 'archive');
       }
-      const files = packFiles(ROOT).map(f => f.path).sort();
+      const files = packFiles(CLI_ROOT).map(f => f.path).sort();
       expect(files.filter(f => /\.(tgz|tar\.gz)$/.test(f) || f.includes('release/'))).toStrictEqual([]);
       const top = new Map<string, number>();
       for (const f of files) top.set(f.split('/')[0], (top.get(f.split('/')[0]) ?? 0) + 1);
@@ -52,17 +59,17 @@ describe('pack', () => {
       });
       expect(files.length).toBe(48);
       expect(files).toContain('dist/rn-a11y-tree.js');
-      if (process.platform !== 'win32') expect(fs.statSync(path.join(ROOT, 'dist/rn-a11y-tree.js')).mode & 0o111).toBeTruthy();
-      const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+      if (process.platform !== 'win32') expect(fs.statSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'dist/rn-a11y-tree.js')).mode & 0o111).toBeTruthy();
+      const manifest = JSON.parse(fs.readFileSync(path.join(CLI_ROOT, 'package.json'), 'utf8'));
       expect(manifest.bin).toEqual({'rn-a11y-tree': './dist/rn-a11y-tree.js'});
-      const help = spawnSync('node', [path.join(ROOT, 'dist/rn-a11y-tree.js'), '--help'], {encoding: 'utf8'});
+      const help = spawnSync('node', [path.join(ROOT, 'packages/react-native-a11y-tree', 'dist/rn-a11y-tree.js'), '--help'], {encoding: 'utf8'});
       expect(help.status, help.stderr).toBe(0);
       expect(help.stdout).toContain('render');
       // The executable must start without any JavaScript packages installed.
       const standalone = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-standalone-'));
       try {
         const entry = path.join(standalone, 'cli.mjs');
-        fs.copyFileSync(path.join(ROOT, 'dist/rn-a11y-tree.js'), entry);
+        fs.copyFileSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'dist/rn-a11y-tree.js'), entry);
         fs.chmodSync(entry, 0o755);
         const result = process.platform === 'win32'
           ? spawnSync('node', [entry, '--help'], {cwd: standalone, encoding: 'utf8'})
@@ -90,7 +97,7 @@ describe('pack', () => {
         '--bin', `win64=${pe(path.join(dir, 'win.exe'))}`,
       ], {encoding: 'utf8'});
       expect(packed.status, packed.stderr).toBe(0);
-      const cli = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+      const cli = JSON.parse(fs.readFileSync(path.join(CLI_ROOT, 'package.json'), 'utf8'));
       expect(cli.dependencies ?? {}).toEqual({});
       expect(Object.keys(cli.optionalDependencies).sort()).toEqual([
         '@react-native-a11y-tree/runtime-darwin-universal',
@@ -120,10 +127,10 @@ describe('pack', () => {
       // Stage the CLI's real published files with local optional specs so this
       // test does not require publishing the new packages to the registry.
       const stage = path.join(dir, 'cli');
-      for (const file of packFiles(ROOT)) {
+      for (const file of packFiles(CLI_ROOT)) {
         const target = path.join(stage, file.path);
         fs.mkdirSync(path.dirname(target), {recursive: true});
-        fs.copyFileSync(path.join(ROOT, file.path), target);
+        fs.copyFileSync(path.join(CLI_ROOT, file.path), target);
       }
       delete cli.scripts;
       delete cli.devDependencies;
@@ -152,7 +159,7 @@ describe('pack', () => {
       // Bundle the actual host-resolution code next to the installed CLI to
       // inspect its selected path/protocol without executing the fake binary.
       const probe = path.join(installedCli, 'dist/probe.js');
-      const build = spawnSync('bun', ['build', path.join(ROOT, 'src/host.ts'), '--target', 'node', '--format', 'esm', '--outfile', probe], {encoding: 'utf8'});
+      const build = spawnSync('bun', ['build', path.join(ROOT, 'packages/react-native-a11y-tree', 'src/host.ts'), '--target', 'node', '--format', 'esm', '--outfile', probe], {encoding: 'utf8'});
       expect(build.status, build.stderr).toBe(0);
       const env = {...process.env, RN_A11Y_HOST_BIN: '', RN_A11Y_HOST_BASE_URL: '', RN_A11Y_HOST_SKIP_PACKAGE: ''};
       const resolve = () => spawnSync('node', ['--input-type=module', '-e', `
@@ -176,7 +183,7 @@ describe('pack', () => {
       expect(help.status, help.stderr).toBe(0);
       const schema = spawnSync('node', [path.join(installedCli, 'dist/rn-a11y-tree.js'), 'schema', 'script'], {encoding: 'utf8', env});
       expect(schema.status, schema.stderr).toBe(0);
-      expect(JSON.parse(schema.stdout)).toEqual(JSON.parse(fs.readFileSync(path.join(ROOT, 'schema/script.json'), 'utf8')));
+      expect(JSON.parse(schema.stdout)).toEqual(JSON.parse(fs.readFileSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'schema/script.json'), 'utf8')));
       const npxHelp = npmTool('npx', ['--no-install', 'react-native-a11y-tree', '--help'], {cwd: app, env});
       expect(npxHelp.status, npxHelp.stderr).toBe(0);
       expect(npxHelp.stdout).toContain('render');

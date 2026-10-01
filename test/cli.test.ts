@@ -6,11 +6,11 @@ import {fileURLToPath} from 'node:url';
 
 import os from 'node:os';
 
-import type {RenderResult, RunResult} from '../src/schema.ts';
-import {ACTION_NAMES} from '../src/script.ts';
+import type {RenderResult, RunResult} from '../packages/react-native-a11y-tree/src/schema.ts';
+import {ACTION_NAMES} from '../packages/react-native-a11y-tree/src/script.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'src', 'cli.ts');
+const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts');
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 const FAKE_HOST = path.join(ROOT, 'test', 'fixtures', 'fake-host.ts');
 
@@ -188,7 +188,7 @@ describe('cli', () => {
     expect(list.stdout).toMatch(/^session-request\t/m);
     const schema = run(['schema', 'script'], {});
     expect(schema.status, schema.stderr).toBe(0);
-    expect(schema.stdout).toBe(fs.readFileSync(path.join(ROOT, 'schema', 'script.json'), 'utf8'));
+    expect(schema.stdout).toBe(fs.readFileSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'schema', 'script.json'), 'utf8'));
     const unknown = run(['schema', 'nope'], {});
     expect(unknown.status).toBe(1);
     expect(JSON.parse(unknown.stderr).error.message).toMatch(/unknown schema "nope" \(one of: .*script/);

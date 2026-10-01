@@ -8,7 +8,7 @@ import {cli, E2E_PRESETS, hostSkip, ROOT} from './helpers.ts';
 
 const ajv = new Ajv({strict: false, allErrors: true});
 const schema = (name: string) =>
-  ajv.compile(JSON.parse(fs.readFileSync(path.join(ROOT, 'schema', `${name}.json`), 'utf8')));
+  ajv.compile(JSON.parse(fs.readFileSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'schema', `${name}.json`), 'utf8')));
 
 describe('schema', () => {
   it.for(E2E_PRESETS)('[$name] real host output validates against schema/*.json (every example)', {timeout: 600_000}, (preset, t) => {

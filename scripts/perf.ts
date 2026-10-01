@@ -22,7 +22,7 @@ import {fileURLToPath} from 'node:url';
 import type {Readable, Writable} from 'node:stream';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'src', 'cli.ts');
+const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts');
 
 const args = process.argv.slice(2);
 const arg = <T extends string | null>(name: string, fallback: T): string | T => {

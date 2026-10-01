@@ -5,7 +5,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {DEFAULT_HOST_BIN} from '../src/host.ts';
+import {DEFAULT_HOST_BIN} from '../packages/react-native-a11y-tree/src/host.ts';
 import {hasNpm, npmTool} from '../test/fixtures/npm.ts';
 
 /**
@@ -43,7 +43,7 @@ describe('package', () => {
       const platformName = process.platform === 'darwin' ? 'darwin-universal' : process.platform === 'linux' ? 'linux-x64-gnu' : 'win32-x64-msvc';
       run('npm', ['pack', '--pack-destination', tarballs], path.join(packagesDir, `runtime-${platformName}`));
       // react-native-a11y-tree: dist/ from `bun run build` (prepack), then the files whitelist.
-      run('npm', ['pack', '--pack-destination', tarballs], ROOT);
+      run('npm', ['pack', '--pack-destination', tarballs], path.join(ROOT, 'packages/react-native-a11y-tree'));
       const files = fs.readdirSync(tarballs).sort();
       expect(files.map(f => f.replace(/-\d+\.\d+\.\d+.*\.tgz$/, ''))).toStrictEqual(['react-native-a11y-tree', `react-native-a11y-tree-runtime-${platformName}`]);
       for (const f of files) t.annotate(`${f}: ${fs.statSync(path.join(tarballs, f)).size} bytes`);

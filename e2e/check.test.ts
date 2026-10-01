@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
-import type {CheckResult} from '../src/check.ts';
+import type {CheckResult} from '../packages/react-native-a11y-tree/src/check.ts';
 import {cli, E2E_PRESETS, hostSkip, type Preset, ROOT} from './helpers.ts';
 
 const EXAMPLE = path.join(ROOT, 'examples', 'basic');

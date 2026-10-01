@@ -23,7 +23,7 @@ import {fileURLToPath} from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TABLE = path.join(ROOT, 'native', 'tools', 'expo-view-configs', 'out', 'viewConfigs.json');
 const UNION = path.join(ROOT, 'native', 'tests', 'fantomExpoUIViewConfig.json');
-export const OUT = path.join(ROOT, 'runtime', 'expo', 'viewConfigs.json');
+export const OUT = path.join(ROOT, 'packages/react-native-a11y-tree', 'runtime', 'expo', 'viewConfigs.json');
 
 const EXCLUDED = new Set(['children', 'key', 'ref', 'style']);
 

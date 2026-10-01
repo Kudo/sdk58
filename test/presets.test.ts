@@ -5,10 +5,10 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {loadProjectConfig, PRESETS, resolveSettings} from '../src/presets.ts';
+import {loadProjectConfig, PRESETS, resolveSettings} from '../packages/react-native-a11y-tree/src/presets.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI = path.join(ROOT, 'src', 'cli.ts');
+const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts');
 
 function tmpProject(config?: unknown): string {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-preset-')));

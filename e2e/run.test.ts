@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
-import type {RunResult} from '../src/schema.ts';
+import type {RunResult} from '../packages/react-native-a11y-tree/src/schema.ts';
 import {cliJson, E2E_PRESETS, get, hostSkip, ROOT} from './helpers.ts';
 
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');

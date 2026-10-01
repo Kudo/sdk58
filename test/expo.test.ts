@@ -5,10 +5,10 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {expoPolyfillPath, renderEntry} from '../src/bundle.ts';
-import {expoLabel, expoRole, expoState, expoText} from '../src/expo.ts';
-import type {ShadowNodeJSON, TreeNode} from '../src/schema.ts';
-import {toRenderResult} from '../src/tree.ts';
+import {expoPolyfillPath, renderEntry} from '../packages/react-native-a11y-tree/src/bundle.ts';
+import {expoLabel, expoRole, expoState, expoText} from '../packages/react-native-a11y-tree/src/expo.ts';
+import type {ShadowNodeJSON, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
+import {toRenderResult} from '../packages/react-native-a11y-tree/src/tree.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -149,7 +149,7 @@ describe('expo', () => {
   it('runtime/expo/viewConfigs.json is generated from the native tables', {skip: !fs.existsSync(path.join(ROOT, 'native/tools/expo-view-configs/out/viewConfigs.json'))}, () => {
     const proc = spawnSync('bun', [path.join(ROOT, 'scripts/gen-expo-view-configs.ts'), '--check'], {encoding: 'utf8'});
     expect(proc.status, proc.stderr).toBe(0);
-    const configs = JSON.parse(fs.readFileSync(path.join(ROOT, 'runtime/expo/viewConfigs.json'), 'utf8'));
+    const configs = JSON.parse(fs.readFileSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'runtime/expo/viewConfigs.json'), 'utf8'));
     expect(Object.keys(configs.views).length).toBe(152);
     expect(configs.views.ExpoUI_Button.events).toStrictEqual(['onButtonPress', 'onButtonPressed', 'onGlobalEvent']);
     for (const entry of [...Object.values(configs.views), configs.union] as Array<{attributes: string[]}>) {

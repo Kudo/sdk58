@@ -305,7 +305,7 @@ jobs:
           BIN="$TESTER_BUILD/fantom_tester.exe"
           ls -la "$BIN"
           export RN_A11Y_HOST_BIN="$(cygpath -w "$BIN")"
-          node src/cli.ts render examples/basic/App.tsx --platform android --format text --no-quiet 2>&1 | tee "$LOGS/g-render.log"; st=$?
+          node packages/react-native-a11y-tree/src/cli.ts render examples/basic/App.tsx --platform android --format text --no-quiet 2>&1 | tee "$LOGS/g-render.log"; st=$?
           echo "wall $((SECONDS - s)) s" > "$LOGS/g.time"; exit $st
 
       - name: (i) binary info
@@ -325,7 +325,7 @@ jobs:
           set +e -o pipefail; s=$SECONDS
           export RN_A11Y_HOST_BIN="$(cygpath -w "$TESTER_BUILD/fantom_tester.exe")"
           printf '%s\n' '{"id":1,"action":{"tap":{"testID":"submit"}}}' '{"id":2,"tree":true,"format":"text"}' '{"id":3,"quit":true}' \
-            | node src/cli.ts session examples/basic/App.tsx --platform android 2>&1 | tee "$LOGS/j-session.log"; st=$?
+            | node packages/react-native-a11y-tree/src/cli.ts session examples/basic/App.tsx --platform android 2>&1 | tee "$LOGS/j-session.log"; st=$?
           echo "wall $((SECONDS - s)) s" > "$LOGS/j.time"; exit $st
 
       - name: (k) unit tests (fake host)
