@@ -2,7 +2,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
 import type {RenderResult} from '../src/schema.ts';
-import {cli, cliJson, E2E_PRESETS, findAll, get, hostCapabilities, hostSkip, isIOS, ROOT} from './helpers.ts';
+import {cli, cliJson, E2E_PRESETS, findAll, get, hostSkip, isIOS, ROOT} from './helpers.ts';
 
 const APP = path.join(ROOT, 'examples', 'basic', 'App.tsx');
 
@@ -10,10 +10,6 @@ describe('render', () => {
   it.for(E2E_PRESETS)('[$name] render examples/basic/App.tsx', {timeout: 180_000}, (preset, t) => {
     if (hostSkip) t.skip(hostSkip);
     const result = cliJson<RenderResult>(['render', APP], preset);
-    // Text sizes need a real TextLayoutManager (`textLayout`; the platform/cxx
-    // stub of the Linux host measures every text as 0x0).
-    const textLayout = hostCapabilities(preset).includes('textLayout');
-    if (!textLayout) t.annotate('host without textLayout: text sizes not checked');
     const {width, height} = preset;
     expect(result.viewport).toStrictEqual({width, height});
     expect(result.root.box.width).toBe(width);
@@ -31,7 +27,7 @@ describe('render', () => {
     // `role="button"` (ARIA prop) is visible in the shadow tree.
     expect(submit.role).toBe('button');
     expect(submit.children.some(c => c.type === 'Paragraph'), 'submit has no Paragraph child').toBeTruthy();
-    for (const text of textLayout ? texts : []) {
+    for (const text of texts) {
       expect(text.box.height, `Paragraph "${text.text}" has height ${text.box.height}`).toBeGreaterThan(10);
     }
 
@@ -46,7 +42,7 @@ describe('render', () => {
     expect(remember.name).toBe('Remember me');
     expect(remember.a11y.state?.checked).toBe(true);
     // Both platforms measure TextInput with CoreText; the Switch is 51x31.
-    if (textLayout) expect(email.box.height).toBe(36.333);
+    expect(email.box.height).toBe(36.333);
     expect(email.style.placeholder).toBe('Email');
     expect([remember.box.width, remember.box.height]).toStrictEqual([51, 31]);
 

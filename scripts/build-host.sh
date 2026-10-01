@@ -18,6 +18,13 @@
 # and goes to native/dist/<arch>/. `universal` builds arm64 and x86_64 and
 # joins them with lipo into native/dist/universal/rn-a11y-host (+ .dSYM).
 #
+# RN_A11Y_TEXT_LAYOUT=macos | portable | stub selects the tester's
+# FANTOM_TEXT_LAYOUT (text measurement: CoreText, the portable stb_truetype
+# layout with the embedded fonts, or the upstream stub). Default: macos on
+# macOS, portable on Linux. A non-default layout gets its own tester build dir
+# (tester-<type>-<layout>) and goes to native/dist/<arch>-<layout>/ (not with
+# RN_A11Y_HOST_ARCH=universal).
+#
 # RN_A11Y_HOST_BUILD_TYPE=Release (default) | MinSizeRel | Debug selects the
 # tester build type (build dir: .../build/tester-<type>). Release and
 # MinSizeRel use ThinLTO and -dead_strip, and strip local symbols (strip -x)
@@ -26,9 +33,8 @@
 # Linux (x86_64; arm64 builds too): native/dist/x86_64/rn-a11y-host, one
 # executable that links only glibc dynamically (libstdc++, libgcc, libatomic,
 # ICU, OpenSSL's libcrypto, Hermes and JSI are static; the tester CMake does
-# this for FANTOM_STATIC_HOST off Apple). Text uses the upstream platform/cxx
-# stub (FANTOM_TEXT_LAYOUT=cxx; RN_A11Y_HOST_TEXT_LAYOUT selects another
-# one): every text measures 0x0. Release strips the binary and keeps its
+# this for FANTOM_STATIC_HOST off Apple). Text uses the portable layout by
+# default (RN_A11Y_TEXT_LAYOUT above; macos is Apple only). Release strips the binary and keeps its
 # symbols in rn-a11y-host.debug (objcopy --only-keep-debug; no -g, so symbols
 # but no line tables). Needs clang (CC/CXX default to clang/clang++), ld.lld
 # (used when on PATH), static ICU and OpenSSL (Ubuntu: libicu-dev,
@@ -56,7 +62,13 @@ MACHINE_ARCH="$(uname -m)"
 # Linux arm64: the same name as on macOS (and as os.arch() in src/host.ts).
 [[ "$MACHINE_ARCH" == "aarch64" ]] && MACHINE_ARCH=arm64
 ARCH="${RN_A11Y_HOST_ARCH:-$MACHINE_ARCH}"
+DEFAULT_TEXT_LAYOUT=macos
+[[ "$OS" == "Darwin" ]] || DEFAULT_TEXT_LAYOUT=portable
+TEXT_LAYOUT="${RN_A11Y_TEXT_LAYOUT:-$DEFAULT_TEXT_LAYOUT}"
 DIST_DIR="$ROOT/native/dist/$ARCH"
+if [[ "$TEXT_LAYOUT" != "$DEFAULT_TEXT_LAYOUT" ]]; then
+  DIST_DIR="$ROOT/native/dist/$ARCH-$TEXT_LAYOUT"
+fi
 CMAKE_VERSION="${CMAKE_VERSION:-3.30.5}"
 
 log() { printf '\033[1m[build-host]\033[0m %s\n' "$*"; }
@@ -76,9 +88,16 @@ hash_stdin() {
   if [[ "$OS" == "Darwin" ]]; then shasum | cut -d' ' -f1; else sha256sum | cut -d' ' -f1; fi
 }
 
+case "$TEXT_LAYOUT" in
+  macos|portable|stub) ;;
+  *) die "RN_A11Y_TEXT_LAYOUT must be macos, portable or stub (got $TEXT_LAYOUT)" ;;
+esac
+[[ "$TEXT_LAYOUT" != "macos" || "$OS" == "Darwin" ]] || die "RN_A11Y_TEXT_LAYOUT=macos needs macOS (CoreText)"
+
 case "$ARCH" in
   arm64|x86_64) ;;
   universal)
+    [[ "$TEXT_LAYOUT" == "macos" ]] || die "RN_A11Y_HOST_ARCH=universal needs RN_A11Y_TEXT_LAYOUT=macos"
     # Both slices (each a full run of this script), then one fat binary.
     for slice in arm64 x86_64; do
       log "universal: building the $slice slice"
@@ -258,6 +277,9 @@ fi
 if [[ "$SANITIZE" == "1" ]]; then
   TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER-sanitize"
 fi
+if [[ "$TEXT_LAYOUT" != "$DEFAULT_TEXT_LAYOUT" ]]; then
+  TESTER_BUILD_DIR="$TESTER_BUILD_DIR-$TEXT_LAYOUT"
+fi
 
 # Same arguments as configureFantomTester in private/react-native-fantom/build.gradle.kts.
 CMAKE_ARGS=(
@@ -270,11 +292,10 @@ CMAKE_ARGS=(
   -DREACT_THIRD_PARTY_NDK_DIR="$REACT_NATIVE_DIR/ReactAndroid/build/third-party-ndk"
   -DRN_ENABLE_DEBUG_STRING_CONVERTIBLE=ON
   -DHERMES_V1_ENABLED=1
+  -DFANTOM_TEXT_LAYOUT="$TEXT_LAYOUT"
 )
 if [[ "$OS" == "Darwin" ]]; then
   CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES="$ARCH")
-else
-  CMAKE_ARGS+=(-DFANTOM_TEXT_LAYOUT="${RN_A11Y_HOST_TEXT_LAYOUT:-cxx}")
 fi
 
 # A foreign architecture needs Hermes built for it (gradle builds it for the

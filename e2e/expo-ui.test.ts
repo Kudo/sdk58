@@ -55,9 +55,7 @@ describe('expo-ui', () => {
         },
       ],
     });
-    // Without the Compose engine (no expoUI.composeLayout, e.g. the Linux host:
-    // its text adapter needs CoreText) the Host has no layout label.
-    expect(host.layout).toBe(caps.has('expoUI.composeLayout') ? 'emulated' : undefined);
+    expect(host.layout).toBe('emulated');
     const descendants = findAll(host, n => n !== host && n.type.startsWith('ExpoUI.'));
     expect(descendants.filter(n => n.layout !== 'emulated' && n.layout !== 'placeholder').map(n => n.key)).toStrictEqual([]);
     if (host.emulatedBy != null) expect(host.emulatedBy).toBe('compose');

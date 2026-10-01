@@ -21,7 +21,7 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | Feature | How it is real | E2E | Known gaps |
 | --- | --- | --- | --- |
 | Rendering and layout | Real Fabric (React, ShadowTree, Yoga) in the Fantom host | `e2e/render.test.ts` | macOS only; one surface per run |
-| Text measurement | CoreText `TextLayoutManager` in the host | `e2e/render.test.ts` (heights > 10) | macOS fonts, not Android/iOS fonts |
+| Text measurement | CoreText `TextLayoutManager` in the host; or the portable layout (stb_truetype, embedded Roboto; `RN_A11Y_TEXT_LAYOUT=portable`, see `native/README.md`) | `e2e/render.test.ts` (heights > 10) | macOS fonts, not Android/iOS fonts; portable: Roboto stands in for SF |
 | Accessibility tree | Host `NativeFantom.getA11yTree` (typed ShadowTree dump) → `src/tree.ts` | `e2e/render.test.ts` | Role/name derivation is simpler than real screen readers |
 | TextInput, Switch | Host `AndroidTextInput` / iOS `TextInput` (CoreText measured) and `AndroidSwitch` / `Switch` shadow nodes | `e2e/render.test.ts`, `e2e/run.test.ts` (both presets) | |
 | Tap, long press, typing | Host `hitTest` + by-tag native events, Pressable responder events, `setTextInputTextByTag` | `e2e/run.test.ts` | No multi-touch responder events; `click` does not bubble |
@@ -110,7 +110,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--header-height <dp>` | all | preset, else 44 for `--platform ios`, else 56 (host) | react-native-screens native header height |
 | `--safe-area-insets <t,l,r,b>` | all | preset, else `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
 | `--scale <n>` | all | preset, else 3 | Device pixel ratio: `PixelRatio.get()` and the `scale` of `Dimensions` / `useWindowDimensions()` |
-| `--font-scale <n>` | all | preset (1), else 1 | `PixelRatio.getFontScale()` and `fontScale` of `Dimensions` |
+| `--font-scale <n>` | all | preset (1), else 1 | `PixelRatio.getFontScale()`, `fontScale` of `Dimensions`, and the text size multiplier (`<Text>` without `allowFontScaling={false}`) |
 | `--no-mounted` | all | mounted on | Do not read mounted-view values (`getA11yTree` `includeMountedProps`; used for `visualBox`, `effectiveOpacity`) |
 | `--timing` | all | off | Print phase timings as JSON on stderr (see [`docs/perf-analysis.md`](docs/perf-analysis.md)) |
 | `--reset-cache` | all | off | Ignore Metro's caches and the bundle cache (cold bundle) |
@@ -975,8 +975,8 @@ AppKit, CoreText, Foundation, libc++, libSystem).
 
 On Linux the script builds `native/dist/x86_64/rn-a11y-host` (or
 `native/dist/arm64/` on arm64): one executable that links only glibc
-dynamically. Text is not measured there yet (the upstream stub TextLayoutManager:
-every text is 0x0). Requirements and details: [native/README.md](native/README.md#linux).
+dynamically. Text uses the portable layout (stb_truetype and the embedded
+fonts; `RN_A11Y_TEXT_LAYOUT=portable` is the default there). Requirements and details: [native/README.md](native/README.md#linux).
 
 `RN_A11Y_HOST_ARCH=arm64|x86_64|universal` (default: the build machine's
 architecture) selects the host architecture. A foreign architecture (x86_64
@@ -1048,7 +1048,7 @@ has `protocolVersion`, the version of the CLI <-> host contract
 `HOST_INCOMPATIBLE` (exit 5) for other versions. Hosts without a manifest
 (`RN_A11Y_HOST_BIN`, `native/dist`) are checked when the host runs: the
 bundle reads `NativeFantom.getHostInfo()` (`{protocolVersion, rnVersion,
-buildType, sanitize, engines: {swiftui, compose}, fonts: {roboto}}`, else a
+buildType, sanitize, engines: {swiftui, compose}, fonts: {roboto}, textLayout}`, else a
 `protocolVersion:<n>` capability), and the CLI stops with
 `HOST_INCOMPATIBLE` for an unsupported version, for every host source.
 Hosts that report neither are not checked. The `--format json` output of

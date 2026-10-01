@@ -11,29 +11,33 @@ endif()
 
 project(fantom_tester)
 
-# FANTOM_TEXT_LAYOUT selects the TextLayoutManager:
-#  - macos: CoreText/AppKit (src/platform/macos), with the embedded Roboto and
-#    the Compose engine's text adapter. Apple only; the default there.
-#  - cxx: the upstream platform/cxx stub (every text gets the minimum size,
-#    0x0). The default elsewhere.
-# Unset, it follows FANTOM_MACOS_TEXT_LAYOUT (the older switch; OFF selects
-# cxx on Apple).
-option(FANTOM_MACOS_TEXT_LAYOUT "Measure text with CoreText/AppKit on macOS" ON)
-if(NOT FANTOM_TEXT_LAYOUT)
-  if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
-    set(FANTOM_TEXT_LAYOUT macos)
-  else()
-    set(FANTOM_TEXT_LAYOUT cxx)
-  endif()
+# FANTOM_TEXT_LAYOUT: the TextLayoutManager that measures <Text> (see below).
+#  - macos: CoreText/AppKit (src/platform/macos), Apple only.
+#  - portable: stb_truetype and the embedded Roboto (src/platform/portable,
+#    third_party/stb), no OS text APIs: builds on any OS.
+#  - stub: upstream platform/cxx (every text has the minimum size, height 0).
+# Default: macos on Apple (stub with the older FANTOM_MACOS_TEXT_LAYOUT=OFF),
+# portable elsewhere.
+option(FANTOM_MACOS_TEXT_LAYOUT "Measure text with CoreText/AppKit on macOS (when FANTOM_TEXT_LAYOUT is not set)" ON)
+if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
+  set(fantom_default_text_layout macos)
+elseif(APPLE)
+  set(fantom_default_text_layout stub)
+else()
+  set(fantom_default_text_layout portable)
 endif()
+set(FANTOM_TEXT_LAYOUT "${fantom_default_text_layout}" CACHE STRING "Text layout: macos, portable or stub")
+set_property(CACHE FANTOM_TEXT_LAYOUT PROPERTY STRINGS macos portable stub)
+if(NOT FANTOM_TEXT_LAYOUT MATCHES "^(macos|portable|stub)$")
+  message(FATAL_ERROR "FANTOM_TEXT_LAYOUT must be macos, portable or stub (got ${FANTOM_TEXT_LAYOUT})")
+endif()
+if(FANTOM_TEXT_LAYOUT STREQUAL "macos" AND NOT APPLE)
+  message(FATAL_ERROR "FANTOM_TEXT_LAYOUT=macos needs an Apple platform")
+endif()
+message(STATUS "Text layout: ${FANTOM_TEXT_LAYOUT}")
 if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
-  if(NOT APPLE)
-    message(FATAL_ERROR "FANTOM_TEXT_LAYOUT=macos needs Apple (CoreText/AppKit)")
-  endif()
   # Needed by the macOS TextLayoutManager (see below).
   enable_language(OBJCXX)
-elseif(NOT FANTOM_TEXT_LAYOUT STREQUAL "cxx")
-  message(FATAL_ERROR "FANTOM_TEXT_LAYOUT must be macos or cxx (got ${FANTOM_TEXT_LAYOUT})")
 endif()
 
 include_directories(${REACT_ANDROID_DIR}/hermes-engine/build/prefab-headers)
@@ -236,12 +240,19 @@ add_react_common_subdir(react/renderer/runtimescheduler)
 add_react_common_subdir(react/renderer/scheduler)
 add_react_common_subdir(react/renderer/telemetry)
 add_react_common_subdir(react/renderer/textlayoutmanager)
-if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
-  # On macOS, replace the stub cxx TextLayoutManager (which returns the minimum
-  # size for every text) with a CoreText/AppKit implementation.
+if(NOT FANTOM_TEXT_LAYOUT STREQUAL "stub")
+  # Replace the stub cxx TextLayoutManager (which returns the minimum size for
+  # every text) with the CoreText/AppKit or the portable implementation (same
+  # header, platform/cxx/.../TextLayoutManager.h).
   get_target_property(TLM_SOURCES react_renderer_textlayoutmanager SOURCES)
   list(FILTER TLM_SOURCES EXCLUDE REGEX "platform/cxx/react/renderer/textlayoutmanager/TextLayoutManager\\.cpp$")
   set_property(TARGET react_renderer_textlayoutmanager PROPERTY SOURCES ${TLM_SOURCES})
+endif()
+if(FANTOM_TEXT_LAYOUT STREQUAL "portable")
+  target_sources(react_renderer_textlayoutmanager
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/portable/TextLayoutManager.cpp)
+endif()
+if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
   target_sources(react_renderer_textlayoutmanager
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/macos/TextLayoutManager.mm)
   target_compile_options(react_renderer_textlayoutmanager
@@ -297,8 +308,9 @@ set(FANTOM_NATIVE_LIBRARIES)
 # Roboto, the Android system font, compiled into the executable
 # (native/fonts/roboto): gzip byte arrays generated at build time by
 # cmake/embed-files.cmake, inflated and registered at startup by
-# src/platform/macos/EmbeddedFonts.mm.
-if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
+# src/platform/macos/EmbeddedFonts.mm (macos), or inflated and parsed by
+# src/platform/portable/PortableFonts.cpp (portable).
+if(NOT FANTOM_TEXT_LAYOUT STREQUAL "stub")
   if(NOT FANTOM_FONTS_DIR)
     get_filename_component(FANTOM_FONTS_DIR "${FANTOM_NODE_MODULES_DIR}/../native/fonts" ABSOLUTE)
   endif()
@@ -324,14 +336,38 @@ if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
     VERBATIM)
   # A library in this directory: a custom command's output is only visible to
   # targets of the same directory, and react_renderer_textlayoutmanager is not.
-  add_library(fantom_embedded_fonts STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/macos/EmbeddedFonts.mm
-    ${embedded_font_data})
-  target_compile_options(fantom_embedded_fonts PRIVATE -std=c++20 -Wall -Werror)
-  target_link_libraries(fantom_embedded_fonts PUBLIC "-framework CoreText" "-framework Foundation" compression)
+  if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
+    add_library(fantom_embedded_fonts STATIC
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/macos/EmbeddedFonts.mm
+      ${embedded_font_data})
+    target_compile_options(fantom_embedded_fonts PRIVATE -std=c++20 -Wall -Werror)
+    target_link_libraries(fantom_embedded_fonts PUBLIC "-framework CoreText" "-framework Foundation" compression)
+    target_include_directories(react_renderer_textlayoutmanager
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/macos)
+  else()
+    # The portable fonts and paragraph layout (STL and the vendored stb
+    # headers only), with the font data.
+    add_library(fantom_embedded_fonts STATIC
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/portable/PortableFonts.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/portable/PortableTextLayout.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/portable/StbImpl.cpp
+      ${embedded_font_data})
+    target_include_directories(fantom_embedded_fonts
+      PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/portable
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb)
+    target_compile_definitions(fantom_embedded_fonts PRIVATE FANTOM_WITH_EMBEDDED_FONTS=1)
+    target_compile_features(fantom_embedded_fonts PRIVATE cxx_std_20)
+    # Third-party code: no warnings.
+    if(MSVC)
+      set(fantom_no_warnings /w)
+    else()
+      target_compile_options(fantom_embedded_fonts PRIVATE -Wall -Werror)
+      set(fantom_no_warnings -w)
+    endif()
+    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/platform/portable/StbImpl.cpp
+      PROPERTIES COMPILE_OPTIONS "${fantom_no_warnings}")
+  endif()
   target_link_libraries(react_renderer_textlayoutmanager fantom_embedded_fonts)
-  target_include_directories(react_renderer_textlayoutmanager
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/macos)
   target_compile_definitions(react_renderer_textlayoutmanager PRIVATE FANTOM_WITH_EMBEDDED_FONTS=1)
 endif()
 
@@ -658,6 +694,8 @@ target_include_directories(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 
 if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
   target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_MACOS_TEXT_LAYOUT=1)
+elseif(FANTOM_TEXT_LAYOUT STREQUAL "portable")
+  target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_PORTABLE_TEXT_LAYOUT=1)
 endif()
 if(FANTOM_WITH_EXPO_UI)
   target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_EXPO_UI=1)
@@ -667,14 +705,21 @@ if(FANTOM_WITH_EXPO_UI)
   target_sources(fantom_tester PRIVATE ${FANTOM_EXPO_UI_LAYOUT_SOURCES})
   target_compile_definitions(fantom_tester PRIVATE FANTOM_EXPO_UI_LAYOUT_ENGINE=1)
   # The Compose layout engine (STL only; src/expoui/compose) with its text
-  # adapter: CoreText and the embedded Roboto (fantom_embedded_fonts above).
+  # adapter: the embedded Roboto (fantom_embedded_fonts above) through CoreText
+  # (components/FantomComposeText.mm) or the portable layout
+  # (platform/portable/FantomComposeText.cpp).
   if(TARGET fantom_embedded_fonts)
     file(GLOB FANTOM_EXPO_UI_COMPOSE_SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/src/expoui/compose/*.cpp)
+    if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
+      set(FANTOM_COMPOSE_TEXT_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/components/FantomComposeText.mm)
+    else()
+      set(FANTOM_COMPOSE_TEXT_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/portable/FantomComposeText.cpp)
+    endif()
     target_sources(fantom_tester
       PRIVATE
         ${FANTOM_EXPO_UI_COMPOSE_SOURCES}
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/components/FantomComposeText.mm)
+        ${FANTOM_COMPOSE_TEXT_SOURCE})
     target_link_libraries(fantom_tester PRIVATE fantom_embedded_fonts)
     target_compile_definitions(fantom_tester
       PRIVATE FANTOM_EXPO_UI_COMPOSE_ENGINE=1 FANTOM_WITH_EMBEDDED_FONTS=1)

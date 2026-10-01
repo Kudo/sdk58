@@ -284,8 +284,8 @@ std::string swiftUIEngineType(std::string_view view) {
 // button names (Button, OutlinedButton, TextButton, ...) are already the
 // component names. Unknown names keep their name minus "View"; the engine
 // reports them as unsupported and gives them no frame.
-#ifdef FANTOM_EXPO_UI_COMPOSE_ENGINE
-std::string composeEngineType(std::string_view view) {
+// Unused without FANTOM_EXPO_UI_COMPOSE_ENGINE (no embedded fonts, e.g. the stub text layout).
+[[maybe_unused]] std::string composeEngineType(std::string_view view) {
   static const std::unordered_map<std::string_view, std::string_view> names = {
       {"ColumnView", "Column"}, {"RowView", "Row"}, {"BoxView", "Box"}, {"FlowRowView", "FlowRow"},
       {"SpacerView", "Spacer"}, {"TextView", "Text"}, {"SwitchView", "Switch"}, {"CheckboxView", "Checkbox"},
@@ -302,7 +302,6 @@ std::string composeEngineType(std::string_view view) {
   }
   return name;
 }
-#endif
 
 using EngineTypeFn = std::string (*)(std::string_view);
 

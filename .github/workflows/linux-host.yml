@@ -2,9 +2,8 @@ name: Linux host
 
 # The Linux x86_64 host (native/dist/x86_64/rn-a11y-host): build, facts
 # (size, NEEDED libraries, minimum glibc), a smoke render, unit and e2e
-# tests. Text uses the platform/cxx stub (0x0): the e2e assertions on text
-# sizes and the Compose engine are gated on the host capabilities
-# (`textLayout`, `expoUI.composeLayout`).
+# tests. Text uses the portable layout (FANTOM_TEXT_LAYOUT=portable, the
+# Linux default of build-host.sh).
 on:
   push:
     branches: [main, ci/linux-host]

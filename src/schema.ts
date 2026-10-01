@@ -141,6 +141,8 @@ export type HostRuntimeInfo = {
   sanitize?: boolean;
   engines?: {swiftui?: boolean; compose?: boolean; [engine: string]: boolean | undefined};
   fonts?: {roboto?: boolean; [font: string]: boolean | undefined};
+  /** Text measurement: `macos` (CoreText), `portable` (embedded fonts, any OS) or `stub` (no text sizes). */
+  textLayout?: 'macos' | 'portable' | 'stub';
   [key: string]: unknown;
 };
 

@@ -9,6 +9,7 @@
 
 #include "FantomTimerRegistry.h"
 #include "NativeFantom.h"
+#include "components/FantomDeviceInfo.h"
 #include "components/FantomExpo.h"
 #include "components/FantomSafeArea.h"
 #include "components/FantomScreens.h"
@@ -327,8 +328,11 @@ void TesterAppDelegate::startSurface(
       .layoutDirection = LayoutDirection::LeftToRight,
   };
 
+  // fontSizeMultiplier: the device font scale (--font-scale), which <Text>
+  // passes to the TextLayoutManager unless allowFontScaling is false.
   LayoutContext layoutContext{
       .pointScaleFactor = pointScaleFactor,
+      .fontSizeMultiplier = static_cast<Float>(getFantomDeviceMetrics().fontScale),
       .viewportOffset = {.x = offsetX, .y = offsetY},
   };
 
@@ -365,6 +369,7 @@ void TesterAppDelegate::updateSurfaceConstraints(
 
   LayoutContext layoutContext{
       .pointScaleFactor = pointScaleFactor,
+      .fontSizeMultiplier = static_cast<Float>(getFantomDeviceMetrics().fontScale),
   };
 
   reactHost_->setSurfaceConstraints(
