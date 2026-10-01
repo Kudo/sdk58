@@ -4,7 +4,8 @@ name: Linux host
 # layout):
 # - build: in the manylinux_2_28 image (AlmaLinux 8, glibc 2.28), so the
 #   binary needs at most GLIBC_2.28; clang from AlmaLinux with the libstdc++
-#   of gcc-toolset (static), ICU built from source (static, cached);
+#   of gcc-toolset (static), ICU built from source (static, trimmed data:
+#   scripts/icu-data-filter.json, cached);
 # - test: the binary on ubuntu-24.04 (smoke render, unit and e2e tests);
 # - old-distro: the binary inside older images (glibc 2.28 / 2.31), run by the
 #   CLI on the runner through `docker run` (smoke render and e2e).
@@ -133,14 +134,14 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.HOST_DIR }}
-          key: host-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-${{ steps.host-key.outputs.libs }}-${{ hashFiles('native/overlay/**', 'native/fonts/**', 'native/scripts/**', 'scripts/build-host.sh', 'scripts/build-icu.sh') }}
+          key: host-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-${{ steps.host-key.outputs.libs }}-${{ hashFiles('native/overlay/**', 'native/fonts/**', 'native/scripts/**', 'scripts/build-host.sh', 'scripts/build-icu.sh', 'scripts/icu-data-filter.json') }}
 
       - name: Restore ICU
         if: steps.host-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v6
         with:
           path: /opt/icu
-          key: icu-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-${{ hashFiles('scripts/build-icu.sh') }}
+          key: icu-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-${{ hashFiles('scripts/build-icu.sh', 'scripts/icu-data-filter.json') }}
 
       - name: Build ICU (static)
         if: steps.host-cache.outputs.cache-hit != 'true'

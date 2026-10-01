@@ -116,6 +116,14 @@
         "react-native": "0.88.0-rc.2",
       },
     },
+    "examples/unicode": {
+      "name": "@react-native-a11y-tree/example-unicode",
+      "version": "0.0.0",
+      "dependencies": {
+        "react": "19.3.0",
+        "react-native": "0.88.0-rc.2",
+      },
+    },
     "packages/rn-a11y-host": {
       "name": "rn-a11y-host",
       "version": "0.1.1",
@@ -435,6 +443,8 @@
     "@react-native-a11y-tree/example-reanimated": ["@react-native-a11y-tree/example-reanimated@workspace:examples/reanimated"],
 
     "@react-native-a11y-tree/example-scrolling": ["@react-native-a11y-tree/example-scrolling@workspace:examples/scrolling"],
+
+    "@react-native-a11y-tree/example-unicode": ["@react-native-a11y-tree/example-unicode@workspace:examples/unicode"],
 
     "@react-native/asset-utils": ["@react-native/asset-utils@0.88.0-rc.2", "", {}, "sha512-d6qGBOmVM1m7PN1kDrWvKwUrHZ5AZTgwXKygf6xl82rnHpfjFb07LhCcIRC06T0jwwgwO8WBz05vjAMr1YIr1A=="],
 

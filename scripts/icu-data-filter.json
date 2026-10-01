@@ -1,0 +1,23 @@
+{
+  "localeFilter": {
+    "filterType": "locale",
+    "includeChildren": false,
+    "includelist": ["en", "en_US", "en_US_POSIX"]
+  },
+  "featureFilters": {
+    "brkitr_adaboost": "exclude",
+    "brkitr_dictionaries": "exclude",
+    "brkitr_lstm": "exclude",
+    "brkitr_rules": "exclude",
+    "brkitr_tree": "exclude",
+    "confusables": "exclude",
+    "conversion_mappings": "exclude",
+    "lang_tree": "exclude",
+    "rbnf_tree": "exclude",
+    "region_tree": "exclude",
+    "stringprep": "exclude",
+    "translit": "exclude",
+    "unames": "exclude",
+    "unit_tree": "exclude"
+  }
+}

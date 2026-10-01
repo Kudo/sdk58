@@ -914,11 +914,35 @@ static host off Apple: `-static-libstdc++ -static-libgcc`, `libatomic.a`
 (at the end of the link line), and ICU (`FANTOM_STATIC_ICU`, default ON:
 `libicui18n.a libicuuc.a libicudata.a`; Hermes uses ICU for collation,
 normalization, case mapping and date formatting where macOS uses
-CoreFoundation). The ICU data (`icudt74_dat`) is 30.8 MB of the 45.7 MB binary.
-Static ICU comes from the distribution (Ubuntu: `libicu-dev`) or from
-`scripts/build-icu.sh <prefix>` (ICU 74.2 from source, static and PIC); then
-build with `CMAKE_PREFIX_PATH=<prefix> ICU_ROOT=<prefix>`, so that Hermes and
-the tester find it.
+CoreFoundation). Static ICU comes from the distribution (Ubuntu: `libicu-dev`,
+full data: 30.8 MB of a 45.7 MB binary) or from `scripts/build-icu.sh <prefix>`
+(ICU 74.2 from source, static and PIC); then build with
+`CMAKE_PREFIX_PATH=<prefix> ICU_ROOT=<prefix>`, so that Hermes and the tester
+find it.
+
+`build-icu.sh` builds the data from ICU's data sources with
+`scripts/icu-data-filter.json` (`ICU_DATA_FILTER_FILE`; about 2.2 MB instead of
+30.8 MB). Hermes is built without Intl (`HERMES_ENABLE_INTL` is off in the
+gradle build for the host), and `lib/Platform/Unicode/PlatformUnicodeICU.cpp`
+uses only `ucol_*` (`localeCompare`, default locale, normalization on),
+`udat_*` (`toLocale{,Date,Time}String`: medium styles, default locale),
+`u_strToUpper`/`u_strToLower` (root or default locale) and `unorm2_*`
+(`normalize`). The filter keeps:
+
+- the locales root, `en`, `en_US` and `en_US_POSIX` (ICU's default locale
+  when `LANG` is unset or `C`) in every locale tree (`locales`, `coll`,
+  `zone`, `curr`), `coll_ucadata`, `normalization`, `misc` (supplemental data,
+  time zones, likely subtags), `zone_supplemental`, `curr_supplemental`,
+  `cnvalias`, `ulayout`, `uemoji`;
+- and drops break iterators (rules, dictionaries, LSTM, AdaBoost), language,
+  region, unit and RBNF names, transliterators, confusables, StringPrep,
+  character names and the conversion tables.
+
+Case mapping and normalization do not depend on the locale data (Turkish
+`toLocaleLowerCase` still works). Another default locale (`LANG=de_DE.UTF-8`)
+falls back: `en_GB` to `en`, `de_DE` to root. Root collation is the same as
+`en`; the root date format is `1970 M01 1` (the same as full ICU 74.2 for a
+locale it does not have).
 
 The release binary is built on glibc 2.28 (CI: `.github/workflows/linux-host.yml`,
 job `build` in the `quay.io/pypa/manylinux_2_28_x86_64` image, AlmaLinux 8:

@@ -24,6 +24,7 @@ them in the table. Unit and CLI tests against a fake host are in `test/`
 | `e2e/expo-ui.test.ts` | expo-ui | android-phone (App.tsx Compose + SwiftUIScreen.tsx), ios-phone (App.tsx SwiftUI) | Compose screen on android, SwiftUI screen on ios |
 | `e2e/dimensions.test.ts` | dimensions | android-phone, ios-phone | window/screen = preset viewport, scale 3, fontScale 1 (needs `deviceMetrics`) |
 | `e2e/package.test.ts` | basic (scratch project) | android-phone | none |
+| `e2e/unicode.test.ts` | unicode | android-phone, ios-phone | none (the date is in the host's time zone) |
 
 ## `e2e/render.test.ts` — `examples/basic/App.tsx`, `render`
 
@@ -154,3 +155,15 @@ without Reanimated).
 - `slide`: the layout `box` does not move; `visualBox.x - box.x` ≈ 120 (±1) after `withSpring(120)` and 1000 ms (`style.transform[12]` = 120).
 - `fade`: `effectiveOpacity` < 1 at `fade-start` (50 ms into `FadeIn.duration(300)`; mounted opacity ≈ 0.056 today) — checked when `capabilities` has `getA11yTree.mounted`, otherwise logged as an annotation — and 1 at `fade-end`.
 - `label` = "from-ui" (`runOnUI` → `runOnJS` roundtrip).
+
+## `e2e/unicode.test.ts` — `examples/unicode/App.tsx`, `render`
+
+Hermes' platform Unicode functions (CoreFoundation on macOS, ICU with the
+trimmed data of `scripts/icu-data-filter.json` on Linux; Hermes is built
+without Intl, so locale and options arguments are ignored).
+
+- `localeCompare`: `a`/`b` gives -1 and 1; precomposed and decomposed `é` compare equal (0).
+- `new Date(0).toLocaleDateString(...)`: English medium date, `Dec 31, 1969` or `Jan 1, 1970` (host time zone).
+- `(1234.5).toLocaleString(...)`: `1234.5` or `1,234.5`.
+- `'İ'.toLowerCase()`: U+0069 U+0307; `'ß'.toUpperCase()`: `SS`.
+- `normalize`: NFD of `é` has length 2, NFC of `e` + U+0301 length 1, NFKC of `ﬁ` is `fi`.
