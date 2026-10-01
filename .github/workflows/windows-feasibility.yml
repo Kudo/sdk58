@@ -167,15 +167,20 @@ jobs:
           RNP=$(cygpath -m "$PWD")/third_party/react-native/packages/react-native
           HB=$RNP/ReactAndroid/hermes-engine/build/hermes
           # Same arguments as configureBuildForHermesWithDebugger in
-          # ReactAndroid/hermes-engine/build.gradle.kts, with Ninja and clang-cl
-          # instead of "NMake Makefiles" and cl.exe.
+          # ReactAndroid/hermes-engine/build.gradle.kts, with Ninja instead of
+          # "NMake Makefiles". The compiler is MSVC (cl.exe): Hermes treats
+          # clang-cl as GCC-compatible (-fno-exceptions, which clang-cl ignores,
+          # and -Werror=undef, which fails on __GNUC__ in llvh; round 3).
+          # MSVC objects link with clang-cl objects (same ABI and STL).
+          MSVC_BIN="$(dirname "$(command -v cl)")"
           cmake -G Ninja -Wno-dev -S "$RNP/sdks/hermes" -B "$HB" \
             -DJSI_DIR="$RNP/ReactCommon/jsi" \
             -DCMAKE_BUILD_TYPE=Release \
             -DHERMES_ENABLE_DEBUGGER=True \
             -DHERMESVM_HEAP_HV_MODE=HEAP_HV_PREFER32 \
-            -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl \
-            -DCMAKE_LINKER=lld-link -DCMAKE_AR=llvm-lib \
+            -DHERMES_MSVC_MP=OFF \
+            -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl \
+            "-DCMAKE_LINKER=$(cygpath -m "$MSVC_BIN/link.exe")" \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             2>&1 | tee "$LOGS/h-cmake.log" || { echo "wall $((SECONDS - s)) s" > "$LOGS/h.time"; exit 1; }
           ninja -C "$HB" -k 0 hermesvm hermesc > "$LOGS/h-ninja.log" 2>&1; st=$?
@@ -228,6 +233,9 @@ jobs:
         run: |
           set -x
           # reanimated: SynchronouslyUpdateUIPropsFunction is only declared for ANDROID / __APPLE__.
+          # Spike only: configure without the Hermes libraries (round 3) so that
+          # the compile errors of the tester are collected even when Hermes fails.
+          sed -i 's|message(FATAL_ERROR "Hermes static library not found|message(WARNING "Hermes static library not found|' third_party/react-native/private/react-native-fantom/tester/CMakeLists.txt
           sed -i 's|^#elif __APPLE__$|#else|' node_modules/react-native-reanimated/Common/cpp/reanimated/Tools/PlatformDepMethodsHolder.h
           # worklets: the non-Android branch calls the macOS pthread_setname_np(name).
           sed -i 's|^    pthread_setname_np(name.c_str());$|#ifdef __APPLE__\n    pthread_setname_np(name.c_str());\n#endif|' node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp
