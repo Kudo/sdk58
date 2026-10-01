@@ -761,7 +761,8 @@ if(MSVC)
   # clang-cl: translate the GCC-style compile options of every target (React
   # Native, the third-party libraries, the native libraries and this
   # directory). clang-cl takes -W<warning>, -D and -I as they are, but reads
-  # -Wall as /Wall (-Weverything) and ignores -std=, -f<option> and -O<n>.
+  # -Wall as /Wall (-Weverything) and ignores -std=, -f<option> and -O<n>;
+  # other -f<option>s are passed with /clang:.
   function(fantom_translate_msvc_option_list input out_var)
     set(result)
     set(next_is_include OFF)
@@ -782,7 +783,9 @@ if(MSVC)
       elseif(option STREQUAL "-fno-omit-frame-pointer")
         list(APPEND result "/Oy-")
       elseif(option STREQUAL "-Wall")
-        list(APPEND result "/clang:-Wall")
+        # clang-cl /W3 = -Wall. Not /clang:-Wall: /clang: options go to the
+        # end of the command line, after the -Wno-<warning> options (round 8).
+        list(APPEND result "/W3")
       elseif(option STREQUAL "-Wpedantic")
         # MSVC keywords (__int64, __forceinline) in folly, double-conversion, glog.
         list(APPEND result "-Wpedantic" "-Wno-language-extension-token")
