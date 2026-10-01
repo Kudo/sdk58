@@ -252,9 +252,13 @@ jobs:
           F=$RN/private/react-native-fantom
           RNP=$RN/packages/react-native
           # Standard headers that libc++ includes transitively (the Linux
-          # spike needed the same set for libstdc++).
+          # spike needed the same set for libstdc++). CMAKE_CXX_FLAGS_INIT, not
+          # CMAKE_CXX_FLAGS: the latter replaces CMake's /DWIN32 /D_WINDOWS
+          # /EHsc /GR (round 4: exceptions off, jsilib-posix.cpp compiled).
           # -FI, not /FI: Git Bash rewrites arguments that start with /.
-          FI="-FIcstdint -FIcstddef -FIcmath -FIalgorithm -FIiterator -FIstdexcept -FImath.h"
+          # No -FImath.h: on a case-insensitive file system it resolves to
+          # folly/portability/Math.h (round 4). <chrono>: worklets EventLoop.cpp.
+          FI="-FIcstdint -FIcstddef -FIcmath -FIalgorithm -FIiterator -FIstdexcept -FIchrono"
           cmake -G Ninja -S "$F/tester" -B "$TESTER_BUILD" \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl \
@@ -269,7 +273,7 @@ jobs:
             -DREACT_THIRD_PARTY_NDK_DIR="$RNP/ReactAndroid/build/third-party-ndk" \
             -DRN_ENABLE_DEBUG_STRING_CONVERTIBLE=ON \
             -DHERMES_V1_ENABLED=1 \
-            "-DCMAKE_CXX_FLAGS=$FI" 2>&1 | tee "$LOGS/e-cmake.log"; st=$?
+            "-DCMAKE_CXX_FLAGS_INIT=$FI" 2>&1 | tee "$LOGS/e-cmake.log"; st=$?
           cp "$TESTER_BUILD/CMakeFiles/CMakeConfigureLog.yaml" "$LOGS/" 2>/dev/null || true
           echo "wall $((SECONDS - s)) s" > "$LOGS/e.time"; exit $st
 

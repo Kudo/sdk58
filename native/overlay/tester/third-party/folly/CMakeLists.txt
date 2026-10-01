@@ -69,7 +69,10 @@ SET(folly_runtime_SRC
 
 if(WIN32)
   file(GLOB folly_portability_SRC CONFIGURE_DEPENDS folly/portability/*.cpp)
-  list(FILTER folly_portability_SRC EXCLUDE REGEX "/(OpenSSL|SysUio)\\.cpp$")
+  # OpenSSL.cpp: no OpenSSL. PThread.cpp: pthread emulation on top of
+  # boost::thread (a compiled boost library; the ReactAndroid boost has no
+  # boost/predef).
+  list(FILTER folly_portability_SRC EXCLUDE REGEX "/(OpenSSL|PThread|SysUio)\\.cpp$")
   list(APPEND folly_runtime_SRC
           ${folly_portability_SRC}
           folly/net/detail/SocketFileDescriptorMap.cpp)

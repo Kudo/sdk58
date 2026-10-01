@@ -20,7 +20,9 @@ if(MSVC)
   set(CMAKE_CXX_STANDARD 20)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   # fmt requires UTF-8 source and execution character sets with MSVC.
-  add_compile_options(/utf-8)
+  # -Wpedantic (React Native flags) warns on MSVC keywords such as __int64
+  # and __forceinline in folly, double-conversion and glog.
+  add_compile_options(/utf-8 -Wno-language-extension-token)
   add_compile_definitions(
     NOMINMAX
     WIN32_LEAN_AND_MEAN
@@ -152,6 +154,8 @@ if(WIN32)
     ${glog_src}/windows/port.cc)
   target_include_directories(glog PRIVATE ${glog_src})
   target_include_directories(glog BEFORE PUBLIC ${glog_src}/windows)
+  # HAVE_SNPRINTF: the UCRT has snprintf (port.cc would define it again).
+  target_compile_definitions(glog PRIVATE HAVE_SNPRINTF)
   target_compile_options(glog PRIVATE -Wno-everything)
 else()
   add_react_third_party_ndk_subdir(glog)
@@ -718,6 +722,15 @@ target_compile_options(fantom_tester
     -std=c++20)
 
 if(MSVC)
+  # Third-party code: warnings that are new with clang-cl and the MSVC
+  # headers (double-conversion: unused typedef/variable in its MSVC branch;
+  # folly: inet_addr deprecated, missing braces; fmt: nodiscard).
+  foreach(target double-conversion fmt folly_runtime gflags)
+    if(TARGET ${target})
+      target_compile_options(${target} PRIVATE -Wno-error)
+    endif()
+  endforeach()
+
   # <cxxabi.h> for worklets and reanimated (src/stubs/windows).
   foreach(target worklets reanimated)
     if(TARGET ${target})
@@ -738,8 +751,12 @@ if(MSVC)
         set(next_is_include OFF)
       elseif(option STREQUAL "-include")
         set(next_is_include ON)
-      elseif(option MATCHES "^-(fexceptions|frtti|g|fPIC|fpic|lpthread|pthread|fvisibility=.*|std=(c|gnu)\\+\\+[0-9]+)$")
-        # /EHsc, /GR and the C++ standard come from CMake.
+      elseif(option STREQUAL "-fexceptions")
+        list(APPEND result "/EHsc")
+      elseif(option STREQUAL "-frtti")
+        list(APPEND result "/GR")
+      elseif(option MATCHES "^-(g|fPIC|fpic|lpthread|pthread|fvisibility=.*|std=(c|gnu)\\+\\+[0-9]+)$")
+        # The C++ standard comes from CMAKE_CXX_STANDARD.
       elseif(option MATCHES "^-O[0-9s]$")
         list(APPEND result "/O2")
       elseif(option STREQUAL "-fno-omit-frame-pointer")
