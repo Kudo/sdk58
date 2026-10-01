@@ -59,4 +59,17 @@ node "$GENERATE_CLI" -p android -s "$TMP_DIR/schema.json" -o "$TMP_DIR/out" \
   -n "$NAME" -j "$JAVA_PACKAGE" -t all >/dev/null
 
 mkdir -p "$OUT_DIR/jni"
-rsync -rc --delete "$TMP_DIR/out/jni/" "$OUT_DIR/jni/"
+if command -v rsync >/dev/null; then
+  rsync -rc --delete "$TMP_DIR/out/jni/" "$OUT_DIR/jni/"
+else
+  # No rsync (Git for Windows): the same copy with cmp.
+  (cd "$OUT_DIR/jni" && find . -type f) | while read -r file; do
+    [[ -f "$TMP_DIR/out/jni/$file" ]] || rm -f "$OUT_DIR/jni/$file"
+  done
+  (cd "$TMP_DIR/out/jni" && find . -type f) | while read -r file; do
+    if ! cmp -s "$TMP_DIR/out/jni/$file" "$OUT_DIR/jni/$file"; then
+      mkdir -p "$(dirname "$OUT_DIR/jni/$file")"
+      cp "$TMP_DIR/out/jni/$file" "$OUT_DIR/jni/$file"
+    fi
+  done
+fi

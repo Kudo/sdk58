@@ -13,6 +13,27 @@ endif()
 
 project(fantom_tester)
 
+if(MSVC)
+  # Windows host (clang-cl). The React Native CMake files pass GCC-style
+  # options; they are translated at the end of this file
+  # (fantom_translate_msvc_options). C++20 through CMake instead of -std=c++20.
+  set(CMAKE_CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  # fmt requires UTF-8 source and execution character sets with MSVC.
+  add_compile_options(/utf-8)
+  add_compile_definitions(
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+    NOGDI
+    _USE_MATH_DEFINES
+    _CRT_SECURE_NO_WARNINGS
+    _CRT_NONSTDC_NO_WARNINGS
+    _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+    _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS
+    GLOG_NO_ABBREVIATED_SEVERITIES
+    GOOGLE_GLOG_DLL_DECL=)
+endif()
+
 option(FANTOM_MACOS_TEXT_LAYOUT "Measure text with CoreText/AppKit on macOS" ON)
 if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
   # Needed by the macOS TextLayoutManager (see below).
@@ -49,24 +70,39 @@ endif()
 add_library(hermes-engine::hermesvm INTERFACE IMPORTED)
 if(FANTOM_STATIC_HOST)
   set(hermes_static_libs)
+  # lib<name>.a, or <name>.lib on Windows.
+  set(lib_prefix ${CMAKE_STATIC_LIBRARY_PREFIX})
+  set(lib_suffix ${CMAKE_STATIC_LIBRARY_SUFFIX})
   foreach(archive
-      lib/libhermesvm_a.a
-      lib/Parser/libhermesParser.a
-      lib/AST/libhermesAST.a
-      lib/Support/libhermesSupport.a
-      lib/Regex/libhermesRegex.a
-      lib/Platform/Unicode/libhermesPlatformUnicode.a
-      external/dtoa/libdtoa.a
-      external/llvh/lib/Support/libLLVHSupport.a
-      external/llvh/lib/Demangle/libLLVHDemangle.a)
+      lib/hermesvm_a
+      lib/Parser/hermesParser
+      lib/AST/hermesAST
+      lib/Support/hermesSupport
+      lib/Regex/hermesRegex
+      lib/Platform/Unicode/hermesPlatformUnicode
+      external/dtoa/dtoa
+      external/llvh/lib/Support/LLVHSupport
+      external/llvh/lib/Demangle/LLVHDemangle)
+    get_filename_component(archive_dir ${archive} DIRECTORY)
+    get_filename_component(archive_name ${archive} NAME)
+    set(archive "${archive_dir}/${lib_prefix}${archive_name}${lib_suffix}")
     if(NOT EXISTS "${HERMES_BUILD_DIR}/${archive}")
       message(FATAL_ERROR "Hermes static library not found: ${HERMES_BUILD_DIR}/${archive}")
     endif()
     list(APPEND hermes_static_libs "${HERMES_BUILD_DIR}/${archive}")
   endforeach()
   file(GLOB boost_context_lib
-    "${HERMES_BUILD_DIR}/external/boost/*/libs/context/libboost_context.a")
-  list(APPEND hermes_static_libs ${boost_context_lib} "-framework CoreFoundation")
+    "${HERMES_BUILD_DIR}/external/boost/*/libs/context/${lib_prefix}boost_context${lib_suffix}")
+  list(APPEND hermes_static_libs ${boost_context_lib})
+  if(APPLE)
+    list(APPEND hermes_static_libs "-framework CoreFoundation")
+  elseif(WIN32)
+    # Hermes uses the ICU of Windows 10 (USE_WIN10_ICU) and LLVH dbghelp/psapi.
+    list(APPEND hermes_static_libs icuuc icuin dbghelp psapi)
+  else()
+    # Hermes uses ICU on Linux (PlatformUnicodeICU).
+    list(APPEND hermes_static_libs icui18n icuuc icudata)
+  endif()
   set_target_properties(hermes-engine::hermesvm PROPERTIES
     INTERFACE_LINK_LIBRARIES "${hermes_static_libs}")
   set(OPENSSL_USE_STATIC_LIBS TRUE)
@@ -87,6 +123,12 @@ if(APPLE AND FANTOM_STATIC_HOST AND FANTOM_OPENSSL_SHIM)
   add_library(fantom_sha256_shim STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto/Sha256Shim.cpp)
   target_include_directories(fantom_sha256_shim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto)
   add_library(OpenSSL::Crypto ALIAS fantom_sha256_shim)
+elseif(WIN32 AND FANTOM_OPENSSL_SHIM)
+  # The same shim with CNG (no OpenSSL on Windows).
+  add_library(fantom_sha256_shim STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto/Sha256ShimWin.cpp)
+  target_include_directories(fantom_sha256_shim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto)
+  target_link_libraries(fantom_sha256_shim PUBLIC bcrypt)
+  add_library(OpenSSL::Crypto ALIAS fantom_sha256_shim)
 else()
   find_package(OpenSSL REQUIRED)
 endif()
@@ -95,7 +137,25 @@ endif()
 add_third_party_subdir(boost)
 
 # Third-party downloaded targets
-add_react_third_party_ndk_subdir(glog)
+if(WIN32)
+  # The glog build of ReactAndroid uses its Android config.h and POSIX
+  # headers; glog 0.3.5 has a Windows port (src/windows: config.h, port.cc and
+  # the glog/*.h headers for Windows).
+  set(glog_src ${REACT_THIRD_PARTY_NDK_DIR}/glog/glog-0.3.5/src)
+  add_library(glog STATIC
+    ${glog_src}/demangle.cc
+    ${glog_src}/logging.cc
+    ${glog_src}/raw_logging.cc
+    ${glog_src}/symbolize.cc
+    ${glog_src}/utilities.cc
+    ${glog_src}/vlog_is_on.cc
+    ${glog_src}/windows/port.cc)
+  target_include_directories(glog PRIVATE ${glog_src})
+  target_include_directories(glog BEFORE PUBLIC ${glog_src}/windows)
+  target_compile_options(glog PRIVATE -Wno-everything)
+else()
+  add_react_third_party_ndk_subdir(glog)
+endif()
 add_react_third_party_ndk_subdir(double-conversion)
 add_react_third_party_ndk_subdir(fast_float)
 add_react_third_party_ndk_subdir(fmt)
@@ -426,7 +486,7 @@ else()
     jsireact
     react_cxxreact
     react_nativemodule_core
-    "-lobjc") # objc_autoreleasePoolPush/Pop in RunLoop/AsyncQueueImpl.cpp
+    $<$<PLATFORM_ID:Darwin>:-lobjc>) # objc_autoreleasePoolPush/Pop in RunLoop/AsyncQueueImpl.cpp
 
   # reanimated. Common/NativeView before the codegen output: its
   # rnreanimated/ComponentDescriptors.h replaces the generated (empty) one.
@@ -656,3 +716,66 @@ target_compile_options(fantom_tester
     -fexceptions
     -frtti
     -std=c++20)
+
+if(MSVC)
+  # <cxxabi.h> for worklets and reanimated (src/stubs/windows).
+  foreach(target worklets reanimated)
+    if(TARGET ${target})
+      target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/windows)
+    endif()
+  endforeach()
+
+  # clang-cl: translate the GCC-style compile options of every target (React
+  # Native, the third-party libraries, the native libraries and this
+  # directory). clang-cl takes -W<warning>, -D and -I as they are, but reads
+  # -Wall as /Wall (-Weverything) and ignores -std=, -f<option> and -O<n>.
+  function(fantom_translate_msvc_option_list input out_var)
+    set(result)
+    set(next_is_include OFF)
+    foreach(option IN LISTS input)
+      if(next_is_include)
+        list(APPEND result "/FI${option}")
+        set(next_is_include OFF)
+      elseif(option STREQUAL "-include")
+        set(next_is_include ON)
+      elseif(option MATCHES "^-(fexceptions|frtti|g|fPIC|fpic|lpthread|pthread|fvisibility=.*|std=(c|gnu)\\+\\+[0-9]+)$")
+        # /EHsc, /GR and the C++ standard come from CMake.
+      elseif(option MATCHES "^-O[0-9s]$")
+        list(APPEND result "/O2")
+      elseif(option STREQUAL "-fno-omit-frame-pointer")
+        list(APPEND result "/Oy-")
+      elseif(option STREQUAL "-Wall")
+        list(APPEND result "/clang:-Wall")
+      elseif(option MATCHES "^-f")
+        list(APPEND result "/clang:${option}")
+      else()
+        list(APPEND result "${option}")
+      endif()
+    endforeach()
+    set(${out_var} "${result}" PARENT_SCOPE)
+  endfunction()
+
+  function(fantom_translate_msvc_options dir)
+    get_property(targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(target IN LISTS targets)
+      get_target_property(type ${target} TYPE)
+      set(properties INTERFACE_COMPILE_OPTIONS)
+      if(NOT type STREQUAL "INTERFACE_LIBRARY")
+        list(APPEND properties COMPILE_OPTIONS)
+      endif()
+      foreach(property IN LISTS properties)
+        get_target_property(options ${target} ${property})
+        if(options)
+          fantom_translate_msvc_option_list("${options}" translated)
+          set_property(TARGET ${target} PROPERTY ${property} "${translated}")
+        endif()
+      endforeach()
+    endforeach()
+    get_property(subdirs DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
+    foreach(subdir IN LISTS subdirs)
+      fantom_translate_msvc_options(${subdir})
+    endforeach()
+  endfunction()
+
+  fantom_translate_msvc_options(${CMAKE_CURRENT_SOURCE_DIR})
+endif()

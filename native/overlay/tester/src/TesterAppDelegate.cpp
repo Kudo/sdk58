@@ -23,6 +23,10 @@
 
 #include <folly/dynamic.h>
 #include <folly/json.h>
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 #include <glog/logging.h>
 #include <jsi/jsi.h>
 #include <logger/react_native_log.h>
@@ -261,6 +265,12 @@ void TesterAppDelegate::evaluateInteractiveChunk(
 }
 
 void TesterAppDelegate::runInteractiveLoop() {
+#ifdef _WIN32
+  // Frames are counted in bytes: text mode would turn CRLF into LF (and stop
+  // at Ctrl-Z) on stdin, and write CRLF on stdout.
+  _setmode(_fileno(stdin), _O_BINARY);
+  _setmode(_fileno(stdout), _O_BINARY);
+#endif
   std::string countLine;
   int evalId = 0;
 

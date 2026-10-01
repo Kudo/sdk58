@@ -7,8 +7,9 @@
 
 // The part of OpenSSL's <openssl/sha.h> that ReactCxxPlatform uses
 // (react/devsupport/DevServerHelper.cpp: SHA256 of the device id), implemented
-// with CommonCrypto (Sha256Shim.cpp). The static host links this instead of
-// libcrypto.a, which Homebrew only has for the build machine's architecture.
+// with CommonCrypto (Sha256Shim.cpp) or, on Windows, CNG (Sha256ShimWin.cpp).
+// The static host links this instead of libcrypto.a, which Homebrew only has
+// for the build machine's architecture.
 
 #pragma once
 

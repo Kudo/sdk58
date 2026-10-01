@@ -1,0 +1,361 @@
+name: Windows feasibility
+
+# Feasibility check: can the headless host (Fantom tester + native/overlay)
+# be built on Windows x64 with clang-cl? Every step continues on error; logs
+# are uploaded. See docs/research/windows-feasibility.md.
+on:
+  # workflow_dispatch needs the file on the default branch; push runs it from
+  # this branch only.
+  push:
+    branches: [ci/windows-host]
+
+env:
+  # Bump to drop the cached gradle/Hermes outputs.
+  DEPS_CACHE_VERSION: '1'
+  # 1: also run the unmodified gradle task (prepareAllDependencies: Hermes
+  # with "NMake Makefiles" and cl.exe) in a separate job, to record its outcome.
+  UPSTREAM_GRADLE: '1'
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      # Short paths (MAX_PATH): the tester build directory.
+      TESTER_BUILD: D:/t
+      SCCACHE_GHA_ENABLED: 'true'
+    steps:
+      - name: git config (no CRLF conversion, long paths)
+        run: |
+          echo "LOGS=$(cygpath -m "$GITHUB_WORKSPACE")/feasibility-logs" >> "$GITHUB_ENV"
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          git config --global core.longpaths true
+
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Toolchain
+        run: |
+          mkdir -p "$LOGS"
+          if [ ! -x "/c/Program Files/LLVM/bin/clang-cl.exe" ]; then
+            choco install llvm -y --no-progress
+          fi
+          echo "C:\\Program Files\\LLVM\\bin" >> "$GITHUB_PATH"
+          export PATH="/c/Program Files/LLVM/bin:$PATH"
+          command -v ninja || choco install ninja -y --no-progress
+          npm install -g yarn@1.22.22
+          {
+            uname -a; nproc; systeminfo | grep -E 'Total Physical Memory|OS Name|OS Version' || true
+            echo "clang-cl: $(command -v clang-cl)"; clang-cl --version
+            echo "lld-link: $(command -v lld-link)"; echo "llvm-lib: $(command -v llvm-lib)"
+            echo "cl: $(command -v cl)"; echo "link: $(command -v link)"; echo "ml64: $(command -v ml64)"
+            cmake --version | head -n 1; echo "ninja $(ninja --version 2>&1)"
+            java -version 2>&1 | head -n 1; node --version; bun --version; yarn --version
+            sccache --version || true
+            echo "VCToolsVersion=$VCToolsVersion WindowsSDKVersion=$WindowsSDKVersion"
+            echo "ANDROID_HOME=$ANDROID_HOME"; ls "$ANDROID_HOME" "$ANDROID_HOME/ndk" "$ANDROID_HOME/cmake" 2>&1
+            echo "ANDROID_NDK=${ANDROID_NDK:-} ANDROID_NDK_HOME=${ANDROID_NDK_HOME:-} ANDROID_NDK_LATEST_HOME=${ANDROID_NDK_LATEST_HOME:-}"
+            echo "submodule: $(git rev-parse HEAD:third_party/react-native)"
+          } 2>&1 | tee "$LOGS/toolchain.txt"
+          echo "RN_SHA=$(git rev-parse HEAD:third_party/react-native)" >> "$GITHUB_ENV"
+
+      - name: Android SDK CMake 3.30.5 + NDK selection
+        continue-on-error: true
+        run: |
+          set -x
+          SDK="$(cygpath -u "$ANDROID_HOME")"
+          SDKMANAGER="$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager.bat | head -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          [ -d "$SDK/cmake/3.30.5" ] || "$SDKMANAGER" --install "cmake;3.30.5" > /dev/null || echo "sdkmanager cmake;3.30.5 failed" | tee -a "$LOGS/toolchain.txt"
+          PINNED=27.1.12297006
+          if [ -f "$SDK/ndk/$PINNED/source.properties" ]; then NDK_DIR="$SDK/ndk/$PINNED"
+          else NDK_DIR="$(ls -d "$SDK"/ndk/* | sort -r | head -n 1)"; fi
+          NDK_VERSION="$(sed -n 's/^Pkg.Revision *= *//p' "$NDK_DIR/source.properties" | tr -d '\r')"
+          echo "NDK: $NDK_DIR ($NDK_VERSION)" | tee -a "$LOGS/toolchain.txt"
+          echo "ANDROID_NDK=$(cygpath -w "$NDK_DIR")" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_VERSION=$NDK_VERSION" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_LATEST_HOME=" >> "$GITHUB_ENV"
+
+      - name: (a) bun install
+        id: a
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          bun install --frozen-lockfile 2>&1 | tee "$LOGS/a-bun-install.log"; st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/a.time"; exit $st
+
+      - name: (b) submodule yarn install
+        id: b
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          cd third_party/react-native
+          yarn install --frozen-lockfile --non-interactive 2>&1 | tee "$LOGS/b-yarn-install.log"; st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/b.time"; exit $st
+
+      - name: overlay
+        run: cp -r native/overlay/. third_party/react-native/private/react-native-fantom/
+
+      - name: Restore gradle/Hermes outputs
+        id: deps-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: win-deps-${{ env.DEPS_CACHE_VERSION }}-${{ env.RN_SHA }}
+          path: |
+            third_party/react-native/packages/react-native/sdks/hermes
+            third_party/react-native/packages/react-native/ReactAndroid/hermes-engine/build/hermes
+            third_party/react-native/packages/react-native/ReactAndroid/hermes-engine/build/prefab-headers
+            third_party/react-native/packages/react-native/ReactAndroid/build/third-party-ndk
+            third_party/react-native/private/react-native-fantom/build/third-party
+            third_party/react-native/private/react-native-fantom/build/codegen
+
+      - name: (c) gradle (codegen, third-party, Hermes source; no Hermes build)
+        id: c
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          { env | grep -E '^(ANDROID|JAVA)' || true; } | tee "$LOGS/c-env.txt"
+          cd third_party/react-native
+          ./gradlew.bat \
+            :private:react-native-fantom:enableHermesBuild \
+            :packages:react-native:ReactAndroid:hermes-engine:unzipHermes \
+            :private:react-native-fantom:prepareRNCodegen \
+            :private:react-native-fantom:prepareNative3pDependencies \
+            --no-daemon --console=plain 2>&1 | tee "$LOGS/c-gradle.log"; st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/c.time"; exit $st
+
+      - name: (h) Hermes (CMake + Ninja + clang-cl)
+        id: h
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          RNP=$(cygpath -m "$PWD")/third_party/react-native/packages/react-native
+          HB=$RNP/ReactAndroid/hermes-engine/build/hermes
+          # Same arguments as configureBuildForHermesWithDebugger in
+          # ReactAndroid/hermes-engine/build.gradle.kts, with Ninja and clang-cl
+          # instead of "NMake Makefiles" and cl.exe.
+          cmake -G Ninja -Wno-dev -S "$RNP/sdks/hermes" -B "$HB" \
+            -DJSI_DIR="$RNP/ReactCommon/jsi" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DHERMES_ENABLE_DEBUGGER=True \
+            -DHERMESVM_HEAP_HV_MODE=HEAP_HV_PREFER32 \
+            -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl \
+            -DCMAKE_LINKER=lld-link -DCMAKE_AR=llvm-lib \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            2>&1 | tee "$LOGS/h-cmake.log" || { echo "wall $((SECONDS - s)) s" > "$LOGS/h.time"; exit 1; }
+          ninja -C "$HB" -k 0 hermesvm hermesc > "$LOGS/h-ninja.log" 2>&1; st=$?
+          grep -E 'error:|FAILED:|error LNK|lld-link: error' "$LOGS/h-ninja.log" | head -100
+          # The link of hermesvm.dll: the system libraries Hermes needs.
+          ninja -C "$HB" -t commands hermesvm | tail -n 1 > "$LOGS/h-hermesvm-link.txt" || true
+          find "$HB" \( -name '*.lib' -o -name '*.dll' -o -name '*.exe' \) -not -path '*/CMakeFiles/*' | tee "$LOGS/hermes-outputs.txt"
+          # prepareHeadersForPrefabWithDebugger
+          PH=$RNP/ReactAndroid/hermes-engine/build/prefab-headers
+          mkdir -p "$PH"
+          (cd "$RNP/sdks/hermes/API" && find . -name '*.h' -not -path './jsi/*' | while read -r f; do mkdir -p "$PH/$(dirname "$f")"; cp "$f" "$PH/$f"; done)
+          (cd "$RNP/sdks/hermes/public" && find . -name '*.h' -not -path './jsi/*' | while read -r f; do mkdir -p "$PH/$(dirname "$f")"; cp "$f" "$PH/$f"; done)
+          find "$HB" -name '*.obj' -delete
+          sccache --show-stats > "$LOGS/h-sccache.txt" 2>&1 || true
+          echo "wall $((SECONDS - s)) s" > "$LOGS/h.time"; exit $st
+
+      - name: Save gradle/Hermes outputs
+        if: steps.deps-cache.outputs.cache-hit != 'true' && steps.c.outcome == 'success' && steps.h.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          key: win-deps-${{ env.DEPS_CACHE_VERSION }}-${{ env.RN_SHA }}
+          path: |
+            third_party/react-native/packages/react-native/sdks/hermes
+            third_party/react-native/packages/react-native/ReactAndroid/hermes-engine/build/hermes
+            third_party/react-native/packages/react-native/ReactAndroid/hermes-engine/build/prefab-headers
+            third_party/react-native/packages/react-native/ReactAndroid/build/third-party-ndk
+            third_party/react-native/private/react-native-fantom/build/third-party
+            third_party/react-native/private/react-native-fantom/build/codegen
+
+      - name: overlay third-party CMakeLists (over cached gradle outputs)
+        run: |
+          F=third_party/react-native/private/react-native-fantom
+          for d in folly gflags nlohmann_json; do
+            cp "native/overlay/tester/third-party/$d/CMakeLists.txt" "$F/build/third-party/$d/CMakeLists.txt" || true
+          done
+
+      - name: (d) codegen-lib (react-native-screens)
+        id: d
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          S=third_party/react-native/private/react-native-fantom/tester/scripts/codegen-lib.sh
+          bash "$S" "$PWD/node_modules/react-native-screens" rnscreens "$(cygpath -u "$RUNNER_TEMP")/codegen-rnscreens" 2>&1 | tee "$LOGS/d-codegen.log"; st=$?
+          find "$(cygpath -u "$RUNNER_TEMP")/codegen-rnscreens" -type f | tee -a "$LOGS/d-codegen.log"
+          echo "wall $((SECONDS - s)) s" > "$LOGS/d.time"; exit $st
+
+      - name: (p) patches in node_modules (non-Apple branches)
+        id: p
+        continue-on-error: true
+        run: |
+          set -x
+          # reanimated: SynchronouslyUpdateUIPropsFunction is only declared for ANDROID / __APPLE__.
+          sed -i 's|^#elif __APPLE__$|#else|' node_modules/react-native-reanimated/Common/cpp/reanimated/Tools/PlatformDepMethodsHolder.h
+          # worklets: the non-Android branch calls the macOS pthread_setname_np(name).
+          sed -i 's|^    pthread_setname_np(name.c_str());$|#ifdef __APPLE__\n    pthread_setname_np(name.c_str());\n#endif|' node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp
+          grep -n -B1 -A1 'pthread_setname_np' node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp | tee "$LOGS/p-patch.txt"
+          grep -n -A2 '#ifdef ANDROID' node_modules/react-native-reanimated/Common/cpp/reanimated/Tools/PlatformDepMethodsHolder.h | head -8 | tee -a "$LOGS/p-patch.txt"
+
+      - name: (e) cmake configure (clang-cl)
+        id: e
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          RN=$(cygpath -m "$PWD")/third_party/react-native
+          F=$RN/private/react-native-fantom
+          RNP=$RN/packages/react-native
+          # Standard headers that libc++ includes transitively (the Linux
+          # spike needed the same set for libstdc++).
+          FI="/FIcstdint /FIcstddef /FIcmath /FIalgorithm /FIiterator /FIstdexcept /FImath.h"
+          cmake -G Ninja -S "$F/tester" -B "$TESTER_BUILD" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl \
+            -DCMAKE_LINKER=lld-link -DCMAKE_AR=llvm-lib \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DFANTOM_MACOS_TEXT_LAYOUT=OFF -DFANTOM_STATIC_HOST=ON \
+            -DFANTOM_CODEGEN_DIR="$F/build/codegen" \
+            -DFANTOM_THIRD_PARTY_DIR="$F/build/third-party" \
+            -DREACT_ANDROID_DIR="$RNP/ReactAndroid" \
+            -DREACT_COMMON_DIR="$RNP/ReactCommon" \
+            -DREACT_CXX_PLATFORM_DIR="$RNP/ReactCxxPlatform" \
+            -DREACT_THIRD_PARTY_NDK_DIR="$RNP/ReactAndroid/build/third-party-ndk" \
+            -DRN_ENABLE_DEBUG_STRING_CONVERTIBLE=ON \
+            -DHERMES_V1_ENABLED=1 \
+            "-DCMAKE_CXX_FLAGS=$FI" 2>&1 | tee "$LOGS/e-cmake.log"; st=$?
+          cp "$TESTER_BUILD/CMakeFiles/CMakeConfigureLog.yaml" "$LOGS/" 2>/dev/null || true
+          echo "wall $((SECONDS - s)) s" > "$LOGS/e.time"; exit $st
+
+      - name: (f) ninja fantom_tester (-k 0)
+        id: f
+        continue-on-error: true
+        run: |
+          set +e; s=$SECONDS; st=0
+          ninja -C "$TESTER_BUILD" -k 0 fantom_tester > "$LOGS/f-ninja.log" 2>&1 || st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/f.time"
+          grep -E 'error:|FAILED:|error LNK|lld-link: error|undefined symbol' "$LOGS/f-ninja.log" | head -300 || true
+          grep -c '^FAILED:' "$LOGS/f-ninja.log" > "$LOGS/f-failed-count.txt" || true
+          tail -n 3 "$LOGS/f-ninja.log"
+          sccache --show-stats > "$LOGS/f-sccache.txt" 2>&1 || true
+          exit $st
+
+      - name: (g) smoke render examples/basic
+        id: g
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          BIN="$TESTER_BUILD/fantom_tester.exe"
+          ls -la "$BIN"
+          export RN_A11Y_HOST_BIN="$(cygpath -w "$BIN")"
+          node src/cli.ts render examples/basic/App.tsx --platform android --format text --no-quiet 2>&1 | tee "$LOGS/g-render.log"; st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/g.time"; exit $st
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "a=${{ steps.a.outcome }} b=${{ steps.b.outcome }} cache=${{ steps.deps-cache.outputs.cache-hit }} c=${{ steps.c.outcome }} h=${{ steps.h.outcome }}"
+            echo "d=${{ steps.d.outcome }} p=${{ steps.p.outcome }} e=${{ steps.e.outcome }} f=${{ steps.f.outcome }} g=${{ steps.g.outcome }}"
+            for t in "$LOGS"/*.time; do echo "$(basename "$t"): $(cat "$t")"; done
+            echo "failed objects: $(cat "$LOGS/f-failed-count.txt" 2>/dev/null)"
+          } | tee "$LOGS/summary.txt"
+          cp -r third_party/react-native/private/react-native-fantom/build/reports "$LOGS/gradle-reports" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: feasibility-logs-windows
+          path: feasibility-logs
+
+  # The unmodified gradle path, for the record: on Windows the Hermes tasks
+  # configure with "NMake Makefiles" (cl.exe from the developer environment).
+  upstream-gradle:
+    if: ${{ vars.SKIP_UPSTREAM_GRADLE != '1' }}
+    runs-on: windows-2025
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: bash
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+    steps:
+      - name: git config
+        run: |
+          echo "LOGS=$(cygpath -m "$GITHUB_WORKSPACE")/feasibility-logs" >> "$GITHUB_ENV"
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: gradle prepareAllDependencies (as-is)
+        id: u
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; mkdir -p "$LOGS"; s=$SECONDS
+          if [ "$UPSTREAM_GRADLE" != "1" ]; then echo skipped; exit 0; fi
+          npm install -g yarn@1.22.22
+          SDK="$(cygpath -u "$ANDROID_HOME")"
+          SDKMANAGER="$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager.bat | head -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          [ -d "$SDK/cmake/3.30.5" ] || "$SDKMANAGER" --install "cmake;3.30.5" > /dev/null
+          PINNED=27.1.12297006
+          if [ -f "$SDK/ndk/$PINNED/source.properties" ]; then NDK_DIR="$SDK/ndk/$PINNED"
+          else NDK_DIR="$(ls -d "$SDK"/ndk/* | sort -r | head -n 1)"; fi
+          export ANDROID_NDK="$(cygpath -w "$NDK_DIR")"
+          export ANDROID_NDK_VERSION="$(sed -n 's/^Pkg.Revision *= *//p' "$NDK_DIR/source.properties" | tr -d '\r')"
+          unset ANDROID_NDK_HOME ANDROID_NDK_ROOT ANDROID_NDK_LATEST_HOME
+          (cd third_party/react-native && yarn install --frozen-lockfile --non-interactive) > "$LOGS/u-yarn.log" 2>&1
+          cp -r native/overlay/. third_party/react-native/private/react-native-fantom/
+          cd third_party/react-native
+          ./gradlew.bat :private:react-native-fantom:prepareAllDependencies --no-daemon --console=plain 2>&1 | tee "$LOGS/u-gradle.log"; st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/u.time"
+          H=packages/react-native/ReactAndroid/hermes-engine/build
+          cp "$H"/*.log "$LOGS/" 2>/dev/null || true
+          find "$H/hermes" \( -name '*.lib' -o -name '*.dll' -o -name '*.exe' \) -not -path '*/CMakeFiles/*' > "$LOGS/u-hermes-outputs.txt" 2>/dev/null || true
+          exit $st
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: feasibility-logs-upstream-gradle
+          path: feasibility-logs
