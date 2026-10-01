@@ -309,12 +309,52 @@ jobs:
           node src/cli.ts render examples/basic/App.tsx --platform android --format text --no-quiet 2>&1 | tee "$LOGS/g-render.log"; st=$?
           echo "wall $((SECONDS - s)) s" > "$LOGS/g.time"; exit $st
 
+      - name: (i) binary info
+        id: i
+        continue-on-error: true
+        run: |
+          BIN="$TESTER_BUILD/fantom_tester.exe"
+          {
+            ls -la "$BIN"
+            llvm-readobj --coff-imports "$BIN" | grep -E '^\s*Name:' | sort -u
+          } 2>&1 | tee "$LOGS/i-binary.txt"
+
+      - name: (j) session smoke (--interactive, stdin frames)
+        id: j
+        continue-on-error: true
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          export RN_A11Y_HOST_BIN="$(cygpath -w "$TESTER_BUILD/fantom_tester.exe")"
+          printf '%s\n' '{"id":1,"action":{"tap":{"testID":"submit"}}}' '{"id":2,"tree":true,"format":"text"}' '{"id":3,"quit":true}' \
+            | node src/cli.ts session examples/basic/App.tsx --platform android 2>&1 | tee "$LOGS/j-session.log"; st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/j.time"; exit $st
+
+      - name: (k) unit tests (fake host)
+        id: k
+        continue-on-error: true
+        timeout-minutes: 40
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          bun run test 2>&1 | tee "$LOGS/k-unit.log"; st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/k.time"; exit $st
+
+      - name: (l) e2e tests (Windows host)
+        id: l
+        continue-on-error: true
+        timeout-minutes: 60
+        run: |
+          set +e -o pipefail; s=$SECONDS
+          export RN_A11Y_HOST_BIN="$(cygpath -w "$TESTER_BUILD/fantom_tester.exe")"
+          bun run test:e2e 2>&1 | tee "$LOGS/l-e2e.log"; st=$?
+          echo "wall $((SECONDS - s)) s" > "$LOGS/l.time"; exit $st
+
       - name: Summary
         if: always()
         run: |
           {
             echo "a=${{ steps.a.outcome }} b=${{ steps.b.outcome }} cache=${{ steps.deps-cache.outputs.cache-hit }} c=${{ steps.c.outcome }} h=${{ steps.h.outcome }}"
             echo "d=${{ steps.d.outcome }} p=${{ steps.p.outcome }} e=${{ steps.e.outcome }} f=${{ steps.f.outcome }} g=${{ steps.g.outcome }}"
+            echo "i=${{ steps.i.outcome }} j=${{ steps.j.outcome }} k=${{ steps.k.outcome }} l=${{ steps.l.outcome }}"
             for t in "$LOGS"/*.time; do echo "$(basename "$t"): $(cat "$t")"; done
             echo "failed objects: $(cat "$LOGS/f-failed-count.txt" 2>/dev/null)"
           } | tee "$LOGS/summary.txt"
@@ -325,3 +365,10 @@ jobs:
         with:
           name: feasibility-logs-windows
           path: feasibility-logs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rn-a11y-host-win64
+          path: ${{ env.TESTER_BUILD }}/fantom_tester.exe
+          if-no-files-found: ignore
