@@ -7,8 +7,9 @@
 
 // The part of OpenSSL's <openssl/sha.h> that ReactCxxPlatform uses
 // (react/devsupport/DevServerHelper.cpp: SHA256 of the device id), implemented
-// with CommonCrypto (Sha256Shim.cpp). The static host links this instead of
-// libcrypto.a, which Homebrew only has for the build machine's architecture.
+// with CommonCrypto on Apple (Sha256Shim.cpp) and in plain C++ elsewhere
+// (Sha256Portable.cpp). The static host links this instead of libcrypto.a,
+// which Homebrew only has for the build machine's architecture.
 
 #pragma once
 
@@ -16,7 +17,8 @@
 
 #define SHA256_DIGEST_LENGTH 32
 
-// Opaque storage, large enough for CC_SHA256_CTX (checked in Sha256Shim.cpp).
+// Opaque storage, large enough for CC_SHA256_CTX and the plain C++ state
+// (checked in Sha256Shim.cpp and Sha256Portable.cpp).
 typedef struct SHA256state_st {
   unsigned int storage[32];
 } SHA256_CTX;

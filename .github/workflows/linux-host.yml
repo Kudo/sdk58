@@ -1,9 +1,13 @@
 name: Linux host
 
-# The Linux x86_64 host (native/dist/x86_64/rn-a11y-host): build, facts
-# (size, NEEDED libraries, minimum glibc), a smoke render, unit and e2e
-# tests. Text uses the portable layout (FANTOM_TEXT_LAYOUT=portable, the
-# Linux default of build-host.sh).
+# The Linux x86_64 host (native/dist/x86_64/rn-a11y-host, portable text
+# layout):
+# - build: in the manylinux_2_28 image (AlmaLinux 8, glibc 2.28), so the
+#   binary needs at most GLIBC_2.28; clang from AlmaLinux with the libstdc++
+#   of gcc-toolset (static), ICU built from source (static, cached);
+# - test: the binary on ubuntu-24.04 (smoke render, unit and e2e tests);
+# - old-distro: the binary inside older images (glibc 2.28 / 2.31), run by the
+#   CLI on the runner through `docker run` (smoke render and e2e).
 on:
   push:
     branches: [main, ci/linux-host]
@@ -14,27 +18,61 @@ concurrency:
   group: linux-host-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  HOST_DIR: native/dist/x86_64
+
 jobs:
-  linux-host:
-    # ubuntu-24.04 x86_64 (2 cores, 7 GB): ANDROID_HOME=/usr/local/lib/android/sdk
-    # with SDK CMake 3.31.5 / 4.1.2 and NDK 27.3 / 28.2 (build-host.sh
-    # installs cmake;3.30.5 and selects the NDK).
+  build:
     runs-on: ubuntu-24.04
+    container:
+      image: quay.io/pypa/manylinux_2_28_x86_64
     timeout-minutes: 150
     env:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
-      CC: clang
-      CXX: clang++
-      HOST_DIR: native/dist/x86_64
-      # ccache for Hermes (gradle's CMake) and the tester: CMake reads the
-      # launcher from these environment variables.
+      # clang wrappers that use gcc-toolset's libstdc++ (see Toolchain).
+      CC: /usr/local/bin/clang
+      CXX: /usr/local/bin/clang++
+      ANDROID_HOME: /opt/android-sdk
+      # Static ICU from scripts/build-icu.sh: Hermes (gradle's CMake, through
+      # FindICU) and the tester CMake (FANTOM_STATIC_ICU) look here.
+      ICU_ROOT: /opt/icu
+      CMAKE_PREFIX_PATH: /opt/icu
+      # ccache for Hermes and the tester: CMake reads the launcher from these
+      # environment variables.
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_BASEDIR: ${{ github.workspace }}
-      CCACHE_COMPILERCHECK: content
+      # CCACHE_DIR and CCACHE_BASEDIR: set in "Build host" (the workspace path
+      # in the container is $GITHUB_WORKSPACE, not github.workspace).
+      CCACHE_COMPILERCHECK: '%compiler% --version'
       CCACHE_MAXSIZE: 3G
     steps:
+      # Before checkout: git (submodules) and the tools the actions need.
+      - name: Toolchain
+        run: |
+          set -x
+          dnf install -y -q git rsync unzip xz file which python3 clang lld
+          # libatomic.a of the gcc-toolset on PATH; libstdc++.a (static
+          # host) from the system package that gcc-toolset's libstdc++.a uses.
+          dnf install -y -q "gcc-toolset-$(gcc -dumpversion | cut -d. -f1)-libatomic-devel"
+          dnf install -y -q --enablerepo=powertools libstdc++-static || dnf install -y -q libstdc++-static
+          git config --global --add safe.directory '*'
+          # clang with the newest gcc-toolset's libstdc++ (C++20) instead of
+          # the system GCC 8 one.
+          GCC_DIR="$(dirname "$(gcc -print-libgcc-file-name)")"
+          for tool in clang clang++; do
+            printf '#!/bin/sh\nexec /usr/bin/%s --gcc-install-dir=%s "$@"\n' "$tool" "$GCC_DIR" > "/usr/local/bin/$tool"
+            chmod +x "/usr/local/bin/$tool"
+          done
+          curl -fsSL https://github.com/ccache/ccache/releases/download/v4.10.2/ccache-4.10.2-linux-x86_64.tar.xz | tar -xJ -C /tmp
+          install /tmp/ccache-4.10.2-linux-x86_64/ccache /usr/local/bin/ccache
+          {
+            cat /etc/redhat-release; ldd --version | head -n 1
+            gcc --version | head -n 1; "$CXX" --version | head -n 1; ld.lld --version
+            echo "gcc install dir: $GCC_DIR"; ls "$GCC_DIR" | grep -E 'libstdc\+\+|libatomic|libgcc' || true
+            head -c 300 "$GCC_DIR/libstdc++.a" | grep -a INPUT || true
+            "$CXX" -print-file-name=libatomic.a; ccache --version | head -n 1
+          }
+
       - uses: actions/checkout@v7
         with:
           submodules: true
@@ -52,26 +90,24 @@ jobs:
         with:
           bun-version: '1.3.14'
 
+      - name: Android SDK (cmake 3.30.5, NDK)
+        run: |
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          curl -fsSLo /tmp/clt.zip https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+          unzip -q /tmp/clt.zip -d "$ANDROID_HOME/cmdline-tools"
+          mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          # The NDK React Native pins (build-host.sh selects it); nothing is
+          # compiled with it, gradle only checks it.
+          NDK="$(sed -n 's/^ndkVersion = "\(.*\)"/\1/p' third_party/react-native/packages/react-native/gradle/libs.versions.toml)"
+          "$SDKMANAGER" --install "cmake;3.30.5" "ndk;$NDK" > /dev/null
+
       - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
-
-      # clang/lld: the host compiler and linker; libicu-dev and libssl-dev:
-      # the static ICU and libcrypto archives.
-      - name: apt packages
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q ninja-build clang lld libssl-dev libicu-dev rsync ccache
-          clang --version | head -n 1
-          ls -la /usr/lib/x86_64-linux-gnu/libicu{uc,i18n,data}.a /usr/lib/x86_64-linux-gnu/libcrypto.a
-
-      - name: Android SDK CMake 3.30.5
-        run: |
-          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' | head -n 1)"
-          yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" --install "cmake;3.30.5" > /dev/null
+          key: bun-manylinux_2_28-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-manylinux_2_28-
 
       - name: Install JS dependencies
         run: bun install --frozen-lockfile
@@ -80,7 +116,7 @@ jobs:
         id: host-key
         run: |
           echo "submodule=$(git -C third_party/react-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "compiler=$(clang --version | head -n 1 | tr -c 'A-Za-z0-9.\n' '-')" >> "$GITHUB_OUTPUT"
+          echo "compiler=$("$CXX" --version | head -n 1 | tr -c 'A-Za-z0-9.\n' '-')" >> "$GITHUB_OUTPUT"
           libs=$(node -e '
             const libs = ["react-native-screens", "react-native-safe-area-context",
               "react-native-gesture-handler", "react-native-reanimated", "react-native-worklets",
@@ -97,11 +133,21 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.HOST_DIR }}
-          key: host-${{ runner.os }}-${{ runner.arch }}-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-${{ steps.host-key.outputs.libs }}-${{ hashFiles('native/overlay/**', 'native/scripts/**', 'scripts/build-host.sh') }}
+          key: host-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-${{ steps.host-key.outputs.libs }}-${{ hashFiles('native/overlay/**', 'native/fonts/**', 'native/scripts/**', 'scripts/build-host.sh', 'scripts/build-icu.sh') }}
 
-      # Compiler cache (Hermes + tester) and Gradle's downloads, only for a
-      # build. A new entry per run (the key has the run id); the newest one is
-      # restored.
+      - name: Restore ICU
+        if: steps.host-cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v6
+        with:
+          path: /opt/icu
+          key: icu-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-${{ hashFiles('scripts/build-icu.sh') }}
+
+      - name: Build ICU (static)
+        if: steps.host-cache.outputs.cache-hit != 'true'
+        run: bash scripts/build-icu.sh /opt/icu
+
+      # Compiler cache (Hermes + tester) and Gradle's downloads. A new entry
+      # per run (the key has the run id); the newest one is restored.
       - name: Restore ccache and Gradle caches
         if: steps.host-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v6
@@ -110,14 +156,15 @@ jobs:
             .ccache
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: linux-build-${{ runner.arch }}-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-${{ github.run_id }}
+          key: linux-build-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-${{ github.run_id }}
           restore-keys: |
-            linux-build-${{ runner.arch }}-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-
-            linux-build-${{ runner.arch }}-${{ steps.host-key.outputs.compiler }}-
+            linux-build-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-
+            linux-build-manylinux_2_28-${{ steps.host-key.outputs.compiler }}-
 
       - name: Build host
         if: steps.host-cache.outputs.cache-hit != 'true'
         run: |
+          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache" CCACHE_BASEDIR="$GITHUB_WORKSPACE"
           ccache --zero-stats
           bun run build:host
           ccache --show-stats
@@ -126,7 +173,7 @@ jobs:
         run: |
           H="$HOST_DIR/rn-a11y-host"
           {
-            echo '### Linux host'
+            echo '### Linux host (built in manylinux_2_28)'
             echo '```'
             file "$H"
             echo "size: $(stat -c%s "$H") bytes"
@@ -134,8 +181,14 @@ jobs:
             echo "NEEDED:"; readelf -d "$H" | grep NEEDED
             echo "max GLIBC version: $(objdump -T "$H" | grep -o 'GLIBC_[0-9.]*' | sort -u -V | tail -n 1)"
             echo "GLIBC versions: $(objdump -T "$H" | grep -o 'GLIBC_[0-9.]*' | sort -u -V | tr '\n' ' ')"
+            echo "ICU data: $(nm -S "$H.debug" 2>/dev/null | awk '/ icudt[0-9]+_dat$/{print strtonum("0x" $2) " bytes (" $4 ")"}')"
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+          MAX="$(objdump -T "$H" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -u -V | tail -n 1)"
+          if [ "$(printf '%s\n2.28\n' "$MAX" | sort -V | tail -n 1)" != "2.28" ]; then
+            echo "::error::rn-a11y-host needs GLIBC_$MAX (more than 2.28)"
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v7
         with:
@@ -143,11 +196,45 @@ jobs:
           path: ${{ env.HOST_DIR }}
           if-no-files-found: error
 
+  test:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: rn-a11y-host-linux-x64
+          path: ${{ env.HOST_DIR }}
+
       - name: Smoke render (examples/basic)
         run: |
+          chmod +x "$HOST_DIR/rn-a11y-host"
           export RN_A11Y_HOST_BIN="$PWD/$HOST_DIR/rn-a11y-host"
           {
-            echo '### Smoke render: examples/basic, android-phone'
+            echo "### Smoke render: examples/basic, android-phone ($(. /etc/os-release && echo "$PRETTY_NAME"))"
             echo '```'
             node src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
             echo '```'
@@ -176,3 +263,69 @@ jobs:
             ${{ runner.temp }}/e2e-report.json
             ${{ runner.temp }}/host-stderr.log
           if-no-files-found: warn
+
+  # The host inside older distributions: the CLI (Node, Metro) runs on the
+  # runner and starts the host with `docker run` (RN_A11Y_HOST_BIN is a
+  # wrapper script; the bundle is a file under the workspace, /tmp or $HOME,
+  # which are mounted at the same paths).
+  old-distro:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # debian:10: glibc 2.28 (the baseline); ubuntu:20.04: glibc 2.31.
+        image: ['debian:10', 'ubuntu:20.04']
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: rn-a11y-host-linux-x64
+          path: ${{ env.HOST_DIR }}
+
+      - name: Host wrapper (docker run ${{ matrix.image }})
+        run: |
+          chmod +x "$HOST_DIR/rn-a11y-host"
+          docker pull -q "${{ matrix.image }}"
+          docker run --rm "${{ matrix.image }}" sh -c 'cat /etc/os-release | head -n 1; ldd --version | head -n 1'
+          cat > "$RUNNER_TEMP/host-in-container" <<EOF
+          #!/bin/bash
+          exec docker run --rm -i -v "$PWD:$PWD" -v /tmp:/tmp -v "$HOME:$HOME" -w "$PWD" "${{ matrix.image }}" "$PWD/$HOST_DIR/rn-a11y-host" "\$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/host-in-container"
+          echo "RN_A11Y_HOST_BIN=$RUNNER_TEMP/host-in-container" >> "$GITHUB_ENV"
+
+      - name: Smoke render (examples/basic) in ${{ matrix.image }}
+        run: |
+          {
+            echo "### Smoke render: examples/basic, android-phone, host in ${{ matrix.image }}"
+            echo '```'
+            node src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: E2E tests with the host in ${{ matrix.image }}
+        run: bun run test:e2e

@@ -57,11 +57,13 @@ include(Deps)
 #  - OpenSSL: only SHA256 in ReactCxxPlatform devsupport. On Apple the static
 #    host uses a CommonCrypto shim (src/stubs/crypto, FANTOM_OPENSSL_SHIM)
 #    instead of libcrypto.a, which Homebrew has only for the build machine's
-#    architecture (needed for the x86_64 / universal host).
+#    architecture (needed for the x86_64 / universal host). Elsewhere the
+#    shim is a plain C++ SHA-256 (Sha256Portable.cpp): no libcrypto.a is
+#    needed (AlmaLinux 8, the Linux build image, has none).
 # FANTOM_HERMES_BUILD_DIR: the Hermes build to link (default: the gradle one;
 # scripts/build-host.sh passes an x86_64 build for RN_A11Y_HOST_ARCH=x86_64).
 option(FANTOM_STATIC_HOST "Link Hermes, JSI and OpenSSL statically" ON)
-option(FANTOM_OPENSSL_SHIM "SHA256 through CommonCrypto instead of OpenSSL (Apple static host)" ON)
+option(FANTOM_OPENSSL_SHIM "SHA256 through a shim (CommonCrypto on Apple, plain C++ elsewhere) instead of OpenSSL (static host)" ON)
 if(UNIX AND NOT APPLE AND NOT FANTOM_STATIC_HOST)
   set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -latomic")
   set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -latomic")
@@ -131,8 +133,13 @@ else()
   set_target_properties(hermes-engine::hermesvm PROPERTIES
     INTERFACE_LINK_LIBRARIES ${LIB_HERMES})
 endif()
-if(APPLE AND FANTOM_STATIC_HOST AND FANTOM_OPENSSL_SHIM)
-  add_library(fantom_sha256_shim STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto/Sha256Shim.cpp)
+if(FANTOM_STATIC_HOST AND FANTOM_OPENSSL_SHIM)
+  if(APPLE)
+    set(fantom_sha256_source Sha256Shim.cpp)
+  else()
+    set(fantom_sha256_source Sha256Portable.cpp)
+  endif()
+  add_library(fantom_sha256_shim STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto/${fantom_sha256_source})
   target_include_directories(fantom_sha256_shim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/crypto)
   add_library(OpenSSL::Crypto ALIAS fantom_sha256_shim)
 else()
