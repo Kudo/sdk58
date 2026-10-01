@@ -2,8 +2,9 @@ name: Linux host
 
 # The Linux x86_64 host (native/dist/x86_64/rn-a11y-host): build, facts
 # (size, NEEDED libraries, minimum glibc), a smoke render, unit and e2e
-# tests. Text uses the platform/cxx stub (0x0), so the e2e suite has known
-# failures (text sizes); that step does not fail the job yet.
+# tests. Text uses the platform/cxx stub (0x0): the e2e assertions on text
+# sizes and the Compose engine are gated on the host capabilities
+# (`textLayout`, `expoUI.composeLayout`).
 on:
   push:
     branches: [main, ci/linux-host]
@@ -160,9 +161,6 @@ jobs:
         run: bun run test
 
       - name: E2E tests (e2e/*.test.ts)
-        # Known failures with the stub text layout (text sizes); see the
-        # uploaded report.
-        continue-on-error: true
         env:
           RN_A11Y_HOST_STDERR_LOG: ${{ runner.temp }}/host-stderr.log
         run: |
@@ -170,7 +168,7 @@ jobs:
           : > "$RN_A11Y_HOST_STDERR_LOG"
           bun run test:e2e --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/e2e-report.json"
 
-      - name: Upload the e2e report
+      - name: Upload the e2e report and the host stderr
         if: always()
         uses: actions/upload-artifact@v7
         with:

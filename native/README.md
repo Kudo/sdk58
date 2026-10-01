@@ -815,6 +815,54 @@ casts each child to the detector type); the types add no data and only base
 members are touched. Our own code keeps the check. `RN_A11Y_OVERLAY_DIR` builds from another copy of the
 overlay (for example `git checkout-index --prefix=/tmp/idx/ -- $(git ls-files native/overlay)`).
 
+### Linux
+
+On Linux (x86_64; CI: `.github/workflows/linux-host.yml` on `ubuntu-24.04`)
+`bun run build:host` writes `native/dist/x86_64/rn-a11y-host` (Linux arm64:
+`native/dist/arm64/`). Requirements: JDK 17 (`JAVA_HOME`, default: the JDK of
+`java` on `PATH`), the Android SDK (`ANDROID_HOME`, default
+`~/Android/Sdk`; only its CMake 3.30.5 and an NDK are used), clang (`CC`/`CXX`
+default to `clang`/`clang++`), `ld.lld` (used when it is on `PATH`), the static
+ICU and OpenSSL archives (Ubuntu: `libicu-dev`, `libssl-dev`) and `rsync`. On
+arm64, where the SDK CMake does not run, the script puts the system `cmake` and
+`ninja` in its place. Release links with `-ffunction-sections -fdata-sections`
+and `--gc-sections`, without ThinLTO and `-g`; the stripped binary has its
+symbol table in `rn-a11y-host.debug` next to it (GNU debug link).
+
+The binary links only glibc dynamically. The tester CMake does this for the
+static host off Apple: `-static-libstdc++ -static-libgcc`, `libatomic.a`
+(at the end of the link line), and ICU (`FANTOM_STATIC_ICU`, default ON:
+`libicui18n.a libicuuc.a libicudata.a`; Hermes uses ICU for collation,
+normalization, case mapping and date formatting where macOS uses
+CoreFoundation).
+
+Text: `FANTOM_TEXT_LAYOUT` selects the TextLayoutManager (`macos`: CoreText,
+the default on Apple; `cxx`: the upstream `platform/cxx` stub, the default
+elsewhere, which measures every text as 0x0). `build-host.sh` passes
+`RN_A11Y_HOST_TEXT_LAYOUT` (default `cxx`) on Linux. Without `macos` there is
+no `textLayout` capability and no `expoUI.composeLayout` (the Compose engine
+needs the CoreText text adapter).
+
+Third-party code that builds only with libc++ or only on Apple is fixed off
+Apple in the tester CMake, without changes in `node_modules` or the submodule:
+
+- `src/platform/compat/StdIncludes.h` is force-included
+  (`fantom_force_std_includes`) into `jsinspector_network`, `react_debug`,
+  `worklets` and `reanimated`: standard headers that libc++ includes
+  transitively and libstdc++ does not (`<cstdint>`, `<algorithm>`, ...).
+- `tester/patches/*.patch` are applied at configure time to copies in
+  `<build>/patched/<package>/` (`fantom_patched_copy`; a patch that does not
+  apply stops the configure): reanimated's `PlatformDepMethodsHolder.h` (the
+  Apple `SynchronouslyUpdateUIPropsFunction` for every non-Android platform;
+  the copy comes first in the include path) and worklets'
+  `AsyncQueueImpl.cpp` (the glibc `pthread_setname_np(thread, name)`; the
+  copy is compiled instead of the original).
+- `folly_runtime`: `-Wno-error=deprecated-declarations`
+  (`std::unexpected_handler` is deprecated in libstdc++ 14).
+- Our code: `FantomExpo.cpp` includes `<math.h>` before
+  `ExpoViewComponentDescriptor.h` (unqualified `isnan`), and
+  `composeEngineType` is compiled only with the Compose engine.
+
 The manual steps below build the Debug tester the upstream way (gradle,
 `build/tester`), which the Fantom tests in a React Native checkout use:
 

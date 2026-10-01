@@ -973,6 +973,11 @@ With the default static host (Hermes and JSI linked in), the
 binary links only system libraries (`otool -L`: libobjc, CoreFoundation,
 AppKit, CoreText, Foundation, libc++, libSystem).
 
+On Linux the script builds `native/dist/x86_64/rn-a11y-host` (or
+`native/dist/arm64/` on arm64): one executable that links only glibc
+dynamically. Text is not measured there yet (the upstream stub TextLayoutManager:
+every text is 0x0). Requirements and details: [native/README.md](native/README.md#linux).
+
 `RN_A11Y_HOST_ARCH=arm64|x86_64|universal` (default: the build machine's
 architecture) selects the host architecture. A foreign architecture (x86_64
 on an arm64 Mac) is cross-built with its own Hermes build into
