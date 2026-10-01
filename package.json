@@ -29,7 +29,7 @@
     "rn-a11y-tree": "./dist/rn-a11y-tree.js"
   },
   "files": [
-    "dist/*.js",
+    "dist/rn-a11y-tree.js",
     "runtime/",
     "!runtime/tsconfig.json",
     "schema/",
@@ -63,10 +63,6 @@
     "build": "bun scripts/build.ts",
     "prepack": "bun run build && bun run schema --check"
   },
-  "dependencies": {
-    "commander": "^15.0.0",
-    "rn-a11y-host": "0.1.1"
-  },
   "peerDependencies": {
     "expo": ">=58.0.0",
     "react": "*",
@@ -79,6 +75,7 @@
     "@types/node": "^26.0.0",
     "@types/react": "^19.1.1",
     "ajv": "^8.20.0",
+    "commander": "^15.0.0",
     "expo": "58.0.0",
     "metro": "0.87.1",
     "metro-config": "0.87.1",
@@ -93,5 +90,10 @@
     "typescript": "~5.9.3",
     "vite": "^8",
     "vitest": "^5.0.3"
+  },
+  "optionalDependencies": {
+    "@react-native-a11y-tree/runtime-darwin-universal": "0.1.1",
+    "@react-native-a11y-tree/runtime-linux-x64-gnu": "0.1.1",
+    "@react-native-a11y-tree/runtime-win32-x64-msvc": "0.1.1"
   }
 }

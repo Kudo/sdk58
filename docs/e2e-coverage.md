@@ -81,12 +81,12 @@ Actions: tap `go`, tap `remember`, tap `greeting`, snapshot. Capability gating: 
 
 ## `e2e/package.test.ts` — npm packages in a scratch project
 
-Skipped off macOS, without `npm`, or without a `native/dist` host.
+Skipped without `npm` or a `native/dist` host.
 
-- `release-host.ts --pack` into a copy of `packages/rn-a11y-host`, `npm pack` of it and of the CLI (its `prepack` runs `bun run build`).
+- `release-host.ts --pack --packages-dir <temp>` stages the scoped runtime packages; `npm pack` of the matching runtime and the CLI (its `prepack` runs `bun run build`).
 - The CLI tarball has `dist/rn-a11y-tree.js` and no `src/`, `native/`, `test/`, `e2e/`, `examples/`, `third_party/`.
 - `npm install expo@58.0.0 react-native@0.88.0-rc.2 react@19.3.0 <both tarballs>` in a scratch project; `npx rn-a11y-tree render App.tsx --preset android-phone --format text` (examples/basic) prints `RootView RootView {0,0,412x915}` and the `submit` line (364x48).
-- `npx rn-a11y-tree session` ready line: `host.source === "package"`, `host.protocolVersion === 1`.
+- `npx rn-a11y-tree session` ready line: `host.source === "package"`, `host.protocolVersion === 1`; binary path points into the matching scoped runtime package and no `rn-a11y-host` npm package is installed.
 
 ## `e2e/dimensions.test.ts` — `examples/dimensions/App.tsx`, `render`
 

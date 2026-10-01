@@ -4,10 +4,6 @@
   "workspaces": {
     "": {
       "name": "react-native-a11y-tree",
-      "dependencies": {
-        "commander": "^15.0.0",
-        "rn-a11y-host": "0.1.1",
-      },
       "devDependencies": {
         "@expo/ui": "~58.0.9",
         "@react-navigation/native": "^7.5.0",
@@ -15,6 +11,7 @@
         "@types/node": "^26.0.0",
         "@types/react": "^19.1.1",
         "ajv": "^8.20.0",
+        "commander": "^15.0.0",
         "expo": "58.0.0",
         "metro": "0.87.1",
         "metro-config": "0.87.1",
@@ -29,6 +26,11 @@
         "typescript": "~5.9.3",
         "vite": "^8",
         "vitest": "^5.0.3",
+      },
+      "optionalDependencies": {
+        "@react-native-a11y-tree/runtime-darwin-universal": "0.1.1",
+        "@react-native-a11y-tree/runtime-linux-x64-gnu": "0.1.1",
+        "@react-native-a11y-tree/runtime-win32-x64-msvc": "0.1.1",
       },
       "peerDependencies": {
         "expo": ">=58.0.0",
@@ -124,8 +126,16 @@
         "react-native": "0.88.0-rc.2",
       },
     },
-    "packages/rn-a11y-host": {
-      "name": "rn-a11y-host",
+    "packages/runtime-darwin-universal": {
+      "name": "@react-native-a11y-tree/runtime-darwin-universal",
+      "version": "0.1.1",
+    },
+    "packages/runtime-linux-x64-gnu": {
+      "name": "@react-native-a11y-tree/runtime-linux-x64-gnu",
+      "version": "0.1.1",
+    },
+    "packages/runtime-win32-x64-msvc": {
+      "name": "@react-native-a11y-tree/runtime-win32-x64-msvc",
       "version": "0.1.1",
     },
   },
@@ -445,6 +455,12 @@
     "@react-native-a11y-tree/example-scrolling": ["@react-native-a11y-tree/example-scrolling@workspace:examples/scrolling"],
 
     "@react-native-a11y-tree/example-unicode": ["@react-native-a11y-tree/example-unicode@workspace:examples/unicode"],
+
+    "@react-native-a11y-tree/runtime-darwin-universal": ["@react-native-a11y-tree/runtime-darwin-universal@workspace:packages/runtime-darwin-universal"],
+
+    "@react-native-a11y-tree/runtime-linux-x64-gnu": ["@react-native-a11y-tree/runtime-linux-x64-gnu@workspace:packages/runtime-linux-x64-gnu"],
+
+    "@react-native-a11y-tree/runtime-win32-x64-msvc": ["@react-native-a11y-tree/runtime-win32-x64-msvc@workspace:packages/runtime-win32-x64-msvc"],
 
     "@react-native/asset-utils": ["@react-native/asset-utils@0.88.0-rc.2", "", {}, "sha512-d6qGBOmVM1m7PN1kDrWvKwUrHZ5AZTgwXKygf6xl82rnHpfjFb07LhCcIRC06T0jwwgwO8WBz05vjAMr1YIr1A=="],
 
@@ -1029,8 +1045,6 @@
     "resolve-workspace-root": ["resolve-workspace-root@2.0.1", "", {}, "sha512-nR23LHAvaI6aHtMg6RWoaHpdR4D881Nydkzi2CixINyg9T00KgaJdJI6Vwty+Ps8WLxZHuxsS0BseWjxSA4C+w=="],
 
     "restore-cursor": ["restore-cursor@2.0.0", "", { "dependencies": { "onetime": "^2.0.0", "signal-exit": "^3.0.2" } }, "sha512-6IzJLuGi4+R14vwagDHX+JrXmPVtPpn4mffDJ1UdR7/Edm87fl6yi8mMBIVvFtJaNTUvjughmW4hwLhRG7gC1Q=="],
-
-    "rn-a11y-host": ["rn-a11y-host@workspace:packages/rn-a11y-host"],
 
     "rolldown": ["rolldown@1.2.12", "", { "dependencies": { "@oxc-project/types": "=0.152.0", "@rolldown/pluginutils": "^1.0.0" }, "optionalDependencies": { "@rolldown/binding-android-arm-eabi": "1.2.12", "@rolldown/binding-android-arm64": "1.2.12", "@rolldown/binding-darwin-arm64": "1.2.12", "@rolldown/binding-darwin-x64": "1.2.12", "@rolldown/binding-freebsd-x64": "1.2.12", "@rolldown/binding-linux-arm-gnueabihf": "1.2.12", "@rolldown/binding-linux-arm64-gnu": "1.2.12", "@rolldown/binding-linux-arm64-musl": "1.2.12", "@rolldown/binding-linux-ppc64-gnu": "1.2.12", "@rolldown/binding-linux-s390x-gnu": "1.2.12", "@rolldown/binding-linux-x64-gnu": "1.2.12", "@rolldown/binding-linux-x64-musl": "1.2.12", "@rolldown/binding-openharmony-arm64": "1.2.12", "@rolldown/binding-win32-arm64-msvc": "1.2.12", "@rolldown/binding-win32-x64-msvc": "1.2.12" }, "bin": { "rolldown": "./bin/cli.mjs" } }, "sha512-8wafseiaG80xmXSfqidUNqZcylTlhmPZZt+za2m+js2sFZ8dTNlhIOV2WcbIPx2hgwPBJpEUGFAMZ9bgBBLTSQ=="],
 

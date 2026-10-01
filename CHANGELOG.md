@@ -1,13 +1,20 @@
 # Changelog
 
-All notable changes to `react-native-a11y-tree` and `rn-a11y-host`. The format
-follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Both packages
+All notable changes to `react-native-a11y-tree` and its native runtime packages. The format
+follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The CLI and platform packages
 share one version.
 
 ## [0.1.1] - Unreleased
 
 ### Added
 
+- Scoped optional runtime packages: `@react-native-a11y-tree/runtime-darwin-universal`,
+  `@react-native-a11y-tree/runtime-linux-x64-gnu`, and
+  `@react-native-a11y-tree/runtime-win32-x64-msvc`, selected by OS/CPU/libc.
+  The CLI resolves these direct optional dependencies within its single
+  JavaScript bundle, including Commander. There are no required npm JavaScript
+  dependencies and only one executable CLI entry. The separate `rn-a11y-host` npm package is no longer
+  needed; binary filenames and `RN_A11Y_HOST_*` overrides are preserved.
 - Device metrics from presets: `Dimensions` (window and screen) and
   `PixelRatio` follow the viewport, `scale` (phones 3, tablets 2) and
   `fontScale` (1); new `--scale` and `--font-scale` flags and `a11y-tree.json`
@@ -36,13 +43,11 @@ share one version.
   ICU's default locale fixed to `en_US` so `LANG` does not change the output,
   a portable SHA-256 instead of OpenSSL. CI: `.github/workflows/linux-host.yml`
   (also runs the e2e suite with the host inside debian:10 and ubuntu:20.04).
-- `rn-a11y-host` ships every platform: `osx-bin/` (universal), `linux64-bin/`
-  and `win64-bin/rn-a11y-host.exe`, one `host-version.json` listing them.
-  `release-host.ts --pack` runs on any OS (`--bin <slot>=<file>`,
-  `--artifacts <dir>`); the release workflow builds the three hosts, packs
-  both packages and installs them in a scratch project on Linux, macOS and
-  Windows. The package source is `index.ts` (`index.js` / `index.d.ts` are
-  built at pack time).
+- `release-host.ts --pack` stages the runtime packages on any OS
+  (`--packages-dir <dir>`, `--bin <slot>=<file>`, `--artifacts <dir>`).
+  Each binary package carries its own `host-version.json`; the release
+  workflow packs the CLI and three runtimes, then verifies scratch-project
+  installs on Linux, macOS, and Windows.
 - `--tz <zone>`: the host runs with `TZ=UTC` unless `--tz` says otherwise, so
   date strings do not depend on the machine (the Windows host reads POSIX
   values like `JST-9` only; an IANA name there gives a warning).

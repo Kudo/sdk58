@@ -6,7 +6,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {getHostPath, HostUnavailableError, hostRelativePath} from '../packages/rn-a11y-host/index.ts';
+import {getHostPath, HostUnavailableError, hostRelativePath} from '../src/runtimePackage.ts';
 
 import {CliError, EXIT_CODES} from '../src/errors.ts';
 import {checkProtocol, DEFAULT_TZ, findHost, hostEnv, type HostProbes, SUPPORTED_PROTOCOL} from '../src/host.ts';
@@ -16,13 +16,12 @@ import {elf, machO, pe} from './fixtures/fake-binaries.ts';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 describe('host-resolve', () => {
-  it('rn-a11y-host getHostPath: hermesc-style layout per platform', () => {
+  it('runtime getHostPath: hermesc-style layout per platform', () => {
     expect(hostRelativePath('darwin', 'arm64')).toBe(path.join('osx-bin', 'rn-a11y-host'));
     expect(hostRelativePath('darwin', 'x64')).toBe(path.join('osx-bin', 'rn-a11y-host'));
     expect(hostRelativePath('linux', 'x64')).toBe(path.join('linux64-bin', 'rn-a11y-host'));
     expect(hostRelativePath('win32', 'x64')).toBe(path.join('win64-bin', 'rn-a11y-host.exe'));
-    expect(getHostPath('linux', 'x64')).toBe(path.join(ROOT, 'packages/rn-a11y-host/linux64-bin/rn-a11y-host'));
-    for (const [platform, arch] of [['linux', 'arm64'], ['win32', 'arm64'], ['freebsd', 'x64']]) {
+    for (const [platform, arch] of [['linux', 'arm64'], ['win32', 'arm64'], ['freebsd', 'x64'], ['darwin', 'ppc']]) {
       expect(() => getHostPath(platform, arch)).toThrow(expect.toSatisfy((error: unknown) =>
           error instanceof HostUnavailableError &&
           error.code === 'HOST_UNAVAILABLE' &&
@@ -109,7 +108,7 @@ describe('host-resolve', () => {
     expect(HOST_PROTOCOL_VERSION >= SUPPORTED_PROTOCOL.min && HOST_PROTOCOL_VERSION <= SUPPORTED_PROTOCOL.max).toBeTruthy();
     checkProtocol({bin: '/h', source: 'package', protocolVersion: SUPPORTED_PROTOCOL.max});
     checkProtocol({bin: '/h', source: 'dist'}); // unknown: no check
-    for (const [v, hint] of [[SUPPORTED_PROTOCOL.max + 1, /Update react-native-a11y-tree/], [SUPPORTED_PROTOCOL.min - 1, /Update rn-a11y-host/]] as const) {
+    for (const [v, hint] of [[SUPPORTED_PROTOCOL.max + 1, /Update react-native-a11y-tree/], [SUPPORTED_PROTOCOL.min - 1, /Update react-native-a11y-tree/]] as const) {
       expect(() => checkProtocol({bin: '/h', source: 'package', version: 'x', protocolVersion: v})).toThrow(expect.toSatisfy((error: CliError) => error.code === 'HOST_INCOMPATIBLE' && hint.test(error.hint ?? '') && new RegExp(`protocol ${v}`).test(error.message)));
     }
     expect(EXIT_CODES.HOST_INCOMPATIBLE).toBe(5);
@@ -117,9 +116,9 @@ describe('host-resolve', () => {
 
   it('release-host.ts --pack: one binary per slot (osx, linux64, win64) and one host-version.json (fake binaries)', {timeout: 120_000}, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-host-pack-'));
-    const pkg = path.join(dir, 'pkg');
+    const pkg = path.join(dir, 'packages');
     const pack = (...args: string[]) =>
-      spawnSync('bun', [path.join(ROOT, 'scripts/release-host.ts'), '--pack', '--package-dir', pkg, ...args], {encoding: 'utf8'});
+      spawnSync('bun', [path.join(ROOT, 'scripts/release-host.ts'), '--pack', '--packages-dir', pkg, ...args], {encoding: 'utf8'});
     const osx = machO(path.join(dir, 'osx'), ['arm64', 'x86_64']);
     const linux = elf(path.join(dir, 'linux'));
     const win = pe(path.join(dir, 'win.exe'));
@@ -128,7 +127,6 @@ describe('host-resolve', () => {
     const manifest = JSON.parse(all.stdout);
     expect(manifest.protocolVersion).toBe(HOST_PROTOCOL_VERSION);
     expect(manifest.version).toMatch(/-[0-9a-f]{12}$/);
-    expect(JSON.parse(fs.readFileSync(path.join(pkg, 'host-version.json'), 'utf8'))).toStrictEqual(manifest);
     const sha = (f: string) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
     expect(manifest.binaries).toStrictEqual({
       'osx-bin/rn-a11y-host': {archs: ['arm64', 'x86_64'], sha256: sha(osx), size: fs.statSync(osx).size},
@@ -137,9 +135,9 @@ describe('host-resolve', () => {
     });
     // Windows has no executable bit.
     for (const file of process.platform === 'win32' ? [] : Object.keys(manifest.binaries)) {
-      expect(fs.statSync(path.join(pkg, file)).mode & 0o100, file).toBeTruthy();
+      expect(fs.statSync(path.join(pkg, file.startsWith('osx') ? 'runtime-darwin-universal' : file.startsWith('linux') ? 'runtime-linux-x64-gnu' : 'runtime-win32-x64-msvc', file)).mode & 0o100, file).toBeTruthy();
     }
-    expect(fs.existsSync(path.join(pkg, 'index.js')) && fs.existsSync(path.join(pkg, 'index.d.ts'))).toBeTruthy();
+    expect(fs.existsSync(path.join(pkg, 'index.js'))).toBe(false);
 
     // --artifacts (CI download layout) for linux64 only: the other slots are removed.
     const artifacts = path.join(dir, 'artifacts');
@@ -148,7 +146,21 @@ describe('host-resolve', () => {
     const linuxOnly = pack('--artifacts', artifacts);
     expect(linuxOnly.status, linuxOnly.stderr).toBe(0);
     expect(Object.keys(JSON.parse(linuxOnly.stdout).binaries)).toStrictEqual(['linux64-bin/rn-a11y-host']);
-    expect(['osx-bin', 'linux64-bin', 'win64-bin'].filter(d => fs.existsSync(path.join(pkg, d)))).toStrictEqual(['linux64-bin']);
+    expect(fs.existsSync(path.join(pkg, 'runtime-darwin-universal/osx-bin'))).toBe(false);
+    expect(fs.existsSync(path.join(pkg, 'runtime-linux-x64-gnu/linux64-bin'))).toBe(true);
+
+    // A local one-slice macOS pack must not advertise support for both CPUs.
+    const armOnly = pack('--bin', `osx=${machO(path.join(dir, 'arm'), ['arm64'])}`);
+    expect(armOnly.status, armOnly.stderr).toBe(0);
+    expect(JSON.parse(fs.readFileSync(path.join(pkg, 'runtime-darwin-universal/package.json'), 'utf8')).cpu).toEqual(['arm64']);
+
+    // An ELF for an unsupported CPU cannot masquerade as the x64 package.
+    const armElf = fs.readFileSync(linux);
+    armElf.writeUInt16LE(183, 18);
+    fs.writeFileSync(path.join(dir, 'arm-elf'), armElf);
+    const wrongCpu = pack('--bin', `linux64=${path.join(dir, 'arm-elf')}`);
+    expect(wrongCpu.status).toBe(1);
+    expect(wrongCpu.stderr).toContain('expected architectures x86_64, got arm64');
 
     // A binary of the wrong format for its slot is rejected.
     const wrong = pack('--bin', `linux64=${win}`);

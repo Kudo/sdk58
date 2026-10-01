@@ -6,12 +6,10 @@ dist/
 /tmp/
 .metro-cache/
 native/dist/
-# rn-a11y-host package contents written by scripts/release-host.ts --pack
-packages/rn-a11y-host/osx-bin/
-packages/rn-a11y-host/linux64-bin/
-packages/rn-a11y-host/win64-bin/
-packages/rn-a11y-host/host-version.json
-packages/rn-a11y-host/index.js
-packages/rn-a11y-host/index.d.ts
 *.tgz
 /release/
+# Platform runtime artifacts written by scripts/release-host.ts --pack
+packages/runtime-*/osx-bin/
+packages/runtime-*/linux64-bin/
+packages/runtime-*/win64-bin/
+packages/runtime-*/host-version.json

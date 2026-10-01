@@ -9,8 +9,8 @@ name: Release host
 # - host-windows: windows-host.yml (built on windows-2025 with MSVC/clang-cl,
 #   tested there); artifact rn-a11y-host-win64;
 # - package: release tarballs per platform (release-host.ts), the
-#   rn-a11y-host package with every binary (release-host.ts --pack
-#   --artifacts), npm pack of both packages, and a scratch-project install
+#   CLI and optional runtime packages (release-host.ts --pack
+#   --artifacts), npm pack of all packages, and a scratch-project install
 #   that renders with the packaged Linux host; also the file:// download;
 # - verify-macos / verify-windows / intel-check: the same install on macOS
 #   and Windows, and the x86_64 slice on an Intel runner;
@@ -160,16 +160,18 @@ jobs:
           fi
           cat release/host-version.json
 
-      # npm packages (not published yet): rn-a11y-host with every binary, and
+      # npm packages (not published yet): optional runtime binaries and
       # the CLI with its bun build in dist/.
       - name: npm pack
         run: |
           bun scripts/release-host.ts --pack --artifacts artifacts
           bun run build
           npm pack --pack-destination release
-          (cd packages/rn-a11y-host && npm pack --pack-destination ../../release)
+          for pkg in packages/runtime-*; do
+            (cd "$pkg" && npm pack --pack-destination ../../release)
+          done
           ls -la release
-          tar -tzvf release/rn-a11y-host-*.tgz
+          for archive in release/react-native-a11y-tree-runtime-*.tgz; do tar -tzvf "$archive"; done
 
       - name: Install the packages in a scratch project and render (Linux host from the package)
         run: bash scripts/verify-packages.sh release
@@ -296,7 +298,7 @@ jobs:
           # Release body: the CHANGELOG.md section of the tag's version.
           notes="$RUNNER_TEMP/release-notes.md"
           bun scripts/changelog-section.ts "$tag" > "$notes"
-          printf '\nAssets: the npm tarballs of react-native-a11y-tree and rn-a11y-host (macOS, Linux x64, Windows x64), and the prebuilt hosts (tar.gz + .sha256 per platform, host-version.json).\n' >> "$notes"
+          printf '\nAssets: the npm tarballs of react-native-a11y-tree and @react-native-a11y-tree/runtime-* (macOS, Linux x64, Windows x64), and the prebuilt hosts (tar.gz + .sha256 per platform, host-version.json).\n' >> "$notes"
           if gh release view "$tag" > /dev/null 2>&1; then
             gh release edit "$tag" --notes-file "$notes"
           else
@@ -304,7 +306,7 @@ jobs:
           fi
           gh release upload "$tag" release/* --clobber
 
-  # Later: publish both packages to npm from the release tarballs. Needs the
+  # Later: publish platform packages first, then CLI to npm from the release tarballs. Needs the
   # NPM_TOKEN secret (until then the user publishes manually from these tarballs).
   # npm-publish:
   #   needs: publish
@@ -326,5 +328,7 @@ jobs:
   #       env:
   #         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   #       run: |
-  #         npm publish --provenance --access public release/rn-a11y-host-*.tgz
-  #         npm publish --provenance --access public release/react-native-a11y-tree-*.tgz
+  #         for pkg in release/react-native-a11y-tree-runtime-*.tgz; do
+  #           npm publish --provenance --access public "$pkg"
+  #         done
+  #         npm publish --provenance --access public release/react-native-a11y-tree-[0-9]*.tgz

@@ -114,7 +114,7 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
    then tag `v0.1.1`:
    `git tag -a v0.1.1 -m "v0.1.1" && git push origin v0.1.1`.
    The release workflow builds the universal host, runs the Intel check,
-   packs both packages, and creates the GitHub release with notes from
+   packs the CLI and scoped runtime packages, and creates the GitHub release with notes from
    `CHANGELOG.md`. Download the two `.tgz` assets, verify them in a scratch
    project (see "Verify a release" below), and give them to the user.
 4. Ask the user which of these is next (they had not answered on 2026-09-30):
@@ -144,7 +144,7 @@ bun run rn-a11y-tree check examples/basic/App.tsx --preset android-phone --rules
 RN_A11Y_HOST_BUILD_TYPE=Debug bun run build:host          # 2-3 s incremental native iteration
 RN_A11Y_HOST_SANITIZE=1 RN_A11Y_HOST_BUILD_TYPE=Release bun run build:host   # ASan+UBSan+vptr host
 RN_A11Y_HOST_ARCH=universal bun run build:host            # arm64 + x86_64 (x86_64 Hermes ~90 s)
-bun scripts/release-host.ts --pack                        # stage packages/rn-a11y-host (this machine's native/dist)
+bun scripts/release-host.ts --pack                        # stage packages/runtime-* (this machine's native/dist)
 bun scripts/release-host.ts --pack --bin osx=<f> --bin linux64=<f> --bin win64=<f.exe>   # or --artifacts <dir>
 bun scripts/perf.ts                                       # perf tables (docs/perf-analysis.md)
 ```
@@ -228,7 +228,7 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 | Reference harnesses | `native/tools/swiftui-ref/` (real SwiftUI, macOS + iOS sim), `native/tools/compose-ref/` (Compose Desktop), `native/tools/*-layout-test/` (engine vs reference) |
 | Host build script | `scripts/build-host.sh`; release packaging `scripts/release-host.ts`; other scripts `scripts/*.ts` (bun) |
 | Tests | Vitest: `test/` (project `unit`, fake host `test/fixtures/fake-host.ts`), `e2e/` (project `e2e`, real host) |
-| Packages | root = CLI (`bin` = `dist/rn-a11y-tree.js`); `packages/rn-a11y-host/` (`index.ts`; hermesc-style `osx-bin/`, `linux64-bin/`, `win64-bin/`) |
+| Packages | root = CLI (`bin` = `dist/rn-a11y-tree.js`); `packages/runtime-*/` (direct optional binary dependencies); resolution in `src/runtimePackage.ts` |
 | Docs | `docs/agent-friendliness.md`, `docs/build-analysis.md`, `docs/perf-analysis.md`, `docs/expo-ui-status.md`, `docs/e2e-coverage.md`, `docs/research/*` |
 | Schemas / tool descriptors | `schema/*.json`, `tools/*.json` (regenerate with `bun run schema`) |
 

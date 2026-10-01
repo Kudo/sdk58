@@ -12,7 +12,13 @@ describe('changelog', () => {
   it('CHANGELOG.md has a section for the package version; changelog-section.ts extracts it', () => {
     const text = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
     const version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
-    expect(JSON.parse(fs.readFileSync(path.join(ROOT, 'packages/rn-a11y-host/package.json'), 'utf8')).version).toBe(version);
+    const metadata = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+    for (const dir of fs.readdirSync(path.join(ROOT, 'packages'))) {
+      if (!dir.startsWith('runtime-')) continue;
+      const runtime = JSON.parse(fs.readFileSync(path.join(ROOT, 'packages', dir, 'package.json'), 'utf8'));
+      expect(runtime.version).toBe(version);
+      expect(metadata.optionalDependencies[runtime.name]).toBe(version);
+    }
     const current = changelogSection(text, version);
     if (current == null || !current.includes('### ')) expect.unreachable(`no section for ${version}`);
     expect(current, 'the section runs into the next one').not.toContain('## [');
