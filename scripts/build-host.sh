@@ -494,6 +494,11 @@ if [[ "$SANITIZE" == "1" ]]; then
     "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined,vptr"
     -DFANTOM_SANITIZE=ON
   )
+elif [[ "$OS" == "Windows" ]]; then
+  # CMake's flags for clang-cl as they are (CMAKE_CXX_FLAGS would replace its
+  # /DWIN32 /D_WINDOWS /EHsc /GR). lld-link removes unreferenced code in
+  # Release (/OPT:REF without /DEBUG). No LTO, no debug information.
+  :
 elif [[ "$BUILD_TYPE" != "Debug" && "$OS" == "Linux" ]]; then
   # Unused sections removed at link time (as -dead_strip on macOS). No ThinLTO
   # and no -g: the link would need more time and memory than a 2-core, 7 GB CI
