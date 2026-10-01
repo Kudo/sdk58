@@ -205,6 +205,8 @@ jobs:
         run: bun run test
 
       - name: E2E tests (e2e/*.test.ts)
+        # Also after failed unit tests: both results in one run.
+        if: ${{ !cancelled() }}
         env:
           RN_A11Y_HOST_STDERR_LOG: ${{ runner.temp }}/host-stderr.log
         run: |
