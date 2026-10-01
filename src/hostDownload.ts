@@ -83,7 +83,9 @@ export async function downloadHost(options: {baseUrl: string; log?: (line: strin
   }
   const root = hostCacheRoot();
   const dir = path.join(root, manifest.version);
-  const bin = path.join(dir, 'rn-a11y-host');
+  // scripts/release-host.ts: rn-a11y-host.exe in the Windows archive.
+  const hostFile = process.platform === 'win32' ? 'rn-a11y-host.exe' : 'rn-a11y-host';
+  const bin = path.join(dir, hostFile);
   const marker = path.join(dir, '.sha256');
   if (fs.existsSync(bin) && fs.existsSync(marker) && fs.readFileSync(marker, 'utf8').trim() === asset.sha256) {
     return bin;
@@ -103,8 +105,8 @@ export async function downloadHost(options: {baseUrl: string; log?: (line: strin
     const unpacked = path.join(tmp, 'host');
     fs.mkdirSync(unpacked);
     execFileSync('tar', ['-xzf', archive, '-C', unpacked]);
-    const unpackedBin = path.join(unpacked, 'rn-a11y-host');
-    if (!fs.existsSync(unpackedBin)) throw new Error(`${asset.file} has no rn-a11y-host`);
+    const unpackedBin = path.join(unpacked, hostFile);
+    if (!fs.existsSync(unpackedBin)) throw new Error(`${asset.file} has no ${hostFile}`);
     fs.chmodSync(unpackedBin, 0o755);
     fs.writeFileSync(path.join(unpacked, '.sha256'), asset.sha256 + '\n');
     fs.rmSync(dir, {recursive: true, force: true});

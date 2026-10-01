@@ -1,8 +1,11 @@
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
+
+import {elf, machO, pe} from './fixtures/fake-binaries.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const hasNpm = spawnSync('npm', ['--version'], {stdio: 'ignore'}).status === 0;
@@ -55,22 +58,40 @@ describe('pack', () => {
     }
   });
 
-  it('npm pack of rn-a11y-host: 7 files with the host binary', {timeout: 120_000}, t => {
+  it('npm pack of rn-a11y-host: 9 files with the osx, linux64 and win64 binaries (fake binaries)', {timeout: 120_000}, t => {
     if (!hasNpm) t.skip('npm is not available');
-    if (!fs.existsSync(path.join(ROOT, 'packages/rn-a11y-host/osx-bin/rn-a11y-host'))) {
-      t.skip('osx-bin is not staged (bun scripts/release-host.ts --pack)');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-host-npm-pack-'));
+    try {
+      const pkg = path.join(dir, 'rn-a11y-host');
+      fs.cpSync(path.join(ROOT, 'packages', 'rn-a11y-host'), pkg, {
+        recursive: true,
+        filter: src => !/[\\/](osx-bin|linux64-bin|win64-bin|host-version\.json|index\.js|index\.d\.ts)$/.test(src),
+      });
+      const packed = spawnSync('bun', [
+        path.join(ROOT, 'scripts', 'release-host.ts'), '--pack', '--package-dir', pkg,
+        '--bin', `osx=${machO(path.join(dir, 'osx'), ['arm64', 'x86_64'])}`,
+        '--bin', `linux64=${elf(path.join(dir, 'linux'))}`,
+        '--bin', `win64=${pe(path.join(dir, 'win.exe'))}`,
+      ], {encoding: 'utf8'});
+      expect(packed.status, packed.stderr).toBe(0);
+      const files = packFiles(pkg);
+      expect(files.map(f => f.path).sort()).toStrictEqual([
+        'LICENSE',
+        'README.md',
+        'host-version.json',
+        'index.d.ts',
+        'index.js',
+        'linux64-bin/rn-a11y-host',
+        'osx-bin/rn-a11y-host',
+        'package.json',
+        'win64-bin/rn-a11y-host.exe',
+      ]);
+      const binaries = JSON.parse(packed.stdout).binaries as Record<string, {size: number}>;
+      expect(Object.fromEntries(files.filter(f => f.path.includes('-bin/')).map(f => [f.path, f.size]))).toStrictEqual(
+        Object.fromEntries(Object.entries(binaries).map(([file, info]) => [file, info.size])),
+      );
+    } finally {
+      fs.rmSync(dir, {recursive: true, force: true});
     }
-    const files = packFiles(path.join(ROOT, 'packages', 'rn-a11y-host'));
-    expect(files.map(f => f.path).sort()).toStrictEqual([
-      'LICENSE',
-      'README.md',
-      'host-version.json',
-      'index.d.ts',
-      'index.js',
-      'osx-bin/rn-a11y-host',
-      'package.json',
-    ]);
-    const bin = files.find(f => f.path === 'osx-bin/rn-a11y-host')!;
-    expect(bin.size).toBe(fs.statSync(path.join(ROOT, 'packages/rn-a11y-host/osx-bin/rn-a11y-host')).size);
   });
 });

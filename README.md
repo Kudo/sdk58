@@ -58,18 +58,21 @@ Two packages:
   React Native install), so the bundle uses the project's Metro.
 - `rn-a11y-host`: the prebuilt host, in hermes-compiler's layout
   (`osx-bin/`, `linux64-bin/`, `win64-bin/`, `host-version.json`,
-  `getHostPath()`). 0.1.0 has a macOS arm64 binary only; see
+  `getHostPath()`): a universal macOS binary and a Linux x64 binary (0.1.0:
+  macOS arm64 only); see
   [packages/rn-a11y-host/README.md](packages/rn-a11y-host/README.md). The
   source is `index.ts`; `bun scripts/release-host.ts --pack` builds
   `index.js` (`bun build`) and `index.d.ts` (`tsc`) next to it. Its
-  `prepack` fails when `osx-bin/rn-a11y-host`, `index.js` or `index.d.ts`
-  is missing (run `bun scripts/release-host.ts --pack` first).
+  `prepack` fails when `index.js`, `index.d.ts`, `host-version.json` or a
+  binary listed in it is missing (run `bun scripts/release-host.ts --pack`
+  first).
 
 Local check of this flow: `e2e/package.test.ts` packs both packages
 (`npm pack`), installs them with `expo@58.0.0 react-native@0.88.0-rc.2
 react@19.3.0` into a scratch project and runs `npx rn-a11y-tree render
 App.tsx --preset android-phone --format text` (skipped without `npm` or a
-`native/dist` host).
+`native/dist` host; on macOS and Linux). The release workflow does the same
+with the packages it builds (`scripts/verify-packages.sh`), on Linux and macOS.
 
 ## Quick start
 
@@ -990,8 +993,9 @@ runner.
 
 ### Prebuilt host
 
-`bun scripts/release-host.ts [--out release] [--pin]` packages
-`native/dist/<arch>/rn-a11y-host`:
+`bun scripts/release-host.ts [--out release] [--platform darwin|linux|win32]
+[--arch arm64|x86_64] [--bin <file>] [--pin]` packages one binary (default
+`native/dist/<arch>/rn-a11y-host` of this machine):
 
 - `rn-a11y-host-<version>-<platform>-<arch>.tar.gz` (the binary and
   `host-version.json`), and its `.sha256`;
@@ -1000,22 +1004,48 @@ runner.
   `build-host.sh` copies), `overlayDirty` (uncommitted overlay changes),
   `nativeLibs` (versions of the npm packages compiled in, plus
   `hermes-compiler`), `repoCommit`, and `assets: {"<platform>-<arch>":
-  {file, sha256, size}}`. `version` is `<react-native
-  version>-<12 hex of sha256(submodule commit, overlay hash, native libs)>`.
-  A second run for another arch into the same directory adds its asset.
+  {file, sha256, size}}` (`darwin-arm64`, `darwin-x86_64`, `linux-x86_64`,
+  `win32-x86_64`: `process.platform` and the arch, as in
+  `src/hostDownload.ts`). `version` is `<react-native
+  version>-<12 hex of sha256(submodule commit, overlay hash, native libs)>`,
+  the same for every platform. A second run for another platform or arch
+  into the same directory adds its asset. `--platform` (default: this
+  machine) lets one machine package the binaries of all platforms; the
+  Windows archive holds `rn-a11y-host.exe`.
 - `--pin` also writes `host-version.json` to the repo root. That is the
   host the CLI downloads.
 
 The script warns when `native/overlay` has uncommitted changes or files
 newer than the binary.
 
-`bun scripts/release-host.ts --pack [--package-dir <dir>]` fills
-`packages/rn-a11y-host` (the npm package of the host, see
-[Install](#install)): `osx-bin/rn-a11y-host` (a universal binary made
-with `lipo` when both `native/dist/arm64` and `native/dist/x86_64` exist)
-and `host-version.json` (the fields above plus `protocolVersion` and
-`binaries: {"osx-bin/rn-a11y-host": {archs, sha256, size}}`). Only macOS
-is packed for now.
+`bun scripts/release-host.ts --pack [--package-dir <dir>] [--bin
+<slot>=<file>]... [--artifacts <dir>]` fills `packages/rn-a11y-host` (the
+npm package of the host, see [Install](#install)) on any OS:
+
+- slots `osx` (`osx-bin/rn-a11y-host`), `linux64`
+  (`linux64-bin/rn-a11y-host`), `win64` (`win64-bin/rn-a11y-host.exe`);
+- inputs: `--bin <slot>=<file>` (repeatable; several `osx` files are joined
+  with `lipo`, on macOS only; `--bin <file>` is this machine's slot),
+  `--artifacts <dir>` (CI artifacts: `<dir>/rn-a11y-host-<slot>/<file>`,
+  the `osx` one universal), else this machine's `native/dist` (macOS:
+  `arm64` and `x86_64` joined into a universal binary);
+- slots without an input are removed; each binary's format must match its
+  slot (Mach-O, ELF, PE, read from the file header, which also gives its
+  archs);
+- `host-version.json`: the fields above plus `protocolVersion` and
+  `binaries: {"<dir>/<file>": {archs, sha256, size}}` for every binary.
+
+`.github/workflows/release-host.yml` (tags `v*`; also on push to
+`ci/linux-host`, without the GitHub release): `host-macos` (universal host,
+tests), `host-linux` (calls `linux-host.yml`: the manylinux_2_28 build and its
+tests), then `package` (ubuntu): the tarballs of every platform and arch, `--pack
+--artifacts`, `npm pack` of both packages, `scripts/verify-packages.sh` (a
+scratch project installs both tarballs and renders `examples/basic` with the
+Linux host from the package) and the `file://` download; `verify-macos` (the
+same install on macOS), `intel-check` (the x86_64 slice on an Intel runner),
+and `publish` (the GitHub release, tags only). A Windows job plugs in as one
+more job that uploads `rn-a11y-host-win64` (see the comment in the
+workflow).
 
 The CLI looks for the host in this order:
 

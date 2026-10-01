@@ -1,26 +1,37 @@
 name: Release host
 
-# On a tag v*: build the host, test it, package it with
-# scripts/release-host.ts and attach the tarball, its .sha256,
-# host-version.json and the npm tarballs of rn-a11y-host and
-# react-native-a11y-tree (npm pack; not published) to the GitHub release. The CLI downloads it
-# with RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>
-# and the host-version.json of that release (commit it to the repo root, or
-# point RN_A11Y_HOST_MANIFEST at it).
+# The hosts of every platform, packaged and verified:
+# - host-macos: the universal macOS host (arm64 + x86_64 cross-built on the
+#   arm64 runner), tested; artifacts rn-a11y-host-osx (universal) and
+#   rn-a11y-host-osx-slices (arm64/, x86_64/);
+# - host-linux: linux-host.yml (built in manylinux_2_28, tested on
+#   ubuntu-24.04, debian:10, ubuntu:20.04); artifact rn-a11y-host-linux64;
+# - host-windows: not yet (see the comment below);
+# - package: release tarballs per platform (release-host.ts), the
+#   rn-a11y-host package with every binary (release-host.ts --pack
+#   --artifacts), npm pack of both packages, and a scratch-project install
+#   that renders with the packaged Linux host; also the file:// download;
+# - verify-macos / intel-check: the same install on macOS, and the x86_64
+#   slice on an Intel runner;
+# - publish: on a tag v*, the GitHub release with every asset. The CLI
+#   downloads with RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>
+#   and the host-version.json of that release.
+# On push to ci/linux-host everything but publish runs.
 
 on:
   push:
     tags: ['v*']
+    branches: [ci/linux-host]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  host-macos:
     # Same image and toolchain as ci.yml.
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
@@ -68,19 +79,11 @@ jobs:
       - name: Install JS dependencies
         run: bun install --frozen-lockfile
 
-      # A clean build: no host cache for releases.
-      - name: Build host
-        run: bun run build:host
-
-      # x86_64 slice, cross-built on this arm64 runner (CMAKE_OSX_ARCHITECTURES);
-      # release-host.ts then packs a universal binary (both native/dist/<arch>).
-      - name: Build host (x86_64 slice)
-        run: RN_A11Y_HOST_ARCH=x86_64 bun run build:host
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: rn-a11y-host-x86_64
-          path: native/dist/x86_64/rn-a11y-host
+      # A clean build: no host cache for releases. Both slices (the x86_64
+      # one cross-built with CMAKE_OSX_ARCHITECTURES) and the lipo'd
+      # native/dist/universal/rn-a11y-host.
+      - name: Build host (universal)
+        run: RN_A11Y_HOST_ARCH=universal bun run build:host
 
       - name: Tests
         run: |
@@ -88,20 +91,92 @@ jobs:
           bun run test
           bun run test:e2e
 
-      - name: Package host
-        run: bun scripts/release-host.ts --out release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rn-a11y-host-osx
+          path: native/dist/universal/rn-a11y-host
+          if-no-files-found: error
 
-      # npm packages (not published yet): rn-a11y-host with osx-bin/ filled
-      # by --pack, and the CLI with its bun build in dist/.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rn-a11y-host-osx-slices
+          path: |
+            native/dist/arm64/rn-a11y-host
+            native/dist/x86_64/rn-a11y-host
+          if-no-files-found: error
+
+  host-linux:
+    uses: ./.github/workflows/linux-host.yml
+
+  # Windows x64: when ci/windows-host lands, add a job `host-windows` that
+  # uploads its binary as the artifact rn-a11y-host-win64 (file
+  # rn-a11y-host.exe), and add it to `needs` of `package`. release-host.ts
+  # --pack --artifacts picks it up (win64-bin/rn-a11y-host.exe), and the
+  # tarball step below packs it when the artifact exists.
+
+  package:
+    needs: [host-macos, host-linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+    steps:
+      # The submodule: release-host.ts records its commit and React Native version.
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      # One directory per artifact: artifacts/rn-a11y-host-<slot>/.
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: rn-a11y-host-*
+          path: artifacts
+
+      - name: Release tarballs (one per platform and arch)
+        run: |
+          find artifacts -type f -name 'rn-a11y-host*' ! -name '*.debug' -exec chmod +x {} +
+          ls -lR artifacts
+          pack() { bun scripts/release-host.ts --out release --platform "$1" --arch "$2" --bin "$3" > /dev/null; }
+          pack darwin arm64 artifacts/rn-a11y-host-osx-slices/arm64/rn-a11y-host
+          pack darwin x86_64 artifacts/rn-a11y-host-osx-slices/x86_64/rn-a11y-host
+          pack linux x86_64 artifacts/rn-a11y-host-linux64/rn-a11y-host
+          if [ -f artifacts/rn-a11y-host-win64/rn-a11y-host.exe ]; then
+            pack win32 x86_64 artifacts/rn-a11y-host-win64/rn-a11y-host.exe
+          fi
+          cat release/host-version.json
+
+      # npm packages (not published yet): rn-a11y-host with every binary, and
+      # the CLI with its bun build in dist/.
       - name: npm pack
         run: |
-          bun scripts/release-host.ts --pack
+          bun scripts/release-host.ts --pack --artifacts artifacts
           bun run build
           npm pack --pack-destination release
           (cd packages/rn-a11y-host && npm pack --pack-destination ../../release)
           ls -la release
+          tar -tzvf release/rn-a11y-host-*.tgz
 
-      - name: Test the packaged host (download from file://)
+      - name: Install the packages in a scratch project and render (Linux host from the package)
+        run: bash scripts/verify-packages.sh release
+
+      - name: Test the packaged Linux host (download from file://)
         run: |
           RN_A11Y_HOST_BASE_URL="file://$PWD/release" \
           RN_A11Y_HOST_MANIFEST="$PWD/release/host-version.json" \
@@ -114,32 +189,35 @@ jobs:
           grep -q 'downloading host' stderr.txt
           if grep -q 'download failed' stderr.txt; then exit 1; fi
 
-      - name: Upload to the GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="${GITHUB_REF_NAME}"
-          # Release body: the CHANGELOG.md section of the tag's version.
-          notes="$RUNNER_TEMP/release-notes.md"
-          bun scripts/changelog-section.ts "$tag" > "$notes"
-          printf '\nAssets: the npm tarballs of react-native-a11y-tree and rn-a11y-host, and the prebuilt host (tar.gz + .sha256 + host-version.json).\n' >> "$notes"
-          if gh release view "$tag" > /dev/null 2>&1; then
-            gh release edit "$tag" --notes-file "$notes"
-          else
-            gh release create "$tag" --title "$tag" --notes-file "$notes"
-          fi
-          gh release upload "$tag" release/* --clobber
-
       - uses: actions/upload-artifact@v7
         with:
-          name: rn-a11y-host-release
+          name: release
           path: release/
+          if-no-files-found: error
+
+  verify-macos:
+    needs: package
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: release
+          path: release
+
+      - name: Install the packages in a scratch project and render (macOS host from the package)
+        run: bash scripts/verify-packages.sh release
 
   # The x86_64 slice cannot run on the arm64 runner (no Rosetta): render with
   # it on an Intel runner.
   intel-check:
-    needs: release
+    needs: host-macos
     runs-on: macos-15-intel
     timeout-minutes: 20
     steps:
@@ -158,22 +236,55 @@ jobs:
 
       - uses: actions/download-artifact@v7
         with:
-          name: rn-a11y-host-x86_64
-          path: x86_64-host
+          name: rn-a11y-host-osx-slices
+          path: slices
 
       - name: Render with the x86_64 host
         run: |
-          chmod +x x86_64-host/rn-a11y-host
+          chmod +x slices/x86_64/rn-a11y-host
           uname -m
-          lipo -info x86_64-host/rn-a11y-host
-          RN_A11Y_HOST_BIN="$PWD/x86_64-host/rn-a11y-host" \
+          lipo -info slices/x86_64/rn-a11y-host
+          RN_A11Y_HOST_BIN="$PWD/slices/x86_64/rn-a11y-host" \
             bun run rn-a11y-tree render examples/basic/App.tsx --preset android-phone --format text | tee render.txt
           grep -q 'submit View #submit role=button "Submit"' render.txt
 
+  publish:
+    needs: [package, verify-macos, intel-check]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: release
+          path: release
+
+      - name: Upload to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          # Release body: the CHANGELOG.md section of the tag's version.
+          notes="$RUNNER_TEMP/release-notes.md"
+          bun scripts/changelog-section.ts "$tag" > "$notes"
+          printf '\nAssets: the npm tarballs of react-native-a11y-tree and rn-a11y-host (macOS, Linux x64), and the prebuilt hosts (tar.gz + .sha256 per platform, host-version.json).\n' >> "$notes"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release edit "$tag" --notes-file "$notes"
+          else
+            gh release create "$tag" --title "$tag" --notes-file "$notes"
+          fi
+          gh release upload "$tag" release/* --clobber
+
   # Later: publish both packages to npm from the release tarballs. Needs the
   # NPM_TOKEN secret (until then the user publishes manually from these tarballs).
-  # publish:
-  #   needs: release
+  # npm-publish:
+  #   needs: publish
   #   runs-on: ubuntu-latest
   #   if: startsWith(github.ref, 'refs/tags/')
   #   permissions:
@@ -186,7 +297,7 @@ jobs:
   #         registry-url: 'https://registry.npmjs.org'
   #     - uses: actions/download-artifact@v7
   #       with:
-  #         name: rn-a11y-host-release
+  #         name: release
   #         path: release
   #     - name: npm publish
   #       env:
