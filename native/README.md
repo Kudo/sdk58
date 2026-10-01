@@ -938,11 +938,16 @@ uses only `ucol_*` (`localeCompare`, default locale, normalization on),
   region, unit and RBNF names, transliterators, confusables, StringPrep,
   character names and the conversion tables.
 
-Case mapping and normalization do not depend on the locale data (Turkish
-`toLocaleLowerCase` still works). Another default locale (`LANG=de_DE.UTF-8`)
-falls back: `en_GB` to `en`, `de_DE` to root. Root collation is the same as
-`en`; the root date format is `1970 M01 1` (the same as full ICU 74.2 for a
-locale it does not have).
+Case mapping and normalization do not depend on the locale data. ICU takes its
+default locale from `LC_ALL` / `LC_MESSAGES` / `LANG`; with the trimmed data a
+`de_DE` locale would fall back to root (`1970 M01 1`). So the host sets ICU's
+default locale to `en_US` before `main()` (`src/platform/icu/IcuDefaultLocale.cpp`,
+off Apple, wherever the host links ICU), and the output does not depend on the
+machine's locale. ICU's `en_US` gives the same medium date and time as the Mac
+host (`Jan 1, 1970`, `12:00:00 AM` with U+202F); date + time is
+`Jan 1, 1970, 12:00:00 AM` (Mac: `Jan 1, 1970 at 12:00:00 AM`).
+`Number.prototype.toLocaleString` does not use ICU or CoreFoundation without
+Intl (`1234.5` on both).
 
 The release binary is built on glibc 2.28 (CI: `.github/workflows/linux-host.yml`,
 job `build` in the `quay.io/pypa/manylinux_2_28_x86_64` image, AlmaLinux 8:

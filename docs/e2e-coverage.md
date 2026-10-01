@@ -24,7 +24,7 @@ them in the table. Unit and CLI tests against a fake host are in `test/`
 | `e2e/expo-ui.test.ts` | expo-ui | android-phone (App.tsx Compose + SwiftUIScreen.tsx), ios-phone (App.tsx SwiftUI) | Compose screen on android, SwiftUI screen on ios |
 | `e2e/dimensions.test.ts` | dimensions | android-phone, ios-phone | window/screen = preset viewport, scale 3, fontScale 1 (needs `deviceMetrics`) |
 | `e2e/package.test.ts` | basic (scratch project) | android-phone | none |
-| `e2e/unicode.test.ts` | unicode | android-phone, ios-phone | none (the date is in the host's time zone) |
+| `e2e/unicode.test.ts` | unicode | android-phone, ios-phone (+ one android-phone LANG test) | none (the date is in the host's time zone) |
 
 ## `e2e/render.test.ts` — `examples/basic/App.tsx`, `render`
 
@@ -164,6 +164,8 @@ without Intl, so locale and options arguments are ignored).
 
 - `localeCompare`: `a`/`b` gives -1 and 1; precomposed and decomposed `é` compare equal (0).
 - `new Date(0).toLocaleDateString(...)`: English medium date, `Dec 31, 1969` or `Jan 1, 1970` (host time zone).
+- `toLocaleTimeString()`: `H:00:00` + U+202F + `AM`/`PM`; `toLocaleString()`: date, then ` at ` (CoreFoundation) or `, ` (ICU), then the time.
 - `(1234.5).toLocaleString(...)`: `1234.5` or `1,234.5`.
 - `'İ'.toLowerCase()`: U+0069 U+0307; `'ß'.toUpperCase()`: `SS`.
 - `normalize`: NFD of `é` has length 2, NFC of `e` + U+0301 length 1, NFKC of `ﬁ` is `fi`.
+- A second test (android-phone) renders with `LANG`, `LC_ALL`, `LC_MESSAGES` unset and with `LANG=LC_ALL=de_DE.UTF-8`: the same Paragraph texts.

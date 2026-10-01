@@ -5,6 +5,8 @@ import {StyleSheet, Text, View} from 'react-native';
 const values: Array<[string, string]> = [
   ['locale-compare', `localeCompare ${'a'.localeCompare('b')} ${'b'.localeCompare('a')} ${'é'.localeCompare('é')}`],
   ['date', `date ${new Date(0).toLocaleDateString('en-US', {timeZone: 'UTC'})}`],
+  ['time', `time ${new Date(0).toLocaleTimeString()}`],
+  ['datetime', `datetime ${new Date(0).toLocaleString()}`],
   ['number', `number ${(1234.5).toLocaleString('en-US')}`],
   ['lower', `lower ${[...'İ'.toLowerCase()].map(c => c.codePointAt(0)?.toString(16)).join(' ')}`],
   ['upper', `upper ${'ß'.toUpperCase()}`],

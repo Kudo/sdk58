@@ -116,6 +116,7 @@ if(FANTOM_STATIC_HOST)
     else()
       list(APPEND hermes_static_libs icui18n icuuc icudata)
     endif()
+    set(FANTOM_HOST_USES_ICU ON)
   endif()
   set_target_properties(hermes-engine::hermesvm PROPERTIES
     INTERFACE_LINK_LIBRARIES "${hermes_static_libs}")
@@ -672,6 +673,18 @@ target_sources(fantom_tester
 target_include_directories(fantom_tester PRIVATE ${FANTOM_IOS_TEXTINPUT_DIR})
 # For NativeFantom.getHostInfo().
 target_compile_definitions(fantom_tester PRIVATE "FANTOM_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\"")
+# Off Apple Hermes uses ICU in ICU's default locale (from LANG / LC_*):
+# src/platform/icu/IcuDefaultLocale.cpp sets it to en_US before main(), so
+# the output does not depend on the machine's locale.
+if(FANTOM_HOST_USES_ICU)
+  find_path(FANTOM_ICU_INCLUDE_DIR unicode/uloc.h)
+  if(NOT FANTOM_ICU_INCLUDE_DIR)
+    message(FATAL_ERROR "unicode/uloc.h not found (ICU headers; see FANTOM_STATIC_ICU)")
+  endif()
+  target_sources(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/icu/IcuDefaultLocale.cpp)
+  target_include_directories(fantom_tester PRIVATE ${FANTOM_ICU_INCLUDE_DIR})
+  target_compile_definitions(fantom_tester PRIVATE "FANTOM_ICU_DEFAULT_LOCALE=\"en_US\"")
+endif()
 
 # Sanitizer builds (scripts/build-host.sh RN_A11Y_HOST_SANITIZE=1): with
 # AddressSanitizer folly calls its leak annotations, which live in a file the
