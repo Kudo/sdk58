@@ -28,7 +28,11 @@
 #include "components/FantomScreens.h"
 #include "components/FantomTextInput.h"
 #ifdef FANTOM_WITH_EMBEDDED_FONTS
+#ifdef FANTOM_WITH_PORTABLE_TEXT_LAYOUT
+#include "platform/portable/EmbeddedFonts.h"
+#else
 #include "platform/macos/EmbeddedFonts.h"
+#endif
 #endif
 #include "render/A11yTree.h"
 #include "render/HitTest.h"
@@ -319,7 +323,8 @@ jsi::Value setExpoUIPlatformHostFunction(
 constexpr int kHostProtocolVersion = 1;
 
 // getHostInfo(): string (JSON {protocolVersion, rnVersion, buildType,
-// sanitize, engines: {swiftui, compose}, fonts: {roboto}})
+// sanitize, engines: {swiftui, compose}, fonts: {roboto}, textLayout:
+// "macos" | "portable" | "stub"})
 jsi::Value getHostInfoHostFunction(
     jsi::Runtime& runtime,
     TurboModule& /*turboModule*/,
@@ -354,10 +359,17 @@ jsi::Value getHostInfoHostFunction(
   // Registers the embedded fonts if not done yet (once per process).
   roboto = registerEmbeddedFonts() > 0;
 #endif
+#if defined(FANTOM_WITH_MACOS_TEXT_LAYOUT)
+  std::string textLayout = "macos";
+#elif defined(FANTOM_WITH_PORTABLE_TEXT_LAYOUT)
+  std::string textLayout = "portable";
+#else
+  std::string textLayout = "stub";
+#endif
   folly::dynamic info = folly::dynamic::object("protocolVersion", kHostProtocolVersion)(
       "rnVersion", rnVersion)("buildType", buildType)("sanitize", sanitize)(
       "engines", folly::dynamic::object("swiftui", swiftui)("compose", compose))(
-      "fonts", folly::dynamic::object("roboto", roboto));
+      "fonts", folly::dynamic::object("roboto", roboto))("textLayout", textLayout);
   return jsi::String::createFromUtf8(runtime, folly::toJson(info));
 }
 
@@ -430,6 +442,10 @@ jsi::Value getCapabilitiesHostFunction(
 #endif
 #ifdef FANTOM_WITH_MACOS_TEXT_LAYOUT
   capabilities.push_back("textLayout");
+#endif
+#ifdef FANTOM_WITH_PORTABLE_TEXT_LAYOUT
+  capabilities.push_back("textLayout");
+  capabilities.push_back("textLayout.portable");
 #endif
 #ifdef FANTOM_WITH_SAFEAREACONTEXT
   capabilities.push_back("safeArea");

@@ -8,6 +8,11 @@
 #include "FantomExpo.h"
 
 #ifdef FANTOM_WITH_EXPOMODULESCORE
+#ifndef __APPLE__
+// ExpoViewComponentDescriptor.h calls unqualified isnan(): libc++ declares it
+// in the global namespace through <cmath>, libstdc++ only through <math.h>.
+#include <math.h>
+#endif
 #include <ExpoViewComponentDescriptor.h>
 #include <react/debug/react_native_assert.h>
 #include <jsi/JSIDynamic.h>

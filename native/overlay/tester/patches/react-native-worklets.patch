@@ -1,0 +1,20 @@
+--- a/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp
++++ b/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp
+@@ -68,9 +68,16 @@
+ #ifdef ANDROID
+     pthread_setname_np(pthread_self(), name.c_str());
+     jni::ThreadScope::WithClassLoader([state]() { AsyncQueueImpl::runLoop(state); });
+-#else
++#elif defined(__APPLE__)
+     pthread_setname_np(name.c_str());
+     AsyncQueueImpl::runLoop(state);
++#elif defined(_WIN32)
++    // No pthreads on Windows (the thread keeps no name).
++    AsyncQueueImpl::runLoop(state);
++#else
++    // glibc: the thread is an argument, and names have at most 15 characters.
++    pthread_setname_np(pthread_self(), name.substr(0, 15).c_str());
++    AsyncQueueImpl::runLoop(state);
+ #endif // ANDROID
+   });
+   thread.detach();

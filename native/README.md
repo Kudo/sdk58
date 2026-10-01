@@ -17,7 +17,8 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | File | Change |
 |---|---|
 | `tester/third-party/nlohmann_json/CMakeLists.txt` | `SYSTEM` include directory. Apple clang 21 with `-Werror` fails on `-Wdeprecated-literal-operator` in the bundled `json.hpp`. |
-| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context, react-native-gesture-handler) when they are found (see Native libraries). With `FANTOM_STATIC_HOST` (default `ON`) Hermes (its static archives from the Hermes build), JSI (the `jsi` target defined as `STATIC` here, instead of `ReactCommon/jsi`'s `SHARED` one) are linked statically, and SHA-256 goes through a CommonCrypto shim instead of OpenSSL (`src/stubs/crypto`, `FANTOM_OPENSSL_SHIM`): one executable without dylibs and without Homebrew OpenSSL (see `docs/build-analysis.md`). `FANTOM_HERMES_BUILD_DIR` selects the Hermes build to link (the x86_64 one for `RN_A11Y_HOST_ARCH=x86_64`). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. On macOS (option `FANTOM_MACOS_TEXT_LAYOUT`, default `ON`): enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation. |
+| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context, react-native-gesture-handler) when they are found (see Native libraries). With `FANTOM_STATIC_HOST` (default `ON`) Hermes (its static archives from the Hermes build), JSI (the `jsi` target defined as `STATIC` here, instead of `ReactCommon/jsi`'s `SHARED` one) are linked statically, and SHA-256 goes through a shim instead of OpenSSL (`src/stubs/crypto`, `FANTOM_OPENSSL_SHIM`; CommonCrypto on Apple, plain C++ elsewhere): one executable without dylibs and without Homebrew OpenSSL (see `docs/build-analysis.md`). `FANTOM_HERMES_BUILD_DIR` selects the Hermes build to link (the x86_64 one for `RN_A11Y_HOST_ARCH=x86_64`). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. `FANTOM_TEXT_LAYOUT` selects the text measurement (default `macos` on Apple, `portable` elsewhere; the older `FANTOM_MACOS_TEXT_LAYOUT=OFF` gives `stub` on Apple): `macos` enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation; `portable` removes the stub and adds `src/platform/portable/TextLayoutManager.cpp` plus the `fantom_embedded_fonts` library (portable fonts and layout, stb, font data; see Portable text layout); `stub` keeps the upstream stub. |
+| `tester/src/platform/portable/*` (new), `tester/third_party/stb/` (new) | The portable text layout (`FANTOM_TEXT_LAYOUT=portable`): `TextLayoutManager.cpp` (React Native attributed strings to runs), `PortableTextLayout.*` (paragraph layout), `PortableFonts.*` (faces, advances, kerning), `StbImpl.cpp` (stb implementations), `EmbeddedFonts.h`, `FantomComposeText.cpp` (the Compose text adapter). `third_party/stb/`: `stb_truetype.h` 1.26 and `stb_image.h` 2.30 (MIT or public domain, see its README). |
 | `tester/src/platform/macos/TextLayoutManager.mm` (new) | Text measurement with AppKit/TextKit 1 (`NSLayoutManager`). Port of the iOS `RCTTextLayoutManager.mm`, `RCTAttributedTextUtils.mm` and `RCTFontUtils.mm`. The upstream stub returns the minimum size (height 0) for all text. |
 | `tester/src/render/A11yTree.h`, `A11yTree.cpp` (new) | Serializes the shadow tree (not the mounted tree, so views are not flattened) to typed JSON. |
 | `tester/src/components/FantomTextInput.h`, `FantomSwitch.h`, `FantomComponents.cpp` (new) | Shadow nodes for `AndroidTextInput` and `AndroidSwitch` (see below). |
@@ -99,13 +100,14 @@ string:
 ```json
 {"protocolVersion": 1, "rnVersion": "0.88.0-rc.3", "buildType": "Release",
  "sanitize": false, "engines": {"swiftui": true, "compose": true},
- "fonts": {"roboto": true}}
+ "fonts": {"roboto": true}, "textLayout": "macos"}
 ```
 
 `buildType` is the tester's `CMAKE_BUILD_TYPE`; `sanitize` is true in an
 AddressSanitizer / UndefinedBehaviorSanitizer build; `engines` are the
 @expo/ui layout engines compiled in; `fonts.roboto` says whether the embedded
-Roboto registered (calling `getHostInfo()` registers it if needed). The CLI
+Roboto registered (calling `getHostInfo()` registers it if needed);
+`textLayout` is the `FANTOM_TEXT_LAYOUT` the host was built with. The CLI
 compares `protocolVersion` with `host-version.json` / `SUPPORTED_PROTOCOL` in
 `src/host.ts`.
 
@@ -135,6 +137,11 @@ it:
   `__rctDeviceEventEmitter` (TurboModule::emitDeviceEvent), so `Dimensions`
   listeners and `useWindowDimensions()` update.
 - The safe-area `initialWindowMetrics` frame uses the same metrics.
+- `startSurface` / surface constraint updates pass the font scale as the
+  surface's `LayoutContext::fontSizeMultiplier` (`TesterAppDelegate.cpp`), so
+  text without `allowFontScaling={false}` is measured at `fontSize *
+  fontScale` (both text layouts; `maxFontSizeMultiplier` caps it). Set the
+  metrics before the surface starts: a later change does not re-measure.
 - `getCapabilities()` has `"deviceMetrics"`.
 
 `tests/FantomDeviceMetrics-itest.js`: default 390x844 scale 3 for a 390x844
@@ -764,6 +771,73 @@ Known differences from a device:
 - Baseline alignment of TextInput is not supported (the TextLayoutManager has
   no `measureLines`); Yoga gets only the top padding and border.
 
+## Portable text layout
+
+`FANTOM_TEXT_LAYOUT=portable` (`RN_A11Y_TEXT_LAYOUT=portable` in
+`build-host.sh`) measures text without OS text APIs, so the same code builds
+on Linux and Windows. It reads the embedded Roboto TTFs (the same gzip arrays
+as the macOS build) with `stb_truetype` (cmap, `hmtx` advances, `kern` and GPOS
+pair kerning, `hhea` metrics) and inflates them with the zlib decoder of
+`stb_image` on first use. It models TextKit 1, which the macOS layout uses:
+
+- Fonts: `fontFamily` `Roboto*` / `sans-serif*` is Roboto (100-400 Regular,
+  500-600 Medium, 700-900 Bold, any italic Italic; face names such as
+  `Roboto-Bold` or `sans-serif-medium` pick that face). The system font (no
+  `fontFamily`, `System`, and any family without an embedded face, which the
+  macOS layout also measures with the system font) is a stand-in for SF,
+  which may not be redistributed: Roboto advances (<= 450 Regular, <= 550
+  Medium, else Bold, italic Italic) times SF's width relative to Roboto for
+  the size and weight (a table in `PortableFonts.cpp` measured with CoreText
+  on macOS 26.5 over a 210-character text, for example 1.092 at 10 pt and
+  0.970 at 24 pt for weight 400, 1.201 at 10 pt for 900; without it Roboto
+  Regular is 8% narrower than SF at 10 pt and 3% wider at 24 pt), with SF's
+  ascent and descent (1980/2048 and 432/2048 em, the same for every weight
+  and size). Individual strings still differ from SF (SF's digits are
+  proportional, Roboto's tabular: "112 views" at 12 pt is 6.7% wider). Monospace
+  families (`monospace`, `ui-monospace`, `Menlo`, `Courier`, `...Mono...`)
+  advance 0.6 em per character. Code points without a glyph: CJK 1 em,
+  Hangul 0.9 em, emoji 1.35 em (the CoreText widths of PingFang and Apple
+  Color Emoji), combining marks, joiners and variation selectors 0, others
+  0.55 em; fallback fonts do not change the line height.
+- Widths: advances plus kerning within a script run, the standard Latin
+  ligatures (ff, fi, fl, ffi, ffl), `letterSpacing` after every glyph
+  (kerning stays; `letterSpacing: 0` turns it off, like `NSKernAttributeName`).
+  Trailing spaces count. No other shaping, left-to-right only.
+- Lines: greedy breaking after spaces, hyphens and dashes, around CJK
+  (not before closing punctuation), between characters for a word wider than
+  the line; `\n`, U+2028, U+2029 end paragraphs and a trailing line break
+  adds an empty line. Line height `round(ascent) + round(descent)` (TextKit's
+  rule, checked from 6 to 60 pt) of the largest font on the line, or
+  `lineHeight` (times the font size multiplier) of the paragraph's first
+  fragment. `numberOfLines` truncates; the result is the container width when
+  a line wrapped, as in `RCTTextLayoutManager`.
+- Inline views (attachments) get frames on their line; `fontSizeMultiplier`,
+  `maxFontSizeMultiplier`, `allowFontScaling` and `textTransform` as on
+  macOS. Not supported: `adjustsFontSizeToFit`, `fontVariant`,
+  `fontVariationSettings` (also ignored by the advances), head/middle
+  truncation widths.
+
+Against TextKit with the same Roboto file (a harness with 5000 random
+strings, sizes 10-29, widths 30-400 pt, `numberOfLines`, `letterSpacing`,
+`lineHeight`) line counts and heights matched in all but one case; widths
+differ only for `numberOfLines` truncation (the ellipsis position, up to
+about 4%).
+
+Against the CoreText host, every `examples/*/App.tsx` under `android-phone`
+and `ios-phone` (380 and 378 text nodes) has the same Paragraph, TextInput
+and @expo/ui TextView heights; the per-example median width difference is at
+most 0.4%, the largest 6.7%. A test screen
+with sizes 10-34, weights 300-900, wrapping paragraphs, `numberOfLines`,
+`lineHeight`, `letterSpacing`, nested spans, CJK, emoji and inline views had 51
+of 53 text heights equal (one wrapping paragraph one line taller).
+
+The Compose engine's text adapter has a portable counterpart
+(`platform/portable/FantomComposeText.cpp`, same class as
+`components/FantomComposeText.mm`), so `expoUI.composeLayout` is available in
+portable builds. `getHostInfo().textLayout` is `"macos"`, `"portable"` or
+`"stub"`; portable hosts add the capabilities `textLayout` and
+`textLayout.portable`.
+
 ## Build
 
 `bun run build:host` (`scripts/build-host.sh`) builds the host into
@@ -776,6 +850,11 @@ sources, codegen), because its `configureFantomTester` task hardcodes
 `CMAKE_BUILD_TYPE=Debug`; the script configures the tester with the same
 arguments into `private/react-native-fantom/build/tester-<type>` with Ninja.
 Times and sizes: `docs/build-analysis.md`.
+
+`RN_A11Y_TEXT_LAYOUT=macos|portable|stub` (default `macos` on macOS, `portable` on Linux) passes
+`FANTOM_TEXT_LAYOUT` to the tester (see Portable text layout). A non-default
+layout builds in `build/tester-<type>-<layout>` and goes to
+`native/dist/<arch>-<layout>/rn-a11y-host`; run it with `RN_A11Y_HOST_BIN`.
 
 `RN_A11Y_HOST_ARCH=arm64|x86_64|universal` (default: the build machine's
 architecture). A foreign architecture (x86_64 on an arm64 Mac) is cross-built
@@ -814,6 +893,98 @@ both cast shadow nodes to a sibling type on purpose to reach protected
 casts each child to the detector type); the types add no data and only base
 members are touched. Our own code keeps the check. `RN_A11Y_OVERLAY_DIR` builds from another copy of the
 overlay (for example `git checkout-index --prefix=/tmp/idx/ -- $(git ls-files native/overlay)`).
+
+### Linux
+
+On Linux (x86_64) `bun run build:host` writes `native/dist/x86_64/rn-a11y-host`
+(Linux arm64: `native/dist/arm64/`). Requirements: JDK 17 (`JAVA_HOME`,
+default: the JDK of `java` on `PATH`), the Android SDK (`ANDROID_HOME`, default
+`~/Android/Sdk`; only its CMake 3.30.5 and an NDK are used), clang (`CC`/`CXX`
+default to `clang`/`clang++`), `ld.lld` (used when it is on `PATH`), static
+ICU archives and `rsync`. OpenSSL is not needed: the SHA-256 shim
+(`src/stubs/crypto`, `FANTOM_OPENSSL_SHIM`) is plain C++ off Apple
+(`Sha256Portable.cpp`). On arm64, where the SDK CMake does not run, the script
+puts the system `cmake` and `ninja` in its place. Release links with
+`-ffunction-sections -fdata-sections` and `--gc-sections`, without ThinLTO and
+`-g`; the stripped binary has its symbol table in `rn-a11y-host.debug` next to
+it (GNU debug link).
+
+The binary links only glibc dynamically. The tester CMake does this for the
+static host off Apple: `-static-libstdc++ -static-libgcc`, `libatomic.a`
+(at the end of the link line), and ICU (`FANTOM_STATIC_ICU`, default ON:
+`libicui18n.a libicuuc.a libicudata.a`; Hermes uses ICU for collation,
+normalization, case mapping and date formatting where macOS uses
+CoreFoundation). Static ICU comes from the distribution (Ubuntu: `libicu-dev`,
+full data: 30.8 MB of a 45.7 MB binary) or from `scripts/build-icu.sh <prefix>`
+(ICU 74.2 from source, static and PIC); then build with
+`CMAKE_PREFIX_PATH=<prefix> ICU_ROOT=<prefix>`, so that Hermes and the tester
+find it.
+
+`build-icu.sh` builds the data from ICU's data sources with
+`scripts/icu-data-filter.json` (`ICU_DATA_FILTER_FILE`; about 2.2 MB instead of
+30.8 MB). Hermes is built without Intl (`HERMES_ENABLE_INTL` is off in the
+gradle build for the host), and `lib/Platform/Unicode/PlatformUnicodeICU.cpp`
+uses only `ucol_*` (`localeCompare`, default locale, normalization on),
+`udat_*` (`toLocale{,Date,Time}String`: medium styles, default locale),
+`u_strToUpper`/`u_strToLower` (root or default locale) and `unorm2_*`
+(`normalize`). The filter keeps:
+
+- the locales root, `en`, `en_US` and `en_US_POSIX` (ICU's default locale
+  when `LANG` is unset or `C`) in every locale tree (`locales`, `coll`,
+  `zone`, `curr`), `coll_ucadata`, `normalization`, `misc` (supplemental data,
+  time zones, likely subtags), `zone_supplemental`, `curr_supplemental`,
+  `cnvalias`, `ulayout`, `uemoji`;
+- and drops break iterators (rules, dictionaries, LSTM, AdaBoost), language,
+  region, unit and RBNF names, transliterators, confusables, StringPrep,
+  character names and the conversion tables.
+
+Case mapping and normalization do not depend on the locale data. ICU takes its
+default locale from `LC_ALL` / `LC_MESSAGES` / `LANG`; with the trimmed data a
+`de_DE` locale would fall back to root (`1970 M01 1`). So the host sets ICU's
+default locale to `en_US` before `main()` (`src/platform/icu/IcuDefaultLocale.cpp`,
+off Apple, wherever the host links ICU), and the output does not depend on the
+machine's locale. ICU's `en_US` gives the same medium date and time as the Mac
+host (`Jan 1, 1970`, `12:00:00 AM` with U+202F); date + time is
+`Jan 1, 1970, 12:00:00 AM` (Mac: `Jan 1, 1970 at 12:00:00 AM`).
+`Number.prototype.toLocaleString` does not use ICU or CoreFoundation without
+Intl (`1234.5` on both).
+
+The release binary is built on glibc 2.28 (CI: `.github/workflows/linux-host.yml`,
+job `build` in the `quay.io/pypa/manylinux_2_28_x86_64` image, AlmaLinux 8:
+AlmaLinux's clang through wrappers with `--gcc-install-dir` of gcc-toolset 14,
+so the static libstdc++ is GCC 14's; `libstdc++-static` and
+`gcc-toolset-14-libatomic-devel` installed; ICU from `build-icu.sh`, cached).
+The glibc symbol versions of a binary are those of the build system, so a
+binary built on a newer distribution does not run on an older one (on
+ubuntu-24.04 it needed GLIBC_2.38). The CI checks that the binary needs at
+most GLIBC_2.28, runs the e2e suite with it on ubuntu-24.04 (job `test`), and
+runs the smoke render and the e2e suite with the host started in `debian:10`
+(glibc 2.28) and `ubuntu:20.04` containers through a `docker run` wrapper as
+`RN_A11Y_HOST_BIN` (job `old-distro`).
+
+Text: the portable layout (`FANTOM_TEXT_LAYOUT=portable`, see Portable text
+layout) is the default on Linux; `build-host.sh` writes it to
+`native/dist/<arch>/` there (`RN_A11Y_TEXT_LAYOUT=stub` goes to
+`native/dist/<arch>-stub/`; `macos` stops with an error).
+
+Third-party code that builds only with libc++ or only on Apple is fixed off
+Apple in the tester CMake, without changes in `node_modules` or the submodule:
+
+- `src/platform/compat/StdIncludes.h` is force-included
+  (`fantom_force_std_includes`) into `jsinspector_network`, `react_debug`,
+  `worklets` and `reanimated`: standard headers that libc++ includes
+  transitively and libstdc++ does not (`<cstdint>`, `<algorithm>`, ...).
+- `tester/patches/*.patch` are applied at configure time to copies in
+  `<build>/patched/<package>/` (`fantom_patched_copy`; a patch that does not
+  apply stops the configure): reanimated's `PlatformDepMethodsHolder.h` (the
+  Apple `SynchronouslyUpdateUIPropsFunction` for every non-Android platform;
+  the copy comes first in the include path) and worklets'
+  `AsyncQueueImpl.cpp` (the glibc `pthread_setname_np(thread, name)`; the
+  copy is compiled instead of the original).
+- `folly_runtime`: `-Wno-error=deprecated-declarations`
+  (`std::unexpected_handler` is deprecated in libstdc++ 14).
+- Our code: `FantomExpo.cpp` includes `<math.h>` before
+  `ExpoViewComponentDescriptor.h` (unqualified `isnan`).
 
 The manual steps below build the Debug tester the upstream way (gradle,
 `build/tester`), which the Fantom tests in a React Native checkout use:
