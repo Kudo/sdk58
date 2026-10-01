@@ -10,7 +10,7 @@ import {hasNpm, npmTool} from '../test/fixtures/npm.ts';
 
 /**
  * The packages as users get them: `npm pack` of react-native-a11y-tree (with
- * the bun build in dist/) and rn-a11y-host (filled by release-host --pack),
+ * the bun build in dist/) and its optional runtime (release-host --pack),
  * installed into a scratch Expo project with npm; `npx rn-a11y-tree render`.
  */
 
@@ -32,26 +32,20 @@ function run(cmd: string, args: string[], cwd: string, env: Record<string, strin
 }
 
 describe('package', () => {
-  it('npm pack CLI, resolver and matching host, install into a scratch Expo project, npx rn-a11y-tree render', {timeout: 900_000}, t => {
+  it('npm pack CLI and matching runtime, install into a scratch Expo project, npx rn-a11y-tree render', {timeout: 900_000}, t => {
     if (skip) t.skip(skip);
     const work = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-pkgtest-')));
     try {
-      // rn-a11y-host: a copy of the package directory, packed with the built host.
-      const hostDir = path.join(work, 'rn-a11y-host');
-      fs.cpSync(path.join(ROOT, 'packages', 'rn-a11y-host'), hostDir, {
-        recursive: true,
-        filter: src => !/[\\/](osx-bin|linux64-bin|win64-bin|host-version\.json)$/.test(src),
-      });
-      run('bun', [path.join(ROOT, 'scripts', 'release-host.ts'), '--pack', '--package-dir', hostDir], ROOT);
+      const packagesDir = path.join(work, 'packages');
+      run('bun', [path.join(ROOT, 'scripts', 'release-host.ts'), '--pack', '--packages-dir', packagesDir], ROOT);
       const tarballs = path.join(work, 'tarballs');
       fs.mkdirSync(tarballs);
-      run('npm', ['pack', '--pack-destination', tarballs], hostDir);
-      const platformName = process.platform === 'darwin' ? 'darwin' : `${process.platform}-${process.arch}`;
-      run('npm', ['pack', '--pack-destination', tarballs], path.join(work, `rn-a11y-host-${platformName}`));
+      const platformName = process.platform === 'darwin' ? 'darwin-universal' : process.platform === 'linux' ? 'linux-x64-gnu' : 'win32-x64-msvc';
+      run('npm', ['pack', '--pack-destination', tarballs], path.join(packagesDir, `runtime-${platformName}`));
       // react-native-a11y-tree: dist/ from `bun run build` (prepack), then the files whitelist.
       run('npm', ['pack', '--pack-destination', tarballs], ROOT);
       const files = fs.readdirSync(tarballs).sort();
-      expect(files.map(f => f.replace(/-\d+\.\d+\.\d+.*\.tgz$/, ''))).toStrictEqual(['react-native-a11y-tree', 'rn-a11y-host', `rn-a11y-host-${platformName}`]);
+      expect(files.map(f => f.replace(/-\d+\.\d+\.\d+.*\.tgz$/, ''))).toStrictEqual(['react-native-a11y-tree', `react-native-a11y-tree-runtime-${platformName}`]);
       for (const f of files) t.annotate(`${f}: ${fs.statSync(path.join(tarballs, f)).size} bytes`);
 
       // A relative path: Git for Windows' tar reads `C:` as a remote host.
@@ -68,12 +62,12 @@ describe('package', () => {
         project,
       );
       fs.copyFileSync(path.join(ROOT, 'examples', 'basic', 'App.tsx'), path.join(project, 'App.tsx'));
-      const env = {RN_A11Y_HOST_BIN: '', RN_A11Y_TREE_CACHE_DIR: ''};
-      const render = run('npx', ['rn-a11y-tree', 'render', 'App.tsx', '--preset', 'android-phone', '--format', 'text'], project, env);
+      const env = {RN_A11Y_HOST_BIN: '', RN_A11Y_TREE_CACHE_DIR: '', RN_A11Y_HOST_SKIP_PACKAGE: '', RN_A11Y_HOST_BASE_URL: '', RN_A11Y_HOST_MANIFEST: ''};
+      const render = run('npx', ['rn-a11y-tree', 'render', 'App.tsx', '--preset', 'android-phone', '--format', 'text', '-v'], project, env);
       expect(render.stdout).toMatch(/^RootView RootView \{0,0,412x915\}$/m);
       expect(render.stdout).toMatch(/^ {4}submit View #submit role=button "Submit" \{24,[\d.]+,364x48\}$/m);
 
-      // The host came from the rn-a11y-host package, with its protocol version.
+      // The host came directly from the optional runtime package, with its protocol version.
       const session = npmTool('npx', ['rn-a11y-tree', 'session', 'App.tsx', '--preset', 'android-phone'], {
         cwd: project,
         input: '{"id":1,"quit":true}\n',
@@ -83,6 +77,8 @@ describe('package', () => {
       expect(ready.ready).toBe(true);
       expect(ready.host.source).toBe('package');
       expect(ready.host.protocolVersion).toBe(1);
+      expect(render.stderr).toContain(`runtime-${platformName}`);
+      expect(fs.existsSync(path.join(project, 'node_modules/rn-a11y-host'))).toBe(false);
     } finally {
       fs.rmSync(work, {recursive: true, force: true});
     }

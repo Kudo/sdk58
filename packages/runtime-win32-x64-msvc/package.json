@@ -1,21 +1,21 @@
 {
-  "name": "rn-a11y-host-linux-x64",
+  "name": "@react-native-a11y-tree/runtime-win32-x64-msvc",
   "version": "0.1.1",
-  "description": "Prebuilt React Native host for linux (x64).",
+  "description": "Prebuilt React Native host for win32 (x64).",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Kudo/react-native-a11y-tree.git",
-    "directory": "packages/rn-a11y-host-linux-x64"
+    "directory": "packages/runtime-win32-x64-msvc"
   },
   "os": [
-    "linux"
+    "win32"
   ],
   "cpu": [
     "x64"
   ],
   "files": [
-    "linux64-bin/rn-a11y-host",
+    "win64-bin/rn-a11y-host.exe",
     "host-version.json",
     "LICENSE",
     "README.md"
@@ -27,6 +27,6 @@
     "access": "public"
   },
   "scripts": {
-    "prepack": "node -e \"for(const f of ['linux64-bin/rn-a11y-host','host-version.json'])require('fs').accessSync(f)\""
+    "prepack": "node -e \"for(const f of ['win64-bin/rn-a11y-host.exe','host-version.json'])require('fs').accessSync(f)\""
   }
 }

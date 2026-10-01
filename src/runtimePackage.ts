@@ -13,7 +13,7 @@ export class HostUnavailableError extends Error {
   readonly arch: string;
 
   constructor(platform: string, arch: string) {
-    super(`rn-a11y-host has no host binary for ${platform}-${arch} (available: darwin, linux-x64, win32-x64)`);
+    super(`react-native-a11y-tree has no runtime binary for ${platform}-${arch} (available: darwin, linux-x64, win32-x64)`);
     this.name = 'HostUnavailableError';
     this.platform = platform;
     this.arch = arch;
@@ -51,5 +51,6 @@ export function getHostVersionPath(platform: string = process.platform, arch: st
 /** npm package for a supported OS/CPU pair. */
 export function hostPackageName(platform: string = process.platform, arch: string = process.arch): string {
   hostRelativePath(platform, arch); // Validate before resolving any package.
-  return platform === 'darwin' ? 'rn-a11y-host-darwin' : `rn-a11y-host-${platform}-${arch}`;
+  const suffix = platform === 'darwin' ? 'darwin-universal' : platform === 'linux' ? 'linux-x64-gnu' : 'win32-x64-msvc';
+  return `@react-native-a11y-tree/runtime-${suffix}`;
 }

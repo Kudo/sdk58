@@ -44,29 +44,31 @@ npx react-native-a11y-tree render App.tsx --preset android-phone --format text
 # or: npm install -D react-native-a11y-tree && npx rn-a11y-tree render ...
 ```
 
-The CLI and a small host resolver:
+The CLI and its optional native runtimes:
 
 - `react-native-a11y-tree`: the CLI. Its `bin` is `dist/rn-a11y-tree.js`,
   one ES module that `bun build` makes from `src/cli.ts` for Node
   (`bun run build`, run by `prepack` together with `bun run schema
   --check`); in a repo checkout, `bun run rn-a11y-tree` runs `node
   src/cli.ts` (Node strips the types). Files: `dist/`,
-  `runtime/`, `schema/`, `tools/`, `README.md`, `LICENSE`. Dependencies:
-  `commander` and `rn-a11y-host`. Peer dependencies: `expo` (>= 58),
+  `runtime/`, `schema/`, `tools/`, `README.md`, `LICENSE`. Commander and
+  runtime selection are bundled into the CLI, so it has no required npm
+  JavaScript dependencies. Peer dependencies: `expo` (>= 58),
   `react-native`, `react`. Metro, `metro-config`, `expo/metro-config` and
   `hermes-compiler` are loaded from the project (the copies that Expo and
   React Native install), so the bundle uses the project's Metro.
-- `rn-a11y-host`: a small resolver with exact-version optional dependencies:
-  `rn-a11y-host-darwin` (universal macOS arm64/x64),
-  `rn-a11y-host-linux-x64`, and `rn-a11y-host-win32-x64`.
-  Their `os`/`cpu` fields let the package manager install only the matching
-  binary. There is no postinstall download or extra CLI command.
-  `getHostPath()` and `getHostVersionPath()` resolve files in that platform
-  package. See [host package details](packages/rn-a11y-host/README.md).
-  Keep optional dependencies enabled; for an installation made with
-  `--omit=optional`, reinstall with `npm install --include=optional`.
+- The CLI directly depends on these exact-version optional runtime packages:
+  `@react-native-a11y-tree/runtime-darwin-universal` (macOS arm64/x64),
+  `@react-native-a11y-tree/runtime-linux-x64-gnu` (glibc 2.28+), and
+  `@react-native-a11y-tree/runtime-win32-x64-msvc`.
+  Their `os`/`cpu` fields (and Linux `libc`) let the package manager install
+  only the matching binary. Resolution lives inside the CLI's single JS
+  bundle; there is no separate resolver package, postinstall download, or
+  extra CLI command. Keep optional dependencies enabled; for an installation
+  made with `--omit=optional`, reinstall with `npm install --include=optional`.
+  The existing `RN_A11Y_HOST_*` overrides and binary filenames still work.
 
-Local check of this flow: `e2e/package.test.ts` packs the CLI, resolver, and current platform package
+Local check of this flow: `e2e/package.test.ts` packs the CLI and current platform package
 (`npm pack`), installs them with `expo@58.0.0 react-native@0.88.0-rc.2
 react@19.3.0` into a scratch project and runs `npx rn-a11y-tree render
 App.tsx --preset android-phone --format text` (skipped without `npm` or a
@@ -1027,9 +1029,9 @@ runner.
 The script warns when `native/overlay` has uncommitted changes or files
 newer than the binary.
 
-`bun scripts/release-host.ts --pack [--package-dir <dir>] [--bin
-<slot>=<file>]... [--artifacts <dir>]` fills `packages/rn-a11y-host` and sibling platform package directories
-(or siblings of `--package-dir`) on any OS:
+`bun scripts/release-host.ts --pack [--packages-dir <dir>] [--bin
+<slot>=<file>]... [--artifacts <dir>]` fills the `packages/runtime-*` directories
+(or `runtime-*` under `--packages-dir`) on any OS:
 
 - slots `osx` (`osx-bin/rn-a11y-host`), `linux64`
   (`linux64-bin/rn-a11y-host`), `win64` (`win64-bin/rn-a11y-host.exe`);
@@ -1042,13 +1044,14 @@ newer than the binary.
   slot (Mach-O, ELF, PE, read from the file header, which also gives its
   archs);
 - `host-version.json`: the fields above plus `protocolVersion` and
-  `binaries: {"<dir>/<file>": {archs, sha256, size}}` for every binary in the
-  resolver, and just the selected binary in each platform package. Local
+  `binaries: {"<dir>/<file>": {archs, sha256, size}}` for the binary in each
+  runtime package. The aggregate manifest is printed to stdout. Local
   macOS packs with one slice advertise only that CPU.
 
-Pack each populated platform directory and the resolver with `npm pack`.
-Publish platform packages before the resolver and CLI, keeping their npm
-versions and the resolver's exact optional dependency versions in sync.
+Pack each populated platform directory and the CLI with `npm pack`.
+Publish runtime packages before the CLI, keeping their npm versions and
+the CLI's exact optional dependency versions in sync. Publishing scoped
+packages requires ownership of the `@react-native-a11y-tree` npm scope.
 An unpopulated platform package fails `prepack` instead of shipping empty.
 
 `.github/workflows/release-host.yml` (tags `v*`; also on push to
@@ -1057,7 +1060,7 @@ tests), `host-linux` (calls `linux-host.yml`: the manylinux_2_28 build and its
 tests), `host-windows` (calls `windows-host.yml`: the windows-2025 build and
 its tests), then `package` (ubuntu): the tarballs of every platform and arch, `--pack
 --artifacts`, `npm pack` of all packages, `scripts/verify-packages.sh` (a
-scratch project installs the CLI, resolver, and matching platform tarballs and renders `examples/basic` with the
+scratch project installs the CLI and matching runtime tarballs and renders `examples/basic` with the
 Linux host from the package) and the `file://` download; `verify-macos` (the
 same install on macOS), `verify-windows` (the same install on windows-2025),
 `intel-check` (the x86_64 slice on an Intel runner), and `publish` (the
@@ -1066,7 +1069,7 @@ GitHub release, tags only).
 The CLI looks for the host in this order:
 
 1. `RN_A11Y_HOST_BIN`.
-2. The `rn-a11y-host` package: `getHostPath()` (`osx-bin/rn-a11y-host` on
+2. The matching `@react-native-a11y-tree/runtime-*` package (`osx-bin/rn-a11y-host` on
    macOS, `linux64-bin/rn-a11y-host` on Linux x64,
    `win64-bin/rn-a11y-host.exe` on Windows x64), when that file exists.
    `RN_A11Y_HOST_SKIP_PACKAGE=1` skips this step (tests).
@@ -1083,7 +1086,7 @@ The CLI looks for the host in this order:
 In a repo checkout (`src/cli.ts` next to the running code) the order is
 `RN_A11Y_HOST_BIN`, the download (only with `RN_A11Y_HOST_BASE_URL`),
 `native/dist`, then the staged package: a fresh `bun run build:host` is
-used even when `packages/rn-a11y-host/osx-bin` holds an older `--pack`
+used even when `packages/runtime-darwin-universal/osx-bin` holds an older `--pack`
 output. `-v` prints the chosen host (`rn-a11y-tree: host: <source> <path>
 (<version>, protocol <n>)`) and the running host's info.
 

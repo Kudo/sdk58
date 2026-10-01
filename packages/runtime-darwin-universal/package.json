@@ -1,12 +1,12 @@
 {
-  "name": "rn-a11y-host-darwin",
+  "name": "@react-native-a11y-tree/runtime-darwin-universal",
   "version": "0.1.1",
   "description": "Prebuilt React Native host for darwin (arm64, x64).",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Kudo/react-native-a11y-tree.git",
-    "directory": "packages/rn-a11y-host-darwin"
+    "directory": "packages/runtime-darwin-universal"
   },
   "os": [
     "darwin"

@@ -4,9 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import {fileURLToPath} from 'node:url';
-import {createRequire} from 'node:module';
-
-const require = createRequire(import.meta.url);
+import {getHostPath, getHostVersionPath} from './runtimePackage.ts';
 
 import {CliError, type ErrorCode, type LogEntry, logEntry} from './errors.ts';
 import {BASE_URL_ENV, downloadHost, hostFileName, readManifest} from './hostDownload.ts';
@@ -118,13 +116,13 @@ export type HostProbes = {
   env: string | undefined;
   baseUrl: string | undefined;
   exists: (file: string) => boolean;
-  /** rn-a11y-host package: binary path and host-version.json, or null when not installed / no binary for this platform. */
+  /** optional runtime package: binary path and host-version.json, or null when not installed / no binary for this platform. */
   packageHost: () => {bin: string; manifest: HostManifestLike} | null;
   download: (baseUrl: string) => Promise<{bin: string; manifest: HostManifestLike}>;
   distBin: string;
   /**
    * A repo checkout (src/cli.ts next to the running code): native/dist, the
-   * host just built, ranks above the staged rn-a11y-host package (the
+   * host just built, ranks above the staged optional runtime package (the
    * git-ignored output of `release-host.ts --pack`).
    */
   checkout: boolean;
@@ -154,7 +152,7 @@ export function checkProtocol(host: HostInfo): void {
         hint:
           v > SUPPORTED_PROTOCOL.max
             ? 'Update react-native-a11y-tree.'
-            : 'Update rn-a11y-host (or the downloaded host) to match this CLI.',
+            : 'Update react-native-a11y-tree (or the downloaded host) to match this CLI.',
         details: {host},
       },
     );
@@ -162,7 +160,7 @@ export function checkProtocol(host: HostInfo): void {
 }
 
 /**
- * Host order: RN_A11Y_HOST_BIN, the rn-a11y-host package, the prebuilt host
+ * Host order: RN_A11Y_HOST_BIN, the optional runtime package, the prebuilt host
  * download (with RN_A11Y_HOST_BASE_URL; cached in
  * ~/.cache/rn-a11y-tree/host/<version>/), native/dist, else HOST_MISSING.
  * In a repo checkout: RN_A11Y_HOST_BIN, the download (when
@@ -210,7 +208,7 @@ export async function findHost(probes: HostProbes): Promise<HostInfo> {
   }
   throw new HostError(
     'HOST_MISSING',
-    `No host binary: no rn-a11y-host package binary for ${process.platform}-${process.arch}, and none at ${probes.distBin}`,
+    `No host binary: no optional runtime package binary for ${process.platform}-${process.arch}, and none at ${probes.distBin}`,
     undefined,
     BUILD_HINT,
   );
@@ -224,13 +222,12 @@ function readJson(file: string): HostManifestLike {
   }
 }
 
-/** The rn-a11y-host package's binary for this platform, or null. */
+/** The optional runtime package's binary for this platform, or null. */
 function packageHost(): {bin: string; manifest: HostManifestLike} | null {
   // Tests of the later steps (download, native/dist) in a checkout with a packed package.
   if (process.env.RN_A11Y_HOST_SKIP_PACKAGE === '1') return null;
   try {
-    const hostPackage = require('rn-a11y-host') as {getHostPath: () => string; getHostVersionPath: () => string};
-    return {bin: hostPackage.getHostPath(), manifest: readJson(hostPackage.getHostVersionPath())};
+    return {bin: getHostPath(), manifest: readJson(getHostVersionPath())};
   } catch {
     // Not installed, or HOST_UNAVAILABLE for this platform.
     return null;
