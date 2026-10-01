@@ -12,9 +12,6 @@ on:
 env:
   # Bump to drop the cached gradle/Hermes outputs.
   DEPS_CACHE_VERSION: '1'
-  # 1: also run the unmodified gradle task (prepareAllDependencies: Hermes
-  # with "NMake Makefiles" and cl.exe) in a separate job, to record its outcome.
-  UPSTREAM_GRADLE: '1'
 
 jobs:
   build:
@@ -149,6 +146,7 @@ jobs:
             :packages:react-native:ReactAndroid:hermes-engine:unzipHermes \
             :private:react-native-fantom:prepareRNCodegen \
             :private:react-native-fantom:prepareNative3pDependencies \
+            "-Preact.internal.windowsBashPath=C:\\Program Files\\Git\\bin\\bash.exe" \
             --no-daemon --console=plain 2>&1 | tee "$LOGS/c-gradle.log"; st=$?
           echo "wall $((SECONDS - s)) s" > "$LOGS/c.time"; exit $st
 
@@ -238,7 +236,8 @@ jobs:
           RNP=$RN/packages/react-native
           # Standard headers that libc++ includes transitively (the Linux
           # spike needed the same set for libstdc++).
-          FI="/FIcstdint /FIcstddef /FIcmath /FIalgorithm /FIiterator /FIstdexcept /FImath.h"
+          # -FI, not /FI: Git Bash rewrites arguments that start with /.
+          FI="-FIcstdint -FIcstddef -FIcmath -FIalgorithm -FIiterator -FIstdexcept -FImath.h"
           cmake -G Ninja -S "$F/tester" -B "$TESTER_BUILD" \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl \
@@ -296,66 +295,4 @@ jobs:
         if: always()
         with:
           name: feasibility-logs-windows
-          path: feasibility-logs
-
-  # The unmodified gradle path, for the record: on Windows the Hermes tasks
-  # configure with "NMake Makefiles" (cl.exe from the developer environment).
-  upstream-gradle:
-    if: ${{ vars.SKIP_UPSTREAM_GRADLE != '1' }}
-    runs-on: windows-2025
-    timeout-minutes: 240
-    defaults:
-      run:
-        shell: bash
-    env:
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
-    steps:
-      - name: git config
-        run: |
-          echo "LOGS=$(cygpath -m "$GITHUB_WORKSPACE")/feasibility-logs" >> "$GITHUB_ENV"
-          git config --global core.autocrlf false
-          git config --global core.longpaths true
-      - uses: actions/checkout@v7
-        with:
-          submodules: true
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-      - name: gradle prepareAllDependencies (as-is)
-        id: u
-        continue-on-error: true
-        run: |
-          set +e -o pipefail; mkdir -p "$LOGS"; s=$SECONDS
-          if [ "$UPSTREAM_GRADLE" != "1" ]; then echo skipped; exit 0; fi
-          npm install -g yarn@1.22.22
-          SDK="$(cygpath -u "$ANDROID_HOME")"
-          SDKMANAGER="$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager.bat | head -n 1)"
-          yes | "$SDKMANAGER" --licenses > /dev/null || true
-          [ -d "$SDK/cmake/3.30.5" ] || "$SDKMANAGER" --install "cmake;3.30.5" > /dev/null
-          PINNED=27.1.12297006
-          if [ -f "$SDK/ndk/$PINNED/source.properties" ]; then NDK_DIR="$SDK/ndk/$PINNED"
-          else NDK_DIR="$(ls -d "$SDK"/ndk/* | sort -r | head -n 1)"; fi
-          export ANDROID_NDK="$(cygpath -w "$NDK_DIR")"
-          export ANDROID_NDK_VERSION="$(sed -n 's/^Pkg.Revision *= *//p' "$NDK_DIR/source.properties" | tr -d '\r')"
-          unset ANDROID_NDK_HOME ANDROID_NDK_ROOT ANDROID_NDK_LATEST_HOME
-          (cd third_party/react-native && yarn install --frozen-lockfile --non-interactive) > "$LOGS/u-yarn.log" 2>&1
-          cp -r native/overlay/. third_party/react-native/private/react-native-fantom/
-          cd third_party/react-native
-          ./gradlew.bat :private:react-native-fantom:prepareAllDependencies --no-daemon --console=plain 2>&1 | tee "$LOGS/u-gradle.log"; st=$?
-          echo "wall $((SECONDS - s)) s" > "$LOGS/u.time"
-          H=packages/react-native/ReactAndroid/hermes-engine/build
-          cp "$H"/*.log "$LOGS/" 2>/dev/null || true
-          find "$H/hermes" \( -name '*.lib' -o -name '*.dll' -o -name '*.exe' \) -not -path '*/CMakeFiles/*' > "$LOGS/u-hermes-outputs.txt" 2>/dev/null || true
-          exit $st
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: feasibility-logs-upstream-gradle
           path: feasibility-logs
