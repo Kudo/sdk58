@@ -17,7 +17,7 @@ Every file is a full copy of the upstream file with changes, or a new file:
 | File | Change |
 |---|---|
 | `tester/third-party/nlohmann_json/CMakeLists.txt` | `SYSTEM` include directory. Apple clang 21 with `-Werror` fails on `-Wdeprecated-literal-operator` in the bundled `json.hpp`. |
-| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context, react-native-gesture-handler) when they are found (see Native libraries). With `FANTOM_STATIC_HOST` (default `ON`) Hermes (its static archives from the Hermes build), JSI (the `jsi` target defined as `STATIC` here, instead of `ReactCommon/jsi`'s `SHARED` one) are linked statically, and SHA-256 goes through a CommonCrypto shim instead of OpenSSL (`src/stubs/crypto`, `FANTOM_OPENSSL_SHIM`): one executable without dylibs and without Homebrew OpenSSL (see `docs/build-analysis.md`). `FANTOM_HERMES_BUILD_DIR` selects the Hermes build to link (the x86_64 one for `RN_A11Y_HOST_ARCH=x86_64`). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. `FANTOM_TEXT_LAYOUT` selects the text measurement (default `macos` on Apple, `portable` elsewhere; the older `FANTOM_MACOS_TEXT_LAYOUT=OFF` gives `stub` on Apple): `macos` enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation; `portable` removes the stub and adds `src/platform/portable/TextLayoutManager.cpp` plus the `fantom_embedded_fonts` library (portable fonts and layout, stb, font data; see Portable text layout); `stub` keeps the upstream stub. |
+| `tester/CMakeLists.txt` | Adds `react/renderer/components/textinput` (only its cross-platform sources: all `platform/android/.../androidtextinput/*.cpp` files are removed from `rrc_textinput`), `src/components/*.cpp`, and links `rrc_textinput`. Builds the native libraries from npm (react-native-screens, react-native-safe-area-context, react-native-gesture-handler) when they are found (see Native libraries). With `FANTOM_STATIC_HOST` (default `ON`) Hermes (its static archives from the Hermes build), JSI (the `jsi` target defined as `STATIC` here, instead of `ReactCommon/jsi`'s `SHARED` one) are linked statically, and SHA-256 goes through a shim instead of OpenSSL (`src/stubs/crypto`, `FANTOM_OPENSSL_SHIM`; CommonCrypto on Apple, plain C++ elsewhere): one executable without dylibs and without Homebrew OpenSSL (see `docs/build-analysis.md`). `FANTOM_HERMES_BUILD_DIR` selects the Hermes build to link (the x86_64 one for `RN_A11Y_HOST_ARCH=x86_64`). The tester source glob uses `CONFIGURE_DEPENDS`, so new source files are found without a manual reconfigure. `FANTOM_TEXT_LAYOUT` selects the text measurement (default `macos` on Apple, `portable` elsewhere; the older `FANTOM_MACOS_TEXT_LAYOUT=OFF` gives `stub` on Apple): `macos` enables `OBJCXX`, removes the stub `platform/cxx/.../TextLayoutManager.cpp` from `react_renderer_textlayoutmanager`, adds `src/platform/macos/TextLayoutManager.mm`, and links AppKit, CoreText and Foundation; `portable` removes the stub and adds `src/platform/portable/TextLayoutManager.cpp` plus the `fantom_embedded_fonts` library (portable fonts and layout, stb, font data; see Portable text layout); `stub` keeps the upstream stub. |
 | `tester/src/platform/portable/*` (new), `tester/third_party/stb/` (new) | The portable text layout (`FANTOM_TEXT_LAYOUT=portable`): `TextLayoutManager.cpp` (React Native attributed strings to runs), `PortableTextLayout.*` (paragraph layout), `PortableFonts.*` (faces, advances, kerning), `StbImpl.cpp` (stb implementations), `EmbeddedFonts.h`, `FantomComposeText.cpp` (the Compose text adapter). `third_party/stb/`: `stb_truetype.h` 1.26 and `stb_image.h` 2.30 (MIT or public domain, see its README). |
 | `tester/src/platform/macos/TextLayoutManager.mm` (new) | Text measurement with AppKit/TextKit 1 (`NSLayoutManager`). Port of the iOS `RCTTextLayoutManager.mm`, `RCTAttributedTextUtils.mm` and `RCTFontUtils.mm`. The upstream stub returns the minimum size (height 0) for all text. |
 | `tester/src/render/A11yTree.h`, `A11yTree.cpp` (new) | Serializes the shadow tree (not the mounted tree, so views are not flattened) to typed JSON. |
@@ -896,24 +896,42 @@ overlay (for example `git checkout-index --prefix=/tmp/idx/ -- $(git ls-files na
 
 ### Linux
 
-On Linux (x86_64; CI: `.github/workflows/linux-host.yml` on `ubuntu-24.04`)
-`bun run build:host` writes `native/dist/x86_64/rn-a11y-host` (Linux arm64:
-`native/dist/arm64/`). Requirements: JDK 17 (`JAVA_HOME`, default: the JDK of
-`java` on `PATH`), the Android SDK (`ANDROID_HOME`, default
+On Linux (x86_64) `bun run build:host` writes `native/dist/x86_64/rn-a11y-host`
+(Linux arm64: `native/dist/arm64/`). Requirements: JDK 17 (`JAVA_HOME`,
+default: the JDK of `java` on `PATH`), the Android SDK (`ANDROID_HOME`, default
 `~/Android/Sdk`; only its CMake 3.30.5 and an NDK are used), clang (`CC`/`CXX`
-default to `clang`/`clang++`), `ld.lld` (used when it is on `PATH`), the static
-ICU and OpenSSL archives (Ubuntu: `libicu-dev`, `libssl-dev`) and `rsync`. On
-arm64, where the SDK CMake does not run, the script puts the system `cmake` and
-`ninja` in its place. Release links with `-ffunction-sections -fdata-sections`
-and `--gc-sections`, without ThinLTO and `-g`; the stripped binary has its
-symbol table in `rn-a11y-host.debug` next to it (GNU debug link).
+default to `clang`/`clang++`), `ld.lld` (used when it is on `PATH`), static
+ICU archives and `rsync`. OpenSSL is not needed: the SHA-256 shim
+(`src/stubs/crypto`, `FANTOM_OPENSSL_SHIM`) is plain C++ off Apple
+(`Sha256Portable.cpp`). On arm64, where the SDK CMake does not run, the script
+puts the system `cmake` and `ninja` in its place. Release links with
+`-ffunction-sections -fdata-sections` and `--gc-sections`, without ThinLTO and
+`-g`; the stripped binary has its symbol table in `rn-a11y-host.debug` next to
+it (GNU debug link).
 
 The binary links only glibc dynamically. The tester CMake does this for the
 static host off Apple: `-static-libstdc++ -static-libgcc`, `libatomic.a`
 (at the end of the link line), and ICU (`FANTOM_STATIC_ICU`, default ON:
 `libicui18n.a libicuuc.a libicudata.a`; Hermes uses ICU for collation,
 normalization, case mapping and date formatting where macOS uses
-CoreFoundation).
+CoreFoundation). The ICU data (`icudt74_dat`) is 30.8 MB of the 45.7 MB binary.
+Static ICU comes from the distribution (Ubuntu: `libicu-dev`) or from
+`scripts/build-icu.sh <prefix>` (ICU 74.2 from source, static and PIC); then
+build with `CMAKE_PREFIX_PATH=<prefix> ICU_ROOT=<prefix>`, so that Hermes and
+the tester find it.
+
+The release binary is built on glibc 2.28 (CI: `.github/workflows/linux-host.yml`,
+job `build` in the `quay.io/pypa/manylinux_2_28_x86_64` image, AlmaLinux 8:
+AlmaLinux's clang through wrappers with `--gcc-install-dir` of gcc-toolset 14,
+so the static libstdc++ is GCC 14's; `libstdc++-static` and
+`gcc-toolset-14-libatomic-devel` installed; ICU from `build-icu.sh`, cached).
+The glibc symbol versions of a binary are those of the build system, so a
+binary built on a newer distribution does not run on an older one (on
+ubuntu-24.04 it needed GLIBC_2.38). The CI checks that the binary needs at
+most GLIBC_2.28, runs the e2e suite with it on ubuntu-24.04 (job `test`), and
+runs the smoke render and the e2e suite with the host started in `debian:10`
+(glibc 2.28) and `ubuntu:20.04` containers through a `docker run` wrapper as
+`RN_A11Y_HOST_BIN` (job `old-distro`).
 
 Text: the portable layout (`FANTOM_TEXT_LAYOUT=portable`, see Portable text
 layout) is the default on Linux; `build-host.sh` writes it to
