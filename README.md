@@ -21,7 +21,7 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | Feature | How it is real | E2E | Known gaps |
 | --- | --- | --- | --- |
 | Rendering and layout | Real Fabric (React, ShadowTree, Yoga) in the Fantom host | `e2e/render.test.ts` | macOS only; one surface per run |
-| Text measurement | CoreText `TextLayoutManager` in the host | `e2e/render.test.ts` (heights > 10) | macOS fonts, not Android/iOS fonts |
+| Text measurement | CoreText `TextLayoutManager` in the host; or the portable layout (stb_truetype, embedded Roboto; `RN_A11Y_TEXT_LAYOUT=portable`, see `native/README.md`) | `e2e/render.test.ts` (heights > 10) | macOS fonts, not Android/iOS fonts; portable: Roboto stands in for SF |
 | Accessibility tree | Host `NativeFantom.getA11yTree` (typed ShadowTree dump) → `src/tree.ts` | `e2e/render.test.ts` | Role/name derivation is simpler than real screen readers |
 | TextInput, Switch | Host `AndroidTextInput` / iOS `TextInput` (CoreText measured) and `AndroidSwitch` / `Switch` shadow nodes | `e2e/render.test.ts`, `e2e/run.test.ts` (both presets) | |
 | Tap, long press, typing | Host `hitTest` + by-tag native events, Pressable responder events, `setTextInputTextByTag` | `e2e/run.test.ts` | No multi-touch responder events; `click` does not bubble |
@@ -1043,7 +1043,7 @@ has `protocolVersion`, the version of the CLI <-> host contract
 `HOST_INCOMPATIBLE` (exit 5) for other versions. Hosts without a manifest
 (`RN_A11Y_HOST_BIN`, `native/dist`) are checked when the host runs: the
 bundle reads `NativeFantom.getHostInfo()` (`{protocolVersion, rnVersion,
-buildType, sanitize, engines: {swiftui, compose}, fonts: {roboto}}`, else a
+buildType, sanitize, engines: {swiftui, compose}, fonts: {roboto}, textLayout}`, else a
 `protocolVersion:<n>` capability), and the CLI stops with
 `HOST_INCOMPATIBLE` for an unsupported version, for every host source.
 Hosts that report neither are not checked. The `--format json` output of

@@ -22,6 +22,10 @@ share one version.
   `examples/dimensions`.
 - Universal macOS host: `RN_A11Y_HOST_ARCH=arm64|x86_64|universal` in
   `build-host.sh` (`native/dist/universal/`).
+- Portable text layout for hosts without CoreText: `FANTOM_TEXT_LAYOUT=portable`
+  (`RN_A11Y_TEXT_LAYOUT=portable` in `build-host.sh`) measures text with
+  `stb_truetype` and the embedded Roboto, including the Compose engine's text;
+  the default macOS host still uses CoreText. `getHostInfo()` has `textLayout`.
 
 ### Changed
 

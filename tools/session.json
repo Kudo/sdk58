@@ -490,6 +490,15 @@
                 }
               ]
             }
+          },
+          "textLayout": {
+            "type": "string",
+            "enum": [
+              "macos",
+              "portable",
+              "stub"
+            ],
+            "description": "Text measurement: `macos` (CoreText), `portable` (embedded fonts, any OS) or `stub` (no text sizes)."
           }
         },
         "required": [

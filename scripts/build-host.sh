@@ -18,6 +18,12 @@
 # and goes to native/dist/<arch>/. `universal` builds arm64 and x86_64 and
 # joins them with lipo into native/dist/universal/rn-a11y-host (+ .dSYM).
 #
+# RN_A11Y_TEXT_LAYOUT=macos (default) | portable | stub selects the tester's
+# FANTOM_TEXT_LAYOUT (text measurement: CoreText, the portable stb_truetype
+# layout with the embedded fonts, or the upstream stub). A non-default layout
+# gets its own tester build dir (tester-<type>-<layout>) and goes to
+# native/dist/<arch>-<layout>/ (not with RN_A11Y_HOST_ARCH=universal).
+#
 # RN_A11Y_HOST_BUILD_TYPE=Release (default) | MinSizeRel | Debug selects the
 # tester build type (build dir: .../build/tester-<type>). Release and
 # MinSizeRel use ThinLTO and -dead_strip, and strip local symbols (strip -x)
@@ -42,7 +48,11 @@ FANTOM_DIR="$RN_DIR/private/react-native-fantom"
 OVERLAY_DIR="${RN_A11Y_OVERLAY_DIR:-$ROOT/native/overlay}"
 MACHINE_ARCH="$(uname -m)"
 ARCH="${RN_A11Y_HOST_ARCH:-$MACHINE_ARCH}"
+TEXT_LAYOUT="${RN_A11Y_TEXT_LAYOUT:-macos}"
 DIST_DIR="$ROOT/native/dist/$ARCH"
+if [[ "$TEXT_LAYOUT" != "macos" ]]; then
+  DIST_DIR="$ROOT/native/dist/$ARCH-$TEXT_LAYOUT"
+fi
 CMAKE_VERSION="${CMAKE_VERSION:-3.30.5}"
 
 log() { printf '\033[1m[build-host]\033[0m %s\n' "$*"; }
@@ -50,9 +60,15 @@ die() { printf '[build-host] error: %s\n' "$*" >&2; exit 1; }
 
 [[ "$(uname -s)" == "Darwin" ]] || die "only macOS is supported for now"
 
+case "$TEXT_LAYOUT" in
+  macos|portable|stub) ;;
+  *) die "RN_A11Y_TEXT_LAYOUT must be macos, portable or stub (got $TEXT_LAYOUT)" ;;
+esac
+
 case "$ARCH" in
   arm64|x86_64) ;;
   universal)
+    [[ "$TEXT_LAYOUT" == "macos" ]] || die "RN_A11Y_HOST_ARCH=universal needs RN_A11Y_TEXT_LAYOUT=macos"
     # Both slices (each a full run of this script), then one fat binary.
     for slice in arm64 x86_64; do
       log "universal: building the $slice slice"
@@ -199,6 +215,9 @@ fi
 if [[ "$SANITIZE" == "1" ]]; then
   TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER-sanitize"
 fi
+if [[ "$TEXT_LAYOUT" != "macos" ]]; then
+  TESTER_BUILD_DIR="$TESTER_BUILD_DIR-$TEXT_LAYOUT"
+fi
 
 # Same arguments as configureFantomTester in private/react-native-fantom/build.gradle.kts.
 CMAKE_ARGS=(
@@ -211,6 +230,7 @@ CMAKE_ARGS=(
   -DREACT_THIRD_PARTY_NDK_DIR="$REACT_NATIVE_DIR/ReactAndroid/build/third-party-ndk"
   -DRN_ENABLE_DEBUG_STRING_CONVERTIBLE=ON
   -DHERMES_V1_ENABLED=1
+  -DFANTOM_TEXT_LAYOUT="$TEXT_LAYOUT"
 )
 CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES="$ARCH")
 
