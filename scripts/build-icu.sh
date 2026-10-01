@@ -101,8 +101,9 @@ if [[ "$WINDOWS" == "1" ]]; then
       export ICU_DATA_FILTER_FILE='$WIN_FILTER' CFLAGS='-MT -O2' CXXFLAGS='-MT -O2 -std:c++17'
       \"\$(cygpath -u '$WIN_WORK')/icu/source/runConfigureICU\" MSYS/MSVC --prefix=\"\$(cygpath -u '$WIN_PREFIX')\" \\
         --enable-static --disable-shared --with-data-packaging=static \\
-        --disable-tests --disable-samples --disable-extras --disable-icuio --disable-layoutex >/dev/null \\
-        || { sed -n '/C compiler version/,/^## ----------------/p' config.log | head -n 80; exit 1; }
+        --disable-tests --disable-samples --disable-extras --disable-icuio --disable-layoutex >configure.log 2>&1 \\
+        || { cat configure.log; sed -n '/C compiler version/,/^## ----------------/p' config.log | head -n 80; exit 1; }
+      grep -E 'checking (host system type|build system type|which Makefile fragment)' configure.log
       make -j$(nproc) >make.log 2>&1 \\
         || { grep -i -E ' error |fatal error|: error' make.log | head -n 40; tail -n 40 make.log; exit 1; }
       make install >/dev/null"
