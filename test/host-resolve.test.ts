@@ -21,8 +21,7 @@ describe('host-resolve', () => {
     expect(hostRelativePath('darwin', 'x64')).toBe(path.join('osx-bin', 'rn-a11y-host'));
     expect(hostRelativePath('linux', 'x64')).toBe(path.join('linux64-bin', 'rn-a11y-host'));
     expect(hostRelativePath('win32', 'x64')).toBe(path.join('win64-bin', 'rn-a11y-host.exe'));
-    expect(getHostPath('linux', 'x64')).toBe(path.join(ROOT, 'packages/rn-a11y-host/linux64-bin/rn-a11y-host'));
-    for (const [platform, arch] of [['linux', 'arm64'], ['win32', 'arm64'], ['freebsd', 'x64']]) {
+    for (const [platform, arch] of [['linux', 'arm64'], ['win32', 'arm64'], ['freebsd', 'x64'], ['darwin', 'ppc']]) {
       expect(() => getHostPath(platform, arch)).toThrow(expect.toSatisfy((error: unknown) =>
           error instanceof HostUnavailableError &&
           error.code === 'HOST_UNAVAILABLE' &&
@@ -137,7 +136,7 @@ describe('host-resolve', () => {
     });
     // Windows has no executable bit.
     for (const file of process.platform === 'win32' ? [] : Object.keys(manifest.binaries)) {
-      expect(fs.statSync(path.join(pkg, file)).mode & 0o100, file).toBeTruthy();
+      expect(fs.statSync(path.join(dir, file.startsWith('osx') ? 'rn-a11y-host-darwin' : file.startsWith('linux') ? 'rn-a11y-host-linux-x64' : 'rn-a11y-host-win32-x64', file)).mode & 0o100, file).toBeTruthy();
     }
     expect(fs.existsSync(path.join(pkg, 'index.js')) && fs.existsSync(path.join(pkg, 'index.d.ts'))).toBeTruthy();
 
@@ -148,7 +147,21 @@ describe('host-resolve', () => {
     const linuxOnly = pack('--artifacts', artifacts);
     expect(linuxOnly.status, linuxOnly.stderr).toBe(0);
     expect(Object.keys(JSON.parse(linuxOnly.stdout).binaries)).toStrictEqual(['linux64-bin/rn-a11y-host']);
-    expect(['osx-bin', 'linux64-bin', 'win64-bin'].filter(d => fs.existsSync(path.join(pkg, d)))).toStrictEqual(['linux64-bin']);
+    expect(fs.existsSync(path.join(dir, 'rn-a11y-host-darwin/osx-bin'))).toBe(false);
+    expect(fs.existsSync(path.join(dir, 'rn-a11y-host-linux-x64/linux64-bin'))).toBe(true);
+
+    // A local one-slice macOS pack must not advertise support for both CPUs.
+    const armOnly = pack('--bin', `osx=${machO(path.join(dir, 'arm'), ['arm64'])}`);
+    expect(armOnly.status, armOnly.stderr).toBe(0);
+    expect(JSON.parse(fs.readFileSync(path.join(dir, 'rn-a11y-host-darwin/package.json'), 'utf8')).cpu).toEqual(['arm64']);
+
+    // An ELF for an unsupported CPU cannot masquerade as the x64 package.
+    const armElf = fs.readFileSync(linux);
+    armElf.writeUInt16LE(183, 18);
+    fs.writeFileSync(path.join(dir, 'arm-elf'), armElf);
+    const wrongCpu = pack('--bin', `linux64=${path.join(dir, 'arm-elf')}`);
+    expect(wrongCpu.status).toBe(1);
+    expect(wrongCpu.stderr).toContain('expected architectures x86_64, got arm64');
 
     // A binary of the wrong format for its slot is rejected.
     const wrong = pack('--bin', `linux64=${win}`);

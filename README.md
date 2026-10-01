@@ -44,7 +44,7 @@ npx react-native-a11y-tree render App.tsx --preset android-phone --format text
 # or: npm install -D react-native-a11y-tree && npx rn-a11y-tree render ...
 ```
 
-Two packages:
+The CLI and a small host resolver:
 
 - `react-native-a11y-tree`: the CLI. Its `bin` is `dist/rn-a11y-tree.js`,
   one ES module that `bun build` makes from `src/cli.ts` for Node
@@ -56,23 +56,22 @@ Two packages:
   `react-native`, `react`. Metro, `metro-config`, `expo/metro-config` and
   `hermes-compiler` are loaded from the project (the copies that Expo and
   React Native install), so the bundle uses the project's Metro.
-- `rn-a11y-host`: the prebuilt host, in hermes-compiler's layout
-  (`osx-bin/`, `linux64-bin/`, `win64-bin/`, `host-version.json`,
-  `getHostPath()`): a universal macOS binary and a Linux x64 binary (0.1.0:
-  macOS arm64 only); see
-  [packages/rn-a11y-host/README.md](packages/rn-a11y-host/README.md). The
-  source is `index.ts`; `bun scripts/release-host.ts --pack` builds
-  `index.js` (`bun build`) and `index.d.ts` (`tsc`) next to it. Its
-  `prepack` fails when `index.js`, `index.d.ts`, `host-version.json` or a
-  binary listed in it is missing (run `bun scripts/release-host.ts --pack`
-  first).
+- `rn-a11y-host`: a small resolver with exact-version optional dependencies:
+  `rn-a11y-host-darwin` (universal macOS arm64/x64),
+  `rn-a11y-host-linux-x64`, and `rn-a11y-host-win32-x64`.
+  Their `os`/`cpu` fields let the package manager install only the matching
+  binary. There is no postinstall download or extra CLI command.
+  `getHostPath()` and `getHostVersionPath()` resolve files in that platform
+  package. See [host package details](packages/rn-a11y-host/README.md).
+  Keep optional dependencies enabled; for an installation made with
+  `--omit=optional`, reinstall with `npm install --include=optional`.
 
-Local check of this flow: `e2e/package.test.ts` packs both packages
+Local check of this flow: `e2e/package.test.ts` packs the CLI, resolver, and current platform package
 (`npm pack`), installs them with `expo@58.0.0 react-native@0.88.0-rc.2
 react@19.3.0` into a scratch project and runs `npx rn-a11y-tree render
 App.tsx --preset android-phone --format text` (skipped without `npm` or a
-`native/dist` host; on macOS and Linux). The release workflow does the same
-with the packages it builds (`scripts/verify-packages.sh`), on Linux and macOS.
+`native/dist` host). The release workflow does the same
+with the packages it builds (`scripts/verify-packages.sh`), on Linux, macOS, and Windows.
 
 ## Quick start
 
@@ -1029,8 +1028,8 @@ The script warns when `native/overlay` has uncommitted changes or files
 newer than the binary.
 
 `bun scripts/release-host.ts --pack [--package-dir <dir>] [--bin
-<slot>=<file>]... [--artifacts <dir>]` fills `packages/rn-a11y-host` (the
-npm package of the host, see [Install](#install)) on any OS:
+<slot>=<file>]... [--artifacts <dir>]` fills `packages/rn-a11y-host` and sibling platform package directories
+(or siblings of `--package-dir`) on any OS:
 
 - slots `osx` (`osx-bin/rn-a11y-host`), `linux64`
   (`linux64-bin/rn-a11y-host`), `win64` (`win64-bin/rn-a11y-host.exe`);
@@ -1039,19 +1038,26 @@ npm package of the host, see [Install](#install)) on any OS:
   `--artifacts <dir>` (CI artifacts: `<dir>/rn-a11y-host-<slot>/<file>`,
   the `osx` one universal), else this machine's `native/dist` (macOS:
   `arm64` and `x86_64` joined into a universal binary);
-- slots without an input are removed; each binary's format must match its
+- binary artifacts for slots without an input are removed; each binary's format and CPU must match its
   slot (Mach-O, ELF, PE, read from the file header, which also gives its
   archs);
 - `host-version.json`: the fields above plus `protocolVersion` and
-  `binaries: {"<dir>/<file>": {archs, sha256, size}}` for every binary.
+  `binaries: {"<dir>/<file>": {archs, sha256, size}}` for every binary in the
+  resolver, and just the selected binary in each platform package. Local
+  macOS packs with one slice advertise only that CPU.
+
+Pack each populated platform directory and the resolver with `npm pack`.
+Publish platform packages before the resolver and CLI, keeping their npm
+versions and the resolver's exact optional dependency versions in sync.
+An unpopulated platform package fails `prepack` instead of shipping empty.
 
 `.github/workflows/release-host.yml` (tags `v*`; also on push to
 `ci/release-all`, without the GitHub release): `host-macos` (universal host,
 tests), `host-linux` (calls `linux-host.yml`: the manylinux_2_28 build and its
 tests), `host-windows` (calls `windows-host.yml`: the windows-2025 build and
 its tests), then `package` (ubuntu): the tarballs of every platform and arch, `--pack
---artifacts`, `npm pack` of both packages, `scripts/verify-packages.sh` (a
-scratch project installs both tarballs and renders `examples/basic` with the
+--artifacts`, `npm pack` of all packages, `scripts/verify-packages.sh` (a
+scratch project installs the CLI, resolver, and matching platform tarballs and renders `examples/basic` with the
 Linux host from the package) and the `file://` download; `verify-macos` (the
 same install on macOS), `verify-windows` (the same install on windows-2025),
 `intel-check` (the x86_64 slice on an Intel runner), and `publish` (the
@@ -1100,7 +1106,7 @@ The download adds about 200 ms to the first run (3.7 MB tarball from
 
 `.github/workflows/release-host.yml` runs on tags `v*`. It builds the host,
 runs the tests, packages the host, makes the npm tarballs (`--pack`,
-`bun run build`, `npm pack` of both packages; not published: a commented
+`bun run build`, `npm pack` of all packages; not published: a commented
 `publish` job needs the `NPM_TOKEN` secret), renders `examples/basic` with the
 packaged host downloaded from `file://`, and uploads the files to the
 GitHub release of the tag. Use them with

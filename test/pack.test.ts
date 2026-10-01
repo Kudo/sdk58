@@ -52,13 +52,18 @@ describe('pack', () => {
       });
       expect(files.length).toBe(48);
       expect(files).toContain('dist/rn-a11y-tree.js');
+      const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+      expect(manifest.bin).toEqual({'rn-a11y-tree': './dist/rn-a11y-tree.js'});
+      const help = spawnSync('node', [path.join(ROOT, 'dist/rn-a11y-tree.js'), '--help'], {encoding: 'utf8'});
+      expect(help.status, help.stderr).toBe(0);
+      expect(help.stdout).toContain('render');
     } finally {
       for (const file of planted) fs.rmSync(file, {force: true});
       for (const dir of createdDirs) fs.rmSync(dir, {recursive: true, force: true});
     }
   });
 
-  it('npm pack of rn-a11y-host: 9 files with the osx, linux64 and win64 binaries (fake binaries)', {timeout: 120_000}, t => {
+  it('npm pack separates the resolver from OS-filtered optional binary packages', {timeout: 120_000}, t => {
     if (!hasNpm) t.skip('npm is not available');
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-host-npm-pack-'));
     try {
@@ -81,15 +86,62 @@ describe('pack', () => {
         'host-version.json',
         'index.d.ts',
         'index.js',
-        'linux64-bin/rn-a11y-host',
-        'osx-bin/rn-a11y-host',
         'package.json',
-        'win64-bin/rn-a11y-host.exe',
       ]);
-      const binaries = JSON.parse(packed.stdout).binaries as Record<string, {size: number}>;
-      expect(Object.fromEntries(files.filter(f => f.path.includes('-bin/')).map(f => [f.path, f.size]))).toStrictEqual(
-        Object.fromEntries(Object.entries(binaries).map(([file, info]) => [file, info.size])),
-      );
+      const resolver = JSON.parse(fs.readFileSync(path.join(pkg, 'package.json'), 'utf8'));
+      for (const [name, os, cpu, bin] of [
+        ['rn-a11y-host-darwin', 'darwin', ['arm64', 'x64'], 'osx-bin/rn-a11y-host'],
+        ['rn-a11y-host-linux-x64', 'linux', ['x64'], 'linux64-bin/rn-a11y-host'],
+        ['rn-a11y-host-win32-x64', 'win32', ['x64'], 'win64-bin/rn-a11y-host.exe'],
+      ] as const) {
+        const platformDir = path.join(dir, name);
+        const manifest = JSON.parse(fs.readFileSync(path.join(platformDir, 'package.json'), 'utf8'));
+        expect(manifest.os).toEqual([os]);
+        expect(manifest.cpu).toEqual(cpu);
+        expect(resolver.optionalDependencies[name]).toBe(manifest.version);
+        expect(packFiles(platformDir).map(f => f.path).sort()).toEqual([
+          'LICENSE', 'README.md', 'host-version.json', bin, 'package.json',
+        ].sort());
+      }
+      // Install actual tarballs with local optional specs: no unpublished registry
+      // packages required, and npm must apply OS/CPU filtering itself.
+      for (const name of Object.keys(resolver.optionalDependencies)) {
+        const platformDir = path.join(dir, name);
+        const packedPlatform = npmTool('npm', ['pack', '--json', '--pack-destination', dir], {cwd: platformDir});
+        expect(packedPlatform.status, packedPlatform.stderr).toBe(0);
+        const result = JSON.parse(packedPlatform.stdout.slice(packedPlatform.stdout.indexOf('[')));
+        resolver.optionalDependencies[name] = `file:${path.join(dir, result[0].filename)}`;
+      }
+      fs.writeFileSync(path.join(pkg, 'package.json'), JSON.stringify(resolver));
+      const packedResolver = npmTool('npm', ['pack', '--json', '--pack-destination', dir], {cwd: pkg});
+      expect(packedResolver.status, packedResolver.stderr).toBe(0);
+      const resolverTarball = JSON.parse(packedResolver.stdout.slice(packedResolver.stdout.indexOf('[')))[0].filename;
+      const app = path.join(dir, 'app');
+      fs.mkdirSync(app);
+      fs.writeFileSync(path.join(app, 'package.json'), '{"private":true}');
+      const install = npmTool('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', path.join(dir, resolverTarball)], {cwd: app});
+      expect(install.status, install.stderr).toBe(0);
+      const selected = process.platform === 'darwin' ? 'rn-a11y-host-darwin' : `rn-a11y-host-${process.platform}-${process.arch}`;
+      for (const name of Object.keys(resolver.optionalDependencies)) {
+        expect(fs.existsSync(path.join(app, 'node_modules', name)), name).toBe(name === selected);
+      }
+      const resolve = () => spawnSync('node', ['--input-type=module', '-e', `
+        import {getHostPath, getHostVersionPath} from 'rn-a11y-host';
+        import fs from 'node:fs';
+        console.log(JSON.stringify({bin: getHostPath(), manifest: JSON.parse(fs.readFileSync(getHostVersionPath()))}));
+      `], {cwd: app, encoding: 'utf8'});
+      const resolved = resolve();
+      expect(resolved.status, resolved.stderr).toBe(0);
+      const host = JSON.parse(resolved.stdout);
+      expect(host.bin).toContain(selected + path.sep);
+      expect(host.manifest.protocolVersion).toBe(1);
+      expect(Object.keys(host.manifest.binaries)).toHaveLength(1);
+      fs.rmSync(path.join(app, 'node_modules', selected), {recursive: true});
+      const missing = resolve();
+      expect(missing.status).not.toBe(0);
+      expect(missing.stderr).toContain('HOST_UNAVAILABLE');
+      expect(missing.stderr).toContain('npm install --include=optional');
+
     } finally {
       fs.rmSync(dir, {recursive: true, force: true});
     }

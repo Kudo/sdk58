@@ -9,8 +9,8 @@ name: Release host
 # - host-windows: windows-host.yml (built on windows-2025 with MSVC/clang-cl,
 #   tested there); artifact rn-a11y-host-win64;
 # - package: release tarballs per platform (release-host.ts), the
-#   rn-a11y-host package with every binary (release-host.ts --pack
-#   --artifacts), npm pack of both packages, and a scratch-project install
+#   rn-a11y-host resolver and platform optional packages (release-host.ts --pack
+#   --artifacts), npm pack of all packages, and a scratch-project install
 #   that renders with the packaged Linux host; also the file:// download;
 # - verify-macos / verify-windows / intel-check: the same install on macOS
 #   and Windows, and the x86_64 slice on an Intel runner;
@@ -160,16 +160,18 @@ jobs:
           fi
           cat release/host-version.json
 
-      # npm packages (not published yet): rn-a11y-host with every binary, and
+      # npm packages (not published yet): resolver, optional platform binaries, and
       # the CLI with its bun build in dist/.
       - name: npm pack
         run: |
           bun scripts/release-host.ts --pack --artifacts artifacts
           bun run build
           npm pack --pack-destination release
-          (cd packages/rn-a11y-host && npm pack --pack-destination ../../release)
+          for pkg in packages/rn-a11y-host*; do
+            (cd "$pkg" && npm pack --pack-destination ../../release)
+          done
           ls -la release
-          tar -tzvf release/rn-a11y-host-*.tgz
+          for archive in release/rn-a11y-host-*.tgz; do tar -tzvf "$archive"; done
 
       - name: Install the packages in a scratch project and render (Linux host from the package)
         run: bash scripts/verify-packages.sh release
@@ -304,7 +306,7 @@ jobs:
           fi
           gh release upload "$tag" release/* --clobber
 
-  # Later: publish both packages to npm from the release tarballs. Needs the
+  # Later: publish platform packages first, then resolver and CLI to npm from the release tarballs. Needs the
   # NPM_TOKEN secret (until then the user publishes manually from these tarballs).
   # npm-publish:
   #   needs: publish
@@ -326,5 +328,8 @@ jobs:
   #       env:
   #         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   #       run: |
-  #         npm publish --provenance --access public release/rn-a11y-host-*.tgz
+  #         for pkg in release/rn-a11y-host-{darwin,linux-x64,win32-x64}-*.tgz; do
+  #           npm publish --provenance --access public "$pkg"
+  #         done
+  #         npm publish --provenance --access public release/rn-a11y-host-[0-9]*.tgz
   #         npm publish --provenance --access public release/react-native-a11y-tree-*.tgz

@@ -15,3 +15,9 @@ packages/rn-a11y-host/index.js
 packages/rn-a11y-host/index.d.ts
 *.tgz
 /release/
+
+# Platform package artifacts
+packages/rn-a11y-host-*/osx-bin/
+packages/rn-a11y-host-*/linux64-bin/
+packages/rn-a11y-host-*/win64-bin/
+packages/rn-a11y-host-*/host-version.json

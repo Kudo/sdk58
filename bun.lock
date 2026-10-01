@@ -127,6 +127,23 @@
     "packages/rn-a11y-host": {
       "name": "rn-a11y-host",
       "version": "0.1.1",
+      "optionalDependencies": {
+        "rn-a11y-host-darwin": "0.1.1",
+        "rn-a11y-host-linux-x64": "0.1.1",
+        "rn-a11y-host-win32-x64": "0.1.1",
+      },
+    },
+    "packages/rn-a11y-host-darwin": {
+      "name": "rn-a11y-host-darwin",
+      "version": "0.1.1",
+    },
+    "packages/rn-a11y-host-linux-x64": {
+      "name": "rn-a11y-host-linux-x64",
+      "version": "0.1.1",
+    },
+    "packages/rn-a11y-host-win32-x64": {
+      "name": "rn-a11y-host-win32-x64",
+      "version": "0.1.1",
     },
   },
   "packages": {
@@ -1031,6 +1048,12 @@
     "restore-cursor": ["restore-cursor@2.0.0", "", { "dependencies": { "onetime": "^2.0.0", "signal-exit": "^3.0.2" } }, "sha512-6IzJLuGi4+R14vwagDHX+JrXmPVtPpn4mffDJ1UdR7/Edm87fl6yi8mMBIVvFtJaNTUvjughmW4hwLhRG7gC1Q=="],
 
     "rn-a11y-host": ["rn-a11y-host@workspace:packages/rn-a11y-host"],
+
+    "rn-a11y-host-darwin": ["rn-a11y-host-darwin@workspace:packages/rn-a11y-host-darwin"],
+
+    "rn-a11y-host-linux-x64": ["rn-a11y-host-linux-x64@workspace:packages/rn-a11y-host-linux-x64"],
+
+    "rn-a11y-host-win32-x64": ["rn-a11y-host-win32-x64@workspace:packages/rn-a11y-host-win32-x64"],
 
     "rolldown": ["rolldown@1.2.12", "", { "dependencies": { "@oxc-project/types": "=0.152.0", "@rolldown/pluginutils": "^1.0.0" }, "optionalDependencies": { "@rolldown/binding-android-arm-eabi": "1.2.12", "@rolldown/binding-android-arm64": "1.2.12", "@rolldown/binding-darwin-arm64": "1.2.12", "@rolldown/binding-darwin-x64": "1.2.12", "@rolldown/binding-freebsd-x64": "1.2.12", "@rolldown/binding-linux-arm-gnueabihf": "1.2.12", "@rolldown/binding-linux-arm64-gnu": "1.2.12", "@rolldown/binding-linux-arm64-musl": "1.2.12", "@rolldown/binding-linux-ppc64-gnu": "1.2.12", "@rolldown/binding-linux-s390x-gnu": "1.2.12", "@rolldown/binding-linux-x64-gnu": "1.2.12", "@rolldown/binding-linux-x64-musl": "1.2.12", "@rolldown/binding-openharmony-arm64": "1.2.12", "@rolldown/binding-win32-arm64-msvc": "1.2.12", "@rolldown/binding-win32-x64-msvc": "1.2.12" }, "bin": { "rolldown": "./bin/cli.mjs" } }, "sha512-8wafseiaG80xmXSfqidUNqZcylTlhmPZZt+za2m+js2sFZ8dTNlhIOV2WcbIPx2hgwPBJpEUGFAMZ9bgBBLTSQ=="],
 

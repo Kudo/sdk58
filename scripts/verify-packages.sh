@@ -12,13 +12,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR="$(cd "${1:?usage: scripts/verify-packages.sh <dir with the .tgz files>}" && pwd)"
 CLI_TGZ="$(ls "$DIR"/react-native-a11y-tree-*.tgz)"
-HOST_TGZ="$(ls "$DIR"/rn-a11y-host-*.tgz)"
+HOST_TGZ="$(ls "$DIR"/rn-a11y-host-[0-9]*.tgz)"
+PLATFORM="$(node -p "process.platform === 'darwin' ? 'darwin' : process.platform + '-' + process.arch")"
+PLATFORM_TGZ="$(ls "$DIR"/rn-a11y-host-"$PLATFORM"-*.tgz)"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 cd "$WORK"
 npm init -y >/dev/null
-npm install --no-audit --no-fund expo@58.0.0 react-native@0.88.0-rc.2 react@19.3.0 "$CLI_TGZ" "$HOST_TGZ"
+npm install --no-audit --no-fund expo@58.0.0 react-native@0.88.0-rc.2 react@19.3.0 "$CLI_TGZ" "$HOST_TGZ" "$PLATFORM_TGZ"
 cp "$ROOT/examples/basic/App.tsx" .
 unset RN_A11Y_HOST_BIN RN_A11Y_HOST_SKIP_PACKAGE RN_A11Y_HOST_BASE_URL RN_A11Y_HOST_MANIFEST
 

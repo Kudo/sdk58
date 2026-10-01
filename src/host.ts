@@ -82,7 +82,7 @@ export class HostError extends CliError {
 }
 
 const BUILD_HINT =
-  'Run `bun run build:host`, set RN_A11Y_HOST_BIN to the path of a host binary, or set RN_A11Y_HOST_BASE_URL to download a prebuilt host.';
+  'Reinstall with optional dependencies enabled (`npm install --include=optional`), run `bun run build:host`, set RN_A11Y_HOST_BIN to the path of a host binary, or set RN_A11Y_HOST_BASE_URL to download a prebuilt host.';
 
 /** `native/dist/<arch>/rn-a11y-host` (`.exe` on Windows), produced by `bun run build:host`. */
 export const DEFAULT_HOST_BIN = path.join(

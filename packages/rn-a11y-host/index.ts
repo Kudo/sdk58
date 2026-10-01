@@ -1,20 +1,10 @@
-/**
- * Path of the prebuilt host binary for this platform, in the layout of
- * hermes-compiler's `hermesc/` directory:
- *
- *   osx-bin/rn-a11y-host        macOS (universal or arm64)
- *   linux64-bin/rn-a11y-host    Linux x64
- *   win64-bin/rn-a11y-host.exe  Windows x64
- *
- * `scripts/release-host.ts --pack` fills these directories (and builds
- * index.js + index.d.ts from this file). The binaries of a platform may be
- * missing (not built yet): check `fs.existsSync()`.
- */
+/** Resolves the optional native package selected by the package manager. */
 
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+import fs from 'node:fs';
 
-const PACKAGE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 
 /** Thrown for platforms without a host build (`code` = `HOST_UNAVAILABLE`). */
 export class HostUnavailableError extends Error {
@@ -32,7 +22,7 @@ export class HostUnavailableError extends Error {
 
 /** Relative path of the host binary for `platform`/`arch` (default: this process). */
 export function hostRelativePath(platform: string = process.platform, arch: string = process.arch): string {
-  if (platform === 'darwin') return path.join('osx-bin', 'rn-a11y-host');
+  if (platform === 'darwin' && (arch === 'arm64' || arch === 'x64')) return path.join('osx-bin', 'rn-a11y-host');
   if (platform === 'linux' && arch === 'x64') return path.join('linux64-bin', 'rn-a11y-host');
   if (platform === 'win32' && arch === 'x64') return path.join('win64-bin', 'rn-a11y-host.exe');
   throw new HostUnavailableError(platform, arch);
@@ -40,10 +30,26 @@ export function hostRelativePath(platform: string = process.platform, arch: stri
 
 /** Absolute path of the host binary for `platform`/`arch` (default: this process). */
 export function getHostPath(platform: string = process.platform, arch: string = process.arch): string {
-  return path.join(PACKAGE_DIR, hostRelativePath(platform, arch));
+  const relative = hostRelativePath(platform, arch);
+  const name = hostPackageName(platform, arch);
+  try {
+    const bin = path.join(path.dirname(require.resolve(`${name}/package.json`)), relative);
+    if (fs.existsSync(bin)) return bin;
+  } catch {
+    // Optional dependencies may have been omitted at install time.
+  }
+  const error = new HostUnavailableError(platform, arch);
+  error.message = `Missing optional host package ${name}. Reinstall with optional dependencies enabled (npm install --include=optional), or set RN_A11Y_HOST_BIN.`;
+  throw error;
 }
 
 /** Path of host-version.json (what the binaries were built from, protocolVersion). */
-export function getHostVersionPath(): string {
-  return path.join(PACKAGE_DIR, 'host-version.json');
+export function getHostVersionPath(platform: string = process.platform, arch: string = process.arch): string {
+  return path.join(path.dirname(path.dirname(getHostPath(platform, arch))), 'host-version.json');
+}
+
+/** npm package for a supported OS/CPU pair. */
+export function hostPackageName(platform: string = process.platform, arch: string = process.arch): string {
+  hostRelativePath(platform, arch); // Validate before resolving any package.
+  return platform === 'darwin' ? 'rn-a11y-host-darwin' : `rn-a11y-host-${platform}-${arch}`;
 }

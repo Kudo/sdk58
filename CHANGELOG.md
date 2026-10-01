@@ -1,12 +1,17 @@
 # Changelog
 
 All notable changes to `react-native-a11y-tree` and `rn-a11y-host`. The format
-follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Both packages
+follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The CLI, resolver, and platform packages
 share one version.
 
 ## [0.1.1] - Unreleased
 
 ### Added
+
+- Platform-specific optional host packages (`rn-a11y-host-darwin`,
+  `rn-a11y-host-linux-x64`, `rn-a11y-host-win32-x64`), selected by OS/CPU.
+  `rn-a11y-host` is now a small resolver; installs no longer include other
+  platforms' binaries. The CLI keeps one bundled JavaScript entry and one bin.
 
 - Device metrics from presets: `Dimensions` (window and screen) and
   `PixelRatio` follow the viewport, `scale` (phones 3, tablets 2) and

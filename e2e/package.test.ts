@@ -32,7 +32,7 @@ function run(cmd: string, args: string[], cwd: string, env: Record<string, strin
 }
 
 describe('package', () => {
-  it('npm pack both packages, install into a scratch Expo project, npx rn-a11y-tree render', {timeout: 900_000}, t => {
+  it('npm pack CLI, resolver and matching host, install into a scratch Expo project, npx rn-a11y-tree render', {timeout: 900_000}, t => {
     if (skip) t.skip(skip);
     const work = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-pkgtest-')));
     try {
@@ -46,10 +46,12 @@ describe('package', () => {
       const tarballs = path.join(work, 'tarballs');
       fs.mkdirSync(tarballs);
       run('npm', ['pack', '--pack-destination', tarballs], hostDir);
+      const platformName = process.platform === 'darwin' ? 'darwin' : `${process.platform}-${process.arch}`;
+      run('npm', ['pack', '--pack-destination', tarballs], path.join(work, `rn-a11y-host-${platformName}`));
       // react-native-a11y-tree: dist/ from `bun run build` (prepack), then the files whitelist.
       run('npm', ['pack', '--pack-destination', tarballs], ROOT);
       const files = fs.readdirSync(tarballs).sort();
-      expect(files.map(f => f.replace(/-\d+\.\d+\.\d+.*\.tgz$/, ''))).toStrictEqual(['react-native-a11y-tree', 'rn-a11y-host']);
+      expect(files.map(f => f.replace(/-\d+\.\d+\.\d+.*\.tgz$/, ''))).toStrictEqual(['react-native-a11y-tree', 'rn-a11y-host', `rn-a11y-host-${platformName}`]);
       for (const f of files) t.annotate(`${f}: ${fs.statSync(path.join(tarballs, f)).size} bytes`);
 
       // A relative path: Git for Windows' tar reads `C:` as a remote host.

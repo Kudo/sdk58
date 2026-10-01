@@ -15,7 +15,7 @@
  *
  * Usage: bun scripts/release-host.ts [--out <dir>] [--platform <p>] [--arch <arch>] [--bin <file>] [--pin]
  *        bun scripts/release-host.ts --pack [--package-dir <dir>] [--bin [<slot>=]<file>]... [--artifacts <dir>]
- *   --pack      fill packages/rn-a11y-host: osx-bin/, linux64-bin/, win64-bin/
+ *   --pack      fill the resolver and sibling platform packages
  *               (<slot> = osx | linux64 | win64) and one host-version.json
  *               listing every binary (see pack())
  *   --artifacts with --pack: <dir>/rn-a11y-host-<slot>/ from CI artifacts
@@ -149,9 +149,9 @@ function buildPackageEntry(packageDir: string) {
 
 /** The package slots (hermesc layout): directory, file name, executable format and arch of each. */
 export const SLOTS = {
-  osx: {dir: 'osx-bin', file: 'rn-a11y-host', format: 'mach-o', platform: 'darwin'},
-  linux64: {dir: 'linux64-bin', file: 'rn-a11y-host', format: 'elf', platform: 'linux'},
-  win64: {dir: 'win64-bin', file: 'rn-a11y-host.exe', format: 'pe', platform: 'win32'},
+  osx: {dir: 'osx-bin', file: 'rn-a11y-host', format: 'mach-o', platform: 'darwin', package: 'rn-a11y-host-darwin', archs: ['arm64', 'x86_64']},
+  linux64: {dir: 'linux64-bin', file: 'rn-a11y-host', format: 'elf', platform: 'linux', package: 'rn-a11y-host-linux-x64', archs: ['x86_64']},
+  win64: {dir: 'win64-bin', file: 'rn-a11y-host.exe', format: 'pe', platform: 'win32', package: 'rn-a11y-host-win32-x64', archs: ['x86_64']},
 } as const;
 export type Slot = keyof typeof SLOTS;
 
@@ -227,10 +227,9 @@ function packInputs(): Map<Slot, string[]> {
 }
 
 /**
- * --pack: fills packages/rn-a11y-host (or --package-dir) in the hermesc
- * layout (osx-bin/, linux64-bin/, win64-bin/; the slots without an input are
- * removed), writes host-version.json (build info + `binaries`: archs, sha256
- * and size of every binary) and builds index.js + index.d.ts. Runs on any
+ * --pack: builds the resolver in packages/rn-a11y-host (or --package-dir),
+ * stages binaries and manifests in sibling optional platform packages, and
+ * removes stale binary artifacts for slots without input. Runs on any
  * OS; lipo only joins several osx inputs.
  */
 function pack() {
@@ -252,15 +251,30 @@ function pack() {
       process.exit(1);
     }
   }
+  fs.mkdirSync(packageDir, {recursive: true});
+  for (const entry of ['package.json', 'README.md', 'LICENSE']) {
+    const source = path.join(ROOT, 'packages', 'rn-a11y-host', entry);
+    const target = path.join(packageDir, entry);
+    if (source !== target) fs.copyFileSync(source, target);
+  }
   buildPackageEntry(packageDir);
   type Binary = {archs: string[]; sha256: string; size: number};
   const binaries: Record<string, Binary> = {};
   for (const slot of Object.keys(SLOTS) as Slot[]) {
-    const {dir, file, format} = SLOTS[slot];
+    const {dir, file, format, package: name, archs} = SLOTS[slot];
+    const platformDir = path.join(path.dirname(packageDir), name);
+    fs.mkdirSync(platformDir, {recursive: true});
+    for (const entry of ['package.json', 'README.md', 'LICENSE']) {
+      const source = path.join(ROOT, 'packages', name, entry);
+      const target = path.join(platformDir, entry);
+      if (source !== target) fs.copyFileSync(source, target);
+    }
+    fs.rmSync(path.join(platformDir, dir), {recursive: true, force: true});
+    fs.rmSync(path.join(platformDir, 'host-version.json'), {force: true});
     fs.rmSync(path.join(packageDir, dir), {recursive: true, force: true});
     const files = inputs.get(slot);
     if (files == null) continue;
-    const outBin = path.join(packageDir, dir, file);
+    const outBin = path.join(platformDir, dir, file);
     fs.mkdirSync(path.dirname(outBin), {recursive: true});
     if (files.length > 1) execFileSync('lipo', ['-create', '-output', outBin, ...files]);
     else fs.copyFileSync(files[0], outBin);
@@ -270,11 +284,30 @@ function pack() {
       console.error(`release-host: ${slot}: ${files.join(', ')}: expected executable format ${format}, got ${detected?.format ?? 'unknown'}`);
       process.exit(1);
     }
+    if (detected.archs.length === 0 || !detected.archs.every(a => (archs as readonly string[]).includes(a))) {
+      throw new Error(`release-host: ${slot}: expected architectures ${archs.join('+')}, got ${detected.archs.join('+')}`);
+    }
+    // Local packs may contain only one macOS slice; never advertise a CPU
+    // that the packaged executable cannot run on.
+    const metadataPath = path.join(platformDir, 'package.json');
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    const resolverMetadata = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
+    if (metadata.version !== resolverMetadata.optionalDependencies[name]) {
+      throw new Error(`release-host: ${name} version must match rn-a11y-host optionalDependencies`);
+    }
+    metadata.cpu = archs.filter(a => detected.archs.includes(a)).map(a => a === 'x86_64' ? 'x64' : a);
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2) + '\n');
     binaries[`${dir}/${file}`] = {archs: detected.archs, sha256: sha256(fs.readFileSync(outBin)), size: fs.statSync(outBin).size};
   }
   const manifest = {...buildInfo([...inputs.values()][0][0]), binaries};
   const text = JSON.stringify(manifest, null, 2) + '\n';
   fs.writeFileSync(path.join(packageDir, 'host-version.json'), text);
+  for (const slot of inputs.keys()) {
+    const {package: name, dir, file} = SLOTS[slot];
+    const key = `${dir}/${file}`;
+    fs.writeFileSync(path.join(path.dirname(packageDir), name, 'host-version.json'),
+      JSON.stringify({...manifest, binaries: {[key]: binaries[key]}}, null, 2) + '\n');
+  }
   console.log(text.trimEnd());
   for (const [file, info] of Object.entries(binaries)) {
     console.error(`release-host: packed ${file} (${info.archs.join('+')}, ${info.size} bytes)`);
