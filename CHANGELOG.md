@@ -16,6 +16,11 @@ share one version.
 - Headless layout, props, accessibility and child-interaction coverage for Expo glass, blur and linear-gradient views; documented visual limitations.
 - Reproducible SDK 58 native-view inventory and a support matrix separating tested behavior from remaining native-module work.
 
+### Fixed
+
+- Use locked React Native workspace dependencies to build codegen on every host platform, avoiding the upstream temporary unpinned install.
+- Normalize tsconfig alias candidates to native path separators on Windows.
+
 ## [0.1.1] - Unreleased
 
 ### Added

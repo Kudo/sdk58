@@ -322,17 +322,19 @@ CMAKE_BIN_DIR="$ANDROID_HOME/cmake/$CMAKE_VERSION/bin"
 FANTOM_BUILD_DIR="$FANTOM_DIR/build"
 REACT_NATIVE_DIR="$RN_DIR/packages/react-native"
 
+# Build codegen from the already-installed, frozen React Native workspace on
+# every platform. Upstream scripts/oss/build.sh installs again in a temporary
+# directory without the workspace lockfile (and has a Git Bash tar issue).
+# Reuse the Windows build path so fresh macOS/Linux builds cannot drift to
+# newly-published codegen dependencies or a stale registry mirror.
+CODEGEN_DIR="$RN_DIR/packages/react-native-codegen"
+CODEGEN_CLI="$CODEGEN_DIR/lib/cli/combine/combine-js-to-schema-cli.js"
+if [[ ! -f "$CODEGEN_CLI" || -n "$(find "$CODEGEN_DIR/src" -newer "$CODEGEN_CLI" -name '*.js' | head -n 1)" ]]; then
+  log "react-native-codegen lib/ (node scripts/build.js)"
+  (cd "$CODEGEN_DIR" && rm -rf lib && node scripts/build.js >/dev/null)
+fi
+
 if [[ "$OS" == "Windows" ]]; then
-  # react-native-codegen lib/: gradle's buildCodegenCLI runs
-  # scripts/oss/build.sh, whose Windows branch tars "<abs>/scripts/oss/../.."
-  # and fails in Git Bash ("Member name contains '..'"). The same build with
-  # node and the workspace's dependencies; buildCodegenCLI is skipped.
-  CODEGEN_DIR="$RN_DIR/packages/react-native-codegen"
-  CODEGEN_CLI="$CODEGEN_DIR/lib/cli/combine/combine-js-to-schema-cli.js"
-  if [[ ! -f "$CODEGEN_CLI" || -n "$(find "$CODEGEN_DIR/src" -newer "$CODEGEN_CLI" -name '*.js' | head -n 1)" ]]; then
-    log "react-native-codegen lib/ (node scripts/build.js)"
-    (cd "$CODEGEN_DIR" && rm -rf lib && node scripts/build.js >/dev/null)
-  fi
   # Gradle without the Hermes build (configured below): codegen, the
   # third-party sources and the Hermes source.
   log "gradle: codegen, third-party sources, Hermes source (logs: $FANTOM_DIR/build/reports/)"
@@ -400,7 +402,8 @@ if [[ "$OS" == "Windows" ]]; then
   done
 else
   log "gradle :private:react-native-fantom:prepareAllDependencies (Hermes, third-party, codegen; logs: $FANTOM_DIR/build/reports/)"
-  (cd "$RN_DIR" && ./gradlew :private:react-native-fantom:prepareAllDependencies --no-daemon --console=plain)
+  (cd "$RN_DIR" && ./gradlew :private:react-native-fantom:prepareAllDependencies \
+    -x :packages:react-native:ReactAndroid:buildCodegenCLI --no-daemon --console=plain)
 fi
 TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER"
 if [[ "$CROSS_ARCH" == "1" ]]; then

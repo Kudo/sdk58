@@ -14,7 +14,9 @@ export function loadProjectPaths(projectRoot: string): ProjectPaths {
     .map(name => path.join(projectRoot, name)).find(file => fs.existsSync(file));
   if (!configPath) return {key: '', match: () => [], watchFolders: []};
   const config = parseTsconfig(configPath);
-  const match = createPathsMatcher({path: configPath, config}) ?? (() => []);
+  const matcher = createPathsMatcher({path: configPath, config});
+  // get-tsconfig returns forward slashes on Windows; expose native paths to Metro.
+  const match = (specifier: string): string[] => (matcher?.(specifier) ?? []).map(candidate => path.normalize(candidate));
   // Metro must see alias targets outside the project too (shared workspace sources).
   const probe = '__RN_A11Y_PATH_PROBE__';
   const targets = Object.keys(config.compilerOptions?.paths ?? {})
