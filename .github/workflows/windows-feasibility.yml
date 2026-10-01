@@ -141,13 +141,21 @@ jobs:
           set +e -o pipefail; s=$SECONDS
           { env | grep -E '^(ANDROID|JAVA)' || true; } | tee "$LOGS/c-env.txt"
           cd third_party/react-native
+          # buildCodegenCLI runs packages/react-native-codegen/scripts/oss/build.sh,
+          # whose Windows branch (tar of "$CODEGEN_DIR" = <abs>/scripts/oss/../..)
+          # fails in Git Bash ("Member name contains '..'"): build lib/ directly
+          # with the workspace's dependencies and skip the task.
+          (cd packages/react-native-codegen && rm -rf lib && node scripts/build.js) > "$LOGS/c-codegen-build.log" 2>&1 \
+            || { echo "codegen build failed"; tail -n 30 "$LOGS/c-codegen-build.log"; }
+          ls packages/react-native-codegen/lib/cli/combine | head -n 3
           ./gradlew.bat \
             :private:react-native-fantom:enableHermesBuild \
             :packages:react-native:ReactAndroid:hermes-engine:unzipHermes \
             :private:react-native-fantom:prepareRNCodegen \
             :private:react-native-fantom:prepareNative3pDependencies \
             "-Preact.internal.windowsBashPath=C:\\Program Files\\Git\\bin\\bash.exe" \
-            --no-daemon --console=plain 2>&1 | tee "$LOGS/c-gradle.log"; st=$?
+            -x :packages:react-native:ReactAndroid:buildCodegenCLI \
+            --continue --no-daemon --console=plain 2>&1 | tee "$LOGS/c-gradle.log"; st=$?
           echo "wall $((SECONDS - s)) s" > "$LOGS/c.time"; exit $st
 
       - name: (h) Hermes (CMake + Ninja + clang-cl)
