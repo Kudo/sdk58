@@ -4,6 +4,18 @@ All notable changes to `react-native-a11y-tree` and its native runtime packages.
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The CLI and platform packages
 share one version.
 
+## [Unreleased]
+
+### Changed
+
+- Move the CLI into `packages/react-native-a11y-tree` under a private Bun workspace root; retain one executable bundle and optional platform runtime packages.
+- Resolve project tsconfig/jsconfig paths (including inherited settings and assets) through Metro, with configuration-aware bundle caching.
+
+### Added
+
+- Headless layout, props, accessibility and child-interaction coverage for Expo glass, blur and linear-gradient views; documented visual limitations.
+- Reproducible SDK 58 native-view inventory and a support matrix separating tested behavior from remaining native-module work.
+
 ## [0.1.1] - Unreleased
 
 ### Added

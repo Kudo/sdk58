@@ -1,0 +1,4016 @@
+{
+  "repository": "https://github.com/expo/expo",
+  "ref": "sdk-58",
+  "commit": "cfbcecdb6835a3241aff68061827a59a41d9080c",
+  "note": "Native-view call sites, not a claim of support. Platforms are inferred from source paths; see expo-support.md for tested behavior.",
+  "views": [
+    {
+      "package": "@expo/dom-webview",
+      "module": "ExpoDomWebViewModule",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/@expo/dom-webview/src/DomWebView.tsx",
+          "line": 16,
+          "factory": "requireNativeViewManager",
+          "module": "ExpoDomWebViewModule",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "AccessoryWidgetBackgroundView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/AccessoryWidgetBackground/index.tsx",
+          "line": 8,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "AccessoryWidgetBackgroundView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "AlertDialogView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/AlertDialog/index.tsx",
+          "line": 63,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "AlertDialogView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "AlertView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Alert/index.tsx",
+          "line": 35,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "AlertView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "AnimatedVisibilityView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/AnimatedVisibility/index.tsx",
+          "line": 195,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "AnimatedVisibilityView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "AssistChipView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Chip/index.tsx",
+          "line": 120,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "AssistChipView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "BackgroundView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Background/index.tsx",
+          "line": 16,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "BackgroundView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "BadgedBoxView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/BadgedBox/index.tsx",
+          "line": 22,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "BadgedBoxView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "BadgeView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Badge/index.tsx",
+          "line": 29,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "BadgeView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "BasicAlertDialogView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/BasicAlertDialog/index.tsx",
+          "line": 36,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "BasicAlertDialogView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "BasicTextFieldView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/TextField/BasicTextField.tsx",
+          "line": 51,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "BasicTextFieldView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "BottomSheetView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/BottomSheet/index.tsx",
+          "line": 49,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "BottomSheetView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "BoxView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Box/index.tsx",
+          "line": 22,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "BoxView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "Button",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Button/index.tsx",
+          "line": 83,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "Button",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/Button/index.tsx",
+          "line": 49,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "Button",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "CapsuleView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Shapes/index.tsx",
+          "line": 87,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "CapsuleView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "CardView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Card/index.tsx",
+          "line": 42,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "CardView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ChartView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Chart/index.tsx",
+          "line": 206,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ChartView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "CheckboxView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Checkbox/index.tsx",
+          "line": 48,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "CheckboxView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "CircleView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Shapes/index.tsx",
+          "line": 105,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "CircleView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "CircularProgressIndicatorView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Progress/index.tsx",
+          "line": 46,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "CircularProgressIndicatorView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "CircularWavyProgressIndicatorView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Progress/index.tsx",
+          "line": 46,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "CircularWavyProgressIndicatorView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ColorPickerView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ColorPicker/index.tsx",
+          "line": 34,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ColorPickerView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ColumnView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Column/index.tsx",
+          "line": 32,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ColumnView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ConcentricRectangleView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Shapes/ConcentricRectangle.tsx",
+          "line": 39,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ConcentricRectangleView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ConfirmationDialogView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ConfirmationDialog/index.tsx",
+          "line": 41,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ConfirmationDialogView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ContainedLoadingIndicatorView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/LoadingIndicator/index.tsx",
+          "line": 50,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ContainedLoadingIndicatorView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ContentUnavailableView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ContentUnavailableView/index.tsx",
+          "line": 25,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ContentUnavailableView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ContextMenu",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ContextMenu/index.tsx",
+          "line": 11,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ContextMenu",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ControlGroupView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ControlGroup/index.tsx",
+          "line": 38,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ControlGroupView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DataListForEachItemView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/List/DataListForEach.tsx",
+          "line": 66,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DataListForEachItemView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DataListForEachPoolView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/List/DataListForEach.tsx",
+          "line": 67,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DataListForEachPoolView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DataListForEachView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/List/DataListForEach.tsx",
+          "line": 65,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DataListForEachView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DatePickerDialogView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DatePicker/index.tsx",
+          "line": 361,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DatePickerDialogView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DatePickerView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/DatePicker/index.tsx",
+          "line": 69,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DatePickerView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DateRangePickerDialogView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DatePicker/index.tsx",
+          "line": 403,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DateRangePickerDialogView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DateRangePickerView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DatePicker/index.tsx",
+          "line": 310,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DateRangePickerView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DateTimePickerView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DatePicker/index.tsx",
+          "line": 219,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DateTimePickerView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DisclosureGroupView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/DisclosureGroup/index.tsx",
+          "line": 30,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DisclosureGroupView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DividerView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Divider/index.tsx",
+          "line": 7,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DividerView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DockedSearchBarView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DockedSearchBar/index.tsx",
+          "line": 40,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DockedSearchBarView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DropdownMenuItemView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DropdownMenu/DropdownMenuItem.tsx",
+          "line": 62,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DropdownMenuItemView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "DropdownMenuView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DropdownMenu/index.tsx",
+          "line": 9,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "DropdownMenuView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ElevatedButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Button/index.tsx",
+          "line": 83,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ElevatedButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ElevatedCardView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Card/index.tsx",
+          "line": 42,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ElevatedCardView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "EllipseView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Shapes/index.tsx",
+          "line": 46,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "EllipseView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ExposedDropdownMenuBoxView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ExposedDropdownMenuBox/index.tsx",
+          "line": 8,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ExposedDropdownMenuBoxView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ExposedDropdownMenuView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ExposedDropdownMenuBox/ExposedDropdownMenu.tsx",
+          "line": 9,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ExposedDropdownMenuView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "FilledIconButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/IconButton/index.tsx",
+          "line": 53,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "FilledIconButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "FilledIconToggleButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ToggleButton/index.tsx",
+          "line": 71,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "FilledIconToggleButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "FilledTonalButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Button/index.tsx",
+          "line": 83,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "FilledTonalButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "FilledTonalIconButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/IconButton/index.tsx",
+          "line": 53,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "FilledTonalIconButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "FilterChipView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Chip/index.tsx",
+          "line": 212,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "FilterChipView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "FloatingActionButtonView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/FloatingActionButton/index.tsx",
+          "line": 80,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "FloatingActionButtonView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "FlowRowView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/FlowRow/index.tsx",
+          "line": 22,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "FlowRowView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "FormView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Form/index.tsx",
+          "line": 13,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "FormView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "GaugeView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Gauge/index.tsx",
+          "line": 47,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "GaugeView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "GlassEffectContainerView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/GlassEffectContainer/index.tsx",
+          "line": 22,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "GlassEffectContainerView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "GridRowView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Grid/index.tsx",
+          "line": 40,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "GridRowView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "GridView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Grid/index.tsx",
+          "line": 38,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "GridView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "GroupView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Group/index.tsx",
+          "line": 10,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "GroupView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "HorizontalCenteredHeroCarouselView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Carousel/index.tsx",
+          "line": 66,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HorizontalCenteredHeroCarouselView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "HorizontalDividerView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Divider/index.tsx",
+          "line": 32,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HorizontalDividerView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "HorizontalFloatingToolbarView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/HorizontalFloatingToolbar/index.tsx",
+          "line": 74,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HorizontalFloatingToolbarView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "HorizontalMultiBrowseCarouselView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Carousel/index.tsx",
+          "line": 66,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HorizontalMultiBrowseCarouselView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "HorizontalPagerView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/HorizontalPager/index.tsx",
+          "line": 125,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HorizontalPagerView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "HorizontalUncontainedCarouselView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Carousel/index.tsx",
+          "line": 66,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HorizontalUncontainedCarouselView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "HostView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Host/index.tsx",
+          "line": 82,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HostView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/Host/index.tsx",
+          "line": 70,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HostView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "HStackView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/HStack/index.tsx",
+          "line": 18,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "HStackView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "IconButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/IconButton/index.tsx",
+          "line": 53,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "IconButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "IconToggleButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ToggleButton/index.tsx",
+          "line": 71,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "IconToggleButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "IconView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Icon/index.tsx",
+          "line": 95,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "IconView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ImageView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Image/index.tsx",
+          "line": 115,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ImageView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/Image/index.tsx",
+          "line": 74,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ImageView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "InnerTextFieldView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/TextField/BasicTextField.tsx",
+          "line": 56,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "InnerTextFieldView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "InputChipView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Chip/index.tsx",
+          "line": 306,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "InputChipView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LabeledContentView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/LabeledContent/index.tsx",
+          "line": 15,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LabeledContentView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LabelView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Label/index.tsx",
+          "line": 40,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LabelView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LazyColumnView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/LazyColumn/index.tsx",
+          "line": 61,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LazyColumnView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LazyHStackView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/LazyHStack/index.tsx",
+          "line": 18,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LazyHStackView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LazyItemsPoolView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/LazyItems/index.tsx",
+          "line": 57,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LazyItemsPoolView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LazyItemsSlotView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/LazyItems/index.tsx",
+          "line": 55,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LazyItemsSlotView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LazyItemsView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/LazyItems/index.tsx",
+          "line": 53,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LazyItemsView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LazyRowView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/LazyRow/index.tsx",
+          "line": 40,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LazyRowView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LazyVStackView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/LazyVStack/index.tsx",
+          "line": 18,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LazyVStackView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LinearProgressIndicatorView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Progress/index.tsx",
+          "line": 46,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LinearProgressIndicatorView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LinearWavyProgressIndicatorView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Progress/index.tsx",
+          "line": 46,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LinearWavyProgressIndicatorView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LinkView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Link/index.tsx",
+          "line": 22,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LinkView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ListForEachView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/List/ListForEach.tsx",
+          "line": 11,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ListForEachView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ListItemView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ListItem/index.tsx",
+          "line": 49,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ListItemView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ListView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/List/index.tsx",
+          "line": 10,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ListView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "LoadingIndicatorView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/LoadingIndicator/index.tsx",
+          "line": 50,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "LoadingIndicatorView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "MaskView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/community/masked-view/MaskedView.android.tsx",
+          "line": 14,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "MaskView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/Mask/index.tsx",
+          "line": 16,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "MaskView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "MenuView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Menu/index.tsx",
+          "line": 15,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "MenuView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ModalBottomSheetView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ModalBottomSheet/index.tsx",
+          "line": 109,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ModalBottomSheetView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "MultiChoiceSegmentedButtonRowView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/MultiChoiceSegmentedButtonRow/index.tsx",
+          "line": 18,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "MultiChoiceSegmentedButtonRowView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "NamespaceView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Namespace.tsx",
+          "line": 14,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "NamespaceView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "NavigationBarItemView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/NavigationBar/index.tsx",
+          "line": 97,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "NavigationBarItemView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "NavigationBarView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/NavigationBar/index.tsx",
+          "line": 91,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "NavigationBarView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "NavigationLinkView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/NavigationLink/index.tsx",
+          "line": 19,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "NavigationLinkView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "NavigationSplitViewView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/NavigationSplitView/index.tsx",
+          "line": 60,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "NavigationSplitViewView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "NavigationStackView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/NavigationStack/index.tsx",
+          "line": 33,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "NavigationStackView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "OutlinedButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Button/index.tsx",
+          "line": 83,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "OutlinedButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "OutlinedCardView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Card/index.tsx",
+          "line": 42,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "OutlinedCardView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "OutlinedIconButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/IconButton/index.tsx",
+          "line": 53,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "OutlinedIconButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "OutlinedIconToggleButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ToggleButton/index.tsx",
+          "line": 71,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "OutlinedIconToggleButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "OverlayView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Overlay/index.tsx",
+          "line": 16,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "OverlayView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "PickerView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Picker/index.tsx",
+          "line": 41,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "PickerView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "PlaceholderView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/TextField/BasicTextField.tsx",
+          "line": 62,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "PlaceholderView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "PlainTooltipView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Tooltip/index.tsx",
+          "line": 87,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "PlainTooltipView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "PopoverView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Popover/index.tsx",
+          "line": 34,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "PopoverView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ProgressView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ProgressView/index.tsx",
+          "line": 35,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ProgressView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "PullToRefreshBoxView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/PullToRefreshBox/index.tsx",
+          "line": 61,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "PullToRefreshBoxView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "RadioButtonView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/RadioButton/index.tsx",
+          "line": 46,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "RadioButtonView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "RectangleView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Shapes/index.tsx",
+          "line": 8,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "RectangleView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "RichTooltipView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Tooltip/index.tsx",
+          "line": 121,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "RichTooltipView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "RNHostView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/RNHostView/index.tsx",
+          "line": 41,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "RNHostView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/RNHostView.tsx",
+          "line": 6,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "RNHostView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "RoundedRectangleView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Shapes/index.tsx",
+          "line": 28,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "RoundedRectangleView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "RowView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Row/index.tsx",
+          "line": 32,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "RowView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ScrollViewComponent",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ScrollView/index.tsx",
+          "line": 47,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ScrollViewComponent",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SearchBarView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/SearchBar/index.tsx",
+          "line": 45,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SearchBarView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SectionView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Section/index.tsx",
+          "line": 44,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SectionView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SecureFieldView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/SecureField/index.tsx",
+          "line": 65,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SecureFieldView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SegmentedButtonView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/SegmentedButton/index.tsx",
+          "line": 71,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SegmentedButtonView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ShapeView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Shape/index.tsx",
+          "line": 92,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ShapeView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ShareLinkView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ShareLink/index.tsx",
+          "line": 49,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ShareLinkView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SingleChoiceSegmentedButtonRowView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/SingleChoiceSegmentedButtonRow/index.tsx",
+          "line": 18,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SingleChoiceSegmentedButtonRowView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SliderView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Slider/index.tsx",
+          "line": 101,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SliderView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/Slider/index.tsx",
+          "line": 67,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SliderView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SlotView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/AlertDialog/index.tsx",
+          "line": 69,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/BadgedBox/index.tsx",
+          "line": 27,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Chip/index.tsx",
+          "line": 77,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DockedSearchBar/index.tsx",
+          "line": 42,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DropdownMenu/DropdownMenuItem.tsx",
+          "line": 12,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DropdownMenu/index.tsx",
+          "line": 18,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/FloatingActionButton/index.tsx",
+          "line": 82,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/HorizontalFloatingToolbar/index.tsx",
+          "line": 77,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ListItem/index.tsx",
+          "line": 54,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ModalBottomSheet/index.tsx",
+          "line": 14,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/NavigationBar/index.tsx",
+          "line": 99,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/SearchBar/index.tsx",
+          "line": 51,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/SegmentedButton/index.tsx",
+          "line": 73,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Slider/index.tsx",
+          "line": 12,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/SlotView.tsx",
+          "line": 8,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Switch/index.tsx",
+          "line": 78,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Tooltip/index.tsx",
+          "line": 62,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/SlotView.tsx",
+          "line": 9,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SlotView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SnackbarHostView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Snackbar/index.tsx",
+          "line": 116,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SnackbarHostView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SnackbarView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Snackbar/index.tsx",
+          "line": 37,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SnackbarView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SpacerView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Spacer/index.tsx",
+          "line": 14,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SpacerView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/Spacer/index.tsx",
+          "line": 16,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SpacerView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "StepperView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Stepper/index.tsx",
+          "line": 37,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "StepperView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SuggestionChipView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Chip/index.tsx",
+          "line": 395,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SuggestionChipView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SurfaceView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Surface/index.tsx",
+          "line": 106,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SurfaceView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SwipeActionsView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/SwipeActions/index.tsx",
+          "line": 35,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SwipeActionsView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SwitchView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Switch/index.tsx",
+          "line": 73,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SwitchView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SyncSwitchView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/SyncSwitch/index.tsx",
+          "line": 34,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SyncSwitchView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "SyncToggleView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/SyncToggle/index.tsx",
+          "line": 34,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "SyncToggleView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "Tab",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/TabView/Tab.tsx",
+          "line": 26,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "Tab",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "TabView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/TabView/index.tsx",
+          "line": 32,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TabView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "TextButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Button/index.tsx",
+          "line": 83,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TextButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "TextFieldView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/TextField/TextField.tsx",
+          "line": 110,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TextFieldView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/TextField/index.tsx",
+          "line": 98,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TextFieldView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "TextView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Text/index.tsx",
+          "line": 254,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TextView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/Text/index.tsx",
+          "line": 68,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TextView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "TimePickerDialogView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/DatePicker/index.tsx",
+          "line": 440,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TimePickerDialogView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ToggleButton",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ToggleButton/index.tsx",
+          "line": 71,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ToggleButton",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ToggleView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Toggle/index.tsx",
+          "line": 37,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ToggleView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ToolbarView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Toolbar/index.tsx",
+          "line": 70,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ToolbarView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "TooltipBoxView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Tooltip/index.tsx",
+          "line": 56,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TooltipBoxView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "TriStateCheckboxView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Checkbox/index.tsx",
+          "line": 107,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "TriStateCheckboxView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "UnevenRoundedRectangleView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/Shapes/index.tsx",
+          "line": 70,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "UnevenRoundedRectangleView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "VerticalDividerView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Divider/index.tsx",
+          "line": 32,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "VerticalDividerView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "VerticalSliderView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/Slider/index.tsx",
+          "line": 108,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "VerticalSliderView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "VStackView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/VStack/index.tsx",
+          "line": 18,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "VStackView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "view": "ZStackView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/swift-ui/ZStack/index.tsx",
+          "line": 14,
+          "factory": "requireNativeView",
+          "module": "ExpoUI",
+          "view": "ZStackView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-app-intents",
+      "module": "ExpoAppIntents",
+      "view": "AppEntityView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-app-intents/src/AppEntityView.ios.tsx",
+          "line": 11,
+          "factory": "requireNativeView",
+          "module": "ExpoAppIntents",
+          "view": "AppEntityView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-apple-authentication",
+      "module": "ExpoAppleAuthentication",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-apple-authentication/src/ExpoAppleAuthenticationButton.ts",
+          "line": 7,
+          "factory": "requireNativeView",
+          "module": "ExpoAppleAuthentication",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-blur",
+      "module": "ExpoBlur",
+      "view": "ExpoBlurTargetView",
+      "platforms": [
+        "android"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-blur/src/NativeBlurModule.android.tsx",
+          "line": 5,
+          "factory": "requireNativeView",
+          "module": "ExpoBlur",
+          "view": "ExpoBlurTargetView",
+          "platforms": [
+            "android"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-blur",
+      "module": "ExpoBlur",
+      "view": "ExpoBlurView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-blur/src/NativeBlurModule.android.tsx",
+          "line": 3,
+          "factory": "requireNativeView",
+          "module": "ExpoBlur",
+          "view": "ExpoBlurView",
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-blur/src/NativeBlurModule.tsx",
+          "line": 4,
+          "factory": "requireNativeView",
+          "module": "ExpoBlur",
+          "view": "ExpoBlurView",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-camera",
+      "module": "ExpoCamera",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-camera/src/ExpoCamera.ts",
+          "line": 6,
+          "factory": "requireNativeView",
+          "module": "ExpoCamera",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-clipboard",
+      "module": "ExpoClipboard",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-clipboard/src/ExpoClipboardPasteButton.ts",
+          "line": 7,
+          "factory": "requireNativeView",
+          "module": "ExpoClipboard",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-contacts",
+      "module": "ExpoContactAccessButton",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-contacts/src/ContactAccessButton.tsx",
+          "line": 64,
+          "factory": "requireNativeView",
+          "module": "ExpoContactAccessButton",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        },
+        {
+          "file": "packages/expo-contacts/src/legacy/ContactAccessButton.tsx",
+          "line": 64,
+          "factory": "requireNativeView",
+          "module": "ExpoContactAccessButton",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-gl",
+      "module": "ExpoGL",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-gl/src/GLView.tsx",
+          "line": 27,
+          "factory": "requireNativeView",
+          "module": "ExpoGL",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-glass-effect",
+      "module": "ExpoGlassEffect",
+      "view": "GlassContainer",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-glass-effect/src/GlassContainer.ios.tsx",
+          "line": 9,
+          "factory": "requireNativeView",
+          "module": "ExpoGlassEffect",
+          "view": "GlassContainer",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-glass-effect",
+      "module": "ExpoGlassEffect",
+      "view": "GlassView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-glass-effect/src/GlassView.ios.tsx",
+          "line": 9,
+          "factory": "requireNativeView",
+          "module": "ExpoGlassEffect",
+          "view": "GlassView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-image",
+      "module": "ExpoImage",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-image/src/ExpoImage.tsx",
+          "line": 13,
+          "factory": "requireNativeView",
+          "module": "ExpoImage",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-linear-gradient",
+      "module": "ExpoLinearGradient",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-linear-gradient/src/NativeLinearGradient.android.tsx",
+          "line": 51,
+          "factory": "requireNativeView",
+          "module": "ExpoLinearGradient",
+          "view": null,
+          "platforms": [
+            "android"
+          ]
+        },
+        {
+          "file": "packages/expo-linear-gradient/src/NativeLinearGradient.ios.tsx",
+          "line": 8,
+          "factory": "requireNativeView",
+          "module": "ExpoLinearGradient",
+          "view": null,
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-live-photo",
+      "module": "ExpoLivePhoto",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-live-photo/src/LivePhotoView.tsx",
+          "line": 19,
+          "factory": "requireNativeView",
+          "module": "ExpoLivePhoto",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-maps",
+      "module": "ExpoAppleMaps",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-maps/src/apple/AppleMapsView.tsx",
+          "line": 11,
+          "factory": "requireNativeView",
+          "module": "ExpoAppleMaps",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-maps",
+      "module": "ExpoGoogleMaps",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-maps/src/google/GoogleMapsView.tsx",
+          "line": 14,
+          "factory": "requireNativeView",
+          "module": "ExpoGoogleMaps",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-maps",
+      "module": "ExpoGoogleStreetView",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-maps/src/google/GoogleStreetView.tsx",
+          "line": 10,
+          "factory": "requireNativeView",
+          "module": "ExpoGoogleStreetView",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-mesh-gradient",
+      "module": "ExpoMeshGradient",
+      "view": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-mesh-gradient/src/MeshGradientView.tsx",
+          "line": 7,
+          "factory": "requireNativeView",
+          "module": "ExpoMeshGradient",
+          "view": null,
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouterNativeLinkPreview",
+      "view": "LinkPreviewNativeActionView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/link/preview/native.tsx",
+          "line": 55,
+          "factory": "requireNativeView",
+          "module": "ExpoRouterNativeLinkPreview",
+          "view": "LinkPreviewNativeActionView",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouterNativeLinkPreview",
+      "view": "LinkZoomTransitionAlignmentRectDetector",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/link/preview/native.tsx",
+          "line": 207,
+          "factory": "requireNativeView",
+          "module": "ExpoRouterNativeLinkPreview",
+          "view": "LinkZoomTransitionAlignmentRectDetector",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouterNativeLinkPreview",
+      "view": "LinkZoomTransitionEnabler",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/link/preview/native.tsx",
+          "line": 142,
+          "factory": "requireNativeView",
+          "module": "ExpoRouterNativeLinkPreview",
+          "view": "LinkZoomTransitionEnabler",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouterNativeLinkPreview",
+      "view": "LinkZoomTransitionSource",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/link/preview/native.tsx",
+          "line": 181,
+          "factory": "requireNativeView",
+          "module": "ExpoRouterNativeLinkPreview",
+          "view": "LinkZoomTransitionSource",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouterNativeLinkPreview",
+      "view": "NativeLinkPreviewContentView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/link/preview/native.tsx",
+          "line": 110,
+          "factory": "requireNativeView",
+          "module": "ExpoRouterNativeLinkPreview",
+          "view": "NativeLinkPreviewContentView",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouterNativeLinkPreview",
+      "view": "NativeLinkPreviewView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/link/preview/native.tsx",
+          "line": 94,
+          "factory": "requireNativeView",
+          "module": "ExpoRouterNativeLinkPreview",
+          "view": "NativeLinkPreviewView",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouterToolbarModule",
+      "view": "RouterToolbarHostView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/toolbar/native.ios.tsx",
+          "line": 7,
+          "factory": "requireNativeView",
+          "module": "ExpoRouterToolbarModule",
+          "view": "RouterToolbarHostView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouterToolbarModule",
+      "view": "RouterToolbarItemView",
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/toolbar/native.ios.tsx",
+          "line": 44,
+          "factory": "requireNativeView",
+          "module": "ExpoRouterToolbarModule",
+          "view": "RouterToolbarItemView",
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-symbols",
+      "module": "SymbolModule",
+      "view": null,
+      "platforms": [
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-symbols/src/SymbolView.ios.tsx",
+          "line": 7,
+          "factory": "requireNativeView",
+          "module": "SymbolModule",
+          "view": null,
+          "platforms": [
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-video",
+      "module": "ExpoVideo",
+      "view": "SurfaceVideoView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-video/src/NativeVideoView.ts",
+          "line": 6,
+          "factory": "requireNativeView",
+          "module": "ExpoVideo",
+          "view": "SurfaceVideoView",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-video",
+      "module": "ExpoVideo",
+      "view": "TextureVideoView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-video/src/NativeVideoView.ts",
+          "line": 8,
+          "factory": "requireNativeView",
+          "module": "ExpoVideo",
+          "view": "TextureVideoView",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-video",
+      "module": "ExpoVideo",
+      "view": "VideoAirPlayButtonView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-video/src/NativeVideoAirPlayButtonView.ts",
+          "line": 3,
+          "factory": "requireNativeView",
+          "module": "ExpoVideo",
+          "view": "VideoAirPlayButtonView",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-video",
+      "module": "ExpoVideo",
+      "view": "VideoView",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-video/src/NativeVideoView.ts",
+          "line": 6,
+          "factory": "requireNativeView",
+          "module": "ExpoVideo",
+          "view": "VideoView",
+          "platforms": [
+            "android",
+            "ios"
+          ]
+        }
+      ]
+    }
+  ]
+}

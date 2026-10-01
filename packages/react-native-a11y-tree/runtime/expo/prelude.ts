@@ -49,6 +49,16 @@ function toViewConfig(entry: ViewConfigEntry): ViewConfig {
   return {validAttributes, directEventTypes};
 }
 
+// Props for decorative Expo views. Their RN/Yoga layout and children are real;
+// the host does not draw glass, blur, or gradient pixels.
+const effectViews: Record<string, ViewConfigEntry> = {
+  ExpoGlassEffect_GlassView: {attributes: ['glassEffectStyle', 'tintColor', 'isInteractive', 'colorScheme'], events: []},
+  ExpoGlassEffect_GlassContainer: {attributes: ['spacing'], events: []},
+  ExpoBlur_ExpoBlurView: {attributes: ['intensity', 'tint', 'blurReductionFactor', 'blurMethod', 'blurTargetId', 'borderRadii'], events: []},
+  ExpoBlur_ExpoBlurTargetView: {attributes: [], events: []},
+  ExpoLinearGradient: {attributes: ['colors', 'locations', 'startPoint', 'endPoint', 'borderRadii', 'dither'], events: []},
+};
+
 export function installExpoPrelude(): void {
   const expo = globalThis.expo;
   if (expo == null) {
@@ -62,7 +72,7 @@ export function installExpoPrelude(): void {
     const name = `${moduleName}${viewName != null ? '_' + viewName : ''}`;
     let config = cache.get(name);
     if (config == null) {
-      config = toViewConfig(configs.views[name] ?? configs.union);
+      config = toViewConfig(effectViews[name] ?? configs.views[name] ?? configs.union);
       cache.set(name, config);
     }
     return config;
@@ -100,6 +110,13 @@ export function installExpoPrelude(): void {
     SwitchDefaultIconSize: 16,
     ToggleButtonIconSize: 18,
     ToggleButtonIconSpacing: 8,
+  });
+  // On iOS the app can take its glass branch using these emulated views.
+  // Android uses expo-glass-effect's own View fallback and false availability.
+  expo.modules.ExpoGlassEffect ??= Object.assign(new NativeModule(), {
+    ViewPrototypes: {},
+    isLiquidGlassAvailable: true,
+    isGlassEffectAPIAvailable: true,
   });
   expo.modules.ExpoAsset ??= Object.assign(new NativeModule(), {
     downloadAsync: async (url: string) => url,

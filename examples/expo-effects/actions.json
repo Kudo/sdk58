@@ -1,0 +1,4 @@
+{
+  "$schema": "../../packages/react-native-a11y-tree/schema/script.json",
+  "actions": [{"tap": {"testID": "glass-button"}}, {"snapshot": "pressed"}]
+}

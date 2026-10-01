@@ -13,6 +13,9 @@
         "ajv": "^8.20.0",
         "commander": "^15.0.0",
         "expo": "58.0.0",
+        "expo-blur": "~58.0.2",
+        "expo-glass-effect": "~58.0.3",
+        "expo-linear-gradient": "~58.0.2",
         "get-tsconfig": "^4.14.3",
         "metro": "0.87.1",
         "metro-config": "0.87.1",
@@ -41,6 +44,18 @@
       "name": "@react-native-a11y-tree/example-dimensions",
       "version": "0.0.0",
       "dependencies": {
+        "react": "19.3.0",
+        "react-native": "0.88.0-rc.2",
+      },
+    },
+    "examples/expo-effects": {
+      "name": "@react-native-a11y-tree/example-expo-effects",
+      "version": "0.0.0",
+      "dependencies": {
+        "expo": "58.0.0",
+        "expo-blur": "~58.0.2",
+        "expo-glass-effect": "~58.0.3",
+        "expo-linear-gradient": "~58.0.2",
         "react": "19.3.0",
         "react-native": "0.88.0-rc.2",
       },
@@ -450,6 +465,8 @@
 
     "@react-native-a11y-tree/example-dimensions": ["@react-native-a11y-tree/example-dimensions@workspace:examples/dimensions"],
 
+    "@react-native-a11y-tree/example-expo-effects": ["@react-native-a11y-tree/example-expo-effects@workspace:examples/expo-effects"],
+
     "@react-native-a11y-tree/example-expo-ui": ["@react-native-a11y-tree/example-expo-ui@workspace:examples/expo-ui"],
 
     "@react-native-a11y-tree/example-gestures": ["@react-native-a11y-tree/example-gestures@workspace:examples/gestures"],
@@ -732,13 +749,19 @@
 
     "expo-asset": ["expo-asset@58.0.9", "", { "dependencies": { "@expo/image-utils": "^0.12.2", "expo-constants": "~58.0.9" }, "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-31fMfET8PyoCNGKmyjOY6fBTyTO7du80EjtrzZ/TsT+9zincWMUGwBWeby/fTXPHMEVgWQAiU2sKEteWEw8+Tg=="],
 
+    "expo-blur": ["expo-blur@58.0.2", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-2WKeR2FCSwTjTm+D0YLoLy/6rR583LYxlnhkB04zVkzWBiQKYCnOaUaOSsjQO2Nr/6ZpECmwXDhw4yzIuHZARQ=="],
+
     "expo-constants": ["expo-constants@58.0.9", "", { "dependencies": { "@expo/env": "~2.5.1", "@expo/require-utils": "^58.0.2" }, "peerDependencies": { "expo": "*", "react-native": "*" } }, "sha512-+EaES5uHt3t3kY4VPsvM0uiOo0sjiMKuxGKqdfKaNbpCg3FI5D3qfQbgDHf5fbM09DIfXSbymKeiZx/JKQgzng=="],
 
     "expo-file-system": ["expo-file-system@58.0.4", "", { "peerDependencies": { "expo": "*", "react-native": "*" } }, "sha512-w7Vuh1qA4fkZOSR4Zylvdr6bgOiH5p1hvfrnNlP+Xqb1x5h8Mu13yvQKUm4A1yc7BAeZ7CXu7//dw5hDEevFUg=="],
 
     "expo-font": ["expo-font@58.0.4", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-AElYv+6hg7xgf8x7yL0zP8D2QrJuASU59iKC+yLd38SM6AvWFMlgBz0fkcgWtZFH7QI0Kz1WP+WsCQd06wYxBQ=="],
 
+    "expo-glass-effect": ["expo-glass-effect@58.0.3", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-NoFT5j2uZecNsiDAd47z37PWYTxNJnJMrVYiAU+SggiV9K91Sc0IuIcMsuOM4sUuPBQdSTs8/I9KXk5M0Z2O/w=="],
+
     "expo-keep-awake": ["expo-keep-awake@58.0.2", "", { "peerDependencies": { "expo": "*", "react": "*" } }, "sha512-UIddpQTJrYq/qsiuFHRJQwb1z1jojQ44XV2o6+bSuxLFKwO4KXp21to2GD3RkRFYLKdrEm98FLbzD9KpALkdKQ=="],
+
+    "expo-linear-gradient": ["expo-linear-gradient@58.0.2", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-Pqcbm1e2hH+A9vdDMq5kgJtlg64eFKv0SalUr9GSd4yFJ9s7PwcT6s4xSV7ZXQKEdhwwfQ+a1SdAayiIOyo9mA=="],
 
     "expo-modules-autolinking": ["expo-modules-autolinking@58.0.6", "", { "dependencies": { "@expo/require-utils": "^58.0.2", "@expo/spawn-async": "^1.8.0", "chalk": "^4.1.0", "commander": "^7.2.0" }, "bin": { "expo-modules-autolinking": "bin/expo-modules-autolinking.js" } }, "sha512-1O707KinH8UCUzi9JNeFqF87BJSh1fGgpwjdI/NzBhG2IoHAFQ1ngnpyqF6ikr/o01aGoBgjdCRRLfzEnop/IA=="],
 

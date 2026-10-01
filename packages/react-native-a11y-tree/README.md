@@ -31,7 +31,7 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
 | react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner; worklet callbacks through Reanimated | `e2e/gestures.test.ts` | No v3 Reanimated detector events, virtual detectors, or transforms in `absoluteToLocal` |
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
-| `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); other Expo native modules are not emulated |
+| `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); see [Expo support](docs/expo-support.md) for other packages |
 
 ## Install
 
@@ -1218,3 +1218,12 @@ resolves `compilerOptions.paths` and `baseUrl`, including JSON comments and
 longest matching alias wins; Metro still selects `.ios`/`.android` variants
 and image scale variants. Aliases apply to app imports, not dependency internals.
 Changes to inherited configuration invalidate the finished bundle cache.
+
+### Expo native views
+
+`expo-glass-effect`, `expo-blur`, and `expo-linear-gradient` preserve their
+container layout, children and accessibility on iOS and Android presets.
+Glass availability APIs select the emulated glass branch on iOS and Expo's
+fallback on Android. Visual effects are not rendered. See the
+[SDK 58 support matrix](docs/expo-support.md) for tested behavior and the
+remaining native-module gaps across Expo's packages.
