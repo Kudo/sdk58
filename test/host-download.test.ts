@@ -131,7 +131,7 @@ describe('host-download', () => {
       cwd: ROOT,
       encoding: 'utf8',
       // No runner: the fallback is the real host in native/dist.
-      env: {...env, RN_A11Y_HOST_RUNNER: '', RN_A11Y_HOST_BASE_URL: 'file:///nonexistent', RN_A11Y_HOST_CACHE_DIR: path.join(release.dir, 'c2')},
+      env: {...env, RN_A11Y_HOST_RUNNER: '', RN_A11Y_HOST_BASE_URL: pathToFileURL(path.join(release.dir, 'nonexistent')).href, RN_A11Y_HOST_CACHE_DIR: path.join(release.dir, 'c2')},
     });
     if (fs.existsSync(DEFAULT_HOST_BIN)) {
       expect(failed.status, failed.stderr).toBe(0);
