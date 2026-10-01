@@ -120,6 +120,19 @@ jobs:
       - name: overlay
         run: cp -r native/overlay/. third_party/react-native/private/react-native-fantom/
 
+      - name: (b2) react-native-codegen lib
+        id: b2
+        continue-on-error: true
+        run: |
+          set +e -o pipefail
+          # Gradle's buildCodegenCLI runs packages/react-native-codegen/scripts/oss/build.sh,
+          # whose Windows branch (tar of "$CODEGEN_DIR" = <abs>/scripts/oss/../..)
+          # fails in Git Bash ("Member name contains '..'"; round 2): build lib/
+          # directly with the workspace's dependencies, and gradle skips the task.
+          cd third_party/react-native/packages/react-native-codegen
+          rm -rf lib && node scripts/build.js > "$LOGS/b2-codegen-build.log" 2>&1; st=$?
+          ls lib/cli/combine | head -n 3; exit $st
+
       - name: Restore gradle/Hermes outputs
         id: deps-cache
         uses: actions/cache/restore@v4
@@ -141,13 +154,6 @@ jobs:
           set +e -o pipefail; s=$SECONDS
           { env | grep -E '^(ANDROID|JAVA)' || true; } | tee "$LOGS/c-env.txt"
           cd third_party/react-native
-          # buildCodegenCLI runs packages/react-native-codegen/scripts/oss/build.sh,
-          # whose Windows branch (tar of "$CODEGEN_DIR" = <abs>/scripts/oss/../..)
-          # fails in Git Bash ("Member name contains '..'"): build lib/ directly
-          # with the workspace's dependencies and skip the task.
-          (cd packages/react-native-codegen && rm -rf lib && node scripts/build.js) > "$LOGS/c-codegen-build.log" 2>&1 \
-            || { echo "codegen build failed"; tail -n 30 "$LOGS/c-codegen-build.log"; }
-          ls packages/react-native-codegen/lib/cli/combine | head -n 3
           ./gradlew.bat \
             :private:react-native-fantom:enableHermesBuild \
             :packages:react-native:ReactAndroid:hermes-engine:unzipHermes \
