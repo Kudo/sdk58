@@ -97,7 +97,8 @@ if [[ "$WINDOWS" == "1" ]]; then
       export ICU_DATA_FILTER_FILE='$WIN_FILTER' CFLAGS='-MT -O2' CXXFLAGS='-MT -O2 -std:c++17'
       \"\$(cygpath -u '$WIN_WORK')/icu/source/runConfigureICU\" MSYS/MSVC --prefix=\"\$(cygpath -u '$WIN_PREFIX')\" \\
         --enable-static --disable-shared --with-data-packaging=static \\
-        --disable-tests --disable-samples --disable-extras --disable-icuio --disable-layoutex >/dev/null
+        --disable-tests --disable-samples --disable-extras --disable-icuio --disable-layoutex >/dev/null \\
+        || { tail -n 60 config.log; exit 1; }
       make -j$(nproc) >/dev/null
       make install >/dev/null"
   echo "$STAMP_VALUE" >"$STAMP"
