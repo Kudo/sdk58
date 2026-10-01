@@ -25,7 +25,7 @@
 # Windows (Git Bash, in an MSVC developer environment: cl.exe on PATH):
 # ICU's MSYS/MSVC build (runConfigureICU) with cl.exe and the static runtime
 # (/MT), run in MSYS2 (GNU make; MSYS2_ROOT, default C:/msys64, with the make
-# and python packages). Output: <prefix>/lib/sicuuc.lib, sicuin.lib and
+# and python packages; only MSYS2's own tools are used). Output: <prefix>/lib/sicuuc.lib, sicuin.lib and
 # sicudt.lib (the names CMake's FindICU looks for), <prefix>/include.
 
 set -euo pipefail
@@ -93,7 +93,10 @@ if [[ "$WINDOWS" == "1" ]]; then
   # The MSVC variables are passed explicitly: MSYS2's bash does not see LIB
   # from Git Bash (link.exe: "cannot open file 'LIBCMT.lib'").
   [[ -n "${LIB:-}" && -n "${INCLUDE:-}" ]] || die "LIB / INCLUDE not set (MSVC developer environment)"
-  MSYSTEM=MSYS \
+  # MSYSTEM=MINGW64: uname says MINGW64_NT, the host is x86_64-pc-mingw64 and
+  # ICU picks its MSYS/MSVC fragment (mh-msys-msvc); with MSYS it is
+  # x86_64-pc-msys, which ICU does not know (mh-unknown).
+  MSYSTEM=MINGW64 \
     "$MSYS2_ROOT/usr/bin/bash.exe" -c "set -e
       export PATH=\"\$(/usr/bin/cygpath -u '$WIN_MSVC_BIN'):/usr/bin:\$PATH\"
       export LIB='$LIB' INCLUDE='$INCLUDE' LIBPATH='${LIBPATH:-}'
