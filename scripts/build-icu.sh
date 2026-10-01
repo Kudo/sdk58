@@ -98,7 +98,7 @@ if [[ "$WINDOWS" == "1" ]]; then
       \"\$(cygpath -u '$WIN_WORK')/icu/source/runConfigureICU\" MSYS/MSVC --prefix=\"\$(cygpath -u '$WIN_PREFIX')\" \\
         --enable-static --disable-shared --with-data-packaging=static \\
         --disable-tests --disable-samples --disable-extras --disable-icuio --disable-layoutex >/dev/null \\
-        || { tail -n 60 config.log; exit 1; }
+        || { sed -n '/C compiler version/,/^## ----------------/p' config.log | head -n 80; exit 1; }
       make -j$(nproc) >/dev/null
       make install >/dev/null"
   echo "$STAMP_VALUE" >"$STAMP"
