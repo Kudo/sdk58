@@ -1,4 +1,5 @@
-import {execFileSync, spawnSync} from 'node:child_process';
+import {spawnSync} from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,8 +9,9 @@ import {fileURLToPath} from 'node:url';
 import {getHostPath, HostUnavailableError, hostRelativePath} from '../packages/rn-a11y-host/index.ts';
 
 import {CliError, EXIT_CODES} from '../src/errors.ts';
-import {checkProtocol, findHost, type HostProbes, SUPPORTED_PROTOCOL} from '../src/host.ts';
+import {checkProtocol, DEFAULT_TZ, findHost, hostEnv, type HostProbes, SUPPORTED_PROTOCOL} from '../src/host.ts';
 import {HOST_PROTOCOL_VERSION} from '../scripts/release-host.ts';
+import {elf, machO, pe} from './fixtures/fake-binaries.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -113,23 +115,44 @@ describe('host-resolve', () => {
     expect(EXIT_CODES.HOST_INCOMPATIBLE).toBe(5);
   });
 
-  it('release-host.ts --pack fills the package directory (osx-bin + host-version.json)', {skip: process.platform !== 'darwin'}, () => {
+  it('release-host.ts --pack: one binary per slot (osx, linux64, win64) and one host-version.json (fake binaries)', {timeout: 120_000}, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-host-pack-'));
-    const bin = path.join(dir, 'fake-host');
-    fs.writeFileSync(bin, '#!/bin/sh\necho host\n');
-    const out = execFileSync(
-      'bun',
-      [path.join(ROOT, 'scripts/release-host.ts'), '--pack', '--bin', bin, '--package-dir', path.join(dir, 'pkg')],
-      {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']},
-    );
-    const manifest = JSON.parse(out);
+    const pkg = path.join(dir, 'pkg');
+    const pack = (...args: string[]) =>
+      spawnSync('bun', [path.join(ROOT, 'scripts/release-host.ts'), '--pack', '--package-dir', pkg, ...args], {encoding: 'utf8'});
+    const osx = machO(path.join(dir, 'osx'), ['arm64', 'x86_64']);
+    const linux = elf(path.join(dir, 'linux'));
+    const win = pe(path.join(dir, 'win.exe'));
+    const all = pack('--bin', `osx=${osx}`, '--bin', `linux64=${linux}`, '--bin', `win64=${win}`);
+    expect(all.status, all.stderr).toBe(0);
+    const manifest = JSON.parse(all.stdout);
     expect(manifest.protocolVersion).toBe(HOST_PROTOCOL_VERSION);
     expect(manifest.version).toMatch(/-[0-9a-f]{12}$/);
-    const packed = path.join(dir, 'pkg', 'osx-bin', 'rn-a11y-host');
-    expect(fs.readFileSync(packed, 'utf8')).toBe('#!/bin/sh\necho host\n');
-    expect(fs.statSync(packed).mode & 0o100).toBeTruthy();
-    expect(JSON.parse(fs.readFileSync(path.join(dir, 'pkg', 'host-version.json'), 'utf8'))).toStrictEqual(manifest);
-    expect(manifest.binaries['osx-bin/rn-a11y-host'].size).toBe(fs.statSync(packed).size);
+    expect(JSON.parse(fs.readFileSync(path.join(pkg, 'host-version.json'), 'utf8'))).toStrictEqual(manifest);
+    const sha = (f: string) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+    expect(manifest.binaries).toStrictEqual({
+      'osx-bin/rn-a11y-host': {archs: ['arm64', 'x86_64'], sha256: sha(osx), size: fs.statSync(osx).size},
+      'linux64-bin/rn-a11y-host': {archs: ['x86_64'], sha256: sha(linux), size: fs.statSync(linux).size},
+      'win64-bin/rn-a11y-host.exe': {archs: ['x86_64'], sha256: sha(win), size: fs.statSync(win).size},
+    });
+    for (const file of Object.keys(manifest.binaries)) {
+      expect(fs.statSync(path.join(pkg, file)).mode & 0o100, file).toBeTruthy();
+    }
+    expect(fs.existsSync(path.join(pkg, 'index.js')) && fs.existsSync(path.join(pkg, 'index.d.ts'))).toBeTruthy();
+
+    // --artifacts (CI download layout) for linux64 only: the other slots are removed.
+    const artifacts = path.join(dir, 'artifacts');
+    fs.mkdirSync(path.join(artifacts, 'rn-a11y-host-linux64'), {recursive: true});
+    fs.copyFileSync(linux, path.join(artifacts, 'rn-a11y-host-linux64', 'rn-a11y-host'));
+    const linuxOnly = pack('--artifacts', artifacts);
+    expect(linuxOnly.status, linuxOnly.stderr).toBe(0);
+    expect(Object.keys(JSON.parse(linuxOnly.stdout).binaries)).toStrictEqual(['linux64-bin/rn-a11y-host']);
+    expect(['osx-bin', 'linux64-bin', 'win64-bin'].filter(d => fs.existsSync(path.join(pkg, d)))).toStrictEqual(['linux64-bin']);
+
+    // A binary of the wrong format for its slot is rejected.
+    const wrong = pack('--bin', `linux64=${win}`);
+    expect(wrong.status).toBe(1);
+    expect(wrong.stderr).toMatch(/linux64: .*: expected executable format elf, got pe/);
     fs.rmSync(dir, {recursive: true, force: true});
   });
 
@@ -200,5 +223,12 @@ describe('host-resolve', () => {
     expect(badSession.status).toBe(5);
     const ready = JSON.parse(badSession.stdout.split('\n')[0]);
     expect([ready.ready, ready.error.code]).toStrictEqual([false, 'HOST_INCOMPATIBLE']);
+  });
+
+  it('hostEnv: TZ=UTC unless --tz; the rest of the environment is kept', () => {
+    expect(DEFAULT_TZ).toBe('UTC');
+    expect(hostEnv(undefined).TZ).toBe('UTC');
+    expect(hostEnv('Asia/Tokyo').TZ).toBe('Asia/Tokyo');
+    expect(hostEnv(undefined).PATH).toBe(process.env.PATH);
   });
 });

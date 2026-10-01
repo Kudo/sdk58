@@ -75,11 +75,23 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
   Actions is blocked by the account spending limit ("The job was not started
   because recent account payments have failed or your spending limit needs to
   be increased"). The user said the limit resets in October 2026.
-- Linux: the host builds and runs on Linux arm64 with workarounds (branch
-  `ci/linux-feasibility`, run 36720960506, report in
-  `docs/research/linux-feasibility.md` on that branch, worktree
-  `~/Developer/rn-a11y-linux-feasibility`). Text is 0-height there (stub text
-  layout manager). Windows: not started. macOS x86_64: built by cross-compile,
+- Linux x64 host (branch `ci/linux-host`, not on `main` yet; it includes
+  `feat/portable-text`): built in `quay.io/pypa/manylinux_2_28_x86_64`
+  (AlmaLinux 8, glibc 2.28) by `.github/workflows/linux-host.yml`, portable
+  text layout, ICU 74.2 from source with trimmed data
+  (`scripts/build-icu.sh`, `scripts/icu-data-filter.json`), ICU default
+  locale fixed to `en_US`, no OpenSSL (plain C++ SHA-256 shim). 17.1 MB,
+  links only glibc, needs GLIBC_2.27. E2E green on ubuntu-24.04 and with the
+  host in debian:10 / ubuntu:20.04 containers. Details: `native/README.md`
+  ("Linux"). Earlier feasibility spike: branch `ci/linux-feasibility`,
+  `docs/research/linux-feasibility.md` there. Packaging of all platforms:
+  `release-host.ts --pack --bin <slot>=<file> | --artifacts <dir>` and
+  `release-host.yml` (`host-macos`, `host-linux`, `package`, `verify-macos`,
+  `intel-check`, `publish`). Windows: spike on `ci/windows-host`.
+- GitHub: the repository is temporarily public as `Kudo/sdk58` (for free
+  Actions minutes; user decision 2026-10-01). Do not change `origin` or any
+  URL in the repo; push with `git push https://github.com/Kudo/sdk58.git
+  <branch>` and use `gh ... --repo Kudo/sdk58`. Do not commit secrets. macOS x86_64: built by cross-compile,
   never executed locally (no Rosetta on the dev Mac; verified only by the
   `intel-check` CI job once Actions runs).
 
@@ -129,7 +141,8 @@ bun run rn-a11y-tree check examples/basic/App.tsx --preset android-phone --rules
 RN_A11Y_HOST_BUILD_TYPE=Debug bun run build:host          # 2-3 s incremental native iteration
 RN_A11Y_HOST_SANITIZE=1 RN_A11Y_HOST_BUILD_TYPE=Release bun run build:host   # ASan+UBSan+vptr host
 RN_A11Y_HOST_ARCH=universal bun run build:host            # arm64 + x86_64 (x86_64 Hermes ~90 s)
-bun scripts/release-host.ts --pack                        # stage packages/rn-a11y-host/osx-bin
+bun scripts/release-host.ts --pack                        # stage packages/rn-a11y-host (this machine's native/dist)
+bun scripts/release-host.ts --pack --bin osx=<f> --bin linux64=<f> --bin win64=<f.exe>   # or --artifacts <dir>
 bun scripts/perf.ts                                       # perf tables (docs/perf-analysis.md)
 ```
 
@@ -218,8 +231,9 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
 
 ## Known gaps (as of 0.1.1)
 
-- Hosts exist for macOS only (arm64 built and tested; x86_64 slice built,
-  verified only on CI). Linux: feasibility done, not productized. Windows: none.
+- Released hosts exist for macOS only (arm64 built and tested; x86_64 slice
+  built, verified only on CI). Linux x64: done on `ci/linux-host` (see State),
+  not released. Windows: none.
 - Text metrics are macOS CoreText with SF / embedded Roboto, not iOS/Android
   renderers. `@expo/ui` engines: SwiftUI 42/43 cases within 0.5 pt on macOS,
   41/43 on the iOS simulator; Compose 112/112 exact. Unsupported `@expo/ui`
@@ -238,10 +252,11 @@ npx rn-a11y-tree render App.tsx --preset android-phone --format text -v
    `src/commandRegistry.ts` that spawns `rn-a11y-tree` through its
    `subprocess.ts` (that repo's rule is subprocess-only), using `tools/*.json`
    as the contract and the session protocol for multi-step use.
-3. Linux host: make the feasibility workarounds real (overlay shim headers,
-   CMake guards, static ICU, Linux branch in `build-host.sh`, CI job), then a
-   portable text stack (HarfBuzz + FreeType + ICU line breaking) replacing the
-   three CoreText files.
+3. Linux host: done on `ci/linux-host` (merge it to `main`). Open: the
+   Fantom itests (`native/tests`) on Linux, and whether the CLI should run
+   the host with `TZ=UTC` (Hermes on Linux passes the current time-zone
+   abbreviation to ICU, which does not know DST names such as `PDT`/`CEST`
+   and then formats in GMT; asked the user).
 4. Windows spike (ReactCxxPlatform + folly under MSVC).
 5. Later: SwiftUI symbol table growth, `lineLimit` edge cases, Reanimated
    sensors/keyboard, `check` rule additions (design tokens per project).

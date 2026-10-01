@@ -47,7 +47,17 @@ export type HostOptions = {
   logs?: LogEntry[];
   /** Do not echo app console output to stderr. */
   quiet?: boolean;
+  /** Time zone of the host process (`TZ`); default DEFAULT_TZ. */
+  tz?: string;
 };
+
+/** The host runs in UTC unless `--tz` says otherwise, so date strings do not depend on the machine. */
+export const DEFAULT_TZ = 'UTC';
+
+/** Environment of the host process: ours, with `TZ` set. */
+export function hostEnv(tz: string | undefined): NodeJS.ProcessEnv {
+  return {...process.env, TZ: tz ?? DEFAULT_TZ};
+}
 
 export type HostTiming = {spawn?: number; result?: number; exit?: number};
 
@@ -354,6 +364,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   if (options.timing) options.timing.spawn = performance.now();
   const child = spawnHost(bin, hostArgs(options), {
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: hostEnv(options.tz),
   });
 
   const stderrChunks: Buffer[] = [];

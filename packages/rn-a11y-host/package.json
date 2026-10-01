@@ -1,7 +1,7 @@
 {
   "name": "rn-a11y-host",
   "version": "0.1.1",
-  "description": "Prebuilt headless React Native host (Fantom: Fabric + Hermes + Yoga) used by react-native-a11y-tree. macOS arm64 in 0.1.0.",
+  "description": "Prebuilt headless React Native host (Fantom: Fabric + Hermes + Yoga) used by react-native-a11y-tree: macOS (universal) and Linux x64.",
   "keywords": [
     "react-native",
     "fantom",
@@ -49,6 +49,6 @@
     "access": "public"
   },
   "scripts": {
-    "prepack": "node -e \"const fs=require('fs');for(const f of ['osx-bin/rn-a11y-host','index.js','index.d.ts'])if(!fs.existsSync(f)){console.error('rn-a11y-host: '+f+' is missing: run bun scripts/release-host.ts --pack in the repo root first');process.exit(1)}\""
+    "prepack": "node -e \"const fs=require('fs');const fail=f=>{console.error('rn-a11y-host: '+f+' is missing: run bun scripts/release-host.ts --pack in the repo root first');process.exit(1)};for(const f of ['index.js','index.d.ts','host-version.json'])if(!fs.existsSync(f))fail(f);const bins=Object.keys(JSON.parse(fs.readFileSync('host-version.json','utf8')).binaries||{});if(bins.length===0)fail('a binary (host-version.json binaries)');for(const f of bins)if(!fs.existsSync(f))fail(f)\""
   }
 }

@@ -16,9 +16,14 @@ on:
     branches: [main, ci/linux-host, ci/windows-host]
   pull_request:
   workflow_dispatch:
+  # release-host.yml calls this workflow for its Linux binary (artifact
+  # rn-a11y-host-linux64).
+  workflow_call:
 
 concurrency:
-  group: linux-host-${{ github.ref }}
+  # github.workflow is the caller's name when called: a release run does not
+  # cancel (or wait for) the standalone run of the same ref.
+  group: linux-host-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -195,7 +200,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: rn-a11y-host-linux-x64
+          name: rn-a11y-host-linux64
           path: ${{ env.HOST_DIR }}
           if-no-files-found: error
 
@@ -229,7 +234,7 @@ jobs:
 
       - uses: actions/download-artifact@v7
         with:
-          name: rn-a11y-host-linux-x64
+          name: rn-a11y-host-linux64
           path: ${{ env.HOST_DIR }}
 
       - name: Smoke render (examples/basic)
@@ -306,7 +311,7 @@ jobs:
 
       - uses: actions/download-artifact@v7
         with:
-          name: rn-a11y-host-linux-x64
+          name: rn-a11y-host-linux64
           path: ${{ env.HOST_DIR }}
 
       - name: Host wrapper (docker run ${{ matrix.image }})
@@ -316,7 +321,7 @@ jobs:
           docker run --rm "${{ matrix.image }}" sh -c 'cat /etc/os-release | head -n 1; ldd --version | head -n 1'
           cat > "$RUNNER_TEMP/host-in-container" <<EOF
           #!/bin/bash
-          exec docker run --rm -i -v "$PWD:$PWD" -v /tmp:/tmp -v "$HOME:$HOME" -w "$PWD" "${{ matrix.image }}" "$PWD/$HOST_DIR/rn-a11y-host" "\$@"
+          exec docker run --rm -i -e TZ -e LANG -e LC_ALL -e LC_MESSAGES -v "$PWD:$PWD" -v /tmp:/tmp -v "$HOME:$HOME" -w "$PWD" "${{ matrix.image }}" "$PWD/$HOST_DIR/rn-a11y-host" "\$@"
           EOF
           chmod +x "$RUNNER_TEMP/host-in-container"
           echo "RN_A11Y_HOST_BIN=$RUNNER_TEMP/host-in-container" >> "$GITHUB_ENV"

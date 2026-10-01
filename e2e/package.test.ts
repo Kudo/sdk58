@@ -18,14 +18,13 @@ function has(cmd: string): boolean {
   return spawnSync(cmd, ['--version'], {stdio: 'ignore'}).status === 0;
 }
 
-const skip =
-  process.platform !== 'darwin'
-    ? 'the host package has macOS binaries only'
-    : !has('npm')
-      ? 'npm is not available'
-      : !fs.existsSync(DIST_BIN)
-        ? 'no native/dist host to pack: run `bun run build:host`'
-        : false;
+// release-host --pack packs this machine's native/dist host (osx-bin/ on
+// macOS, linux64-bin/ on Linux).
+const skip = !has('npm')
+  ? 'npm is not available'
+  : !fs.existsSync(DIST_BIN)
+    ? 'no native/dist host to pack: run `bun run build:host`'
+    : false;
 
 function run(cmd: string, args: string[], cwd: string, env: Record<string, string> = {}) {
   const proc = spawnSync(cmd, args, {cwd, encoding: 'utf8', env: {...process.env, ...env}, maxBuffer: 64 * 1024 * 1024});
