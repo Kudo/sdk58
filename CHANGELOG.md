@@ -4,7 +4,7 @@ All notable changes to `react-native-a11y-tree` and its native runtime packages.
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The CLI and platform packages
 share one version.
 
-## [Unreleased]
+## [0.1.2] - 2026-10-01
 
 ### Changed
 
@@ -136,5 +136,6 @@ First release. macOS arm64 host only.
 - Heap use-after-free in the `@expo/ui` Host frame writing in release builds
   (SIGSEGV on macOS 15).
 
-[0.1.1]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.0...HEAD
+[0.1.2]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Kudo/react-native-a11y-tree/releases/tag/v0.1.0
