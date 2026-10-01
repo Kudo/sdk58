@@ -20,9 +20,7 @@ if(MSVC)
   set(CMAKE_CXX_STANDARD 20)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   # fmt requires UTF-8 source and execution character sets with MSVC.
-  # -Wpedantic (React Native flags) warns on MSVC keywords such as __int64
-  # and __forceinline in folly, double-conversion and glog.
-  add_compile_options(/utf-8 -Wno-language-extension-token)
+  add_compile_options(/utf-8)
   add_compile_definitions(
     NOMINMAX
     WIN32_LEAN_AND_MEAN
@@ -30,6 +28,7 @@ if(MSVC)
     _USE_MATH_DEFINES
     _CRT_SECURE_NO_WARNINGS
     _CRT_NONSTDC_NO_WARNINGS
+    _WINSOCK_DEPRECATED_NO_WARNINGS
     _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
     _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS
     GLOG_NO_ABBREVIATED_SEVERITIES
@@ -730,6 +729,23 @@ if(MSVC)
       target_compile_options(${target} PRIVATE -Wno-error)
     endif()
   endforeach()
+  # Their headers as system headers for the code that includes them (the MSVC
+  # branches of double-conversion's utils.h and folly's F14Table.h warn under
+  # -Wall -Wpedantic).
+  foreach(target boost double-conversion fast_float fmt folly_runtime glog)
+    if(TARGET ${target})
+      get_target_property(dirs ${target} INTERFACE_INCLUDE_DIRECTORIES)
+      if(dirs)
+        set_property(TARGET ${target} APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES ${dirs})
+      endif()
+    endif()
+  endforeach()
+  # fast_float (header-only) passes the React Native flags, -Werror included,
+  # to every target that links it (through folly_runtime): the -Wno-error
+  # above came before them on the command line.
+  get_target_property(options fast_float INTERFACE_COMPILE_OPTIONS)
+  list(REMOVE_ITEM options -Werror -Wall -Wpedantic)
+  set_property(TARGET fast_float PROPERTY INTERFACE_COMPILE_OPTIONS "${options}")
 
   # <cxxabi.h> for worklets and reanimated (src/stubs/windows).
   foreach(target worklets reanimated)
@@ -763,6 +779,9 @@ if(MSVC)
         list(APPEND result "/Oy-")
       elseif(option STREQUAL "-Wall")
         list(APPEND result "/clang:-Wall")
+      elseif(option STREQUAL "-Wpedantic")
+        # MSVC keywords (__int64, __forceinline) in folly, double-conversion, glog.
+        list(APPEND result "-Wpedantic" "-Wno-language-extension-token")
       elseif(option MATCHES "^-f")
         list(APPEND result "/clang:${option}")
       else()

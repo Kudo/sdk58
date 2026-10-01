@@ -265,10 +265,12 @@ jobs:
           # No -FImath.h: on a case-insensitive file system it resolves to
           # folly/portability/Math.h (round 4). <chrono>: worklets EventLoop.cpp.
           FI="-FIcstdint -FIcstddef -FIcmath -FIalgorithm -FIiterator -FIstdexcept -FIchrono"
+          # Full paths: CMake takes a bare CMAKE_AR as relative to the source dir (round 6).
+          LLVM_BIN="$(cygpath -m "$(dirname "$(command -v clang-cl)")")"
           cmake -G Ninja -S "$F/tester" -B "$TESTER_BUILD" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl \
-            -DCMAKE_LINKER=lld-link -DCMAKE_AR=llvm-lib \
+            -DCMAKE_C_COMPILER="$LLVM_BIN/clang-cl.exe" -DCMAKE_CXX_COMPILER="$LLVM_BIN/clang-cl.exe" \
+            -DCMAKE_LINKER="$LLVM_BIN/lld-link.exe" -DCMAKE_AR="$LLVM_BIN/llvm-lib.exe" \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DFANTOM_MACOS_TEXT_LAYOUT=OFF -DFANTOM_STATIC_HOST=ON \
             -DFANTOM_CODEGEN_DIR="$F/build/codegen" \
