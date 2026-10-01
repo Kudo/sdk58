@@ -135,7 +135,8 @@ describe('host-resolve', () => {
       'linux64-bin/rn-a11y-host': {archs: ['x86_64'], sha256: sha(linux), size: fs.statSync(linux).size},
       'win64-bin/rn-a11y-host.exe': {archs: ['x86_64'], sha256: sha(win), size: fs.statSync(win).size},
     });
-    for (const file of Object.keys(manifest.binaries)) {
+    // Windows has no executable bit.
+    for (const file of process.platform === 'win32' ? [] : Object.keys(manifest.binaries)) {
       expect(fs.statSync(path.join(pkg, file)).mode & 0o100, file).toBeTruthy();
     }
     expect(fs.existsSync(path.join(pkg, 'index.js')) && fs.existsSync(path.join(pkg, 'index.d.ts'))).toBeTruthy();
