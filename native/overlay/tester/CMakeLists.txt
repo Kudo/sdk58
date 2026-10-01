@@ -98,8 +98,9 @@ if(FANTOM_STATIC_HOST)
   if(APPLE)
     list(APPEND hermes_static_libs "-framework CoreFoundation")
   elseif(WIN32)
-    # Hermes uses the ICU of Windows 10 (USE_WIN10_ICU) and LLVH dbghelp/psapi.
-    list(APPEND hermes_static_libs icuuc icuin dbghelp psapi)
+    # Hermes uses the ICU of Windows 10 (USE_WIN10_ICU), LLVH dbghelp/psapi,
+    # and winmm (timeBeginPeriod in the sampling profiler).
+    list(APPEND hermes_static_libs icuuc icuin dbghelp psapi winmm)
   else()
     # Hermes uses ICU on Linux (PlatformUnicodeICU).
     list(APPEND hermes_static_libs icui18n icuuc icudata)
@@ -750,6 +751,9 @@ if(MSVC)
   # LOG_EVERY_N of the Windows glog header: its compile-time assert typedef
   # is unused (UIManagerBinding.cpp).
   target_compile_options(react_renderer_uimanager PRIVATE -Wno-unused-local-typedef)
+
+  # folly without PThread.cpp (third-party/folly/CMakeLists.txt).
+  target_sources(folly_runtime PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/stubs/windows/FollyPThread.cpp)
 
   # <cxxabi.h> for worklets and reanimated (src/stubs/windows).
   foreach(target worklets reanimated)
