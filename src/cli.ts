@@ -66,6 +66,13 @@ function isQuiet(options: {quiet?: boolean}): boolean {
   return options.quiet ?? !process.stdout.isTTY;
 }
 
+/** The MSVC runtime of the Windows host reads only POSIX TZ values (`UTC`, `JST-9`, `PST8PDT`), not IANA names. */
+function warnTimeZone(options: {tz?: string; quiet?: boolean}): void {
+  if (process.platform === 'win32' && options.tz?.includes('/') && !isQuiet(options)) {
+    process.stderr.write('rn-a11y-tree: warning: on Windows --tz needs a POSIX TZ such as JST-9 or PST8PDT\n');
+  }
+}
+
 type RenderOptions = HostConfigOptions & OutputOptions & {
   quiet?: boolean;
   timing?: boolean;
@@ -243,6 +250,7 @@ async function execute<T>(
   if (!options.bundleOnly) {
     // Fail (or download) before spending time on Metro.
     await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
+    warnTimeZone(options);
   }
   const metroStart = performance.now();
   const result = await bundleOrFail({
@@ -461,6 +469,7 @@ async function session(file: string, options: RunOptions) {
     throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
   }
   const host = await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
+  warnTimeZone(options);
   const result = await bundleOrFail({
     appPath: file,
     viewportWidth: options.width,

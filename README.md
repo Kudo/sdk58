@@ -117,7 +117,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--safe-area-insets <t,l,r,b>` | all | preset, else `0,0,0,0` | react-native-safe-area-context insets, e.g. `47,0,0,34` |
 | `--scale <n>` | all | preset, else 3 | Device pixel ratio: `PixelRatio.get()` and the `scale` of `Dimensions` / `useWindowDimensions()` |
 | `--font-scale <n>` | all | preset (1), else 1 | `PixelRatio.getFontScale()`, `fontScale` of `Dimensions`, and the text size multiplier (`<Text>` without `allowFontScaling={false}`) |
-| `--tz <zone>` | all | `UTC` | Time zone of the app: the host runs with `TZ=<zone>` (IANA name like `America/Los_Angeles`, or POSIX like `JST-9`), so date strings do not depend on the machine's time zone |
+| `--tz <zone>` | all | `UTC` | Time zone of the app: the host runs with `TZ=<zone>` (IANA name like `America/Los_Angeles`, or POSIX like `JST-9`), so date strings do not depend on the machine's time zone. On Windows only POSIX values work (`UTC`, `JST-9`, `PST8PDT`; the MSVC runtime does not read IANA names): a name with `/` prints a warning (unless `--quiet`) |
 | `--no-mounted` | all | mounted on | Do not read mounted-view values (`getA11yTree` `includeMountedProps`; used for `visualBox`, `effectiveOpacity`) |
 | `--timing` | all | off | Print phase timings as JSON on stderr (see [`docs/perf-analysis.md`](docs/perf-analysis.md)) |
 | `--reset-cache` | all | off | Ignore Metro's caches and the bundle cache (cold bundle) |

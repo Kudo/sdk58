@@ -185,6 +185,16 @@ describe('host-resolve', () => {
     });
   }
 
+  it('--tz with an IANA name warns on Windows only (fake host)', {timeout: 120_000}, () => {
+    const app = path.join(ROOT, 'examples/basic/App.tsx');
+    const iana = cliRun(['render', app, '--platform', 'android', '--tz', 'America/Los_Angeles', '--no-quiet'], {FAKE_HOST_MODE: 'shadow-tree'});
+    expect(iana.status, iana.stderr).toBe(0);
+    expect(/warning: on Windows --tz needs a POSIX TZ such as JST-9 or PST8PDT/.test(iana.stderr)).toBe(process.platform === 'win32');
+    const posix = cliRun(['render', app, '--platform', 'android', '--tz', 'JST-9', '--no-quiet'], {FAKE_HOST_MODE: 'shadow-tree'});
+    expect(posix.status, posix.stderr).toBe(0);
+    expect(posix.stderr).not.toMatch(/--tz needs a POSIX TZ/);
+  });
+
   it('runtime protocol check (getHostInfo) and hostInfo in the output (fake host)', {timeout: 180_000}, () => {
     const app = path.join(ROOT, 'examples/basic/App.tsx');
     const ok = cliRun(['render', app, '--platform', 'android', '-v'], {FAKE_HOST_MODE: 'shadow-tree'});
