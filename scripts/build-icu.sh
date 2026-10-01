@@ -90,12 +90,13 @@ if [[ "$WINDOWS" == "1" ]]; then
   # The MSVC tools first: MSYS2's coreutils have a link.exe too.
   WIN_MSVC_BIN="$(cygpath -m "$(dirname "$(command -v cl)")")"
   rm -rf "$PREFIX"
-  # Not a login shell: MSYS2's /etc/profile loses LIB (link.exe: "cannot
-  # open file 'LIBCMT.lib'"); MSYS2's tools by PATH instead.
+  # The MSVC variables are passed explicitly: MSYS2's bash does not see LIB
+  # from Git Bash (link.exe: "cannot open file 'LIBCMT.lib'").
+  [[ -n "${LIB:-}" && -n "${INCLUDE:-}" ]] || die "LIB / INCLUDE not set (MSVC developer environment)"
   MSYSTEM=MSYS \
     "$MSYS2_ROOT/usr/bin/bash.exe" -c "set -e
       export PATH=\"\$(/usr/bin/cygpath -u '$WIN_MSVC_BIN'):/usr/bin:\$PATH\"
-      echo \"LIB=\$LIB\" | cut -c1-200
+      export LIB='$LIB' INCLUDE='$INCLUDE' LIBPATH='${LIBPATH:-}'
       cd \"\$(cygpath -u '$WIN_WORK')/build\"
       export ICU_DATA_FILTER_FILE='$WIN_FILTER' CFLAGS='-MT -O2' CXXFLAGS='-MT -O2 -std:c++17'
       \"\$(cygpath -u '$WIN_WORK')/icu/source/runConfigureICU\" MSYS/MSVC --prefix=\"\$(cygpath -u '$WIN_PREFIX')\" \\
