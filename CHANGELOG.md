@@ -22,6 +22,13 @@ share one version.
   `examples/dimensions`.
 - Universal macOS host: `RN_A11Y_HOST_ARCH=arm64|x86_64|universal` in
   `build-host.sh` (`native/dist/universal/`).
+- Windows x64 host: `build-host.sh` in Git Bash writes
+  `native/dist/x86_64/rn-a11y-host.exe` (Hermes with MSVC, the tester with
+  clang-cl, `/MT`, static ICU, portable text layout); the CLI finds it, finds
+  `hermes-compiler`'s `win64-bin/hermesc.exe`, and compiles bytecode in the
+  background without `/bin/sh`. `RN_A11Y_HOST_RUNNER` starts the host through
+  another program (tests: `bun` for the script fake host). CI:
+  `.github/workflows/windows-host.yml`.
 - Portable text layout for hosts without CoreText: `FANTOM_TEXT_LAYOUT=portable`
   (`RN_A11Y_TEXT_LAYOUT=portable` in `build-host.sh`) measures text with
   `stb_truetype` and the embedded Roboto, including the Compose engine's text;

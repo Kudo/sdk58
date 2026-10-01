@@ -81,9 +81,12 @@ bun run rn-a11y-tree render examples/basic/App.tsx --platform android
 bun run check             # bun run typecheck, bun run schema --check, bun run test, bun run test:e2e
 ```
 
-The CLI uses `native/dist/<arch>/rn-a11y-host`. Set `RN_A11Y_HOST_BIN` to use
-another host binary, or `RN_A11Y_HOST_BASE_URL` to download a prebuilt host
-(see [Prebuilt host](#prebuilt-host)).
+The CLI uses `native/dist/<arch>/rn-a11y-host` (`rn-a11y-host.exe` on
+Windows). Set `RN_A11Y_HOST_BIN` to use another host binary, or
+`RN_A11Y_HOST_BASE_URL` to download a prebuilt host (see
+[Prebuilt host](#prebuilt-host)). `RN_A11Y_HOST_RUNNER=<program>` starts the
+host as `<program> <host> <args>` (the unit tests run the script fake host
+with `bun`, also on Windows).
 
 ## CLI reference
 
@@ -978,6 +981,12 @@ On Linux the script builds `native/dist/x86_64/rn-a11y-host` (or
 dynamically. Text uses the portable layout (stb_truetype and the embedded
 fonts; `RN_A11Y_TEXT_LAYOUT=portable` is the default there). Requirements and details: [native/README.md](native/README.md#linux).
 
+On Windows (x64, in Git Bash with the MSVC developer environment and LLVM)
+the script builds `native/dist/x86_64/rn-a11y-host.exe`: one executable with
+the static MSVC runtime and static ICU that imports only Windows system DLLs;
+Hermes is built with MSVC, the tester with clang-cl, text uses the portable
+layout. Requirements and details: [native/README.md](native/README.md#windows).
+
 `RN_A11Y_HOST_ARCH=arm64|x86_64|universal` (default: the build machine's
 architecture) selects the host architecture. A foreign architecture (x86_64
 on an arm64 Mac) is cross-built with its own Hermes build into
@@ -1024,7 +1033,7 @@ The CLI looks for the host in this order:
    macOS, `linux64-bin/rn-a11y-host` on Linux x64,
    `win64-bin/rn-a11y-host.exe` on Windows x64), when that file exists.
    `RN_A11Y_HOST_SKIP_PACKAGE=1` skips this step (tests).
-3. With `RN_A11Y_HOST_BASE_URL` set: `~/.cache/rn-a11y-tree/host/<version>/rn-a11y-host`
+3. With `RN_A11Y_HOST_BASE_URL` set: `~/.cache/rn-a11y-tree/host/<version>/rn-a11y-host` (`.exe` on Windows)
    (`RN_A11Y_HOST_CACHE_DIR`, else `$XDG_CACHE_HOME/rn-a11y-tree/host`)
    when its `.sha256` marker matches the manifest. Else it downloads
    `<base>/<file>` (`https://` or `file://`), checks the sha256 against the

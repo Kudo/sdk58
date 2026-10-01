@@ -851,7 +851,7 @@ sources, codegen), because its `configureFantomTester` task hardcodes
 arguments into `private/react-native-fantom/build/tester-<type>` with Ninja.
 Times and sizes: `docs/build-analysis.md`.
 
-`RN_A11Y_TEXT_LAYOUT=macos|portable|stub` (default `macos` on macOS, `portable` on Linux) passes
+`RN_A11Y_TEXT_LAYOUT=macos|portable|stub` (default `macos` on macOS, `portable` on Linux and Windows) passes
 `FANTOM_TEXT_LAYOUT` to the tester (see Portable text layout). A non-default
 layout builds in `build/tester-<type>-<layout>` and goes to
 `native/dist/<arch>-<layout>/rn-a11y-host`; run it with `RN_A11Y_HOST_BIN`.
@@ -985,6 +985,71 @@ Apple in the tester CMake, without changes in `node_modules` or the submodule:
   (`std::unexpected_handler` is deprecated in libstdc++ 14).
 - Our code: `FantomExpo.cpp` includes `<math.h>` before
   `ExpoViewComponentDescriptor.h` (unqualified `isnan`).
+
+### Windows
+
+On Windows (x64) `bun run build:host`, run in Git Bash, writes
+`native/dist/x86_64/rn-a11y-host.exe`. Requirements: an MSVC developer
+environment (`vcvars64.bat`, or `ilammy/msvc-dev-cmd` in CI: `cl.exe`,
+`link.exe`, `INCLUDE`, `LIB`), LLVM on `PATH` (`clang-cl`, `lld-link`,
+`llvm-lib`, `llvm-readobj`), JDK 17 (`JAVA_HOME`), the Android SDK
+(`ANDROID_HOME`, default `%LOCALAPPDATA%\Android\Sdk`; only its CMake 3.30.5
+and Ninja and an NDK are used), and a static ICU (`ICU_ROOT`, from
+`scripts/build-icu.sh <prefix>`, which needs MSYS2 with `make` and `python`:
+`MSYS2_ROOT`, default `C:/msys64`). Clone with `core.autocrlf=false` (the
+shell scripts and patches need LF). CI: `.github/workflows/windows-host.yml`
+(job `build` on `windows-2025`, job `test` runs the smoke render, the unit
+tests and the e2e suite with the binary).
+
+Two compilers:
+
+- Hermes is built with MSVC (`cl.exe`) and Ninja by `build-host.sh` itself,
+  with the arguments of gradle's `configureBuildForHermesWithDebugger`. Hermes'
+  CMake treats clang-cl as GCC (`-fno-exceptions`, which clang-cl ignores, and
+  `-Werror=undef`), and gradle's Windows path (`NMake Makefiles`) passes
+  `JSI_DIR` with backslashes, which Hermes' CMake reads as escapes. Gradle
+  still prepares the codegen, the third-party sources and the Hermes source
+  (`-x buildCodegenCLI`: react-native-codegen's `scripts/oss/build.sh` fails in
+  Git Bash, so `build-host.sh` builds its `lib/` with `node scripts/build.js`).
+- The tester is built with clang-cl. The React Native CMake files pass
+  GCC-style options; `fantom_translate_msvc_options()` at the end of the
+  tester `CMakeLists.txt` rewrites them for every target (`-fexceptions` to
+  `/EHsc`, `-frtti` to `/GR`, `-Wall` to `/W3` (clang-cl reads `-Wall` as
+  `-Weverything`), `-O<n>` to `/O2`, `-include` to `/FI`, `-std=` removed in
+  favor of `CMAKE_CXX_STANDARD 20`, other `-f` options through `/clang:`).
+
+The objects of both compilers link into one executable (same ABI and MSVC
+STL). Everything uses the static MSVC runtime (`/MT`:
+`CMAKE_MSVC_RUNTIME_LIBRARY`, also for Hermes and ICU), and ICU is the same
+static, trimmed ICU 74.2 as on Linux (`sicuuc.lib sicuin.lib sicudt.lib`; ICU's
+MSYS/MSVC build with `cl.exe /MT`), not the ICU of Windows 10, so the host
+imports only Windows system DLLs and does not need the Visual C++
+redistributable. `build-host.sh` lists the imports (`llvm-readobj
+--coff-imports`) and warns about any non-system DLL.
+
+Windows-only pieces of the overlay (all behind `WIN32` / `MSVC` / `_WIN32`):
+
+- glog from its Windows port (`glog-0.3.5/src/windows`: `port.cc`, Windows
+  `config.h` and headers; `HAVE_SNPRINTF`), not the ReactAndroid glog target.
+- `third-party/gflags/CMakeLists.txt`: gflags' `windows_port.cc`,
+  `OS_WINDOWS`, public `GFLAGS_IS_A_DLL=0`.
+- `third-party/folly/CMakeLists.txt`: folly's portability layer
+  (`folly/portability/*.cpp` without `OpenSSL.cpp` and `PThread.cpp`, which
+  needs the compiled `boost::thread`; `net/detail/SocketFileDescriptorMap.cpp`),
+  no `FOLLY_USE_LIBCPP` / `FOLLY_HAVE_PTHREAD`; `src/stubs/windows/FollyPThread.cpp`
+  has the one function of `PThread.cpp` that the host links.
+- `src/stubs/windows/cxxabi.h` for worklets and reanimated
+  (`abi::__cxa_demangle`; MSVC type names are not mangled).
+- The worklets patch has a `_WIN32` branch (no thread name), and
+  `StdIncludes.h` also has `<chrono>` (MSVC STL).
+- Third-party headers (boost, double-conversion, fast_float, fmt, folly,
+  glog) are system headers for their users; `fast_float` no longer passes
+  `-Werror -Wall -Wpedantic` to every target that links it.
+- `TesterAppDelegate.cpp` puts stdin and stdout in binary mode for
+  `--interactive` (text mode would change CRLF and stop at Ctrl-Z; the frames
+  are counted in bytes).
+- `RN_A11Y_TESTER_BUILD_DIR` (e.g. `D:/t`) moves the tester build out of the
+  checkout: object paths under it can exceed `MAX_PATH`.
 
 The manual steps below build the Debug tester the upstream way (gradle,
 `build/tester`), which the Fantom tests in a React Native checkout use:
