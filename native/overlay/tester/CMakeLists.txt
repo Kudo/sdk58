@@ -7,16 +7,33 @@ cmake_minimum_required(VERSION 3.13)
 set(CMAKE_VERBOSE_MAKEFILE on)
 if(UNIX AND NOT APPLE)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-  set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -latomic")
-  set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -latomic")
 endif()
 
 project(fantom_tester)
 
+# FANTOM_TEXT_LAYOUT selects the TextLayoutManager:
+#  - macos: CoreText/AppKit (src/platform/macos), with the embedded Roboto and
+#    the Compose engine's text adapter. Apple only; the default there.
+#  - cxx: the upstream platform/cxx stub (every text gets the minimum size,
+#    0x0). The default elsewhere.
+# Unset, it follows FANTOM_MACOS_TEXT_LAYOUT (the older switch; OFF selects
+# cxx on Apple).
 option(FANTOM_MACOS_TEXT_LAYOUT "Measure text with CoreText/AppKit on macOS" ON)
-if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
+if(NOT FANTOM_TEXT_LAYOUT)
+  if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
+    set(FANTOM_TEXT_LAYOUT macos)
+  else()
+    set(FANTOM_TEXT_LAYOUT cxx)
+  endif()
+endif()
+if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
+  if(NOT APPLE)
+    message(FATAL_ERROR "FANTOM_TEXT_LAYOUT=macos needs Apple (CoreText/AppKit)")
+  endif()
   # Needed by the macOS TextLayoutManager (see below).
   enable_language(OBJCXX)
+elseif(NOT FANTOM_TEXT_LAYOUT STREQUAL "cxx")
+  message(FATAL_ERROR "FANTOM_TEXT_LAYOUT must be macos or cxx (got ${FANTOM_TEXT_LAYOUT})")
 endif()
 
 include_directories(${REACT_ANDROID_DIR}/hermes-engine/build/prefab-headers)
@@ -41,6 +58,10 @@ include(Deps)
 # scripts/build-host.sh passes an x86_64 build for RN_A11Y_HOST_ARCH=x86_64).
 option(FANTOM_STATIC_HOST "Link Hermes, JSI and OpenSSL statically" ON)
 option(FANTOM_OPENSSL_SHIM "SHA256 through CommonCrypto instead of OpenSSL (Apple static host)" ON)
+if(UNIX AND NOT APPLE AND NOT FANTOM_STATIC_HOST)
+  set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -latomic")
+  set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -latomic")
+endif()
 if(FANTOM_HERMES_BUILD_DIR)
   set(HERMES_BUILD_DIR ${FANTOM_HERMES_BUILD_DIR})
 else()
@@ -66,7 +87,30 @@ if(FANTOM_STATIC_HOST)
   endforeach()
   file(GLOB boost_context_lib
     "${HERMES_BUILD_DIR}/external/boost/*/libs/context/libboost_context.a")
-  list(APPEND hermes_static_libs ${boost_context_lib} "-framework CoreFoundation")
+  list(APPEND hermes_static_libs ${boost_context_lib})
+  if(APPLE)
+    list(APPEND hermes_static_libs "-framework CoreFoundation")
+  else()
+    # Hermes' Unicode functions (PlatformUnicodeICU.cpp: collation,
+    # normalization, case mapping, date formatting) use ICU off Apple.
+    # FANTOM_STATIC_ICU (default ON): the static archives, with ICU's data
+    # (libicudata.a), so the host does not depend on the distribution's ICU
+    # version (its symbols carry the version, e.g. ucol_open_74).
+    option(FANTOM_STATIC_ICU "Link ICU statically (static host, not Apple)" ON)
+    if(FANTOM_STATIC_ICU)
+      set(icu_static_libs)
+      foreach(icu_lib icui18n icuuc icudata)
+        find_library(FANTOM_ICU_${icu_lib}_STATIC NAMES lib${icu_lib}.a)
+        if(NOT FANTOM_ICU_${icu_lib}_STATIC)
+          message(FATAL_ERROR "lib${icu_lib}.a not found (install the ICU development package, e.g. libicu-dev, or configure with -DFANTOM_STATIC_ICU=OFF)")
+        endif()
+        list(APPEND icu_static_libs ${FANTOM_ICU_${icu_lib}_STATIC})
+      endforeach()
+      list(APPEND hermes_static_libs ${icu_static_libs} ${CMAKE_DL_LIBS} pthread)
+    else()
+      list(APPEND hermes_static_libs icui18n icuuc icudata)
+    endif()
+  endif()
   set_target_properties(hermes-engine::hermesvm PROPERTIES
     INTERFACE_LINK_LIBRARIES "${hermes_static_libs}")
   set(OPENSSL_USE_STATIC_LIBS TRUE)
@@ -192,7 +236,7 @@ add_react_common_subdir(react/renderer/runtimescheduler)
 add_react_common_subdir(react/renderer/scheduler)
 add_react_common_subdir(react/renderer/telemetry)
 add_react_common_subdir(react/renderer/textlayoutmanager)
-if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
+if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
   # On macOS, replace the stub cxx TextLayoutManager (which returns the minimum
   # size for every text) with a CoreText/AppKit implementation.
   get_target_property(TLM_SOURCES react_renderer_textlayoutmanager SOURCES)
@@ -254,7 +298,7 @@ set(FANTOM_NATIVE_LIBRARIES)
 # (native/fonts/roboto): gzip byte arrays generated at build time by
 # cmake/embed-files.cmake, inflated and registered at startup by
 # src/platform/macos/EmbeddedFonts.mm.
-if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
+if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
   if(NOT FANTOM_FONTS_DIR)
     get_filename_component(FANTOM_FONTS_DIR "${FANTOM_NODE_MODULES_DIR}/../native/fonts" ABSOLUTE)
   endif()
@@ -426,7 +470,7 @@ else()
     jsireact
     react_cxxreact
     react_nativemodule_core
-    "-lobjc") # objc_autoreleasePoolPush/Pop in RunLoop/AsyncQueueImpl.cpp
+    $<$<PLATFORM_ID:Darwin>:-lobjc>) # objc_autoreleasePoolPush/Pop in RunLoop/AsyncQueueImpl.cpp
 
   # reanimated. Common/NativeView before the codegen output: its
   # rnreanimated/ComponentDescriptors.h replaces the generated (empty) one.
@@ -466,6 +510,103 @@ fantom_add_native_library(expomodulescore expo-modules-core NONE
   INCLUDE_DIRS "common/cpp" "common/cpp/fabric")
 if(TARGET expomodulescore AND EXISTS "${FANTOM_NODE_MODULES_DIR}/@expo/ui/package.json")
   set(FANTOM_WITH_EXPO_UI ON)
+endif()
+
+# ---- Not Apple: third-party code that only builds with libc++ / on Apple ----
+# The Mac host does not use any of this. Upstream fixes would make each entry
+# unnecessary.
+if(NOT APPLE)
+  # fantom_force_std_includes(<targets>...): force-include
+  # src/platform/compat/StdIncludes.h (standard headers that libc++ includes
+  # transitively and libstdc++ does not) into the C++ of <targets>.
+  function(fantom_force_std_includes)
+    set(header "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/compat/StdIncludes.h")
+    foreach(target ${ARGN})
+      if(TARGET ${target})
+        # One argument (clang's joined -include<file>, MSVC's /FI<file>):
+        # CMake de-duplicates repeated option words.
+        if(MSVC)
+          target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/FI${header}>")
+        else()
+          target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-include${header}>")
+        endif()
+      endif()
+    endforeach()
+  endfunction()
+  fantom_force_std_includes(jsinspector_network react_debug worklets reanimated)
+
+  # fantom_patched_copy(<package dir> <patch> <out dir> <files>...): copies
+  # <files> (relative to <package dir>) to <out dir> and applies <patch>
+  # (patches/*.patch, paths relative to the package, -p1) to the copy, at
+  # configure time. node_modules stays as it is. Re-done when the patch or a
+  # file changes.
+  function(fantom_patched_copy package_dir patch out_dir)
+    file(SHA256 "${patch}" inputs_hash)
+    set(inputs "${patch}")
+    foreach(file ${ARGN})
+      file(SHA256 "${package_dir}/${file}" file_hash)
+      string(APPEND inputs_hash " ${file_hash}")
+      list(APPEND inputs "${package_dir}/${file}")
+    endforeach()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${inputs})
+    set(stamp "${out_dir}/.fantom-patch-stamp")
+    if(EXISTS "${stamp}")
+      file(READ "${stamp}" stamp_hash)
+      if(stamp_hash STREQUAL inputs_hash)
+        return()
+      endif()
+    endif()
+    find_program(FANTOM_PATCH_PROGRAM patch REQUIRED)
+    file(REMOVE_RECURSE "${out_dir}")
+    foreach(file ${ARGN})
+      get_filename_component(file_dir "${out_dir}/${file}" DIRECTORY)
+      file(COPY "${package_dir}/${file}" DESTINATION "${file_dir}")
+    endforeach()
+    execute_process(
+      COMMAND ${FANTOM_PATCH_PROGRAM} -p1 --forward --batch -i "${patch}"
+      WORKING_DIRECTORY "${out_dir}"
+      RESULT_VARIABLE patch_result
+      OUTPUT_VARIABLE patch_output
+      ERROR_VARIABLE patch_output)
+    if(NOT patch_result EQUAL 0)
+      message(FATAL_ERROR "${patch} does not apply to ${package_dir}:\n${patch_output}")
+    endif()
+    file(WRITE "${stamp}" "${inputs_hash}")
+  endfunction()
+
+  if(TARGET reanimated)
+    # PlatformDepMethodsHolder.h declares SynchronouslyUpdateUIPropsFunction
+    # only for ANDROID and __APPLE__: the patched copy uses the Apple type for
+    # every non-Android platform. Its directory comes first in the include
+    # path (the header is included as <reanimated/Tools/...>).
+    set(patched_dir "${CMAKE_BINARY_DIR}/patched/react-native-reanimated")
+    fantom_patched_copy("${FANTOM_REANIMATED_DIR}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/patches/react-native-reanimated.patch" "${patched_dir}"
+      Common/cpp/reanimated/Tools/PlatformDepMethodsHolder.h)
+    target_include_directories(reanimated BEFORE PUBLIC "${patched_dir}/Common/cpp")
+  endif()
+  if(TARGET worklets)
+    # AsyncQueueImpl.cpp calls the macOS pthread_setname_np(name) on every
+    # non-Android platform: the patched copy (compiled instead of the
+    # original) uses the glibc form for non-Apple.
+    set(patched_dir "${CMAKE_BINARY_DIR}/patched/react-native-worklets")
+    set(patched_source Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp)
+    fantom_patched_copy("${FANTOM_WORKLETS_DIR}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/patches/react-native-worklets.patch" "${patched_dir}"
+      ${patched_source})
+    get_target_property(worklets_sources worklets SOURCES)
+    list(FIND worklets_sources "${FANTOM_WORKLETS_DIR}/${patched_source}" original_index)
+    if(original_index EQUAL -1)
+      message(FATAL_ERROR "worklets: ${patched_source} is not a source of the target")
+    endif()
+    list(REMOVE_AT worklets_sources ${original_index})
+    list(APPEND worklets_sources "${patched_dir}/${patched_source}")
+    set_property(TARGET worklets PROPERTY SOURCES ${worklets_sources})
+  endif()
+
+  # folly/lang/Exception.cpp uses std::unexpected_handler, deprecated in
+  # libstdc++ 14 (folly builds with -Werror).
+  target_compile_options(folly_runtime PRIVATE -Wno-error=deprecated-declarations)
 endif()
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
@@ -515,7 +656,7 @@ endif()
 
 target_include_directories(fantom_tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-if(APPLE AND FANTOM_MACOS_TEXT_LAYOUT)
+if(FANTOM_TEXT_LAYOUT STREQUAL "macos")
   target_compile_definitions(fantom_tester PRIVATE FANTOM_WITH_MACOS_TEXT_LAYOUT=1)
 endif()
 if(FANTOM_WITH_EXPO_UI)
@@ -656,3 +797,19 @@ target_compile_options(fantom_tester
     -fexceptions
     -frtti
     -std=c++20)
+
+# Static host off Apple: one executable for common Linux distributions. Only
+# glibc (libc, libm) stays dynamic: libstdc++, libgcc and libatomic are linked
+# statically (libatomic.a at the end of the link line, after every library
+# that may need it), ICU too (FANTOM_STATIC_ICU above).
+if(UNIX AND NOT APPLE AND FANTOM_STATIC_HOST)
+  target_link_options(fantom_tester PRIVATE -static-libstdc++ -static-libgcc)
+  execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libatomic.a
+    OUTPUT_VARIABLE fantom_libatomic
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT IS_ABSOLUTE "${fantom_libatomic}" OR NOT EXISTS "${fantom_libatomic}")
+    message(FATAL_ERROR "libatomic.a not found (${CMAKE_CXX_COMPILER} -print-file-name=libatomic.a: ${fantom_libatomic})")
+  endif()
+  set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} ${fantom_libatomic}")
+endif()

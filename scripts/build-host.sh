@@ -23,8 +23,19 @@
 # MinSizeRel use ThinLTO and -dead_strip, and strip local symbols (strip -x)
 # in native/dist. See docs/build-analysis.md.
 #
+# Linux (x86_64; arm64 builds too): native/dist/x86_64/rn-a11y-host, one
+# executable that links only glibc dynamically (libstdc++, libgcc, libatomic,
+# ICU, OpenSSL's libcrypto, Hermes and JSI are static; the tester CMake does
+# this for FANTOM_STATIC_HOST off Apple). Text uses the upstream platform/cxx
+# stub (FANTOM_TEXT_LAYOUT=cxx; RN_A11Y_HOST_TEXT_LAYOUT selects another
+# one): every text measures 0x0. Release strips the binary and keeps its
+# symbols in rn-a11y-host.debug (objcopy --only-keep-debug; no -g, so symbols
+# but no line tables). Needs clang (CC/CXX default to clang/clang++), ld.lld
+# (used when on PATH), static ICU and OpenSSL (Ubuntu: libicu-dev,
+# libssl-dev), rsync. RN_A11Y_HOST_ARCH must be the machine's architecture.
+#
 # Requirements: JDK 17, Android SDK (for its CMake and Ninja), Xcode command
-# line tools, Node with corepack. Homebrew OpenSSL is not needed (the tester's
+# line tools (macOS), Node with corepack. Homebrew OpenSSL is not needed (the tester's
 # FANTOM_OPENSSL_SHIM, default ON). The x86_64 slice on an arm64 Mac adds its
 # own Hermes build (~1.5 min) and tester build (~3.5 min); it cannot run here
 # without Rosetta. First build takes ~5 min on an M4 (Hermes
@@ -40,7 +51,10 @@ FANTOM_DIR="$RN_DIR/private/react-native-fantom"
 # the git index exported with `git checkout-index`, to leave out uncommitted
 # work in the tree).
 OVERLAY_DIR="${RN_A11Y_OVERLAY_DIR:-$ROOT/native/overlay}"
+OS="$(uname -s)"
 MACHINE_ARCH="$(uname -m)"
+# Linux arm64: the same name as on macOS (and as os.arch() in src/host.ts).
+[[ "$MACHINE_ARCH" == "aarch64" ]] && MACHINE_ARCH=arm64
 ARCH="${RN_A11Y_HOST_ARCH:-$MACHINE_ARCH}"
 DIST_DIR="$ROOT/native/dist/$ARCH"
 CMAKE_VERSION="${CMAKE_VERSION:-3.30.5}"
@@ -48,7 +62,19 @@ CMAKE_VERSION="${CMAKE_VERSION:-3.30.5}"
 log() { printf '\033[1m[build-host]\033[0m %s\n' "$*"; }
 die() { printf '[build-host] error: %s\n' "$*" >&2; exit 1; }
 
-[[ "$(uname -s)" == "Darwin" ]] || die "only macOS is supported for now"
+case "$OS" in
+  Darwin|Linux) ;;
+  *) die "only macOS and Linux are supported for now (got $OS)" ;;
+esac
+if [[ "$OS" == "Linux" && "$ARCH" != "$MACHINE_ARCH" ]]; then
+  die "on Linux RN_A11Y_HOST_ARCH must be the machine's architecture ($MACHINE_ARCH, got $ARCH)"
+fi
+
+# Hash of stdin, for stamps (SHA-1 with shasum on macOS, SHA-256 on Linux,
+# where shasum is not always installed).
+hash_stdin() {
+  if [[ "$OS" == "Darwin" ]]; then shasum | cut -d' ' -f1; else sha256sum | cut -d' ' -f1; fi
+}
 
 case "$ARCH" in
   arm64|x86_64) ;;
@@ -79,11 +105,27 @@ CROSS_ARCH=0
 
 # --- (a) toolchain ---------------------------------------------------------
 
-export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17}"
-[[ -x "$JAVA_HOME/bin/java" ]] || die "JAVA_HOME ($JAVA_HOME) has no bin/java; install JDK 17 (brew install openjdk@17)"
+if [[ "$OS" == "Darwin" ]]; then
+  export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17}"
+  JDK_HINT="brew install openjdk@17"
+  export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+else
+  # The JDK of the java on PATH (e.g. /usr/lib/jvm/java-17-openjdk-amd64).
+  if [[ -z "${JAVA_HOME:-}" ]] && command -v java >/dev/null; then
+    JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
+  fi
+  export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-17-openjdk-amd64}"
+  JDK_HINT="e.g. apt install openjdk-17-jdk-headless"
+  # Android Studio's default SDK location on Linux.
+  export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
+  # Hermes (gradle) and the tester are built with clang: the upstream code
+  # and its -Werror flags are not checked with GCC.
+  export CC="${CC:-clang}" CXX="${CXX:-clang++}"
+  command -v "$CXX" >/dev/null || die "$CXX not found; install clang (or set CC/CXX)"
+fi
+[[ -x "$JAVA_HOME/bin/java" ]] || die "JAVA_HOME ($JAVA_HOME) has no bin/java; install JDK 17 ($JDK_HINT)"
 export PATH="$JAVA_HOME/bin:$PATH"
 
-export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 [[ -d "$ANDROID_HOME" ]] || die "ANDROID_HOME ($ANDROID_HOME) does not exist; install the Android SDK"
 
 if [[ ! -x "$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake" ]]; then
@@ -91,6 +133,18 @@ if [[ ! -x "$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake" ]]; then
   [[ -n "$SDKMANAGER" ]] || die "sdkmanager not found under $ANDROID_HOME/cmdline-tools"
   log "installing cmake;$CMAKE_VERSION with $SDKMANAGER"
   yes | "$SDKMANAGER" --install "cmake;$CMAKE_VERSION" >/dev/null
+fi
+# The SDK CMake for Linux is x86_64 only. Gradle reads CMake from this path
+# only (cmakeBinaryPath in private/react-native-fantom/build.gradle.kts), so
+# on Linux arm64 the system cmake and ninja take its place.
+if [[ "$OS" == "Linux" ]] && ! "$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake" --version >/dev/null 2>&1; then
+  command -v cmake >/dev/null && command -v ninja >/dev/null ||
+    die "the SDK CMake $CMAKE_VERSION does not run on this machine and there is no system cmake + ninja to use instead"
+  log "the SDK CMake $CMAKE_VERSION does not run here: using $(command -v cmake) and $(command -v ninja) in its place"
+  rm -rf "$ANDROID_HOME/cmake/$CMAKE_VERSION"
+  mkdir -p "$ANDROID_HOME/cmake/$CMAKE_VERSION/bin"
+  ln -s "$(command -v cmake)" "$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake"
+  ln -s "$(command -v ninja)" "$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/ninja"
 fi
 
 [[ -f "$RN_DIR/package.json" ]] || die "submodule missing; run: git submodule update --init --depth 1"
@@ -130,8 +184,13 @@ log "Ninja:  $(ninja --version 2>/dev/null || echo 'not on PATH (the SDK CMake b
 log "NDK:    ${NDK_VERSION:-none} ${NDK_DIR:+($NDK_DIR)}; React Native pins ${PINNED_NDK:-?}"
 log "Gradle: $(sed -n 's/^distributionUrl=.*gradle-\([0-9.]*\)-.*/\1/p' "$RN_DIR/gradle/wrapper/gradle-wrapper.properties")"
 log "Node:   $(node --version)"
-log "Xcode:  $(xcodebuild -version 2>/dev/null | tr '\n' ' ')($(xcode-select -p 2>/dev/null))"
-log "Clang:  $(clang --version | head -n 1)"
+if [[ "$OS" == "Darwin" ]]; then
+  log "Xcode:  $(xcodebuild -version 2>/dev/null | tr '\n' ' ')($(xcode-select -p 2>/dev/null))"
+  log "Clang:  $(clang --version | head -n 1)"
+else
+  log "OS:     $(. /etc/os-release 2>/dev/null && echo "${PRETTY_NAME:-}") ($(uname -r)), glibc $(ldd --version 2>/dev/null | head -n 1 | awk '{print $NF}')"
+  log "Clang:  $("$CXX" --version | head -n 1) ($CXX)"
+fi
 
 # RN's codegen shells out to `yarn`. It must be Yarn 1: put a shim first on PATH.
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -147,7 +206,7 @@ export PATH="$SHIM_DIR:$PATH"
 # --- (b) JS deps in the submodule -------------------------------------------
 
 STAMP="$RN_DIR/node_modules/.rn-a11y-tree-install-stamp"
-LOCK_HASH="$(shasum "$RN_DIR/yarn.lock" | cut -d' ' -f1)"
+LOCK_HASH="$(hash_stdin <"$RN_DIR/yarn.lock")"
 if [[ ! -f "$STAMP" || "$(cat "$STAMP")" != "$LOCK_HASH" ]]; then
   log "yarn install (Yarn 1) in third_party/react-native"
   (cd "$RN_DIR" && yarn install --frozen-lockfile --non-interactive)
@@ -212,7 +271,11 @@ CMAKE_ARGS=(
   -DRN_ENABLE_DEBUG_STRING_CONVERTIBLE=ON
   -DHERMES_V1_ENABLED=1
 )
-CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES="$ARCH")
+if [[ "$OS" == "Darwin" ]]; then
+  CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES="$ARCH")
+else
+  CMAKE_ARGS+=(-DFANTOM_TEXT_LAYOUT="${RN_A11Y_HOST_TEXT_LAYOUT:-cxx}")
+fi
 
 # A foreign architecture needs Hermes built for it (gradle builds it for the
 # build machine only). Its build runs hermesc to compile Hermes' internal
@@ -257,6 +320,20 @@ if [[ "$SANITIZE" == "1" ]]; then
     "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined,vptr"
     -DFANTOM_SANITIZE=ON
   )
+elif [[ "$BUILD_TYPE" != "Debug" && "$OS" == "Linux" ]]; then
+  # Unused sections removed at link time (as -dead_strip on macOS). No ThinLTO
+  # and no -g: the link would need more time and memory than a 2-core, 7 GB CI
+  # runner has to spare. lld when it is installed (faster than GNU ld).
+  LINKER_FLAGS="-Wl,--gc-sections"
+  if command -v ld.lld >/dev/null; then
+    LINKER_FLAGS="-fuse-ld=lld $LINKER_FLAGS"
+  fi
+  CMAKE_ARGS+=(
+    "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections"
+    "-DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections"
+    "-DCMAKE_EXE_LINKER_FLAGS=$LINKER_FLAGS"
+    "-DCMAKE_SHARED_LINKER_FLAGS=$LINKER_FLAGS"
+  )
 elif [[ "$BUILD_TYPE" != "Debug" ]]; then
   # ThinLTO and dead code stripping (docs/build-analysis.md). Debug info (-g)
   # for native/dist/<arch>/rn-a11y-host.dSYM: ThinLTO keeps its objects in
@@ -276,7 +353,7 @@ fi
 # CMakeLists.txt or a CONFIGURE_DEPENDS glob changes.
 # Re-configure when the arguments change (the cache keeps the old values).
 ARGS_STAMP="$TESTER_BUILD_DIR/.rn-a11y-cmake-args"
-ARGS_HASH="$(printf '%s\n' "${CMAKE_ARGS[@]}" | shasum | cut -d' ' -f1)"
+ARGS_HASH="$(printf '%s\n' "${CMAKE_ARGS[@]}" | hash_stdin)"
 if [[ ! -f "$TESTER_BUILD_DIR/build.ninja" || "$(cat "$ARGS_STAMP" 2>/dev/null)" != "$ARGS_HASH" ]]; then
   mkdir -p "$TESTER_BUILD_DIR/lto-objects"
   log "cmake configure ($BUILD_TYPE, Ninja) -> ${TESTER_BUILD_DIR#"$ROOT"/}"
@@ -307,6 +384,34 @@ if [[ "$SANITIZE" == "1" ]]; then
 fi
 
 # --- (e) relocatable dist ---------------------------------------------------
+
+if [[ "$OS" == "Linux" ]]; then
+  log "copying to ${DIST_DIR#"$ROOT"/}"
+  rm -rf "$DIST_DIR"
+  mkdir -p "$DIST_DIR"
+  cp "$BIN" "$DIST_DIR/rn-a11y-host"
+  HOST="$DIST_DIR/rn-a11y-host"
+  # Release/MinSizeRel: the symbol table into rn-a11y-host.debug (gdb and
+  # addr2line find it through the debug link), then strip the binary.
+  if [[ "$BUILD_TYPE" != "Debug" ]]; then
+    objcopy --only-keep-debug "$HOST" "$HOST.debug"
+    strip --strip-all "$HOST"
+    objcopy --add-gnu-debuglink="$HOST.debug" "$HOST"
+  fi
+  # Only glibc may stay dynamic: anything else would make the host depend on
+  # the distribution.
+  NEEDED="$(readelf -d "$HOST" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p')"
+  NON_SYSTEM_DEPS="$(printf '%s\n' "$NEEDED" |
+    grep -v -E '^(libc|libm|libdl|libpthread|librt|ld-linux-x86-64|ld-linux-aarch64)\.so\.[0-9]+$' || true)"
+  if [[ -n "$NON_SYSTEM_DEPS" ]]; then
+    log "warning: rn-a11y-host links non-glibc libraries:"
+    printf '  %s\n' $NON_SYSTEM_DEPS
+  fi
+  GLIBC_MAX="$(objdump -T "$HOST" | grep -o 'GLIBC_[0-9.]*' | sort -u -V | tail -n 1)"
+  log "done: $HOST ($(stat -c%s "$HOST") bytes; needs ${GLIBC_MAX:-no versioned glibc symbols})"
+  log "NEEDED: $(printf '%s ' $NEEDED)"
+  exit 0
+fi
 
 log "copying to ${DIST_DIR#"$ROOT"/}"
 rm -rf "$DIST_DIR"

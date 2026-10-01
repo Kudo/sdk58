@@ -1,0 +1,181 @@
+name: Linux host
+
+# The Linux x86_64 host (native/dist/x86_64/rn-a11y-host): build, facts
+# (size, NEEDED libraries, minimum glibc), a smoke render, unit and e2e
+# tests. Text uses the platform/cxx stub (0x0), so the e2e suite has known
+# failures (text sizes); that step does not fail the job yet.
+on:
+  push:
+    branches: [main, ci/linux-host]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: linux-host-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-host:
+    # ubuntu-24.04 x86_64 (2 cores, 7 GB): ANDROID_HOME=/usr/local/lib/android/sdk
+    # with SDK CMake 3.31.5 / 4.1.2 and NDK 27.3 / 28.2 (build-host.sh
+    # installs cmake;3.30.5 and selects the NDK).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      CC: clang
+      CXX: clang++
+      HOST_DIR: native/dist/x86_64
+      # ccache for Hermes (gradle's CMake) and the tester: CMake reads the
+      # launcher from these environment variables.
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 3G
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+
+      # clang/lld: the host compiler and linker; libicu-dev and libssl-dev:
+      # the static ICU and libcrypto archives.
+      - name: apt packages
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build clang lld libssl-dev libicu-dev rsync ccache
+          clang --version | head -n 1
+          ls -la /usr/lib/x86_64-linux-gnu/libicu{uc,i18n,data}.a /usr/lib/x86_64-linux-gnu/libcrypto.a
+
+      - name: Android SDK CMake 3.30.5
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' | head -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "cmake;3.30.5" > /dev/null
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Host cache key
+        id: host-key
+        run: |
+          echo "submodule=$(git -C third_party/react-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "compiler=$(clang --version | head -n 1 | tr -c 'A-Za-z0-9.\n' '-')" >> "$GITHUB_OUTPUT"
+          libs=$(node -e '
+            const libs = ["react-native-screens", "react-native-safe-area-context",
+              "react-native-gesture-handler", "react-native-reanimated", "react-native-worklets",
+              "expo-modules-core", "@expo/ui"];
+            console.log(libs.map(l => {
+              try { return l + "@" + require(l + "/package.json").version; }
+              catch { return l + "@none"; }
+            }).join(","));')
+          echo "native libs: $libs"
+          echo "libs=$(echo "$libs" | sha256sum | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore host binary
+        id: host-cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.HOST_DIR }}
+          key: host-${{ runner.os }}-${{ runner.arch }}-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-${{ steps.host-key.outputs.libs }}-${{ hashFiles('native/overlay/**', 'native/scripts/**', 'scripts/build-host.sh') }}
+
+      # Compiler cache (Hermes + tester) and Gradle's downloads, only for a
+      # build. A new entry per run (the key has the run id); the newest one is
+      # restored.
+      - name: Restore ccache and Gradle caches
+        if: steps.host-cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v6
+        with:
+          path: |
+            .ccache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: linux-build-${{ runner.arch }}-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-${{ github.run_id }}
+          restore-keys: |
+            linux-build-${{ runner.arch }}-${{ steps.host-key.outputs.compiler }}-${{ steps.host-key.outputs.submodule }}-
+            linux-build-${{ runner.arch }}-${{ steps.host-key.outputs.compiler }}-
+
+      - name: Build host
+        if: steps.host-cache.outputs.cache-hit != 'true'
+        run: |
+          ccache --zero-stats
+          bun run build:host
+          ccache --show-stats
+
+      - name: Host facts
+        run: |
+          H="$HOST_DIR/rn-a11y-host"
+          {
+            echo '### Linux host'
+            echo '```'
+            file "$H"
+            echo "size: $(stat -c%s "$H") bytes"
+            echo "ldd:"; ldd "$H"
+            echo "NEEDED:"; readelf -d "$H" | grep NEEDED
+            echo "max GLIBC version: $(objdump -T "$H" | grep -o 'GLIBC_[0-9.]*' | sort -u -V | tail -n 1)"
+            echo "GLIBC versions: $(objdump -T "$H" | grep -o 'GLIBC_[0-9.]*' | sort -u -V | tr '\n' ' ')"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rn-a11y-host-linux-x64
+          path: ${{ env.HOST_DIR }}
+          if-no-files-found: error
+
+      - name: Smoke render (examples/basic)
+        run: |
+          export RN_A11Y_HOST_BIN="$PWD/$HOST_DIR/rn-a11y-host"
+          {
+            echo '### Smoke render: examples/basic, android-phone'
+            echo '```'
+            node src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: E2E tests (e2e/*.test.ts)
+        # Known failures with the stub text layout (text sizes); see the
+        # uploaded report.
+        continue-on-error: true
+        env:
+          RN_A11Y_HOST_STDERR_LOG: ${{ runner.temp }}/host-stderr.log
+        run: |
+          export RN_A11Y_HOST_BIN="$PWD/$HOST_DIR/rn-a11y-host"
+          : > "$RN_A11Y_HOST_STDERR_LOG"
+          bun run test:e2e --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/e2e-report.json"
+
+      - name: Upload the e2e report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-report-linux-x64
+          path: |
+            ${{ runner.temp }}/e2e-report.json
+            ${{ runner.temp }}/host-stderr.log
+          if-no-files-found: warn
