@@ -26,8 +26,9 @@ if(WIN32)
     -DHAVE_STRTOLL
     -DHAVE_SHLWAPI_H
     -DOS_WINDOWS
-    -DGFLAGS_INTTYPES_FORMAT_C99
-    -DGFLAGS_IS_A_DLL=0)
+    -DGFLAGS_INTTYPES_FORMAT_C99)
+  # Public: gflags_declare.h declares the API __declspec(dllimport) otherwise.
+  target_compile_definitions(gflags PUBLIC GFLAGS_IS_A_DLL=0)
   target_link_libraries(gflags shlwapi)
   return()
 endif()

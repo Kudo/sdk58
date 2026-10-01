@@ -747,6 +747,10 @@ if(MSVC)
   list(REMOVE_ITEM options -Werror -Wall -Wpedantic)
   set_property(TARGET fast_float PROPERTY INTERFACE_COMPILE_OPTIONS "${options}")
 
+  # LOG_EVERY_N of the Windows glog header: its compile-time assert typedef
+  # is unused (UIManagerBinding.cpp).
+  target_compile_options(react_renderer_uimanager PRIVATE -Wno-unused-local-typedef)
+
   # <cxxabi.h> for worklets and reanimated (src/stubs/windows).
   foreach(target worklets reanimated)
     if(TARGET ${target})
