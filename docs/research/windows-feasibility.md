@@ -33,8 +33,8 @@ the two compilers link together (same ABI, same MSVC STL, `/MD`).
 
 Round 11 (run 36820159022) with the same host:
 
-- `fantom_tester.exe`: 11,883,008 bytes (Release, no LTO, not stripped of
-  anything; no `.pdb` copied). Imports (`llvm-readobj --coff-imports`):
+- `fantom_tester.exe`: 11,883,008 bytes (Release, no LTO, no debug
+  information). Imports (`llvm-readobj --coff-imports`):
   `KERNEL32`, `MSVCP140`, `MSVCP140_2`, `VCRUNTIME140`, `VCRUNTIME140_1`,
   the UCRT `api-ms-win-crt-*` DLLs, `SHLWAPI`, `WINMM`, `WS2_32`, `bcrypt`,
   `icuin`, `icuuc`. Hermes, JSI, folly and glog are static.
