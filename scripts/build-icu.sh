@@ -81,8 +81,8 @@ cd "$WORK/build"
 
 if [[ "$WINDOWS" == "1" ]]; then
   log "building ICU $ICU_VERSION (cl.exe /MT, MSYS2 $MSYS2_ROOT) -> $PREFIX"
-  # MSYS2's bash with the PATH of this environment (cl.exe, link.exe) after
-  # MSYS2's tools. runConfigureICU puts -MD first; the later -MT wins.
+  # MSYS2's bash with the environment of this shell (cl.exe, link.exe,
+  # INCLUDE, LIB). runConfigureICU puts -MD first; the later -MT wins.
   # Paths in the mixed form (C:/...): Git Bash's /tmp is not MSYS2's.
   WIN_PREFIX="$(cygpath -m "$PREFIX")"
   WIN_WORK="$(cygpath -m "$WORK")"
@@ -90,9 +90,12 @@ if [[ "$WINDOWS" == "1" ]]; then
   # The MSVC tools first: MSYS2's coreutils have a link.exe too.
   WIN_MSVC_BIN="$(cygpath -m "$(dirname "$(command -v cl)")")"
   rm -rf "$PREFIX"
-  MSYSTEM=MSYS MSYS2_PATH_TYPE=inherit CHERE_INVOKING=1 \
-    "$MSYS2_ROOT/usr/bin/bash.exe" -lc "set -e
-      export PATH=\"\$(cygpath -u '$WIN_MSVC_BIN'):\$PATH\"
+  # Not a login shell: MSYS2's /etc/profile loses LIB (link.exe: "cannot
+  # open file 'LIBCMT.lib'"); MSYS2's tools by PATH instead.
+  MSYSTEM=MSYS \
+    "$MSYS2_ROOT/usr/bin/bash.exe" -c "set -e
+      export PATH=\"\$(/usr/bin/cygpath -u '$WIN_MSVC_BIN'):/usr/bin:\$PATH\"
+      echo \"LIB=\$LIB\" | cut -c1-200
       cd \"\$(cygpath -u '$WIN_WORK')/build\"
       export ICU_DATA_FILTER_FILE='$WIN_FILTER' CFLAGS='-MT -O2' CXXFLAGS='-MT -O2 -std:c++17'
       \"\$(cygpath -u '$WIN_WORK')/icu/source/runConfigureICU\" MSYS/MSVC --prefix=\"\$(cygpath -u '$WIN_PREFIX')\" \\
