@@ -29,7 +29,7 @@ describe('cli', () => {
       const proc = spawnSync('node', [CLI, 'render', APP, ...extra], {
         cwd: ROOT,
         encoding: 'utf8',
-        env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST},
+        env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun'},
       });
       expect(proc.status).toBe(1);
       expect(proc.stdout).toBe('');
@@ -51,7 +51,7 @@ describe('cli', () => {
   });
 
   it('bundles with Metro and parses host stdout (fake host)', {timeout: 120_000}, () => {
-    const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST});
+    const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun'});
     expect(proc.status, proc.stderr).toBe(0);
     const result = JSON.parse(proc.stdout) as RenderResult;
     expect(result.root.box.width).toBe(390);
@@ -61,7 +61,7 @@ describe('cli', () => {
 
   it('parses a shadowTree payload (fake host)', {timeout: 120_000}, () => {
     const proc = run(['render', APP, '--platform', 'android', '--debug-props'], {
-      RN_A11Y_HOST_BIN: FAKE_HOST,
+      RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun',
       FAKE_HOST_MODE: 'shadow-tree',
     });
     expect(proc.status, proc.stderr).toBe(0);
@@ -84,7 +84,7 @@ describe('cli', () => {
 
   it('reports JS errors from the host', {timeout: 120_000}, () => {
     const proc = run(['render', APP, '--platform', 'android'], {
-      RN_A11Y_HOST_BIN: FAKE_HOST,
+      RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun',
       FAKE_HOST_MODE: 'js-error',
     });
     expect(proc.status).toBe(4);
@@ -110,7 +110,7 @@ describe('cli', () => {
     for (const [script, pattern] of cases) {
       const file = writeScript(script);
       const proc = run(['run', APP, '--platform', 'android', '--script', file], {
-        RN_A11Y_HOST_BIN: FAKE_HOST,
+        RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun',
       });
       fs.rmSync(path.dirname(file), {recursive: true, force: true});
       expect(proc.status).toBe(1);
@@ -118,12 +118,12 @@ describe('cli', () => {
       expect(proc.stderr).not.toMatch(/Bundle:/);
       expect(proc.stdout).toBe('');
     }
-    const missing = run(['run', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST});
+    const missing = run(['run', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun'});
     expect(missing.status).toBe(1);
     expect(missing.stderr).toMatch(/--script <json> is required/);
     const badMode = run(
       ['run', APP, '--platform', 'android', '--script', 'x.json', '--tap-mode', 'swipe'],
-      {RN_A11Y_HOST_BIN: FAKE_HOST},
+      {RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun'},
     );
     expect(badMode.status).toBe(1);
     expect(badMode.stderr).toMatch(/--tap-mode must be one of: touch, click, both/);
@@ -132,7 +132,7 @@ describe('cli', () => {
   it('run: reports steps, snapshots and the final tree (fake host)', {timeout: 120_000}, () => {
     const file = writeScript([{tap: {testID: 'submit'}}, {tap: {testID: 'missing'}}, {snapshot: 'after'}]);
     const proc = run(['run', APP, '--platform', 'android', '--script', file, '--no-quiet'], {
-      RN_A11Y_HOST_BIN: FAKE_HOST,
+      RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun',
       FAKE_HOST_MODE: 'run',
     });
     fs.rmSync(path.dirname(file), {recursive: true, force: true});

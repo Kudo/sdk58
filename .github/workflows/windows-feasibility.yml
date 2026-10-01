@@ -3,11 +3,10 @@ name: Windows feasibility
 # Feasibility check: can the headless host (Fantom tester + native/overlay)
 # be built on Windows x64 with clang-cl? Every step continues on error; logs
 # are uploaded. See docs/research/windows-feasibility.md.
+# The spike is over (the Windows host is built by windows-host.yml); kept for
+# the record, it runs only when started by hand.
 on:
-  # workflow_dispatch needs the file on the default branch; push runs it from
-  # this branch only.
-  push:
-    branches: [ci/windows-host]
+  workflow_dispatch:
 
 env:
   # Bump to drop the cached gradle/Hermes outputs.

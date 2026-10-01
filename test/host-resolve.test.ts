@@ -142,7 +142,7 @@ describe('host-resolve', () => {
       {
         cwd: ROOT,
         encoding: 'utf8',
-        env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.ts'), RN_A11Y_HOST_STDERR_LOG: log},
+        env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.ts'), RN_A11Y_HOST_RUNNER: 'bun', RN_A11Y_HOST_STDERR_LOG: log},
       },
     );
     expect(proc.status, proc.stderr).toBe(0);
@@ -157,7 +157,7 @@ describe('host-resolve', () => {
       cwd: ROOT,
       encoding: 'utf8',
       input,
-      env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.ts'), ...env},
+      env: {...process.env, RN_A11Y_HOST_BIN: path.join(ROOT, 'test/fixtures/fake-host.ts'), RN_A11Y_HOST_RUNNER: 'bun', ...env},
     });
   }
 

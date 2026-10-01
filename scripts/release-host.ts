@@ -29,6 +29,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+import {hostFileName} from '../src/hostDownload.ts';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RN_DIR = path.join(ROOT, 'third_party', 'react-native');
 const OVERLAY_DIR = path.join(ROOT, 'native', 'overlay');
@@ -191,7 +193,8 @@ function main() {
   const arch = arg('--arch', os.arch() === 'x64' ? 'x86_64' : os.arch());
   const platform = process.platform;
   const outDir = path.resolve(arg('--out', path.join(ROOT, 'release')));
-  const bin = path.resolve(arg('--bin', path.join(ROOT, 'native', 'dist', arch, 'rn-a11y-host')));
+  const hostFile = hostFileName(platform);
+  const bin = path.resolve(arg('--bin', path.join(ROOT, 'native', 'dist', arch, hostFile)));
   if (!fs.existsSync(bin)) {
     console.error(`release-host: ${path.relative(ROOT, bin)} not found; run \`bun run build:host\` first`);
     process.exit(1);
@@ -204,13 +207,14 @@ function main() {
   fs.mkdirSync(outDir, {recursive: true});
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-host-release-'));
   try {
-    fs.copyFileSync(bin, path.join(stage, 'rn-a11y-host'));
-    fs.chmodSync(path.join(stage, 'rn-a11y-host'), 0o755);
+    fs.copyFileSync(bin, path.join(stage, hostFile));
+    fs.chmodSync(path.join(stage, hostFile), 0o755);
     type Asset = {file: string; sha256: string; size: number};
     const manifest = {...info, assets: {} as Record<string, Asset> /* filled below */};
     fs.writeFileSync(path.join(stage, 'host-version.json'), JSON.stringify({...manifest, assets: undefined}, null, 2) + '\n');
     const tarPath = path.join(outDir, file);
-    execFileSync('tar', ['-czf', tarPath, '-C', stage, 'rn-a11y-host', 'host-version.json']);
+    // The archive by a relative path: GNU tar (Git for Windows) reads "C:..." as host:path.
+    execFileSync('tar', ['-czf', file, '-C', stage, hostFile, 'host-version.json'], {cwd: outDir});
     const digest = sha256(fs.readFileSync(tarPath));
     fs.writeFileSync(`${tarPath}.sha256`, `${digest}  ${file}\n`);
     // Another arch packaged into the same directory for the same version: keep its asset.

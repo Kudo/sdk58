@@ -1,4 +1,4 @@
-import {spawn} from 'node:child_process';
+import {type ChildProcess, spawn, type SpawnOptions} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,10 +9,24 @@ import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 
 import {CliError, type ErrorCode, type LogEntry, logEntry} from './errors.ts';
-import {BASE_URL_ENV, downloadHost, readManifest} from './hostDownload.ts';
+import {BASE_URL_ENV, downloadHost, hostFileName, readManifest} from './hostDownload.ts';
+
+export {hostFileName};
 import type {HostPayload, HostRuntimeInfo} from './schema.ts';
 
 export const HOST_BIN_ENV = 'RN_A11Y_HOST_BIN';
+/**
+ * A program that runs the host: `$RN_A11Y_HOST_RUNNER <host> <args>` instead
+ * of `<host> <args>` (tests: `bun` for the script fake host, which Windows
+ * cannot start through its shebang).
+ */
+export const HOST_RUNNER_ENV = 'RN_A11Y_HOST_RUNNER';
+
+/** Starts the host binary `bin` (through RN_A11Y_HOST_RUNNER when set). */
+export function spawnHost(bin: string, args: string[], options: SpawnOptions): ChildProcess {
+  const runner = process.env[HOST_RUNNER_ENV];
+  return runner ? spawn(runner, [bin, ...args], options) : spawn(bin, args, options);
+}
 
 // Must match `RESULT_TYPE` / `ERROR_TYPE` in runtime/fantom/setup.ts.
 const RESULT_TYPE = 'rn-a11y-tree-result';
@@ -60,14 +74,14 @@ export class HostError extends CliError {
 const BUILD_HINT =
   'Run `bun run build:host`, set RN_A11Y_HOST_BIN to the path of a host binary, or set RN_A11Y_HOST_BASE_URL to download a prebuilt host.';
 
-/** `native/dist/<arch>/rn-a11y-host`, produced by `bun run build:host`. */
+/** `native/dist/<arch>/rn-a11y-host` (`.exe` on Windows), produced by `bun run build:host`. */
 export const DEFAULT_HOST_BIN = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
   'native',
   'dist',
   os.arch() === 'x64' ? 'x86_64' : os.arch(),
-  'rn-a11y-host',
+  hostFileName(),
 );
 
 /**
@@ -338,12 +352,12 @@ type HostLine =
 export async function runHost<T = HostPayload>(options: HostOptions): Promise<T> {
   const bin = getHostBin();
   if (options.timing) options.timing.spawn = performance.now();
-  const child = spawn(bin, hostArgs(options), {
+  const child = spawnHost(bin, hostArgs(options), {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   const stderrChunks: Buffer[] = [];
-  child.stderr.on('data', (chunk: Buffer) => {
+  child.stderr!.on('data', (chunk: Buffer) => {
     stderrChunks.push(chunk);
     if (options.verbose) process.stderr.write(chunk);
   });
@@ -351,7 +365,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   let result: T | undefined;
   let jsError: {message: string; stack?: string} | undefined;
 
-  const rl = readline.createInterface({input: child.stdout});
+  const rl = readline.createInterface({input: child.stdout!});
   rl.on('line', rawLine => {
     const line = rawLine.trim();
     if (!line) return;

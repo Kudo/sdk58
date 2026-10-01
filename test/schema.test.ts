@@ -35,7 +35,7 @@ function cli(args: string[], env: Record<string, string> = {}, input?: string) {
   return spawnSync('node', [CLI, ...args], {
     cwd: ROOT,
     encoding: 'utf8',
-    env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST, ...env},
+    env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun', ...env},
     input,
     maxBuffer: 64 * 1024 * 1024,
   });

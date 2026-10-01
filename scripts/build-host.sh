@@ -25,6 +25,9 @@
 # (tester-<type>-<layout>) and goes to native/dist/<arch>-<layout>/ (not with
 # RN_A11Y_HOST_ARCH=universal).
 #
+# RN_A11Y_TESTER_BUILD_DIR: the tester build directory instead of
+# .../build/tester-<type>[-<arch>][-<layout>] (e.g. D:/t on Windows).
+#
 # RN_A11Y_HOST_BUILD_TYPE=Release (default) | MinSizeRel | Debug selects the
 # tester build type (build dir: .../build/tester-<type>). Release and
 # MinSizeRel use ThinLTO and -dead_strip, and strip local symbols (strip -x)
@@ -39,6 +42,19 @@
 # but no line tables). Needs clang (CC/CXX default to clang/clang++), ld.lld
 # (used when on PATH), static ICU and OpenSSL (Ubuntu: libicu-dev,
 # libssl-dev), rsync. RN_A11Y_HOST_ARCH must be the machine's architecture.
+#
+# Windows (x64, Git Bash): native/dist/x86_64/rn-a11y-host.exe, one
+# executable with the static MSVC runtime (/MT) and static ICU; it imports
+# only Windows system DLLs. Run in an MSVC developer environment (vcvars64:
+# cl.exe, link.exe) with LLVM (clang-cl, lld-link, llvm-lib) on PATH. Hermes
+# is built with MSVC (cl.exe; Hermes' CMake does not support clang-cl), the
+# tester with clang-cl (the tester CMake translates the GCC-style options of
+# the React Native CMake files). ICU: scripts/build-icu.sh <prefix> (needs
+# MSYS2), then ICU_ROOT=<prefix>. Gradle's Windows paths are avoided:
+# react-native-codegen's lib/ is built with node (its build.sh fails in Git
+# Bash) and Hermes is configured here (gradle passes JSI_DIR with
+# backslashes, which Hermes' CMake reads as escapes). Release: no debug
+# information. See docs/research/windows-feasibility.md.
 #
 # Requirements: JDK 17, Android SDK (for its CMake and Ninja), Xcode command
 # line tools (macOS), Node with corepack. Homebrew OpenSSL is not needed (the tester's
@@ -58,6 +74,7 @@ FANTOM_DIR="$RN_DIR/private/react-native-fantom"
 # work in the tree).
 OVERLAY_DIR="${RN_A11Y_OVERLAY_DIR:-$ROOT/native/overlay}"
 OS="$(uname -s)"
+case "$OS" in MINGW*|MSYS*|CYGWIN*) OS=Windows ;; esac
 MACHINE_ARCH="$(uname -m)"
 # Linux arm64: the same name as on macOS (and as os.arch() in src/host.ts).
 [[ "$MACHINE_ARCH" == "aarch64" ]] && MACHINE_ARCH=arm64
@@ -69,23 +86,33 @@ DIST_DIR="$ROOT/native/dist/$ARCH"
 if [[ "$TEXT_LAYOUT" != "$DEFAULT_TEXT_LAYOUT" ]]; then
   DIST_DIR="$ROOT/native/dist/$ARCH-$TEXT_LAYOUT"
 fi
+EXE=""
+[[ "$OS" == "Windows" ]] && EXE=".exe"
 CMAKE_VERSION="${CMAKE_VERSION:-3.30.5}"
 
 log() { printf '\033[1m[build-host]\033[0m %s\n' "$*"; }
 die() { printf '[build-host] error: %s\n' "$*" >&2; exit 1; }
 
 case "$OS" in
-  Darwin|Linux) ;;
-  *) die "only macOS and Linux are supported for now (got $OS)" ;;
+  Darwin|Linux|Windows) ;;
+  *) die "only macOS, Linux and Windows are supported (got $OS)" ;;
 esac
-if [[ "$OS" == "Linux" && "$ARCH" != "$MACHINE_ARCH" ]]; then
-  die "on Linux RN_A11Y_HOST_ARCH must be the machine's architecture ($MACHINE_ARCH, got $ARCH)"
+if [[ "$OS" != "Darwin" && "$ARCH" != "$MACHINE_ARCH" ]]; then
+  die "on $OS RN_A11Y_HOST_ARCH must be the machine's architecture ($MACHINE_ARCH, got $ARCH)"
+fi
+if [[ "$OS" == "Windows" && "$ARCH" != "x86_64" ]]; then
+  die "on Windows only x86_64 is supported (got $ARCH)"
 fi
 
 # Hash of stdin, for stamps (SHA-1 with shasum on macOS, SHA-256 on Linux,
 # where shasum is not always installed).
 hash_stdin() {
   if [[ "$OS" == "Darwin" ]]; then shasum | cut -d' ' -f1; else sha256sum | cut -d' ' -f1; fi
+}
+
+# A path for the native tools (CMake, Ninja): C:/... on Windows.
+native_path() {
+  if [[ "$OS" == "Windows" ]]; then cygpath -m "$1"; else printf '%s' "$1"; fi
 }
 
 case "$TEXT_LAYOUT" in
@@ -128,6 +155,23 @@ if [[ "$OS" == "Darwin" ]]; then
   export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17}"
   JDK_HINT="brew install openjdk@17"
   export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+elif [[ "$OS" == "Windows" ]]; then
+  # POSIX forms of the Windows paths (C:\... in the environment).
+  [[ -n "${JAVA_HOME:-}" ]] && JAVA_HOME="$(cygpath -u "$JAVA_HOME")"
+  export JAVA_HOME="${JAVA_HOME:-}"
+  JDK_HINT="e.g. winget install EclipseAdoptium.Temurin.17.JDK, and set JAVA_HOME"
+  if [[ -n "${ANDROID_HOME:-}" ]]; then
+    ANDROID_HOME="$(cygpath -u "$ANDROID_HOME")"
+  else
+    ANDROID_HOME="$(cygpath -u "${LOCALAPPDATA:-$HOME/AppData/Local}")/Android/Sdk"
+  fi
+  export ANDROID_HOME
+  command -v cl >/dev/null || die "cl.exe not on PATH: run in an MSVC developer environment (vcvars64.bat, or ilammy/msvc-dev-cmd in CI)"
+  for tool in clang-cl lld-link llvm-lib llvm-readobj; do
+    command -v "$tool" >/dev/null || die "$tool not on PATH (install LLVM, e.g. C:\Program Files\LLVM\bin)"
+  done
+  [[ -n "${ICU_ROOT:-}" && -f "$ICU_ROOT/lib/sicuuc.lib" ]] ||
+    die "ICU_ROOT must be a static ICU build (scripts/build-icu.sh <prefix>, then ICU_ROOT=<prefix>; got '${ICU_ROOT:-}')"
 else
   # The JDK of the java on PATH (e.g. /usr/lib/jvm/java-17-openjdk-amd64).
   if [[ -z "${JAVA_HOME:-}" ]] && command -v java >/dev/null; then
@@ -147,8 +191,8 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 [[ -d "$ANDROID_HOME" ]] || die "ANDROID_HOME ($ANDROID_HOME) does not exist; install the Android SDK"
 
-if [[ ! -x "$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake" ]]; then
-  SDKMANAGER="$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -n 1 || true)"
+if [[ ! -x "$ANDROID_HOME/cmake/$CMAKE_VERSION/bin/cmake$EXE" ]]; then
+  SDKMANAGER="$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager.bat 2>/dev/null | head -n 1 || true)"
   [[ -n "$SDKMANAGER" ]] || die "sdkmanager not found under $ANDROID_HOME/cmdline-tools"
   log "installing cmake;$CMAKE_VERSION with $SDKMANAGER"
   yes | "$SDKMANAGER" --install "cmake;$CMAKE_VERSION" >/dev/null
@@ -206,6 +250,11 @@ log "Node:   $(node --version)"
 if [[ "$OS" == "Darwin" ]]; then
   log "Xcode:  $(xcodebuild -version 2>/dev/null | tr '\n' ' ')($(xcode-select -p 2>/dev/null))"
   log "Clang:  $(clang --version | head -n 1)"
+elif [[ "$OS" == "Windows" ]]; then
+  log "OS:     $(uname -s) ($(uname -r))"
+  log "MSVC:   $(cl 2>&1 | head -n 1 | tr -d '\r') ($(command -v cl))"
+  log "Clang:  $(clang-cl --version | head -n 1) ($(command -v clang-cl))"
+  log "ICU:    $ICU_ROOT"
 else
   log "OS:     $(. /etc/os-release 2>/dev/null && echo "${PRETTY_NAME:-}") ($(uname -r)), glibc $(ldd --version 2>/dev/null | head -n 1 | awk '{print $NF}')"
   log "Clang:  $("$CXX" --version | head -n 1) ($CXX)"
@@ -237,7 +286,12 @@ fi
 # --- (c) overlay ------------------------------------------------------------
 
 log "applying native/overlay -> private/react-native-fantom"
-rsync -a "$OVERLAY_DIR/" "$FANTOM_DIR/"
+if command -v rsync >/dev/null; then
+  rsync -a "$OVERLAY_DIR/" "$FANTOM_DIR/"
+else
+  # Git for Windows has no rsync.
+  cp -R "$OVERLAY_DIR/." "$FANTOM_DIR/"
+fi
 
 # --- (d) build --------------------------------------------------------------
 
@@ -264,12 +318,84 @@ case "$BUILD_TYPE" in
 esac
 BUILD_TYPE_LOWER="$(printf '%s' "$BUILD_TYPE" | tr '[:upper:]' '[:lower:]')"
 
-log "gradle :private:react-native-fantom:prepareAllDependencies (Hermes, third-party, codegen; logs: $FANTOM_DIR/build/reports/)"
-(cd "$RN_DIR" && ./gradlew :private:react-native-fantom:prepareAllDependencies --no-daemon --console=plain)
-
 CMAKE_BIN_DIR="$ANDROID_HOME/cmake/$CMAKE_VERSION/bin"
 FANTOM_BUILD_DIR="$FANTOM_DIR/build"
 REACT_NATIVE_DIR="$RN_DIR/packages/react-native"
+
+if [[ "$OS" == "Windows" ]]; then
+  # react-native-codegen lib/: gradle's buildCodegenCLI runs
+  # scripts/oss/build.sh, whose Windows branch tars "<abs>/scripts/oss/../.."
+  # and fails in Git Bash ("Member name contains '..'"). The same build with
+  # node and the workspace's dependencies; buildCodegenCLI is skipped.
+  CODEGEN_DIR="$RN_DIR/packages/react-native-codegen"
+  CODEGEN_CLI="$CODEGEN_DIR/lib/cli/combine/combine-js-to-schema-cli.js"
+  if [[ ! -f "$CODEGEN_CLI" || -n "$(find "$CODEGEN_DIR/src" -newer "$CODEGEN_CLI" -name '*.js' | head -n 1)" ]]; then
+    log "react-native-codegen lib/ (node scripts/build.js)"
+    (cd "$CODEGEN_DIR" && rm -rf lib && node scripts/build.js >/dev/null)
+  fi
+  # Gradle without the Hermes build (configured below): codegen, the
+  # third-party sources and the Hermes source.
+  log "gradle: codegen, third-party sources, Hermes source (logs: $FANTOM_DIR/build/reports/)"
+  # Gradle (Java) reads these variables as Windows paths.
+  GRADLE_ENV=(JAVA_HOME="$(cygpath -w "$JAVA_HOME")" ANDROID_HOME="$(cygpath -w "$ANDROID_HOME")"
+    ANDROID_SDK_ROOT="$(cygpath -w "$ANDROID_HOME")")
+  [[ -n "${ANDROID_NDK:-}" ]] && GRADLE_ENV+=(ANDROID_NDK="$(cygpath -w "$ANDROID_NDK")")
+  (cd "$RN_DIR" && env "${GRADLE_ENV[@]}" ./gradlew.bat \
+    :private:react-native-fantom:enableHermesBuild \
+    :packages:react-native:ReactAndroid:hermes-engine:unzipHermes \
+    :private:react-native-fantom:prepareRNCodegen \
+    :private:react-native-fantom:prepareNative3pDependencies \
+    -x :packages:react-native:ReactAndroid:buildCodegenCLI \
+    --no-daemon --console=plain)
+
+  # Hermes: the arguments of configureBuildForHermesWithDebugger
+  # (hermes-engine/build.gradle.kts), with Ninja, MSVC, the static runtime
+  # and the static ICU, and paths with forward slashes.
+  HERMES_SRC="$(cygpath -m "$REACT_NATIVE_DIR/sdks/hermes")"
+  HERMES_BUILD="$REACT_NATIVE_DIR/ReactAndroid/hermes-engine/build/hermes"
+  MSVC_BIN="$(cygpath -m "$(dirname "$(command -v cl)")")"
+  HERMES_ARGS=(
+    -DJSI_DIR="$(cygpath -m "$REACT_NATIVE_DIR/ReactCommon/jsi")"
+    -DCMAKE_BUILD_TYPE=Release
+    -DHERMES_ENABLE_DEBUGGER=True
+    -DHERMESVM_HEAP_HV_MODE=HEAP_HV_PREFER32
+    -DHERMES_MSVC_MP=OFF
+    -DCMAKE_C_COMPILER="$MSVC_BIN/cl.exe"
+    -DCMAKE_CXX_COMPILER="$MSVC_BIN/cl.exe"
+    -DCMAKE_LINKER="$MSVC_BIN/link.exe"
+    -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
+    -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+    -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF
+    -DHERMES_USE_STATIC_ICU=ON
+    -DICU_ROOT="$(cygpath -m "$ICU_ROOT")"
+  )
+  HERMES_STAMP="$HERMES_BUILD/.rn-a11y-cmake-args"
+  HERMES_HASH="$(printf '%s\n' "${HERMES_ARGS[@]}" | hash_stdin)"
+  if [[ ! -f "$HERMES_BUILD/build.ninja" || "$(cat "$HERMES_STAMP" 2>/dev/null)" != "$HERMES_HASH" ]]; then
+    log "Hermes: cmake configure (Ninja, cl.exe /MT) -> ${HERMES_BUILD#"$ROOT"/}"
+    rm -rf "$HERMES_BUILD"
+    "$CMAKE_BIN_DIR/cmake$EXE" --log-level=ERROR -Wno-dev -G Ninja \
+      -DCMAKE_MAKE_PROGRAM="$(cygpath -m "$CMAKE_BIN_DIR/ninja$EXE")" \
+      -S "$HERMES_SRC" -B "$(cygpath -m "$HERMES_BUILD")" "${HERMES_ARGS[@]}"
+    echo "$HERMES_HASH" >"$HERMES_STAMP"
+  fi
+  log "Hermes: build (hermesvm, hermesc)"
+  HERMES_START=$SECONDS
+  "$CMAKE_BIN_DIR/cmake$EXE" --build "$(cygpath -m "$HERMES_BUILD")" --target hermesvm hermesc
+  log "Hermes: $((SECONDS - HERMES_START)) s"
+  # prepareHeadersForPrefabWithDebugger: API/ and public/ headers, not jsi/.
+  PREFAB_HEADERS="$REACT_NATIVE_DIR/ReactAndroid/hermes-engine/build/prefab-headers"
+  mkdir -p "$PREFAB_HEADERS"
+  for headers in "$REACT_NATIVE_DIR/sdks/hermes/API" "$REACT_NATIVE_DIR/sdks/hermes/public"; do
+    (cd "$headers" && find . -name '*.h' -not -path './jsi/*' | while read -r header; do
+      mkdir -p "$PREFAB_HEADERS/$(dirname "$header")"
+      cp "$header" "$PREFAB_HEADERS/$header"
+    done)
+  done
+else
+  log "gradle :private:react-native-fantom:prepareAllDependencies (Hermes, third-party, codegen; logs: $FANTOM_DIR/build/reports/)"
+  (cd "$RN_DIR" && ./gradlew :private:react-native-fantom:prepareAllDependencies --no-daemon --console=plain)
+fi
 TESTER_BUILD_DIR="$FANTOM_BUILD_DIR/tester-$BUILD_TYPE_LOWER"
 if [[ "$CROSS_ARCH" == "1" ]]; then
   TESTER_BUILD_DIR="$TESTER_BUILD_DIR-$ARCH"
@@ -280,6 +406,9 @@ fi
 if [[ "$TEXT_LAYOUT" != "$DEFAULT_TEXT_LAYOUT" ]]; then
   TESTER_BUILD_DIR="$TESTER_BUILD_DIR-$TEXT_LAYOUT"
 fi
+# RN_A11Y_TESTER_BUILD_DIR: another tester build directory, e.g. a short one
+# on Windows (object paths under the checkout can exceed MAX_PATH).
+TESTER_BUILD_DIR="${RN_A11Y_TESTER_BUILD_DIR:-$TESTER_BUILD_DIR}"
 
 # Same arguments as configureFantomTester in private/react-native-fantom/build.gradle.kts.
 CMAKE_ARGS=(
@@ -296,6 +425,24 @@ CMAKE_ARGS=(
 )
 if [[ "$OS" == "Darwin" ]]; then
   CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES="$ARCH")
+fi
+if [[ "$OS" == "Windows" ]]; then
+  # clang-cl, lld-link and llvm-lib by full path (CMake takes a bare
+  # CMAKE_AR as relative to the source directory), CMake paths with forward
+  # slashes, static ICU for the tester (FANTOM_STATIC_ICU: s*.lib).
+  LLVM_BIN="$(cygpath -m "$(dirname "$(command -v clang-cl)")")"
+  for i in "${!CMAKE_ARGS[@]}"; do
+    case "${CMAKE_ARGS[$i]}" in
+      -D*_DIR=/*) CMAKE_ARGS[$i]="${CMAKE_ARGS[$i]%%=*}=$(cygpath -m "${CMAKE_ARGS[$i]#*=}")" ;;
+    esac
+  done
+  CMAKE_ARGS+=(
+    -DCMAKE_C_COMPILER="$LLVM_BIN/clang-cl.exe"
+    -DCMAKE_CXX_COMPILER="$LLVM_BIN/clang-cl.exe"
+    -DCMAKE_LINKER="$LLVM_BIN/lld-link.exe"
+    -DCMAKE_AR="$LLVM_BIN/llvm-lib.exe"
+    -DCMAKE_PREFIX_PATH="$(cygpath -m "$ICU_ROOT")"
+  )
 fi
 
 # A foreign architecture needs Hermes built for it (gradle builds it for the
@@ -378,16 +525,16 @@ ARGS_HASH="$(printf '%s\n' "${CMAKE_ARGS[@]}" | hash_stdin)"
 if [[ ! -f "$TESTER_BUILD_DIR/build.ninja" || "$(cat "$ARGS_STAMP" 2>/dev/null)" != "$ARGS_HASH" ]]; then
   mkdir -p "$TESTER_BUILD_DIR/lto-objects"
   log "cmake configure ($BUILD_TYPE, Ninja) -> ${TESTER_BUILD_DIR#"$ROOT"/}"
-  "$CMAKE_BIN_DIR/cmake" --log-level=ERROR -G Ninja \
-    -DCMAKE_MAKE_PROGRAM="$CMAKE_BIN_DIR/ninja" \
-    -S "$FANTOM_DIR/tester" -B "$TESTER_BUILD_DIR" "${CMAKE_ARGS[@]}"
+  "$CMAKE_BIN_DIR/cmake$EXE" --log-level=ERROR -G Ninja \
+    -DCMAKE_MAKE_PROGRAM="$(native_path "$CMAKE_BIN_DIR/ninja$EXE")" \
+    -S "$(native_path "$FANTOM_DIR/tester")" -B "$(native_path "$TESTER_BUILD_DIR")" "${CMAKE_ARGS[@]}"
   echo "$ARGS_HASH" >"$ARGS_STAMP"
 fi
 
 log "cmake --build ($BUILD_TYPE)"
-"$CMAKE_BIN_DIR/cmake" --build "$TESTER_BUILD_DIR" --target fantom_tester
+"$CMAKE_BIN_DIR/cmake$EXE" --build "$(native_path "$TESTER_BUILD_DIR")" --target fantom_tester
 
-BIN="$TESTER_BUILD_DIR/fantom_tester"
+BIN="$TESTER_BUILD_DIR/fantom_tester$EXE"
 [[ -x "$BIN" ]] || die "build did not produce $BIN"
 
 # Warn if the binary is older than an overlay file. This can be harmless
@@ -405,6 +552,25 @@ if [[ "$SANITIZE" == "1" ]]; then
 fi
 
 # --- (e) relocatable dist ---------------------------------------------------
+
+if [[ "$OS" == "Windows" ]]; then
+  log "copying to ${DIST_DIR#"$ROOT"/}"
+  rm -rf "$DIST_DIR"
+  mkdir -p "$DIST_DIR"
+  HOST="$DIST_DIR/rn-a11y-host.exe"
+  cp "$BIN" "$HOST"
+  # Only Windows system DLLs may be imported: no MSVC runtime (/MT), no ICU.
+  IMPORTS="$(llvm-readobj --coff-imports "$HOST" | sed -n 's/^ *Name: \(.*\.dll\)$/\1/Ip' | sort -u)"
+  NON_SYSTEM_DEPS="$(printf '%s\n' "$IMPORTS" |
+    grep -v -i -E '^(kernel32|advapi32|bcrypt|dbghelp|ole32|oleaut32|psapi|shell32|shlwapi|user32|winmm|ws2_32|ntdll|api-ms-win-core-[a-z0-9-]+)\.dll$' || true)"
+  if [[ -n "$NON_SYSTEM_DEPS" ]]; then
+    log "warning: rn-a11y-host.exe imports non-system DLLs:"
+    printf '  %s\n' $NON_SYSTEM_DEPS
+  fi
+  log "done: $HOST ($(stat -c%s "$HOST") bytes)"
+  log "imports: $(printf '%s ' $IMPORTS)"
+  exit 0
+fi
 
 if [[ "$OS" == "Linux" ]]; then
   log "copying to ${DIST_DIR#"$ROOT"/}"

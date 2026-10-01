@@ -264,7 +264,7 @@ describe('check', () => {
     return spawnSync('node', [CLI, ...args], {
       cwd: ROOT,
       encoding: 'utf8',
-      env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST, FAKE_HOST_MODE: 'shadow-tree', ...env},
+      env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun', FAKE_HOST_MODE: 'shadow-tree', ...env},
       maxBuffer: 64 * 1024 * 1024,
     });
   }

@@ -13,10 +13,10 @@
  * - The host exits (code 0) when stdin is closed.
  */
 
-import {type ChildProcess, spawn} from 'node:child_process';
+import type {ChildProcess} from 'node:child_process';
 import readline from 'node:readline';
 
-import {appendHostStderr, checkHostInfo, getHostBin, type HostInfo, hostArgs} from './host.ts';
+import {appendHostStderr, checkHostInfo, getHostBin, type HostInfo, hostArgs, spawnHost} from './host.ts';
 import type {HostRuntimeInfo, SessionTreeOptions, ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
@@ -78,7 +78,7 @@ export async function runSession(options: {
   let timedOut = false;
   const {io} = options;
   const spawnedAt = performance.now();
-  const child: ChildProcess = spawn(
+  const child: ChildProcess = spawnHost(
     getHostBin(),
     [
       '--interactive',

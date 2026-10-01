@@ -42,7 +42,7 @@ describe('bundle-cache', () => {
       fs.mkdirSync(path.join(project, 'node_modules'));
       expect(cacheRoot(project)).toBe(path.join(project, 'node_modules', '.cache', 'rn-a11y-tree'));
       process.env.RN_A11Y_TREE_CACHE_DIR = '/tmp/x';
-      expect(cacheRoot(project)).toBe('/tmp/x');
+      expect(cacheRoot(project)).toBe(path.resolve('/tmp/x'));
     } finally {
       if (saved == null) delete process.env.RN_A11Y_TREE_CACHE_DIR;
       else process.env.RN_A11Y_TREE_CACHE_DIR = saved;

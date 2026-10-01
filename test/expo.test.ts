@@ -130,7 +130,7 @@ describe('expo', () => {
     const withUI = project({devDependencies: {'@expo/ui': '~58.0.9'}});
     const plain = project({dependencies: {react: '19.3.0'}});
     try {
-      expect(expoPolyfillPath(withExpo) ?? '').toMatch(/expo-modules-core\/src\/polyfill\/dangerous-internal\.ts$/);
+      expect(expoPolyfillPath(withExpo) ?? '').toMatch(/expo-modules-core[\\/]src[\\/]polyfill[\\/]dangerous-internal\.ts$/);
       expect(expoPolyfillPath(withUI)).toBeTruthy();
       expect(expoPolyfillPath(plain)).toBe(null); // expo-modules-core resolves (hoisted), but the project does not use it
       expect(expoPolyfillPath(path.join(os.tmpdir(), 'no-such-project'))).toBe(null);

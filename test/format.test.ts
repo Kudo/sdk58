@@ -105,14 +105,14 @@ describe('format', () => {
     const proc = spawnSync(
       'node',
       [path.join(ROOT, 'src', 'cli.ts'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'text', '--select', 'role=button'],
-      {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.ts'), FAKE_HOST_MODE: 'shadow-tree'}},
+      {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.ts'), RN_A11Y_HOST_RUNNER: 'bun', FAKE_HOST_MODE: 'shadow-tree'}},
     );
     expect(proc.status, proc.stderr).toBe(0);
     expect(proc.stdout.trim()).toMatch(/^submit View #submit role=button "Submit" \{24,154,342x48\}$/);
     const bad = spawnSync(
       'node',
       [path.join(ROOT, 'src', 'cli.ts'), 'render', path.join(ROOT, 'examples', 'basic', 'App.tsx'), '--platform', 'android', '--format', 'xml'],
-      {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.ts')}},
+      {cwd: ROOT, encoding: 'utf8', env: {...process.env, RN_A11Y_HOST_BIN: path.join(FIXTURES, 'fake-host.ts'), RN_A11Y_HOST_RUNNER: 'bun'}},
     );
     expect(bad.status).toBe(1);
     expect(bad.stderr).toMatch(/--format must be one of: json, compact, text, ndjson/);

@@ -21,6 +21,12 @@
 #
 # Uses CC/CXX (default clang/clang++). Skips the build when
 # <prefix>/.rn-a11y-icu-stamp matches the version and compilers.
+#
+# Windows (Git Bash, in an MSVC developer environment: cl.exe on PATH):
+# ICU's MSYS/MSVC build (runConfigureICU) with cl.exe and the static runtime
+# (/MT), run in MSYS2 (GNU make; MSYS2_ROOT, default C:/msys64, with the make
+# and python packages). Output: <prefix>/lib/sicuuc.lib, sicuin.lib and
+# sicudt.lib (the names CMake's FindICU looks for), <prefix>/include.
 
 set -euo pipefail
 
@@ -38,10 +44,21 @@ die() { printf '[build-icu] error: %s\n' "$*" >&2; exit 1; }
 
 PREFIX="${1:-}"
 [[ -n "$PREFIX" ]] || die "usage: scripts/build-icu.sh <prefix>"
-export CC="${CC:-clang}" CXX="${CXX:-clang++}"
+WINDOWS=0
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) WINDOWS=1 ;; esac
+if [[ "$WINDOWS" == "1" ]]; then
+  command -v cl >/dev/null || die "cl.exe not on PATH (run in an MSVC developer environment)"
+  MSYS2_ROOT="${MSYS2_ROOT:-C:/msys64}"
+  [[ -x "$MSYS2_ROOT/usr/bin/make" && -x "$MSYS2_ROOT/usr/bin/python3" ]] ||
+    die "MSYS2 with make and python not found in $MSYS2_ROOT (pacman -S make python; or set MSYS2_ROOT)"
+  COMPILER_ID="cl $(cl 2>&1 | head -n 1 | tr -d '\r') /MT"
+else
+  export CC="${CC:-clang}" CXX="${CXX:-clang++}"
+  COMPILER_ID="$("$CC" --version | head -n 1) $("$CXX" --version | head -n 1)"
+fi
 
 STAMP="$PREFIX/.rn-a11y-icu-stamp"
-STAMP_VALUE="$ICU_VERSION $("$CC" --version | head -n 1) $("$CXX" --version | head -n 1) filter $(sha256sum <"$FILTER" | cut -d' ' -f1)"
+STAMP_VALUE="$ICU_VERSION $COMPILER_ID filter $(sha256sum <"$FILTER" | cut -d' ' -f1)"
 if [[ -f "$STAMP" && "$(cat "$STAMP")" == "$STAMP_VALUE" ]]; then
   log "ICU $ICU_VERSION already in $PREFIX"
   exit 0
@@ -59,9 +76,36 @@ tar -xzf "$WORK/$ICU_TARBALL" -C "$WORK"
 rm -rf "$WORK/icu/source/data"
 unzip -q "$WORK/$ICU_DATA_ZIP" -d "$WORK/icu/source"
 
-log "building ICU $ICU_VERSION ($CXX) -> $PREFIX"
 mkdir -p "$WORK/build"
 cd "$WORK/build"
+
+if [[ "$WINDOWS" == "1" ]]; then
+  log "building ICU $ICU_VERSION (cl.exe /MT, MSYS2 $MSYS2_ROOT) -> $PREFIX"
+  # MSYS2's bash with the PATH of this environment (cl.exe, link.exe) after
+  # MSYS2's tools. runConfigureICU puts -MD first; the later -MT wins.
+  # Paths in the mixed form (C:/...): Git Bash's /tmp is not MSYS2's.
+  WIN_PREFIX="$(cygpath -m "$PREFIX")"
+  WIN_WORK="$(cygpath -m "$WORK")"
+  WIN_FILTER="$(cygpath -m "$FILTER")"
+  # The MSVC tools first: MSYS2's coreutils have a link.exe too.
+  WIN_MSVC_BIN="$(cygpath -m "$(dirname "$(command -v cl)")")"
+  rm -rf "$PREFIX"
+  MSYSTEM=MSYS MSYS2_PATH_TYPE=inherit CHERE_INVOKING=1 \
+    "$MSYS2_ROOT/usr/bin/bash.exe" -lc "set -e
+      export PATH=\"\$(cygpath -u '$WIN_MSVC_BIN'):\$PATH\"
+      cd \"\$(cygpath -u '$WIN_WORK')/build\"
+      export ICU_DATA_FILTER_FILE='$WIN_FILTER' CFLAGS='-MT -O2' CXXFLAGS='-MT -O2 -std:c++17'
+      \"\$(cygpath -u '$WIN_WORK')/icu/source/runConfigureICU\" MSYS/MSVC --prefix=\"\$(cygpath -u '$WIN_PREFIX')\" \\
+        --enable-static --disable-shared --with-data-packaging=static \\
+        --disable-tests --disable-samples --disable-extras --disable-icuio --disable-layoutex >/dev/null
+      make -j$(nproc) >/dev/null
+      make install >/dev/null"
+  echo "$STAMP_VALUE" >"$STAMP"
+  log "done: $(ls "$PREFIX/lib"/*.lib | tr '\n' ' ')($(wc -c <"$PREFIX/lib/sicudt.lib") bytes of data)"
+  exit 0
+fi
+
+log "building ICU $ICU_VERSION ($CXX) -> $PREFIX"
 # -fPIC: Hermes links ICU into libhermesvm.so too.
 ICU_DATA_FILTER_FILE="$FILTER" \
 CFLAGS="-O2 -fPIC -ffunction-sections -fdata-sections" \

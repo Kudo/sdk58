@@ -12,13 +12,15 @@ import {fileURLToPath} from 'node:url';
 
 import {expect, type TestContext} from 'vitest';
 
+import {DEFAULT_HOST_BIN} from '../src/host.ts';
 import {type PresetName, PRESETS} from '../src/presets.ts';
 import type {TreeNode} from '../src/schema.ts';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const CLI = path.join(ROOT, 'src', 'cli.ts');
 
-const DIST_BIN = path.join(ROOT, 'native', 'dist', process.arch === 'x64' ? 'x86_64' : process.arch, 'rn-a11y-host');
+// native/dist/<arch>/rn-a11y-host (.exe on Windows).
+const DIST_BIN = DEFAULT_HOST_BIN;
 export const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
 
 /** `skip` option for tests that need the real host. */

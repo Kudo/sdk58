@@ -1,0 +1,222 @@
+name: Windows host
+
+# The Windows x64 host (native/dist/x86_64/rn-a11y-host.exe, portable text
+# layout):
+# - build: on windows-2025 with `bun run build:host` in Git Bash: Hermes with
+#   MSVC (cl.exe), the tester with clang-cl, the static MSVC runtime (/MT),
+#   ICU built from source (static, trimmed data: scripts/icu-data-filter.json,
+#   MSYS2 for its make, cached), sccache for Hermes and the tester;
+# - test: the binary on windows-2025 (smoke render, unit and e2e tests).
+on:
+  push:
+    branches: [main, ci/windows-host]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: windows-host-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HOST_DIR: native/dist/x86_64
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: bash
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      # Static ICU from scripts/build-icu.sh (Hermes through FindICU, the
+      # tester through FANTOM_STATIC_ICU).
+      ICU_ROOT: D:/icu
+      # Short tester build directory: object paths under the checkout can
+      # exceed MAX_PATH.
+      RN_A11Y_TESTER_BUILD_DIR: D:/t
+      # sccache (GitHub Actions cache backend) for Hermes and the tester:
+      # CMake reads the launcher from these environment variables.
+      SCCACHE_GHA_ENABLED: 'true'
+      CMAKE_C_COMPILER_LAUNCHER: sccache
+      CMAKE_CXX_COMPILER_LAUNCHER: sccache
+    steps:
+      # Before checkout: LF line endings (the shell scripts and patches), long paths.
+      - name: git config
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          git config --global core.longpaths true
+
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      # cl.exe, link.exe, the Windows SDK.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Toolchain
+        run: |
+          # LLVM (clang-cl, lld-link, llvm-lib, llvm-readobj) of the image.
+          echo "C:\\Program Files\\LLVM\\bin" >> "$GITHUB_PATH"
+          export PATH="/c/Program Files/LLVM/bin:$PATH"
+          clang-cl --version | head -n 1
+          cl 2>&1 | head -n 1
+          sccache --version
+
+      - name: Host cache key
+        id: host-key
+        run: |
+          echo "submodule=$(git -C third_party/react-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "compiler=$(cl 2>&1 | head -n 1 | tr -c 'A-Za-z0-9.\n' '-')-$(clang-cl --version | head -n 1 | tr -c 'A-Za-z0-9.\n' '-')" >> "$GITHUB_OUTPUT"
+
+      - name: Restore ICU
+        id: icu-cache
+        uses: actions/cache@v6
+        with:
+          path: D:/icu
+          key: icu-windows-${{ steps.host-key.outputs.compiler }}-${{ hashFiles('scripts/build-icu.sh', 'scripts/icu-data-filter.json') }}
+
+      # MSYS2 only for ICU's build (GNU make; python for the data filter).
+      - uses: msys2/setup-msys2@v2
+        id: msys2
+        if: steps.icu-cache.outputs.cache-hit != 'true'
+        with:
+          msystem: MSYS
+          install: make python
+          path-type: inherit
+
+      - name: Build ICU (static, /MT)
+        if: steps.icu-cache.outputs.cache-hit != 'true'
+        env:
+          MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
+        run: bash scripts/build-icu.sh "$ICU_ROOT"
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build host
+        run: |
+          sccache --zero-stats
+          bun run build:host
+          sccache --show-stats
+
+      - name: Host facts
+        run: |
+          H="$HOST_DIR/rn-a11y-host.exe"
+          {
+            echo '### Windows host'
+            echo '```'
+            echo "size: $(stat -c%s "$H") bytes"
+            echo "imports:"; llvm-readobj --coff-imports "$H" | sed -n 's/^ *Name: //p' | sort -u
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          # /MT and static ICU: no MSVC runtime or ICU DLL.
+          if llvm-readobj --coff-imports "$H" | grep -i -E 'Name: (msvcp|vcruntime|api-ms-win-crt|icu)'; then
+            echo "::error::rn-a11y-host.exe imports the MSVC runtime or ICU"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rn-a11y-host-windows-x64
+          path: ${{ env.HOST_DIR }}
+          if-no-files-found: error
+
+  test:
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+    steps:
+      - name: git config
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          git config --global core.longpaths true
+
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install JS dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: rn-a11y-host-windows-x64
+          path: ${{ env.HOST_DIR }}
+
+      - name: Smoke render (examples/basic)
+        run: |
+          {
+            echo "### Smoke render: examples/basic, android-phone (windows-2025)"
+            echo '```'
+            node src/cli.ts render examples/basic/App.tsx --preset android-phone --format text
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: E2E tests (e2e/*.test.ts)
+        env:
+          RN_A11Y_HOST_STDERR_LOG: ${{ runner.temp }}/host-stderr.log
+        run: |
+          : > "$RN_A11Y_HOST_STDERR_LOG"
+          bun run test:e2e --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/e2e-report.json"
+
+      - name: Upload the e2e report and the host stderr
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-report-windows-x64
+          path: |
+            ${{ runner.temp }}/e2e-report.json
+            ${{ runner.temp }}/host-stderr.log
+          if-no-files-found: warn

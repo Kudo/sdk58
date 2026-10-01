@@ -182,7 +182,9 @@ export function hermescPath(): string | null {
       ? 'osx-bin/hermesc'
       : process.platform === 'linux'
         ? 'linux64-bin/hermesc'
-        : null;
+        : process.platform === 'win32'
+          ? 'win64-bin/hermesc.exe'
+          : null;
   if (sub == null) return null;
   // hermes-compiler is a dependency of react-native: look next to it too
   // (installs where it is not hoisted).
@@ -223,6 +225,18 @@ export function compileBytecode(dir: string): boolean {
   return true;
 }
 
+// Arguments: hermesc, the temporary output, the final output, hermesc's
+// arguments (JSON). Runs hermesc, then renames the output. A script for this
+// runtime (node or bun), not /bin/sh, so that it also runs on Windows.
+const BACKGROUND_COMPILE_SCRIPT = `
+const {spawnSync} = require('node:child_process');
+const fs = require('node:fs');
+const [hermesc, tmp, out, args] = process.argv.slice(-4);
+const result = spawnSync(hermesc, JSON.parse(args), {stdio: 'ignore', windowsHide: true});
+if (result.status === 0 && fs.existsSync(tmp)) fs.renameSync(tmp, out);
+else fs.rmSync(tmp, {force: true});
+`;
+
 /** Starts hermesc detached, so it can finish after the CLI exits. */
 export function compileBytecodeInBackground(dir: string): boolean {
   const hermesc = hermescPath();
@@ -230,9 +244,11 @@ export function compileBytecodeInBackground(dir: string): boolean {
   const js = path.join(dir, BUNDLE_FILE);
   const tmp = path.join(dir, `.${BYTECODE_FILE}.bg`);
   const out = path.join(dir, BYTECODE_FILE);
-  const quote = (s: string) => `'${s.replaceAll("'", "'\\''")}'`;
-  const command = `${[hermesc, ...hermescArgs(js, tmp)].map(quote).join(' ')} && mv ${quote(tmp)} ${quote(out)}`;
-  const child = spawn('/bin/sh', ['-c', command], {detached: true, stdio: 'ignore'});
+  const child = spawn(
+    process.execPath,
+    ['-e', BACKGROUND_COMPILE_SCRIPT, hermesc, tmp, out, JSON.stringify(hermescArgs(js, tmp))],
+    {detached: true, stdio: 'ignore', windowsHide: true},
+  );
   child.unref();
   return true;
 }

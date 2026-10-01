@@ -30,7 +30,7 @@ describe('session', () => {
       {
         cwd: ROOT,
         encoding: 'utf8',
-        env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST},
+        env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun'},
         input: lines.map(l => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n') + '\n',
         maxBuffer: 64 * 1024 * 1024,
       },
@@ -80,7 +80,7 @@ describe('session', () => {
     const proc = spawnSync('node', [CLI, 'session', APP], {
       cwd: ROOT,
       encoding: 'utf8',
-      env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST},
+      env: {...process.env, RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun'},
       input: '',
     });
     expect(proc.status).toBe(1);

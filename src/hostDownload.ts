@@ -29,6 +29,11 @@ export type HostManifest = {
   [key: string]: unknown;
 };
 
+/** File name of the host binary on `platform` (default: this process). */
+export function hostFileName(platform: string = process.platform): string {
+  return platform === 'win32' ? 'rn-a11y-host.exe' : 'rn-a11y-host';
+}
+
 export function assetKey(): string {
   return `${process.platform}-${os.arch() === 'x64' ? 'x86_64' : os.arch()}`;
 }
@@ -83,7 +88,7 @@ export async function downloadHost(options: {baseUrl: string; log?: (line: strin
   }
   const root = hostCacheRoot();
   const dir = path.join(root, manifest.version);
-  const bin = path.join(dir, 'rn-a11y-host');
+  const bin = path.join(dir, hostFileName());
   const marker = path.join(dir, '.sha256');
   if (fs.existsSync(bin) && fs.existsSync(marker) && fs.readFileSync(marker, 'utf8').trim() === asset.sha256) {
     return bin;
@@ -102,9 +107,10 @@ export async function downloadHost(options: {baseUrl: string; log?: (line: strin
     }
     const unpacked = path.join(tmp, 'host');
     fs.mkdirSync(unpacked);
-    execFileSync('tar', ['-xzf', archive, '-C', unpacked]);
-    const unpackedBin = path.join(unpacked, 'rn-a11y-host');
-    if (!fs.existsSync(unpackedBin)) throw new Error(`${asset.file} has no rn-a11y-host`);
+    // The archive by a relative path: GNU tar (Git for Windows) reads "C:..." as host:path.
+    execFileSync('tar', ['-xzf', asset.file, '-C', unpacked], {cwd: tmp});
+    const unpackedBin = path.join(unpacked, hostFileName());
+    if (!fs.existsSync(unpackedBin)) throw new Error(`${asset.file} has no ${hostFileName()}`);
     fs.chmodSync(unpackedBin, 0o755);
     fs.writeFileSync(path.join(unpacked, '.sha256'), asset.sha256 + '\n');
     fs.rmSync(dir, {recursive: true, force: true});
