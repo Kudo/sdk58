@@ -82,6 +82,8 @@ type RenderOptions = HostConfigOptions & OutputOptions & {
   dev: boolean;
   debugProps: boolean;
   verbose: boolean;
+  /** --tz: time zone of the host (default UTC). */
+  tz?: string;
 };
 
 function write(text: string, out: string | undefined) {
@@ -284,6 +286,7 @@ async function execute<T>(
     timing: hostTiming,
     logs,
     quiet: isQuiet(options),
+    tz: options.tz,
   };
   try {
     let payload: T;
@@ -486,6 +489,7 @@ async function session(file: string, options: RunOptions) {
       quiet: isQuiet(options),
       host,
       treeDefaults,
+      tz: options.tz,
       io: {
         input: process.stdin,
         output: process.stdout,
@@ -610,7 +614,16 @@ function addCommonOptions(command: Command): Command {
     )
     .option('--scale <n>', 'device pixel ratio for Dimensions/PixelRatio (default: preset, else 3)', positiveNumber)
     .option('--font-scale <n>', 'font scale for Dimensions/PixelRatio (default 1)', positiveNumber)
+    .option('--tz <zone>', 'time zone of the app (TZ of the host process), e.g. America/Los_Angeles (default UTC)', timeZone)
     .option('-v, --verbose', 'print Metro progress and host logs to stderr', false);
+}
+
+/** `--tz`: an IANA zone name like `UTC` or `Europe/Berlin` (also POSIX forms like `PST8PDT`). */
+function timeZone(value: string): string {
+  if (!/^[A-Za-z0-9_+:/-]+$/.test(value)) {
+    throw new InvalidArgumentError(`"${value}" is not a time zone name (e.g. UTC, America/Los_Angeles)`);
+  }
+  return value;
 }
 
 function collect(value: string, previous: string[]): string[] {
@@ -704,6 +717,7 @@ addOutputOptions(program.command('session'))
   )
   .option('--scale <n>', 'device pixel ratio for Dimensions/PixelRatio (default: preset, else 3)', positiveNumber)
   .option('--font-scale <n>', 'font scale for Dimensions/PixelRatio (default 1)', positiveNumber)
+  .option('--tz <zone>', 'time zone of the app (TZ of the host process), e.g. America/Los_Angeles (default UTC)', timeZone)
   .option('-v, --verbose', 'print Metro progress and host logs to stderr', false)
   .addHelpText(
     'after',

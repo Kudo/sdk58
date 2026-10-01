@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {getHostPath, HostUnavailableError, hostRelativePath} from '../packages/rn-a11y-host/index.ts';
 
 import {CliError, EXIT_CODES} from '../src/errors.ts';
-import {checkProtocol, findHost, type HostProbes, SUPPORTED_PROTOCOL} from '../src/host.ts';
+import {checkProtocol, DEFAULT_TZ, findHost, hostEnv, type HostProbes, SUPPORTED_PROTOCOL} from '../src/host.ts';
 import {HOST_PROTOCOL_VERSION} from '../scripts/release-host.ts';
 import {elf, machO, pe} from './fixtures/fake-binaries.ts';
 
@@ -223,5 +223,12 @@ describe('host-resolve', () => {
     expect(badSession.status).toBe(5);
     const ready = JSON.parse(badSession.stdout.split('\n')[0]);
     expect([ready.ready, ready.error.code]).toStrictEqual([false, 'HOST_INCOMPATIBLE']);
+  });
+
+  it('hostEnv: TZ=UTC unless --tz; the rest of the environment is kept', () => {
+    expect(DEFAULT_TZ).toBe('UTC');
+    expect(hostEnv(undefined).TZ).toBe('UTC');
+    expect(hostEnv('Asia/Tokyo').TZ).toBe('Asia/Tokyo');
+    expect(hostEnv(undefined).PATH).toBe(process.env.PATH);
   });
 });

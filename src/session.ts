@@ -16,7 +16,7 @@
 import {type ChildProcess, spawn} from 'node:child_process';
 import readline from 'node:readline';
 
-import {appendHostStderr, checkHostInfo, getHostBin, type HostInfo, hostArgs} from './host.ts';
+import {appendHostStderr, checkHostInfo, getHostBin, type HostInfo, hostArgs, hostEnv} from './host.ts';
 import type {HostRuntimeInfo, SessionTreeOptions, ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
@@ -71,6 +71,8 @@ export async function runSession(options: {
   host?: HostInfo | null;
   /** Output options for the ready tree, and defaults for `tree` / `snapshot` responses (a request's own fields win). */
   treeDefaults?: SessionTreeOptions;
+  /** Time zone of the host (`TZ`); default UTC. */
+  tz?: string;
   io: SessionIO;
 }): Promise<number> {
   const treeDefaults: Record<string, unknown> = {...options.treeDefaults};
@@ -89,7 +91,7 @@ export async function runSession(options: {
         verbose: options.verbose,
       }),
     ],
-    {stdio: ['pipe', 'pipe', 'pipe']},
+    {stdio: ['pipe', 'pipe', 'pipe'], env: hostEnv(options.tz)},
   );
 
   const stderrChunks: Buffer[] = [];

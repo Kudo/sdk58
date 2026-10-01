@@ -319,7 +319,7 @@ jobs:
           docker run --rm "${{ matrix.image }}" sh -c 'cat /etc/os-release | head -n 1; ldd --version | head -n 1'
           cat > "$RUNNER_TEMP/host-in-container" <<EOF
           #!/bin/bash
-          exec docker run --rm -i -v "$PWD:$PWD" -v /tmp:/tmp -v "$HOME:$HOME" -w "$PWD" "${{ matrix.image }}" "$PWD/$HOST_DIR/rn-a11y-host" "\$@"
+          exec docker run --rm -i -e TZ -e LANG -e LC_ALL -e LC_MESSAGES -v "$PWD:$PWD" -v /tmp:/tmp -v "$HOME:$HOME" -w "$PWD" "${{ matrix.image }}" "$PWD/$HOST_DIR/rn-a11y-host" "\$@"
           EOF
           chmod +x "$RUNNER_TEMP/host-in-container"
           echo "RN_A11Y_HOST_BIN=$RUNNER_TEMP/host-in-container" >> "$GITHUB_ENV"
