@@ -235,7 +235,8 @@ jobs:
           # reanimated: SynchronouslyUpdateUIPropsFunction is only declared for ANDROID / __APPLE__.
           # Spike only: configure without the Hermes libraries (round 3) so that
           # the compile errors of the tester are collected even when Hermes fails.
-          sed -i 's|message(FATAL_ERROR "Hermes static library not found|message(WARNING "Hermes static library not found|' third_party/react-native/private/react-native-fantom/tester/CMakeLists.txt
+          sed -i 's|^\( *\)message(FATAL_ERROR "Hermes static library not found\(.*\)$|\1message(WARNING "Hermes static library not found\2\n\1continue()|' third_party/react-native/private/react-native-fantom/tester/CMakeLists.txt
+          grep -n -A1 'Hermes static library not found' third_party/react-native/private/react-native-fantom/tester/CMakeLists.txt
           sed -i 's|^#elif __APPLE__$|#else|' node_modules/react-native-reanimated/Common/cpp/reanimated/Tools/PlatformDepMethodsHolder.h
           # worklets: the non-Android branch calls the macOS pthread_setname_np(name).
           sed -i 's|^    pthread_setname_np(name.c_str());$|#ifdef __APPLE__\n    pthread_setname_np(name.c_str());\n#endif|' node_modules/react-native-worklets/Common/cpp/worklets/RunLoop/AsyncQueueImpl.cpp
