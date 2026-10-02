@@ -42,6 +42,19 @@ resolution runs before finished-cache lookup. Native-tab diagnostics still
 apply: these timings do not establish native selected-tab visibility or drawing.
 No Metro daemon, simulator or emulator is involved.
 
+## Private cache snapshot recheck (2026-10-02)
+
+Revision `19acac0` includes private per-invocation bundle snapshots and the
+configured graceful session shutdown budget. On the same M4/Node/native-host
+setup, the medium screen Android preset measured 6,137 ms cold (one sample),
+656 ms unchanged median (327–721 ms, n=5), and 1,583 ms source-edit median
+(1,459–2,285 ms, n=5). Every invocation starts fresh; revision labels and expected
+cache hit/miss outcomes are asserted. No Metro daemon or simulator is used.
+
+[Raw samples](perf/agent-loop-medium-19acac0.json) retain phase timings. This is a
+shared-machine observation with automatic bytecode compilation, not a controlled
+before/after comparison or a guarantee. Other validation ran concurrently.
+
 ## Historical measurements (2026-09-29)
 
 The following predates the finished-bundle cache, bytecode support, and revision-

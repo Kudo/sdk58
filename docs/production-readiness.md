@@ -66,6 +66,18 @@ boxing on both presets. This is a historical patch comparison of JavaScript
 contracts, not native ABI validation or an independently maintained app pilot.
 No supported version range is inferred from those two package versions.
 
+## External whole-app exercise
+
+The [TanStack Query pilot](validation/2026-10-02-tanstack-pilot/README.md) runs the
+complete upstream React Native example with explicit dependency upgrades and one
+NetInfo fixture. Both presets exercise loading, list/detail navigation and focus
+refetch, including strict policy with exact allowances. App source files remain
+unchanged except its manifest. The app typecheck fails with a documented data-type
+mismatch; this is not a clean production build or evidence of production adoption.
+One shutdown exit-5 failure remains unexplained; bounded comparisons passed on
+both baseline and changed CLI code, which does not establish its cause. Error,
+empty-state and recovery scenarios remain separate validation work.
+
 ## Current reference evidence
 
 [Desktop native layout comparisons](validation/2026-10-02-native-reference/README.md)

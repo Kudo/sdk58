@@ -1,0 +1,310 @@
+{
+  "app": "examples/medium/App.tsx",
+  "preset": "android-phone",
+  "bytecode": "auto",
+  "timestamp": "2026-10-02T13:05:08.142Z",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "node": "v26.5.0"
+  },
+  "summary": {
+    "cold": {
+      "n": 1,
+      "medianMs": 6137,
+      "minMs": 6137,
+      "maxMs": 6137
+    },
+    "unchanged": {
+      "n": 5,
+      "medianMs": 656,
+      "minMs": 327,
+      "maxMs": 721
+    },
+    "source-edit": {
+      "n": 5,
+      "medianMs": 1583,
+      "minMs": 1459,
+      "maxMs": 2285
+    }
+  },
+  "samples": [
+    {
+      "scenario": "cold",
+      "wallMs": 6137,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 5527.203,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 430.368,
+        "hostStartupMs": 98.667,
+        "hostSpawnToExitMs": 455.858,
+        "js": {
+          "evalMs": 182.619,
+          "renderMs": 127.842,
+          "settleMs": 8.18,
+          "dumpMs": 11.765,
+          "jsTotalMs": 331.701,
+          "settleRounds": 3
+        },
+        "convertMs": 5.134,
+        "outputBytes": 831,
+        "totalMs": 6068.181
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 656,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 41.024,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 451.852,
+        "hostStartupMs": 109.1,
+        "hostSpawnToExitMs": 468.063,
+        "js": {
+          "evalMs": 211.092,
+          "renderMs": 112.097,
+          "settleMs": 8.005,
+          "dumpMs": 10.506,
+          "jsTotalMs": 342.752,
+          "settleRounds": 3
+        },
+        "convertMs": 5.303,
+        "outputBytes": 831,
+        "totalMs": 637.446
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 544,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 20.216,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 392.29,
+        "hostStartupMs": 66.764,
+        "hostSpawnToExitMs": 410.894,
+        "js": {
+          "evalMs": 174.117,
+          "renderMs": 130.455,
+          "settleMs": 8.652,
+          "dumpMs": 11.216,
+          "jsTotalMs": 325.526,
+          "settleRounds": 3
+        },
+        "convertMs": 5.865,
+        "outputBytes": 831,
+        "totalMs": 525.443
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 679,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 30.292,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 488.978,
+        "hostStartupMs": 84.35,
+        "hostSpawnToExitMs": 512.273,
+        "js": {
+          "evalMs": 234.119,
+          "renderMs": 146.562,
+          "settleMs": 9.372,
+          "dumpMs": 13.345,
+          "jsTotalMs": 404.628,
+          "settleRounds": 3
+        },
+        "convertMs": 8.922,
+        "outputBytes": 831,
+        "totalMs": 659.87
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 721,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 24.178,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 533.047,
+        "hostStartupMs": 93.573,
+        "hostSpawnToExitMs": 554.026,
+        "js": {
+          "evalMs": 247.696,
+          "renderMs": 161.38,
+          "settleMs": 10.959,
+          "dumpMs": 18.297,
+          "jsTotalMs": 439.474,
+          "settleRounds": 3
+        },
+        "convertMs": 8.457,
+        "outputBytes": 831,
+        "totalMs": 697.617
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 327,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": true,
+        "metroMs": 30.098,
+        "bundleBytes": 3141641,
+        "hostSpawnToResultMs": 146.518,
+        "hostStartupMs": 26.289,
+        "hostSpawnToExitMs": 151.225,
+        "js": {
+          "evalMs": 21.566,
+          "renderMs": 79.948,
+          "settleMs": 3.068,
+          "dumpMs": 14.825,
+          "jsTotalMs": 120.229,
+          "settleRounds": 3
+        },
+        "convertMs": 8.521,
+        "outputBytes": 831,
+        "totalMs": 304.362
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 2285,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 1659.962,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 469.411,
+        "hostStartupMs": 88.022,
+        "hostSpawnToExitMs": 485.678,
+        "js": {
+          "evalMs": 214.367,
+          "renderMs": 145.254,
+          "settleMs": 8.704,
+          "dumpMs": 11.828,
+          "jsTotalMs": 381.389,
+          "settleRounds": 3
+        },
+        "convertMs": 5.046,
+        "outputBytes": 831,
+        "totalMs": 2256.413
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 1623,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 1028.378,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 448.261,
+        "hostStartupMs": 73.946,
+        "hostSpawnToExitMs": 467.517,
+        "js": {
+          "evalMs": 179.905,
+          "renderMs": 168.306,
+          "settleMs": 12.257,
+          "dumpMs": 12.635,
+          "jsTotalMs": 374.315,
+          "settleRounds": 3
+        },
+        "convertMs": 5.55,
+        "outputBytes": 831,
+        "totalMs": 1594.029
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 1476,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 951.022,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 389.745,
+        "hostStartupMs": 65.613,
+        "hostSpawnToExitMs": 406.694,
+        "js": {
+          "evalMs": 175.705,
+          "renderMs": 127.002,
+          "settleMs": 8.823,
+          "dumpMs": 11.461,
+          "jsTotalMs": 324.132,
+          "settleRounds": 3
+        },
+        "convertMs": 4.884,
+        "outputBytes": 831,
+        "totalMs": 1451.449
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 1459,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 932.154,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 386.629,
+        "hostStartupMs": 66.543,
+        "hostSpawnToExitMs": 406.34,
+        "js": {
+          "evalMs": 172.442,
+          "renderMs": 126.683,
+          "settleMs": 8.513,
+          "dumpMs": 11.304,
+          "jsTotalMs": 320.086,
+          "settleRounds": 3
+        },
+        "convertMs": 4.875,
+        "outputBytes": 831,
+        "totalMs": 1433.406
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 1583,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 1078.035,
+        "bundleBytes": 5610821,
+        "hostSpawnToResultMs": 367.758,
+        "hostStartupMs": 61.647,
+        "hostSpawnToExitMs": 384.944,
+        "js": {
+          "evalMs": 164.982,
+          "renderMs": 120.559,
+          "settleMs": 8.74,
+          "dumpMs": 10.66,
+          "jsTotalMs": 306.111,
+          "settleRounds": 3
+        },
+        "convertMs": 4.695,
+        "outputBytes": 831,
+        "totalMs": 1556.774
+      }
+    }
+  ],
+  "sourceRevision": "19acac0"
+}
