@@ -77,9 +77,14 @@ ARM64 execution does not replace the Intel runner result.
   mismatches and explicit exclusions.
 - Successful strict capability gates on every supported platform for the exact
   release candidate, including the actual packaged binary/architecture slices.
-- Further stress coverage for interactive-session output and Windows runner descendants.
-  One-shot stdout/stderr has a tested 32 MiB combined budget, including
-  unterminated lines and console floods.
+- Windows runner-descendant termination and client-side session input/output
+  backpressure still need further coverage. Host stdout/stderr is bounded to
+  32 MiB per one-shot run or session frame, including unterminated lines and
+  console floods. Session tests cover idle floods, retained diagnostics,
+  cancellation, hung shutdown and escaped inherited pipes. These host limits
+  do not bound arbitrary client-input lines or a stalled output consumer.
+  A descendant that deliberately escapes the POSIX process group may outlive
+  the host; the pipe cutoff bounds the CLI wait, not that escaped process.
   One-shot host deadlines cover native execution after bundling; they do not bound
   Metro startup or compilation.
 - Dependency-upgrade exercises and a published support matrix based on those

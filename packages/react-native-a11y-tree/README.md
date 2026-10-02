@@ -20,15 +20,15 @@ macOS arm64 only (the host is built by `bun run build:host`).
 
 | Feature | How it is real | E2E | Known gaps |
 | --- | --- | --- | --- |
-| Rendering and layout | Real Fabric (React, ShadowTree, Yoga) in the Fantom host | `e2e/render.test.ts` | macOS only; one surface per run |
+| Rendering and layout | Real Fabric (React, ShadowTree, Yoga) in the Fantom host | `e2e/render.test.ts` | One surface per run; native platform UI is not instantiated |
 | Text measurement | CoreText `TextLayoutManager` in the host; or the portable layout (stb_truetype, embedded Roboto; `RN_A11Y_TEXT_LAYOUT=portable`, see `native/README.md`) | `e2e/render.test.ts` (heights > 10) | macOS fonts, not Android/iOS fonts; portable: Roboto stands in for SF |
 | Accessibility tree | Host `NativeFantom.getA11yTree` (typed ShadowTree dump) → `src/tree.ts` | `e2e/render.test.ts` | Role/name derivation is simpler than real screen readers |
 | TextInput, Switch | Host `AndroidTextInput` / iOS `TextInput` (CoreText measured) and `AndroidSwitch` / `Switch` shadow nodes | `e2e/render.test.ts`, `e2e/run.test.ts` (both presets) | |
 | Tap, long press, typing | Host `hitTest` + by-tag native events, Pressable responder events, `setTextInputTextByTag` | `e2e/run.test.ts` | No multi-touch responder events; `click` does not bubble |
 | Scrolling, FlatList | Host scroll events and ScrollView state; `onLayout` delivered by settling the event queue | `e2e/scrolling.test.ts` | One scroll event per `scroll` action (no fling) |
 | Session mode | Host `--interactive` mode, one bundle | `e2e/session.test.ts` | No recovery after a host crash |
-| react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No transitions |
-| react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
+| react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No native transitions or native-tab controller |
+| react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts`, `e2e/expo-modules.test.ts` (preset insets) | Insets are configured, not measured from a device |
 | react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner; worklet callbacks through Reanimated | `e2e/gestures.test.ts` | No v3 Reanimated detector events, virtual detectors, or transforms in `absoluteToLocal` |
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
 | `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); see [Expo support](docs/expo-support.md) for other packages |
@@ -88,8 +88,23 @@ including the result and application logs. Exceeding this limit terminates the
 host with `HOST_CRASHED` (exit 5), `error.details.outputLimit: true`, and no
 bytecode retry. Reduce console output or render a smaller screen. This bounds
 protocol buffering even when a line has no newline. Diagnostic stderr files
-contain only output accepted before the limit; interactive sessions have a
-separate lifetime and are not covered by this one-shot budget.
+contain only output accepted before the limit.
+
+Sessions apply the same 32 MiB combined host-output budget separately to each
+request, including startup. Output between requests counts toward the next
+request; extra completion markers cannot reset it. Valid long sessions may
+produce more than 32 MiB overall. Retained diagnostics are deduplicated and
+bounded by both bytes and unique entries; overflow fails explicitly rather than
+dropping evidence. Stderr retention is limited to a 64 KiB tail, while accepted
+stderr can stream to `RN_A11Y_HOST_STDERR_LOG`.
+
+Session shutdown and inherited-pipe cleanup are bounded too. An idle host
+failure emits `{id: null, ok: false, error: ...}`; an active request retains its
+request ID, and startup failures use `ready: false`. Late shutdown logs or
+diagnostics may produce an additional `id: null` record. Rejected late evidence
+remains an error and causes exit 6 in strict mode. SIGINT/SIGTERM cancel the
+session with `HOST_CRASHED`, `details.cancelled: true`, and exit 5. POSIX host
+process groups are terminated; Windows still has the immediate-child limitation.
 
 ## Dependency checks and application fixtures
 
@@ -423,7 +438,7 @@ adds a violation with `rule: "step"` and `key: "step:<index>"`.
 
 - `tools/*.json`: MCP-style tool descriptors `{name, description,
   inputSchema, outputSchema, examples: [{input, argv}], x-cli}` for
-  `render`, `query`, `act` (`run`), `diff` (`run --diff`), `check` and
+  `doctor`, `render`, `query`, `act` (`run`), `diff` (`run --diff`), `check` and
   `session` (with `x-protocol` for the stdin/stdout lines). Input types are
   in `src/tools.ts`; `toolArgv(name, input)` maps an input to CLI arguments
   (`actions` and `rules` are passed inline as JSON). Every tool accepts

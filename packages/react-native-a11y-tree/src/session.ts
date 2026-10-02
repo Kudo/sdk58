@@ -13,16 +13,18 @@
  * - The host exits (code 0) when stdin is closed.
  */
 
-import {collectDiagnostics, fidelityError, type FidelityOptions} from './diagnostics.ts';
+import {collectDiagnostics, fidelityError, type FidelityOptions, type Diagnostic} from './diagnostics.ts';
 
 import type {ChildProcess} from 'node:child_process';
 import readline from 'node:readline';
+import fs from 'node:fs';
+import {PassThrough} from 'node:stream';
 
-import {appendHostStderr, checkHostInfo, getHostBin, type HostInfo, hostArgs, hostEnv, spawnHost} from './host.ts';
+import {checkHostInfo, getHostBin, type HostInfo, hostArgs, hostEnv, spawnHost} from './host.ts';
 import type {HostRuntimeInfo, SessionTreeOptions, ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
-import {type CliError, type ErrorCode, EXIT_CODES, type LogEntry, logEntry, nativeModuleHint, stepErrorCode} from './errors.ts';
+import {CliError, type ErrorInfo, type ErrorCode, EXIT_CODES, type LogEntry, logEntry, nativeModuleHint, stepErrorCode} from './errors.ts';
 import {type Format, FORMATS, formatRender, parseSelector} from './format.ts';
 import type {TreeNode} from './schema.ts';
 import {convertShadowTree, convertStep} from './tree.ts';
@@ -34,6 +36,7 @@ type HostResponse = {
   id: unknown;
   ok: boolean;
   error?: string;
+  hostError?: ErrorInfo;
   ready?: boolean;
   quit?: boolean;
   step?: Step;
@@ -46,6 +49,7 @@ type HostResponse = {
 };
 
 type Frame = {
+  evalId: number;
   response: HostResponse | null;
   replError: {message: string; stack?: string} | null;
   resolve: () => void;
@@ -63,7 +67,7 @@ export async function runSession(options: FidelityOptions & {
   windowWidth: number;
   windowHeight: number;
   verbose?: boolean;
-  /** Per-request timeout in ms; on timeout the host is killed and the session ends with code 1. */
+  /** Per-request timeout in ms; on timeout the host is killed and the session ends with code 5. */
   timeoutMs?: number;
   /** Print startup timings and per-request latency as JSON on stderr. */
   timing?: boolean;
@@ -80,89 +84,179 @@ export async function runSession(options: FidelityOptions & {
 }): Promise<number> {
   const treeDefaults: Record<string, unknown> = {...options.treeDefaults};
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  let timedOut = false;
-  let policyFailed = false;
-  const diagnosticLogs: LogEntry[] = (options.initialLogs ?? []).filter(entry => collectDiagnostics([entry]).length > 0);
-  const runtimeFallbacks = new Set<string>();
-  const diagnosticsFor = (response: HostResponse) => {
-    for (const fallback of response.fallbacks ?? []) runtimeFallbacks.add(fallback);
-    return collectDiagnostics(diagnosticLogs, [...runtimeFallbacks]);
-  };
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647) {
+    throw new CliError('USAGE', 'Session timeoutMs must be an integer from 1 through 2147483647.');
+  }
+  const LIMIT = 32 * 1024 * 1024;
   const {io} = options;
+  let policyFailed = false;
+  let diagnosticVersion = 0;
+  let reportedDiagnosticVersion = 0;
+  let terminalError: ErrorInfo | null = null;
+  let terminalReported = false;
+  let readySent = false;
+  let shutdownRequested = false;
+  let exited = false;
+  let current: Frame | null = null;
+  let nextEvalId = 0;
+  let inputLines: readline.Interface | undefined;
+  let escalation: ReturnType<typeof setTimeout> | undefined;
+  let cutoff: ReturnType<typeof setTimeout> | undefined;
+  let shutdownTimer: ReturnType<typeof setTimeout> | undefined;
+  let drainTimer: ReturnType<typeof setTimeout> | undefined;
+  let resolveExit!: (code: number) => void;
+  const exitPromise = new Promise<number>(resolve => {resolveExit = resolve;});
+  const bin = getHostBin();
   const spawnedAt = performance.now();
-  const child: ChildProcess = spawnHost(
-    getHostBin(),
-    [
-      '--interactive',
-      ...hostArgs({
-        bundlePath: options.bundlePath,
-        windowWidth: options.windowWidth,
-        windowHeight: options.windowHeight,
-        verbose: options.verbose,
-      }),
-    ],
-    {stdio: ['pipe', 'pipe', 'pipe'], env: hostEnv(options.tz)},
-  );
-
-  const stderrChunks: Buffer[] = [];
-  child.stderr!.on('data', (chunk: Buffer) => {
-    stderrChunks.push(chunk);
-    if (options.verbose) process.stderr.write(chunk);
+  const child: ChildProcess = spawnHost(bin, ['--interactive', ...hostArgs({
+    bundlePath: options.bundlePath, windowWidth: options.windowWidth,
+    windowHeight: options.windowHeight, verbose: options.verbose,
+  })], {
+    stdio: ['pipe', 'pipe', 'pipe'], env: hostEnv(options.tz),
+    // POSIX runners share a process group. Windows only kills the immediate
+    // child; escaped descendants on any OS are bounded by the pipe cutoff.
+    detached: process.platform !== 'win32',
   });
 
-  let current: Frame | null = null;
-  // App console output since the last response.
-  let pendingLogs: LogEntry[] = [...(options.initialLogs ?? [])];
+  let stderrTail = Buffer.alloc(0);
+  let stderrLog: number | undefined;
+  const closeLog = () => {
+    if (stderrLog === undefined) return;
+    try {fs.closeSync(stderrLog);} catch {}
+    stderrLog = undefined;
+  };
+  if (process.env.RN_A11Y_HOST_STDERR_LOG) {
+    try {
+      stderrLog = fs.openSync(process.env.RN_A11Y_HOST_STDERR_LOG, 'a');
+      fs.writeSync(stderrLog, `--- ${bin} (pid ${process.pid}) ---\n`);
+    } catch {closeLog();}
+  }
+  const boundedStdout = new PassThrough();
+  const hostLines = readline.createInterface({input: boundedStdout});
+  const kill = (signal: NodeJS.Signals) => {
+    try {
+      if (process.platform !== 'win32' && child.pid != null) process.kill(-child.pid, signal);
+      else child.kill(signal);
+    } catch {try {child.kill(signal);} catch {}}
+  };
+  const stop = (error: ErrorInfo) => {
+    if (terminalError || exited) return;
+    terminalError = error;
+    inputLines?.close(); // Wake an idle client-input wait without destroying it.
+    kill('SIGTERM');
+    escalation = setTimeout(() => kill('SIGKILL'), 250);
+    cutoff = setTimeout(() => {
+      error.details = {...error.details, cleanupTimedOut: true};
+      finalize(child.exitCode);
+    }, 1250);
+  };
+  let outputLimited = false;
+  const failOutput = (message: string) => {
+    outputLimited = true;
+    stop({code: 'HOST_CRASHED', message, details: {outputLimit: true}});
+  };
+  const overflow = (reason = 'combined stdout/stderr output') =>
+    failOutput(`Host exceeded the ${LIMIT}-byte ${reason} limit`);
+
+  // Per-frame bytes reset only on its expected completion. Idle output carries
+  // into the next frame, so unsolicited markers cannot refresh the allowance.
+  let outputBytes = 0;
+  let lineBytes = 0;
+  const accept = (size: number) => {
+    if (outputLimited || exited) return false;
+    outputBytes += size;
+    if (outputBytes <= LIMIT) return true;
+    overflow();
+    return false;
+  };
+  let pendingLogs: LogEntry[] = [];
+  let pendingLogBytes = 0;
+  const diagnosticMap = new Map<string, Diagnostic>();
+  let diagnosticBytes = 0;
+  const retainDiagnostics = (items: Diagnostic[]) => {
+    for (const item of items) {
+      const key = `${item.code}:${item.target}`;
+      const previous = diagnosticMap.get(key);
+      const bytes = diagnosticBytes + Buffer.byteLength(JSON.stringify(item))
+        - (previous ? Buffer.byteLength(JSON.stringify(previous)) : 0);
+      // Also bound object overhead for many distinct, very short diagnostics.
+      if (bytes > LIMIT) {overflow('retained diagnostic'); return;}
+      if (!previous && diagnosticMap.size >= 65_536) {
+        failOutput('Host exceeded the 65536 retained diagnostic count limit'); return;
+      }
+      diagnosticMap.set(key, item);
+      if (!previous || previous.message !== item.message) diagnosticVersion++;
+      diagnosticBytes = bytes;
+    }
+  };
+  const retainLog = (entry: LogEntry) => {
+    const bytes = Buffer.byteLength(JSON.stringify(entry));
+    if (pendingLogBytes + bytes > LIMIT) {overflow('retained log'); return;}
+    pendingLogs.push(entry);
+    pendingLogBytes += bytes;
+    retainDiagnostics(collectDiagnostics([entry]));
+  };
   const takeLogs = () => {
     const logs = pendingLogs;
     pendingLogs = [];
+    pendingLogBytes = 0;
     return logs;
   };
-  let exited = false;
-  const exitPromise = new Promise<number>(resolve => {
-    child.on('close', code => {
-      appendHostStderr(getHostBin(), Buffer.concat(stderrChunks).toString('utf8'));
-      exited = true;
-      current?.resolve();
-      resolve(code ?? 1);
-    });
-  });
-  child.on('error', error => {
-    io.log(`host failed to start: ${error.message}`);
-  });
+  const diagnosticsFor = (response: HostResponse) => {
+    retainDiagnostics(collectDiagnostics([], response.fallbacks ?? []));
+    return [...diagnosticMap.values()];
+  };
 
-  readline.createInterface({input: child.stdout!}).on('line', rawLine => {
+  const onStderr = (chunk: Buffer) => {
+    if (!accept(chunk.length)) return;
+    const tail = chunk.subarray(-65536);
+    stderrTail = Buffer.concat([stderrTail.subarray(-Math.max(0, 65536 - tail.length)), tail]).subarray(-65536);
+    if (stderrLog !== undefined) {
+      try {fs.writeSync(stderrLog, chunk);} catch {closeLog();}
+    }
+    if (options.verbose) process.stderr.write(chunk);
+  };
+  const onStdout = (chunk: Buffer) => {
+    if (terminalError) {accept(chunk.length); return;}
+    // A chunk can straddle a completion and idle output. Feed byte segments so
+    // the synchronous line handler changes budgets at the actual boundary.
+    for (let offset = 0; offset < chunk.length;) {
+      const newline = chunk.indexOf(10, offset);
+      const end = newline < 0 ? chunk.length : newline + 1;
+      const size = end - offset;
+      if (!accept(size)) return;
+      lineBytes += size;
+      if (lineBytes > LIMIT) {overflow('unterminated stdout line'); return;}
+      if (newline >= 0) lineBytes = 0;
+      boundedStdout.write(chunk.subarray(offset, end));
+      offset = end;
+    }
+  };
+  const onStdoutEnd = () => boundedStdout.end();
+  hostLines.on('line', rawLine => {
+    if (terminalError) return;
     const line = rawLine.trim();
     if (!line) return;
-    let message: {type?: string; [key: string]: unknown};
-    try {
-      message = JSON.parse(line);
-    } catch {
-      io.log(`[host] ${line}`);
-      return;
-    }
-    switch (message.type) {
+    let message: {type?: string; [key: string]: unknown} | null;
+    try {message = JSON.parse(line);} catch {io.log(`[host] ${line}`); return;}
+    switch (message?.type) {
       case RESPONSE_TYPE:
         if (current) current.response = message as unknown as HostResponse;
         break;
       case 'repl-error':
-        if (current) {
-          current.replError = {
-            message: String(message.message),
-            stack: message.stack as string | undefined,
-          };
-        }
+        if (current) current.replError = {message: String(message.message), stack: message.stack as string | undefined};
         break;
       case 'repl-eval-complete': {
         const frame = current;
+        if (!frame || message.id !== frame.evalId) break;
         current = null;
-        frame?.resolve();
+        outputBytes = 0;
+        frame.resolve();
         break;
       }
       case 'console-log': {
         const entry = logEntry(String(message.level ?? 'info'), String(message.message));
-        pendingLogs.push(entry);
-        if (collectDiagnostics([entry]).length) diagnosticLogs.push(entry);
+        retainLog(entry);
         if (!options.quiet || /^\[NATIVE_(?:COMPONENT|MODULE)_FALLBACK\] /.test(entry.message)) io.log(`[app] ${entry.message}`);
         break;
       }
@@ -171,45 +265,82 @@ export async function runSession(options: FidelityOptions & {
     }
   });
 
-  /** Sends one request to the runtime and waits for the frame to complete. */
-  function send(request: Record<string, unknown>): Promise<HostResponse> {
-    if (exited) {
-      return Promise.resolve({id: request.id, ok: false, error: 'host has exited'});
+  function finalize(code: number | null) {
+    if (exited) return;
+    if (!terminalError && (code !== 0 || !shutdownRequested || current)) {
+      terminalError = {code: 'HOST_CRASHED', message: code !== 0
+        ? `host exited with ${child.signalCode ? `signal ${child.signalCode}` : `code ${code}`}`
+        : 'host exited while handling the session', details: {exitCode: code}};
     }
+    exited = true;
+    if (terminalError) {
+      kill('SIGKILL');
+      if (terminalError.code === 'HOST_CRASHED' && stderrTail.length) {
+        terminalError.details = {...terminalError.details, stderrTail: stderrTail.toString('utf8')};
+      }
+    }
+    for (const timer of [escalation, cutoff, shutdownTimer, drainTimer]) if (timer !== undefined) clearTimeout(timer);
+    inputLines?.close();
+    hostLines.removeAllListeners('line');
+    hostLines.close();
+    boundedStdout.destroy();
+    child.stdout!.removeListener('data', onStdout);
+    child.stdout!.removeListener('end', onStdoutEnd);
+    child.stderr!.removeListener('data', onStderr);
+    child.removeListener('close', finalize);
+    child.removeListener('exit', onExit);
+    child.removeListener('error', onError);
+    child.stdin!.removeListener('error', onInputError);
+    child.stdout!.destroy(); child.stderr!.destroy(); child.stdin!.destroy();
+    if (stderrLog !== undefined) {
+      try {fs.writeSync(stderrLog, '\n');} catch {}
+      closeLog();
+    }
+    child.unref();
+    current?.resolve();
+    current = null;
+    resolveExit(code ?? 1);
+  }
+  const onExit = () => {
+    // 'exit' reaps the leader, but 'close' can wait forever on inherited pipes.
+    drainTimer = setTimeout(() => stop({code: 'HOST_CRASHED', message: 'Host descendants retained session pipes after exit'}), 250);
+  };
+  const onError = (error: Error) => stop({code: 'HOST_CRASHED', message: `Host failed: ${error.message}`});
+  const onInputError = (error: Error) => {if (!exited) onError(error);};
+  child.on('close', finalize);
+  child.on('exit', onExit);
+  child.on('error', onError);
+  child.stdin!.on('error', onInputError);
+  child.stdout!.on('data', onStdout);
+  child.stdout!.once('end', onStdoutEnd);
+  child.stderr!.on('data', onStderr);
+  for (const entry of options.initialLogs ?? []) retainLog(entry);
+
+  /** Sends one request; fatal failures resolve only after bounded cleanup. */
+  function send(request: Record<string, unknown>): Promise<HostResponse> {
+    if (terminalError || exited) {
+      return exitPromise.then(() => ({id: request.id, ok: false,
+        error: terminalError?.message ?? 'host has exited', hostError: terminalError ?? undefined}));
+    }
+    if (request.quit === true) shutdownRequested = true;
     return new Promise(resolve => {
       let settled = false;
-      const timer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        timedOut = true;
-        current = null;
-        child.kill('SIGKILL');
-        resolve({id: request.id, ok: false, error: 'timeout'});
-      }, timeoutMs);
+      const timer = setTimeout(() => stop({code: 'TIMEOUT', message: 'timeout'}), timeoutMs);
       const frame: Frame = {
-        response: null,
-        replError: null,
+        evalId: nextEvalId++, response: null, replError: null,
         resolve: () => {
           if (settled) return;
           settled = true;
           clearTimeout(timer);
-          if (frame.response) {
-            resolve(frame.response);
-          } else if (frame.replError) {
-            resolve({id: request.id, ok: false, error: frame.replError.message});
-          } else {
-            resolve({
-              id: request.id,
-              ok: false,
-              error: exited ? 'host exited while handling the request' : 'no response from the runtime',
-            });
-          }
+          if (terminalError) resolve({id: request.id, ok: false, error: terminalError.message, hostError: terminalError});
+          else if (frame.response) resolve(frame.response);
+          else if (frame.replError) resolve({id: request.id, ok: false, error: frame.replError.message});
+          else resolve({id: request.id, ok: false, error: exited ? 'host exited while handling the request' : 'no response from the runtime'});
         },
       };
       current = frame;
       const arg = JSON.stringify(JSON.stringify(request));
-      const code =
-        `globalThis.__rnA11y != null ? globalThis.__rnA11y.request(${arg}) : ` +
+      const code = `globalThis.__rnA11y != null ? globalThis.__rnA11y.request(${arg}) : ` +
         `(() => { throw globalThis.__rnA11ySetupError ?? new Error('rn-a11y-tree session runtime is not installed'); })();\n`;
       const bytes = Buffer.from(code, 'utf8');
       child.stdin!.write(`${bytes.length}\n`);
@@ -218,6 +349,9 @@ export async function runSession(options: FidelityOptions & {
   }
 
   const writeLine = (value: unknown) => {
+    const record = value as {error?: ErrorInfo; diagnostics?: Diagnostic[]};
+    if (terminalError && record.error === terminalError) terminalReported = true;
+    if (record.diagnostics) reportedDiagnosticVersion = diagnosticVersion;
     io.output.write(JSON.stringify(value) + '\n');
   };
 
@@ -250,128 +384,174 @@ export async function runSession(options: FidelityOptions & {
       out.ok = false;
       out.error = policyError.toJSON();
     }
+    if (response.hostError || terminalError) {
+      out.ok = false;
+      out.error = response.hostError ?? terminalError;
+    }
     return out;
   };
 
   const finish = async (): Promise<number> => {
-    child.stdin!.end();
+    shutdownRequested = true;
+    if (!exited && !terminalError) {
+      child.stdin!.end();
+      shutdownTimer ??= setTimeout(() => stop({code: 'HOST_CRASHED', message: 'Host did not exit after session shutdown'}), 250);
+    }
     const code = await exitPromise;
-    if (timedOut) {
-      io.log(`request timed out after ${timeoutMs} ms; host killed`);
-      return EXIT_CODES.TIMEOUT;
+    // stdout is drained before exitPromise settles. Cleanup can log after the
+    // quit response/completion; apply policy to that evidence before returning.
+    const diagnostics = [...diagnosticMap.values()];
+    const latePolicyError = fidelityError(diagnostics, options);
+    if (latePolicyError) policyFailed = true;
+    if (terminalError) {
+      if (!terminalReported) {
+        const logs = takeLogs();
+        writeLine({...(!readySent ? {ready: false} : {id: null, ok: false}), error: terminalError,
+          ...(diagnostics.length ? {diagnostics} : {}), ...(logs.length ? {logs} : {})});
+      }
+      if (terminalError.code === 'TIMEOUT') io.log(`request timed out after ${timeoutMs} ms; host killed`);
+      return EXIT_CODES[terminalError.code];
     }
     if (code !== 0) {
       io.log(`host exited with code ${code}`);
-      const stderr = Buffer.concat(stderrChunks).toString('utf8');
+      const stderr = stderrTail.toString('utf8');
       if (stderr && !options.verbose) io.log(stderr.trimEnd());
       return EXIT_CODES.HOST_CRASHED;
+    }
+    const logs = takeLogs();
+    if (logs.length || diagnosticVersion !== reportedDiagnosticVersion) {
+      // Only new evidence needs a follow-up, but rejected evidence must stay
+      // explicitly failed even when an earlier response reported policy failure.
+      if (latePolicyError) {
+        writeLine({...(!readySent ? {ready: false} : {id: null, ok: false}),
+          error: latePolicyError.toJSON(), diagnostics, ...(logs.length ? {logs} : {})});
+      } else {
+        writeLine({id: null, ok: true, ...(diagnostics.length ? {diagnostics} : {}), ...(logs.length ? {logs} : {})});
+      }
     }
     return policyFailed ? EXIT_CODES.UNSUPPORTED_NATIVE : 0;
   };
 
-  // Initial render.
-  const start = await send({id: null, start: true});
-  if (timedOut) {
-    writeLine({ready: false, error: {code: 'TIMEOUT', message: 'timeout'}});
-    return finish();
-  }
-  if (!start.ok) {
-    const code = exited ? 'HOST_CRASHED' : 'APP_THREW';
-    const logs = takeLogs();
-    const hint = nativeModuleHint(start.error ?? '');
-    writeLine({ready: false, error: {code, message: start.error, ...(hint ? {hint} : {})}, ...(logs.length > 0 ? {logs} : {})});
-    await finish();
-    return EXIT_CODES[code];
-  }
+  const cancel = () => stop({code: 'HOST_CRASHED', message: 'Host execution cancelled', details: {cancelled: true}});
+  // Keep these installed through cleanup so repeated signals cannot strand
+  // the detached host while it is being reaped. This API owns one CLI session.
+  process.on('SIGINT', cancel);
+  process.on('SIGTERM', cancel);
   try {
-    checkHostInfo(start.hostInfo);
-  } catch (error) {
-    const cliError = error as CliError;
-    writeLine({ready: false, error: cliError.toJSON()});
-    await finish();
-    return EXIT_CODES[cliError.code];
-  }
-  if (options.timing) {
-    const toReady = Math.round((performance.now() - spawnedAt) * 1000) / 1000;
-    const js = start.timings;
-    io.log(
-      `rn-a11y-tree timing: ${JSON.stringify({
-        hostSpawnToReadyMs: toReady,
-        hostStartupMs:
-          js?.jsTotalMs != null ? Math.round((toReady - js.jsTotalMs) * 1000) / 1000 : undefined,
-        js,
-      })}`,
-    );
-  }
-  const diagnostics = diagnosticsFor(start);
-  const policyError = fidelityError(diagnostics, options);
-  if (policyError) {
-    policyFailed = true;
-    writeLine({ready: false, error: policyError.toJSON(), diagnostics, logs: takeLogs()});
-    return finish();
-  }
-  const readyLogs = takeLogs();
-  const host = options.host;
-  writeLine({
-    ready: true,
-    ...(diagnostics.length ? {diagnostics} : {}),
-    tree: start.tree ? formatSessionTree(convertShadowTree(start.tree), treeDefaults) : null,
-    capabilities: start.capabilities ?? [],
-    ...(start.hostInfo != null ? {hostInfo: start.hostInfo} : {}),
-    ...(host != null
-      ? {
-          host: {
-            source: host.source,
-            ...(host.version != null ? {version: host.version} : {}),
-            ...(host.protocolVersion != null ? {protocolVersion: host.protocolVersion} : {}),
-          },
-        }
-      : {}),
-    ...(readyLogs.length > 0 ? {logs: readyLogs} : {}),
-  });
-
-  // Requests, one at a time, in order.
-  let quitSent = false;
-  const lines = readline.createInterface({input: io.input});
-  for await (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    let request: Record<string, unknown>;
+    // Initial render.
+    const start = await send({id: null, start: true});
+    if (terminalError) return await finish();
+    if (!start.ok) {
+      const code = exited ? 'HOST_CRASHED' : 'APP_THREW';
+      const logs = takeLogs();
+      const hint = nativeModuleHint(start.error ?? '');
+      writeLine({ready: false, error: {code, message: start.error, ...(hint ? {hint} : {})}, ...(logs.length > 0 ? {logs} : {})});
+      const shutdownCode = await finish();
+      return shutdownCode || EXIT_CODES[code];
+    }
     try {
-      request = JSON.parse(line);
+      checkHostInfo(start.hostInfo);
     } catch (error) {
-      writeLine({...convert({id: null, ok: false, error: 'invalid JSON'}, {}), error: {code: 'USAGE', message: `invalid JSON: ${(error as Error).message}`}});
-      continue;
+      const cliError = error as CliError;
+      writeLine({ready: false, error: cliError.toJSON()});
+      const shutdownCode = await finish();
+      return shutdownCode || EXIT_CODES[cliError.code];
     }
-    const problem = validateRequest(request);
-    if (problem != null) {
-      writeLine({...convert({id: request?.id ?? null, ok: false, error: problem}, {}), error: {code: 'USAGE', message: problem}});
-      continue;
-    }
-    const requestStart = performance.now();
-    const response = await send(request);
-    writeLine(convert(response, request));
     if (options.timing) {
+      const toReady = Math.round((performance.now() - spawnedAt) * 1000) / 1000;
+      const js = start.timings;
       io.log(
-        `rn-a11y-tree timing: ${JSON.stringify({id: request.id, requestMs: Math.round((performance.now() - requestStart) * 1000) / 1000})}`,
+        `rn-a11y-tree timing: ${JSON.stringify({
+          hostSpawnToReadyMs: toReady,
+          hostStartupMs:
+            js?.jsTotalMs != null ? Math.round((toReady - js.jsTotalMs) * 1000) / 1000 : undefined,
+          js,
+        })}`,
       );
     }
-    if (request.quit === true) {
-      quitSent = true;
-      break;
+    const diagnostics = diagnosticsFor(start);
+    if (terminalError) return await finish();
+    const policyError = fidelityError(diagnostics, options);
+    if (policyError) {
+      policyFailed = true;
+      writeLine({ready: false, error: policyError.toJSON(), diagnostics, logs: takeLogs()});
+      return await finish();
     }
-    if (timedOut || policyFailed || exited) break;
+    const readyLogs = takeLogs();
+    const host = options.host;
+    readySent = true;
+    writeLine({
+      ready: true,
+      ...(diagnostics.length ? {diagnostics} : {}),
+      tree: start.tree ? formatSessionTree(convertShadowTree(start.tree), treeDefaults) : null,
+      capabilities: start.capabilities ?? [],
+      ...(start.hostInfo != null ? {hostInfo: start.hostInfo} : {}),
+      ...(host != null
+        ? {
+            host: {
+              source: host.source,
+              ...(host.version != null ? {version: host.version} : {}),
+              ...(host.protocolVersion != null ? {protocolVersion: host.protocolVersion} : {}),
+            },
+          }
+        : {}),
+      ...(readyLogs.length > 0 ? {logs: readyLogs} : {}),
+    });
+
+    // Requests, one at a time, in order.
+    let quitSent = false;
+    const lines = inputLines = readline.createInterface({input: io.input});
+    for await (const rawLine of lines) {
+      if (terminalError || exited) break;
+      const line = rawLine.trim();
+      if (!line) continue;
+      let request: Record<string, unknown>;
+      try {
+        request = JSON.parse(line);
+      } catch (error) {
+        writeLine({...convert({id: null, ok: false, error: 'invalid JSON'}, {}), error: {code: 'USAGE', message: `invalid JSON: ${(error as Error).message}`}});
+        continue;
+      }
+      const problem = validateRequest(request);
+      if (problem != null) {
+        writeLine({...convert({id: request?.id ?? null, ok: false, error: problem}, {}), error: {code: 'USAGE', message: problem}});
+        continue;
+      }
+      const requestStart = performance.now();
+      const response = await send(request);
+      const out = convert(response, request);
+      if (terminalError) await exitPromise;
+      writeLine(out);
+      if (options.timing) {
+        io.log(
+          `rn-a11y-tree timing: ${JSON.stringify({id: request.id, requestMs: Math.round((performance.now() - requestStart) * 1000) / 1000})}`,
+        );
+      }
+      if (request.quit === true) {
+        quitSent = true;
+        break;
+      }
+      if (terminalError || policyFailed || exited) break;
+    }
+    lines.close();
+    if (!exited && !quitSent && !terminalError) {
+      // End of input without `quit` behaves like `quit`.
+      const response = await send({id: null, quit: true});
+      const wasFailed = policyFailed;
+      const out = convert(response, {});
+      // Normal EOF remains silent; an unrequested cleanup failure must be visible.
+      if ((!wasFailed && policyFailed) || !response.ok) writeLine(out);
+    }
+    return await finish();
+  } finally {
+    if (!exited) {
+      stop({code: 'HOST_CRASHED', message: 'Session stopped before host shutdown'});
+      await exitPromise;
+    }
+    inputLines?.close();
+    process.off('SIGINT', cancel);
+    process.off('SIGTERM', cancel);
   }
-  lines.close();
-  if (!exited && !quitSent && !timedOut) {
-    // End of input without `quit` behaves like `quit`.
-    const response = await send({id: null, quit: true});
-    const wasFailed = policyFailed;
-    const out = convert(response, {});
-    // Normal EOF remains silent; an unrequested cleanup failure must be visible.
-    if ((!wasFailed && policyFailed) || !response.ok) writeLine(out);
-  }
-  return finish();
 }
 
 /**
