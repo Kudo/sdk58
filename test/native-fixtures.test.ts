@@ -1,4 +1,4 @@
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {installNativeFixtures} from '../packages/react-native-a11y-tree/runtime/nativeFixtures.ts';
 
 it('installs explicit fixtures lazily and reports only accessed modules', () => {
@@ -20,6 +20,36 @@ it('installs explicit fixtures lazily and reports only accessed modules', () => 
     expect.stringContaining('[APPLICATION_FIXTURE] expo/Existing:'),
     expect.stringContaining('[APPLICATION_FIXTURE] turbo/Storage:'),
   ]);
+});
+
+it('validates all Nitro definitions and version before mutating either registry', () => {
+  const invalid = [
+    {nitroModules: []}, {nitroModules: {Storage: {}}},
+    {nitroModules: {'bad name': () => ({})}}, {nitroModules: undefined},
+  ];
+  for (const nitro of invalid) {
+    const expo = {NativeModule: class {}, modules: {}};
+    const registerTurbo = vi.fn();
+    expect(() => installNativeFixtures({expoModules: {Good: {}}, turboModules: {Good: {}}, ...nitro},
+      {expo, registerTurbo, warn: () => {}, nitroVersion: () => '0.37.1'})).toThrow(/fixture/i);
+    expect(expo.modules).toEqual({});
+    expect(registerTurbo).not.toHaveBeenCalled();
+  }
+  for (const nitroVersion of [undefined, () => '', () => 'unknown', () => {throw new Error('package missing');}]) {
+    const expo = {NativeModule: class {}, modules: {}};
+    const registerTurbo = vi.fn();
+    expect(() => installNativeFixtures({expoModules: {Good: {}}, nitroModules: {}},
+      {expo, registerTurbo, warn: () => {}, nitroVersion})).toThrow();
+    expect(expo.modules).toEqual({});
+    expect(registerTurbo).not.toHaveBeenCalled();
+  }
+});
+
+it('rejects conflicting Nitro bootstrap registrations before any registry mutation', () => {
+  const registerTurbo = vi.fn();
+  expect(() => installNativeFixtures({turboModules: {NitroModules: {}}, nitroModules: {}},
+    {registerTurbo, warn: () => {}, nitroVersion: () => '0.37.1'})).toThrow(/NitroModules/);
+  expect(registerTurbo).not.toHaveBeenCalled();
 });
 
 it('rejects invalid fixture definitions before installing anything', () => {

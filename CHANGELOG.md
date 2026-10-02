@@ -8,6 +8,8 @@ share one version.
 
 ### Added
 
+- Explicit Nitro HybridObject fixture factories and E2E coverage of real MMKV JS and Nitro Image view registration, with native limitations exposed in diagnostics.
+
 - Release gates exercise the npm-packed universal macOS host on ARM64 and Intel; package E2E respects the selected host.
 
 - Explicit consuming-app roots and constrained custom Metro configuration, including real SVG-transformer regression coverage; unsupported worker/serializer integrations are rejected.

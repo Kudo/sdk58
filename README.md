@@ -106,6 +106,10 @@ export default {
   expoModules: {
     MyExpoService: {getStatusAsync: async () => 'available'},
   },
+  nitroModules: {
+    // A factory per HybridObject creation, not a shared module singleton.
+    MyHybridService: () => ({getValue: () => 'fixture value'}),
+  },
 };
 ```
 
@@ -120,6 +124,21 @@ library's native contract, including callback and Promise behavior; these fixtur
 do not verify native implementation, persistence, permissions, or device lifecycle.
 See [the AsyncStorage example](examples/storage-fixture) for a real third-party JS
 library backed by an explicit in-memory native fixture.
+
+Nitro fixtures require the app's `react-native-nitro-modules` dependency. They
+provide explicit HybridObject factories through the package's normal JS bootstrap;
+used factories report `APPLICATION_FIXTURE` with target `nitro/<name>`. Unknown
+objects and unsupported native proxy operations throw and report
+`NATIVE_API_UNSUPPORTED`, including when the app catches the error. No native
+Nitro/JSI objects, persistence, cross-runtime sharing, or native state are created.
+Nitro 0.37.1 also attempts boxing during import when Worklets is installed; that
+caught error remains a `NitroModules.box` diagnostic and fails strict mode even
+when all fixture names are allowed.
+Nitro views use the existing unsupported-view fallback: layout and standard View
+props can be inspected, but native drawing, `hybridRef`, and native callbacks
+are not executed. Strict mode requires an explicit allowance for each view.
+See [the Nitro example](examples/nitro-fixture) for MMKV and Nitro Image coverage
+and the exact package versions and limitations.
 
 Commit shared policy in the app's `a11y-tree.json`:
 

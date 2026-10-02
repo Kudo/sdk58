@@ -1,0 +1,12 @@
+[
+  {"type": {"testID": "note", "text": "Nitro fixture note"}},
+  {"tap": {"testID": "save"}},
+  {"snapshot": "saved"},
+  {"type": {"testID": "note", "text": "Temporary edit"}},
+  {"tap": {"testID": "load"}},
+  {"snapshot": "loaded"},
+  {"tap": {"testID": "remove"}},
+  {"snapshot": "deleted"},
+  {"tap": {"testID": "load"}},
+  {"snapshot": "removed"}
+]

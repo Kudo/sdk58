@@ -168,6 +168,15 @@ export function renderEntry(options: {
     require.resolve('react-native-safe-area-context/package.json', {paths: [options.projectRoot ?? findProjectRoot(options.appPath)]});
     safeArea = true;
   } catch {}
+  // Resolve Nitro only from the selected app. Its package metadata is a Metro
+  // dependency when setup is used, so upgrades invalidate the cached bundle.
+  let nitroPackage: string | undefined;
+  if (options.setupPath) {
+    try {
+      nitroPackage = createRequire(path.join(options.projectRoot ?? findProjectRoot(options.appPath), 'package.json'))
+        .resolve('react-native-nitro-modules/package.json');
+    } catch {}
+  }
   return template
     .replaceAll('__RUNTIME_DIR__', quote(RUNTIME_DIR))
     .replaceAll('__APP_PATH__', quote(path.resolve(options.appPath)))
@@ -186,6 +195,7 @@ export function renderEntry(options: {
       const fixtureModule = require('${quote(path.resolve(options.setupPath))}');
       require('${quote(path.join(RUNTIME_DIR, 'nativeFixtures'))}').installNativeFixtures(fixtureModule.default ?? fixtureModule, {
         expo: globalThis.expo,
+        nitroVersion: ${nitroPackage ? `() => require('${quote(nitroPackage)}').version` : 'undefined'},
         registerTurbo: require('${quote(path.join(RUNTIME_DIR, 'turboModuleStubs'))}').registerTurboModuleFixture,
         warn: message => console.warn(message),
       });

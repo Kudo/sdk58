@@ -22,10 +22,17 @@ reuse disk caches; a Metro daemon is not required. See
 ## Third-party integration and maintenance
 
 Pure JavaScript libraries can run through their real imports. Native service
-libraries can use explicit Expo/TurboModule fixtures; the AsyncStorage example
+libraries can use explicit Expo/TurboModule or Nitro HybridObject fixtures; the AsyncStorage example
 exercises its real JavaScript wrapper with an in-memory callback contract. Native
 UI libraries may additionally need Fabric descriptors, layout, event handling,
 and host integration. A generic fixture object cannot supply those behaviors.
+
+The [Nitro example](../examples/nitro-fixture/README.md) pins Nitro 0.37.1,
+MMKV 4.3.2, and Nitro Image 0.15.2. It tests the real JS bootstrap, storage
+interactions with app-owned factories, and a Nitro Image View fallback. Native
+storage, image decoding/drawing, hybrid refs, and cross-runtime boxing remain
+unsupported. Nitro's caught boxing error still fails strict policy. These tests
+do not mean that the native Nitro runtime is compiled into the host.
 
 For each maintained adapter, record the tested package version, supported methods,
 unsupported operations, observable diagnostics, and regression examples. Test

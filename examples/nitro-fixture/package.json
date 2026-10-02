@@ -1,0 +1,12 @@
+{
+  "name": "example-nitro-fixture",
+  "private": true,
+  "dependencies": {
+    "expo": "58.0.0",
+    "react": "19.3.0",
+    "react-native": "0.88.0-rc.2",
+    "react-native-mmkv": "4.3.2",
+    "react-native-nitro-image": "0.15.2",
+    "react-native-nitro-modules": "0.37.1"
+  }
+}
