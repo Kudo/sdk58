@@ -226,3 +226,10 @@ The requested attempt bounds were exhausted and testing stopped. **The original
 exit-5 cause remains unknown.** Neither this baseline comparison nor passing
 changed-source runs proves that the graceful-shutdown change fixes that original
 failure. The original failed attempt and its capture limitations remain recorded.
+
+## Follow-up fault validation
+
+The separate [scenario report](scenario-report.md) records executed empty-list and
+detail-query error/recovery flows on both presets, with explicit data and JS
+lifecycle fixtures. It extends coverage beyond the historical happy-path runs;
+it does not resolve their intermittent shutdown failure.

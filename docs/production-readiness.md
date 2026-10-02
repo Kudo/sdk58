@@ -75,8 +75,11 @@ refetch, including strict policy with exact allowances. App source files remain
 unchanged except its manifest. The app typecheck fails with a documented data-type
 mismatch; this is not a clean production build or evidence of production adoption.
 One shutdown exit-5 failure remains unexplained; bounded comparisons passed on
-both baseline and changed CLI code, which does not establish its cause. Error,
-empty-state and recovery scenarios remain separate validation work.
+both baseline and changed CLI code, which does not establish its cause. Separate
+[empty/error/recovery scenarios](validation/2026-10-02-tanstack-pilot/scenario-report.md)
+passed 42 assertions across four strict sessions on both presets. These preserve
+the real query functions and navigation, while explicitly perturbing bundled data
+and injecting JS AppState events; they do not test HTTP or native lifecycle delivery.
 
 ## Current reference evidence
 

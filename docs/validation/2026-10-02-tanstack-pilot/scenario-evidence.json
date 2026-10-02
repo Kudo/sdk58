@@ -1,0 +1,1189 @@
+{
+  "upstream": {
+    "repo": "https://github.com/TanStack/query",
+    "revision": "29859ae60c8dca0a5cdbf8abccc775b655cf43e2",
+    "path": "examples/react/react-native",
+    "fileCount": 26,
+    "license": "MIT",
+    "filesSha256": {
+      "App.tsx": "8ea535b98abdd95adbf06615b95f970bf70a46d7d9d1e45f898407f57b9ca52e",
+      "app.json": "665432674421e482fc23f0e8fffc2d2ac79b422aa41f04f41b1a56235d628849",
+      "src/components/ListItem.tsx": "6779eb984c5c856aaf22b2d33447d48792692240da3dacf652bcb7d898755775",
+      "babel.config.js": "6d07fd00b2a1eff1a5f0540113357b88aad71a805c3bb2579d83870e3f5c0e2d",
+      "src/hooks/useAppState.ts": "dac68c3a5538088b68e1605d1994b148601a84f78c90cc60a1aea8d5ee1a40db",
+      "src/components/ErrorMessage.tsx": "448823e61876f20d1a51ec561f9bbdd1d14063635f41e2be3b0ec994d54a5c13",
+      "src/components/LoadingIndicator.tsx": "9095220035fdbe1fa174d7c0babe33764c75ff41947125bebe72f77785299c64",
+      "src/lib/api.ts": "da8c2a6cf9f29e96b4b6b2fca190536b2a7b8a1e033f309f32d6789502c2c78e",
+      "src/components/Divider.tsx": "57a571fb9db0e081f08c5a768eb1b3ab41040b4f4eadf90be547808ed0583534",
+      "src/hooks/useOnlineManager.ts": "b66743d79c4170b16fe6bb47a403672dec91a10b7c903d16a30c6744961ee0fd",
+      "src/screens/MoviesListScreen.tsx": "05424116ff9cac20a280d2de5dbe57df3c64074401c5124b22534572911f7c76",
+      "tsconfig.json": "712583ff9cdb4b4e4f9b000a4a56d68db8dc1921cbfbc36d490a3a9f2be3dd72",
+      "src/navigation/MoviesStack.tsx": "5ab4c50840fce72cf4a1d22ffe889a41a64f1c24741f284b457a14dad1e7c040",
+      "src/hooks/useRefreshByUser.ts": "a21b690ccf4efcf3ae76e80411f380579839071f5fa082320d30db90916d1bba",
+      "src/hooks/useRefreshOnFocus.ts": "c05012a558878c0b05b990ab24c4081d6243f0c8830bf1d0db8dc4289683c126",
+      "src/navigation/types.ts": "2ee005563abeca673f0d86fee38c98582d076ed66926b6c71e76ecc37a85aa4e",
+      "src/screens/MovieDetailsScreen.tsx": "e1a4228a3768a7d6acac4ba881ad6e6c62d06911e322977e831fcf14fe5f33ec",
+      "src/data/movies.json": "c7c90b63ffb69db7c5b785c7a350a6ca9712412dc9170bff644bb49a234e2e27",
+      "README.md": "20d5b1fcff312a9ad51b52c6f84dd29f5def889eef5a03916b8ec99382854d5a",
+      ".eslintrc": "c507c9e1d40a42fd39c3505301190d766d199b8e29328f8137873f7cc86f2a2a",
+      "UPSTREAM-LICENSE": "a405ee70c632bb938acb7ac5f210e814409b3760ea9d2329d8ed8ffcfd11a0e7",
+      ".gitignore": "114f291a583c87f792a2d2d5f2735598afa2a3dc5a745f1255ed62d0e2d8a5a8",
+      "assets/icon.png": "74c64047eb557b1341bba7a2831eedde9ddb705e6451a9ad9f5552bf558f13de",
+      "package.json": "a95259f064aaff19129c2c3fe807e0cf4a771fc6cf70dd1a64f9e3c93727209a",
+      "assets/favicon.png": "24272cdaeff82cc5facdaccd982a6f05b60c4504704bbf94c19a6388659880bb",
+      "assets/adaptive-icon.png": "5f4c0a732b6325bf4071d9124d2ae67e037cb24fcc9c482ef82bea742109a3b8",
+      "assets/splash.png": "bc25a616b4e31cf7300cd97b9cbf8894e855e6373aa797d0badd7e211111c5e5"
+    },
+    "unchangedExceptManifest": true
+  },
+  "app": "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+  "appLockSha256": "f55cf175bbca825b06b5b6e61e2f52aa475c9b3393bfe93f7ce5d3bb7f0d325f",
+  "upstreamSourceUnchangedAfterScenarios": true,
+  "scenarioFixtures": {
+    "empty": {
+      "file": "scenario-empty-fixtures.ts",
+      "sha256": "8df60f44a928a7341e09c2f860bc30643ba6fae6aeead5081b8ee3fac35f063e"
+    },
+    "error": {
+      "file": "scenario-error-fixtures.ts",
+      "sha256": "93827d3819b6cfa402980bd04fcfd3f8e304c40e04589a484a86a3df3310e6ac"
+    }
+  },
+  "eventContract": {
+    "reactNativeVersion": "0.88.0-rc.2",
+    "files": {
+      "Libraries/AppState/AppState.js": "4eaa5b64713c0cb40f52149987f124a0489f55d39d9e2b2b1fac4a73abf919c8",
+      "Libraries/EventEmitter/NativeEventEmitter.js": "ca25a6d9d649270c512fe6a6ee5fd8a33d418fc571cb0f649846187961c2ef54"
+    },
+    "description": "AppState change subscriptions map appStateDidChange payload.app_state; NativeEventEmitter subscribes through RCTDeviceEventEmitter. Each fixture verifies delivered background/active sequence and AppState.currentState."
+  },
+  "runs": [
+    {
+      "preset": "android-phone",
+      "startedAt": "2026-10-02T13:06:39.314Z",
+      "sourceAtStart": {
+        "head": "3b9ab39cf14b9cf23d0858a24ae35a7c634ae1f9",
+        "status": "?? docs/validation/2026-10-02-tanstack-pilot/scenario-empty-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-error-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-flow.mjs\n",
+        "hash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "empty query has no movie rows",
+        "empty query still renders app navigator",
+        "empty query mounted resolved list",
+        "fixture cleared data before initial query",
+        "empty list recovered real movie rows",
+        "data restoration logged explicitly",
+        "real AppState event mapping verified",
+        "real list query refetched after focus"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "RNGestureHandlerRootView",
+          "View",
+          "RNSScreenContainer",
+          "RNSScreen",
+          "Paragraph"
+        ],
+        "emptyText": [
+          "Movies"
+        ],
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "PILOT_DATA_EMPTY"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_DATA_RESTORED"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_APPSTATE_CONTRACT_VERIFIED"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "android-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/scenario-empty-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "pilot/movies-data",
+        "--allow-fallback",
+        "pilot/app-state",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "StatusBarManager",
+        "--allow-fallback",
+        "AndroidProgressBar",
+        "--allow-fallback",
+        "AndroidSwipeRefreshLayout"
+      ],
+      "scenario": "empty",
+      "artifactPrefix": "/tmp/tanstack-scenario-empty-android-phone-1790946399314",
+      "cliPid": 35804,
+      "status": {
+        "code": 0,
+        "signal": null
+      },
+      "success": true,
+      "sourceAtEnd": {
+        "head": "3b9ab39cf14b9cf23d0858a24ae35a7c634ae1f9",
+        "status": "?? docs/validation/2026-10-02-tanstack-pilot/scenario-empty-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-error-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-flow.mjs\n",
+        "hash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T13:06:44.238Z",
+      "diagnostics": [
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/movies-data",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: clearing then restoring the shared bundled JSON array; no HTTP or API implementation replacement."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/app-state",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "StatusBarManager",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidProgressBar",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidSwipeRefreshLayout",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidSwipeRefreshLayout is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: clearing then restoring the shared bundled JSON array; no HTTP or API implementation replacement."
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        },
+        {
+          "level": "info",
+          "message": "PILOT_DATA_EMPTY"
+        },
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidSwipeRefreshLayout is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "PILOT_DATA_RESTORED"
+        },
+        {
+          "level": "info",
+          "message": "PILOT_APPSTATE_CONTRACT_VERIFIED"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        }
+      ],
+      "protocolErrors": [],
+      "artifacts": {
+        ".ndjson": {
+          "path": "/tmp/tanstack-scenario-empty-android-phone-1790946399314.ndjson",
+          "bytes": 518442,
+          "sha256": "8a0aa9e15c3a35c687e0534aa399424cc7c2063209dfab19b002f9d208384ba6"
+        },
+        ".stderr": {
+          "path": "/tmp/tanstack-scenario-empty-android-phone-1790946399314.stderr",
+          "bytes": 671,
+          "sha256": "8ec6c1fb2459da7f8920363127fc36d6409a85d205c242b127ff889bd8f4389f"
+        },
+        ".native.stderr": {
+          "path": "/tmp/tanstack-scenario-empty-android-phone-1790946399314.native.stderr",
+          "bytes": 11501,
+          "sha256": "35bd3b61071b12536687d87709a3f26d20025ef087c39be2482177791310f649"
+        },
+        ".metadata.json": {
+          "path": "/tmp/tanstack-scenario-empty-android-phone-1790946399314.metadata.json",
+          "bytes": 22854,
+          "sha256": "6158d4c3ebe2ab3654ec39e14148c78d39d125f7e43b3038d0ade7d42a397882"
+        }
+      }
+    },
+    {
+      "preset": "ios-phone",
+      "startedAt": "2026-10-02T13:06:58.074Z",
+      "sourceAtStart": {
+        "head": "3b9ab39cf14b9cf23d0858a24ae35a7c634ae1f9",
+        "status": "?? docs/validation/2026-10-02-tanstack-pilot/scenario-empty-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-error-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-flow.mjs\n",
+        "hash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "empty query has no movie rows",
+        "empty query still renders app navigator",
+        "empty query mounted resolved list",
+        "fixture cleared data before initial query",
+        "empty list recovered real movie rows",
+        "data restoration logged explicitly",
+        "real AppState event mapping verified",
+        "real list query refetched after focus"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "View",
+          "Paragraph",
+          "RNSScreenContainer",
+          "RNSScreen"
+        ],
+        "emptyText": [
+          "Movies"
+        ],
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "PILOT_DATA_EMPTY"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_DATA_RESTORED"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_APPSTATE_CONTRACT_VERIFIED"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "ios-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/scenario-empty-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "pilot/movies-data",
+        "--allow-fallback",
+        "pilot/app-state",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "ActivityIndicatorView",
+        "--allow-fallback",
+        "PullToRefreshView"
+      ],
+      "scenario": "empty",
+      "artifactPrefix": "/tmp/tanstack-scenario-empty-ios-phone-1790946418074",
+      "cliPid": 38402,
+      "status": {
+        "code": 0,
+        "signal": null
+      },
+      "success": true,
+      "sourceAtEnd": {
+        "head": "3b9ab39cf14b9cf23d0858a24ae35a7c634ae1f9",
+        "status": "?? docs/validation/2026-10-02-tanstack-pilot/scenario-empty-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-error-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-flow.mjs\n",
+        "hash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T13:07:03.798Z",
+      "diagnostics": [
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/movies-data",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: clearing then restoring the shared bundled JSON array; no HTTP or API implementation replacement."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/app-state",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "ActivityIndicatorView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "PullToRefreshView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: clearing then restoring the shared bundled JSON array; no HTTP or API implementation replacement."
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        },
+        {
+          "level": "info",
+          "message": "PILOT_DATA_EMPTY"
+        },
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "PILOT_DATA_RESTORED"
+        },
+        {
+          "level": "info",
+          "message": "PILOT_APPSTATE_CONTRACT_VERIFIED"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        }
+      ],
+      "protocolErrors": [],
+      "artifacts": {
+        ".ndjson": {
+          "path": "/tmp/tanstack-scenario-empty-ios-phone-1790946418074.ndjson",
+          "bytes": 444265,
+          "sha256": "4248883a7590b266603cf70244b6424dd84d40dbebd93f0d605ec027a90eecd9"
+        },
+        ".stderr": {
+          "path": "/tmp/tanstack-scenario-empty-ios-phone-1790946418074.stderr",
+          "bytes": 554,
+          "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+        },
+        ".native.stderr": {
+          "path": "/tmp/tanstack-scenario-empty-ios-phone-1790946418074.native.stderr",
+          "bytes": 11501,
+          "sha256": "8e6a78492bc63b82c1691490d2cd523b4fc6208259f8a28c51241d407606ae33"
+        },
+        ".metadata.json": {
+          "path": "/tmp/tanstack-scenario-empty-ios-phone-1790946418074.metadata.json",
+          "bytes": 22365,
+          "sha256": "89580186747bf63a6e56a002499fe69af7ced9d7cbd5816cbad88a36fa602736"
+        }
+      }
+    },
+    {
+      "preset": "android-phone",
+      "startedAt": "2026-10-02T13:06:56.906Z",
+      "sourceAtStart": {
+        "head": "3b9ab39cf14b9cf23d0858a24ae35a7c634ae1f9",
+        "status": "?? docs/validation/2026-10-02-tanstack-pilot/scenario-empty-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-error-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-flow.mjs\n",
+        "hash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "real list resolved before data perturbation",
+        "fixture removed cached movie before tap",
+        "real navigation reached partial details",
+        "upstream error UI displays Movie not found",
+        "original query plus two retries executed",
+        "error observed before fixture restored data",
+        "in-place details recovery resolved plot",
+        "in-place details recovery removed error",
+        "detail query ran again on focus",
+        "data restoration logged explicitly",
+        "real AppState event mapping verified"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "RNGestureHandlerRootView",
+          "View",
+          "RNSScreenContainer",
+          "RNSScreen",
+          "Paragraph"
+        ],
+        "errorText": [
+          "Movie not found"
+        ],
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_RUSH_REMOVED"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_DATA_RESTORED"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_APPSTATE_CONTRACT_VERIFIED"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "android-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/scenario-error-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "pilot/movies-data",
+        "--allow-fallback",
+        "pilot/app-state",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "StatusBarManager",
+        "--allow-fallback",
+        "AndroidProgressBar",
+        "--allow-fallback",
+        "AndroidSwipeRefreshLayout"
+      ],
+      "scenario": "error",
+      "artifactPrefix": "/tmp/tanstack-scenario-error-android-phone-1790946416905",
+      "cliPid": 38218,
+      "status": {
+        "code": 0,
+        "signal": null
+      },
+      "success": true,
+      "sourceAtEnd": {
+        "head": "3b9ab39cf14b9cf23d0858a24ae35a7c634ae1f9",
+        "status": "?? docs/validation/2026-10-02-tanstack-pilot/scenario-empty-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-error-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-flow.mjs\n",
+        "hash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T13:07:03.868Z",
+      "diagnostics": [
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/movies-data",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: removing a listed movie then restoring the bundled JSON array; real query functions and retries remain unchanged."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/app-state",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "StatusBarManager",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidProgressBar",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidSwipeRefreshLayout",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidSwipeRefreshLayout is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: removing a listed movie then restoring the bundled JSON array; real query functions and retries remain unchanged."
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        },
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidSwipeRefreshLayout is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "PILOT_RUSH_REMOVED"
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "PILOT_DATA_RESTORED"
+        },
+        {
+          "level": "info",
+          "message": "PILOT_APPSTATE_CONTRACT_VERIFIED"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        }
+      ],
+      "protocolErrors": [],
+      "artifacts": {
+        ".ndjson": {
+          "path": "/tmp/tanstack-scenario-error-android-phone-1790946416905.ndjson",
+          "bytes": 2117168,
+          "sha256": "70de4e1cc2012951e0ff9fba26cc7107cb7d557b5d940229661afdc6a09616f6"
+        },
+        ".stderr": {
+          "path": "/tmp/tanstack-scenario-error-android-phone-1790946416905.stderr",
+          "bytes": 671,
+          "sha256": "8ec6c1fb2459da7f8920363127fc36d6409a85d205c242b127ff889bd8f4389f"
+        },
+        ".native.stderr": {
+          "path": "/tmp/tanstack-scenario-error-android-phone-1790946416905.native.stderr",
+          "bytes": 11501,
+          "sha256": "46d3c71122abfa1c43892a683f6dc534382ff3abb7064741b525a398b1958e32"
+        },
+        ".metadata.json": {
+          "path": "/tmp/tanstack-scenario-error-android-phone-1790946416905.metadata.json",
+          "bytes": 23703,
+          "sha256": "6936a6ec508aa5a04332c01b35494abe350f80b514295a96dade1f4f744c29dc"
+        }
+      }
+    },
+    {
+      "preset": "ios-phone",
+      "startedAt": "2026-10-02T13:07:26.151Z",
+      "sourceAtStart": {
+        "head": "3b9ab39cf14b9cf23d0858a24ae35a7c634ae1f9",
+        "status": "?? docs/validation/2026-10-02-tanstack-pilot/scenario-empty-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-error-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-flow.mjs\n",
+        "hash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "real list resolved before data perturbation",
+        "fixture removed cached movie before tap",
+        "real navigation reached partial details",
+        "upstream error UI displays Movie not found",
+        "original query plus two retries executed",
+        "error observed before fixture restored data",
+        "in-place details recovery resolved plot",
+        "in-place details recovery removed error",
+        "detail query ran again on focus",
+        "data restoration logged explicitly",
+        "real AppState event mapping verified"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "View",
+          "Paragraph",
+          "RNSScreenContainer",
+          "RNSScreen"
+        ],
+        "errorText": [
+          "Movie not found"
+        ],
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_RUSH_REMOVED"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_DATA_RESTORED"
+          },
+          {
+            "level": "info",
+            "message": "PILOT_APPSTATE_CONTRACT_VERIFIED"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "ios-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/scenario-error-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "pilot/movies-data",
+        "--allow-fallback",
+        "pilot/app-state",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "ActivityIndicatorView",
+        "--allow-fallback",
+        "PullToRefreshView"
+      ],
+      "scenario": "error",
+      "artifactPrefix": "/tmp/tanstack-scenario-error-ios-phone-1790946446150",
+      "cliPid": 41879,
+      "status": {
+        "code": 0,
+        "signal": null
+      },
+      "success": true,
+      "sourceAtEnd": {
+        "head": "3b9ab39cf14b9cf23d0858a24ae35a7c634ae1f9",
+        "status": "?? docs/validation/2026-10-02-tanstack-pilot/scenario-empty-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-error-fixtures.ts\n?? docs/validation/2026-10-02-tanstack-pilot/scenario-flow.mjs\n",
+        "hash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T13:07:31.569Z",
+      "diagnostics": [
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/movies-data",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: removing a listed movie then restoring the bundled JSON array; real query functions and retries remain unchanged."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/app-state",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "ActivityIndicatorView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "PullToRefreshView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: removing a listed movie then restoring the bundled JSON array; real query functions and retries remain unchanged."
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        },
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "PILOT_RUSH_REMOVED"
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "PILOT_DATA_RESTORED"
+        },
+        {
+          "level": "info",
+          "message": "PILOT_APPSTATE_CONTRACT_VERIFIED"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        }
+      ],
+      "protocolErrors": [],
+      "artifacts": {
+        ".ndjson": {
+          "path": "/tmp/tanstack-scenario-error-ios-phone-1790946446150.ndjson",
+          "bytes": 1801465,
+          "sha256": "4e6dee53fbb892549037199cccb5257d4bf059606ef750c1c6f82162b8005163"
+        },
+        ".stderr": {
+          "path": "/tmp/tanstack-scenario-error-ios-phone-1790946446150.stderr",
+          "bytes": 554,
+          "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+        },
+        ".native.stderr": {
+          "path": "/tmp/tanstack-scenario-error-ios-phone-1790946446150.native.stderr",
+          "bytes": 11501,
+          "sha256": "2c5524167431c0ff45a8c978cd41f30ccb98d6af3b19f3ba019a59187a95dc70"
+        },
+        ".metadata.json": {
+          "path": "/tmp/tanstack-scenario-error-ios-phone-1790946446150.metadata.json",
+          "bytes": 23214,
+          "sha256": "b4ca1bcec45da203e4c2746ccebee41d36c1b6665289d49b6f48e003dfd4598a"
+        }
+      }
+    }
+  ],
+  "negativeStrictChecks": [
+    {
+      "name": "empty-android",
+      "status": 6,
+      "error": "UNSUPPORTED_NATIVE",
+      "diagnostics": [
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/movies-data",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: clearing then restoring the shared bundled JSON array; no HTTP or API implementation replacement."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/app-state",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        }
+      ],
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "render",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--preset",
+        "android-phone",
+        "--format",
+        "json",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/scenario-empty-fixtures.ts",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "StatusBarManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "AndroidProgressBar",
+        "--allow-fallback",
+        "AndroidSwipeRefreshLayout",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--no-cache",
+        "--bytecode",
+        "off"
+      ],
+      "sourceStable": true,
+      "sourceHash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+    },
+    {
+      "name": "error-ios",
+      "status": 6,
+      "error": "UNSUPPORTED_NATIVE",
+      "diagnostics": [
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/movies-data",
+          "message": "[APPLICATION_FIXTURE] pilot/movies-data: removing a listed movie then restoring the bundled JSON array; real query functions and retries remain unchanged."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "pilot/app-state",
+          "message": "[APPLICATION_FIXTURE] pilot/app-state: injecting JS AppState notifications; OS lifecycle delivery is not tested."
+        }
+      ],
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "render",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--preset",
+        "ios-phone",
+        "--format",
+        "json",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/scenario-error-fixtures.ts",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "ActivityIndicatorView",
+        "--allow-fallback",
+        "PullToRefreshView",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--no-cache",
+        "--bytecode",
+        "off"
+      ],
+      "sourceStable": true,
+      "sourceHash": "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f"
+    }
+  ],
+  "sourceSnapshots": {
+    "0f3d7b9d6110aea88c2e3f7e584740115975a417d2f1ebd65dbbb110c669c05f": {
+      "packages/react-native-a11y-tree/src/bundle.ts": "3a6141630197c0b9f6a3e2b449f531c37e39f3fd17598a095e8db3cc170a2481",
+      "packages/react-native-a11y-tree/src/bundleCache.ts": "cf671da10984fe65e6975f49c256e182621e36bb1a1d3d1a332e3a094c98a63f",
+      "packages/react-native-a11y-tree/src/check.ts": "5109ed73bc2cf60fa29197b5cd1c03e59c88610e9ed3f6667b32fc04e96ecbd1",
+      "packages/react-native-a11y-tree/src/cli.ts": "7d066837b5c1b165ac3ce3f6312407206a0579fddb9b2d0a4b3e77b942aec763",
+      "packages/react-native-a11y-tree/src/compatibility.ts": "adf4597060e16be44087c7bff76d6670870e1d9bb0505b71960e9234edeba9f4",
+      "packages/react-native-a11y-tree/src/diagnostics.ts": "3f3f056b7551b65a16a6ea91f0e25237ba660c81cfa2a4f8647344e4f24022a5",
+      "packages/react-native-a11y-tree/src/diff.ts": "d576f655706446f0fb1a41ef860ea7597209f75713e2759d007fafae83384f62",
+      "packages/react-native-a11y-tree/src/doctor.ts": "5ef23ffadf2bc91f53a772f35480575d6cd38caceffabfb7d37f4c645f53cc25",
+      "packages/react-native-a11y-tree/src/errors.ts": "d31d95aa56a1ae82c39a64b39a14e09ee0b28eea3fcf371aff9dd1004f592c3f",
+      "packages/react-native-a11y-tree/src/expo.ts": "dae4be1e487b45d2f8a943453def120597b4cacc825336f7cfe30fe94fba0754",
+      "packages/react-native-a11y-tree/src/format.ts": "b7a3a0c6b048b9454af62fcb390c1c6630863d2ee0c754577da908128295a8ec",
+      "packages/react-native-a11y-tree/src/genSchema.ts": "cb03e09665e13c3f27e9b865655cdd28efc6a9c38658258db4a6136733f5cca3",
+      "packages/react-native-a11y-tree/src/host.ts": "087e5d30325d32cc327a2fbde84539fc0115d2dbde065cf3a3729e8ef89943f2",
+      "packages/react-native-a11y-tree/src/hostDownload.ts": "cbd23f349987bf5371fdad2a4ac2d636bd09cfc199609dfc15614c5b8084faf4",
+      "packages/react-native-a11y-tree/src/metroConfig.ts": "f74fa57d00a27eb8cbd404fe565bf7725d3bb33f1490314b80b50e84463316eb",
+      "packages/react-native-a11y-tree/src/presets.ts": "7fdd3303d89c615d774986ca4d63ce85819b9fdf3a68ce7007023f60c7be8750",
+      "packages/react-native-a11y-tree/src/processCleanup.ts": "20676fababb5e076a6c653f2235b149546c497c3a5d114db3c770c82e9460ca2",
+      "packages/react-native-a11y-tree/src/runtimePackage.ts": "f63e3df1703190950affb7b7770cdd903f8d241021d1e4b830964e0566641673",
+      "packages/react-native-a11y-tree/src/schema.ts": "de38cb6b07ad6b48484dcbcbe0fc177d86151f32a21674e8334a51c60e152ad1",
+      "packages/react-native-a11y-tree/src/script.ts": "b685d0c58488073d4554ce8753308a8b2a2ab492405fd71d2bb1956ddcf74367",
+      "packages/react-native-a11y-tree/src/session.ts": "215b56448ad4d3578f40d64c5f391faea38246393ef06a8a25cf31c524ae8f19",
+      "packages/react-native-a11y-tree/src/tools.ts": "e15abba577b9c351209f6dfe981f330b1decc4160d51d78e071d58390485ba6d",
+      "packages/react-native-a11y-tree/src/tree.ts": "6b7a69e8f8fdddbc30ef6e05ada8db91075918bdbe82e2de7f864dcb0343516e",
+      "packages/react-native-a11y-tree/src/tsconfigPaths.ts": "73920c840b71ca5e1e494a6e0bc799a94fc6418e2189fa19919d77505cc69d41",
+      "packages/react-native-a11y-tree/runtime/actions.ts": "afeb316359c4e75257bfefb3afa4bea0b4980474c26bfcf12635d340eaa23270",
+      "packages/react-native-a11y-tree/runtime/capabilities.ts": "296cf05f500abdf7991628a5dcea56ef4023705173c9b39baaed20143b8440cd",
+      "packages/react-native-a11y-tree/runtime/entry-template.ts": "9b14cb1f458cc807926d2946b259a563af2b69bee330fc303f4f33a1a57a39c6",
+      "packages/react-native-a11y-tree/runtime/expo/actions.ts": "09b88fcdd4ebbed229a0f799e5d454dcb5b770f266b8e055504da70324a6146c",
+      "packages/react-native-a11y-tree/runtime/expo/moduleAdapters.ts": "ccb9d185ecbfc883f443cfee5e562883b9564745df4b9f8ba32db96d01285a65",
+      "packages/react-native-a11y-tree/runtime/expo/prelude.ts": "7995bfef3c4b86b8f2e49c5e9d704311bbd5ce9ef83d5a2c455718e70a5e0c64",
+      "packages/react-native-a11y-tree/runtime/expo/viewConfigs.json": "0bd8db75b06d9ab42eea8c249ad4aad1a4712213395c83ad1dfe583bba5528fe",
+      "packages/react-native-a11y-tree/runtime/fantom/Constants.ts": "a63c2b272609bd01089adcbdec559860d11daa315a40873582f2f4c69c5001d5",
+      "packages/react-native-a11y-tree/runtime/fantom/getFantomRenderedOutput.tsx": "395236e1ef904b7fd7db0c66e233d1da76f845bb6134fe8339f946e5f0f3f789",
+      "packages/react-native-a11y-tree/runtime/fantom/HighResTimeStampMock.ts": "1b39a96c49ed086707e1b3a7903135f14c06c61a8348dad67200d85f594b2377",
+      "packages/react-native-a11y-tree/runtime/fantom/index.ts": "64ef853488fd25fedb8e9ee877778dc3d9c572573e7004fdb264de733209b572",
+      "packages/react-native-a11y-tree/runtime/fantom/LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+      "packages/react-native-a11y-tree/runtime/fantom/mocks/ReactNativeInternalFeatureFlags.ts": "ffe6849a6970ed9de4b801642b829dfa3fb4483fcf77bef7afef4ac67e7fe617",
+      "packages/react-native-a11y-tree/runtime/fantom/setup.ts": "0b6bc4d8e9e5ae22b051179fd38bd43f4b698fd65d0ae36c4186a37204642e21",
+      "packages/react-native-a11y-tree/runtime/fantom/setUpDefaultReactNativeEnvironment.ts": "ff7193b78074928ec438a6b1e8c4713524accc16484d4bcba0b08f33035738d5",
+      "packages/react-native-a11y-tree/runtime/fantom/specs/NativeFantom.ts": "d179fe823f9a150bae0a434d1e95a890fe93cb7df6b23e2e30916c328b0b6a7b",
+      "packages/react-native-a11y-tree/runtime/fantom/TimerMock.ts": "533221cf57e5cd31b56a64d82fa2c05722d6ee5208cd5ad18eaea764f98fabfd",
+      "packages/react-native-a11y-tree/runtime/fantom/VENDORED.md": "d277524305eaf6158a624fe9f53cfb743bd17e925b1d1bcc48c3547c7c0fe6ac",
+      "packages/react-native-a11y-tree/runtime/gh/hostContext.ts": "5f8a5ca9b7d48c73afbe01409e281bc36822d31c20a4cf4d6ce6dbafcda1b9d0",
+      "packages/react-native-a11y-tree/runtime/gh/HostGestureDetector.tsx": "3a2320ee021c5c5443749443d871f71a23dd913cca7dc663b579d6a0e7e4debf",
+      "packages/react-native-a11y-tree/runtime/gh/NativeRNGestureHandlerModule.ts": "4c4247ba0d73c3a4aabb9d35426af5445eeb10d66eafc0ad7490e2169a816530",
+      "packages/react-native-a11y-tree/runtime/globals.d.ts": "a1891e89a62db290365f904e24a95255890d4b116af2bef1a080a2e0f1e162d5",
+      "packages/react-native-a11y-tree/runtime/hostConfig.ts": "16213d048de86b291fd7e15e3bf2e36d6550f0067999c548dac643b626ccc735",
+      "packages/react-native-a11y-tree/runtime/modules.d.ts": "d7060fda898410a3d50081085a109dc0eee977519ec1c4d5dca0a007645db705",
+      "packages/react-native-a11y-tree/runtime/nativeComponentFallback.ts": "1d5206490b1730c8074a6ccabb7125bbc206ddf5e72174f4ad191f735c85b9a8",
+      "packages/react-native-a11y-tree/runtime/nativeFixtures.ts": "e42f53fbb833ee6ad79e4bbdf1c061e9387f2ff28b7ac2f20b04317c4b816d5f",
+      "packages/react-native-a11y-tree/runtime/nitroFixtures.ts": "a0e5ec4672810e7476af17d64337271ad384b6a022a08a70edc0d6ee7b97897c",
+      "packages/react-native-a11y-tree/runtime/session.ts": "f472876f4cf9c6d9a35da1e9b95349eb153965164d137c6f2a0b93ac9244bfeb",
+      "packages/react-native-a11y-tree/runtime/settle.ts": "399743fb8cad3f5af1311ef04f6fa3cd03e1da83c10939cec95f14e64dad067f",
+      "packages/react-native-a11y-tree/runtime/timings.ts": "0bb25a24b150c90c30e4705594e46897dc2982dcfc6609abd4f4d84a11b6e42c",
+      "packages/react-native-a11y-tree/runtime/tree-index.ts": "f5cee6f5b2917952a014e663838c9227104c4eeee57e43b50ceba9c48817b825",
+      "packages/react-native-a11y-tree/runtime/tsconfig.json": "13e62bf014eb68b282ba21fd5001c2bf3acb296db65af504202b4303913e7128",
+      "packages/react-native-a11y-tree/runtime/turboModuleStubs.ts": "417087f12b0e3669f1b39cfe39f404da60201024659ae5782960219f3cefd02f"
+    }
+  }
+}
