@@ -364,6 +364,7 @@ terminal or with `--quiet`, a readable message otherwise).
 | 3 | `BUNDLE_FAILED` | Metro failed (syntax error, missing import) |
 | 4 | `APP_THREW` | the app threw while loading or rendering (`details.stack`) |
 | 5 | `HOST_MISSING`, `HOST_UNAVAILABLE`, `HOST_INCOMPATIBLE`, `HOST_CRASHED`, `TIMEOUT` | host problems (`details.stderrTail`) |
+| 6 | `UNSUPPORTED_NATIVE` | `--fail-on-fallback` rejected an observed native/runtime limitation |
 
 - Step errors are `{code, message}` with `TARGET_NOT_FOUND`,
   `TARGET_COVERED`, `TIMEOUT` or `APP_THREW`; session error responses use the
@@ -373,6 +374,69 @@ terminal or with `--quiet`, a readable message otherwise).
   common noise (`getViewManagerConfig('RNCMaskedView')`, deprecation
   warnings). With `--no-quiet`, errors and warnings that are not known noise
   are also printed on stderr.
+
+## Observed native limitations and CI policy
+
+Successful renders are not proof of native equivalence. `diagnostics` reports observed
+native component substitutions, module adapters (including core TurboModule stubs),
+unsupported adapter API calls, and action-runner fallbacks. Each entry has
+`{code, target, message}`. Entries are deduplicated by code and target. An empty
+list does not certify device behavior: platform emulation and unexercised APIs
+still need device validation. See [Expo support](docs/expo-support.md).
+
+Diagnostics survive `--select` (including no matches), `--subtree`, `--depth`, and
+compact output. Text output prints warning lines; render/run NDJSON can include
+an envelope `{diagnostics: [...]}` before node/step lines. Session ready lines and
+responses report cumulative observed limitations, so querying later cannot hide
+an earlier fallback. App logs remain available separately.
+
+The default stays permissive for exploration. Opt in to a CI policy:
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone --format json --fail-on-fallback
+# After reviewing the reported limitations, allow only the intentional ones:
+rn-a11y-tree render App.tsx --preset android-phone --format compact \
+  --fail-on-fallback --allow-fallback ExpoImage --allow-fallback StatusBarManager
+```
+
+`--allow-fallback` is repeatable and matches exact `target` names; there are no
+wildcards. Allowed limitations remain in diagnostics. Unsupported adapter API
+calls cannot be allowed, even when app code catches the exception. Model those
+operations explicitly in an application fixture instead. The flags work with
+`render`, `run`, `check`, `session`, and generated agent tool descriptors.
+
+A policy rejection emits `UNSUPPORTED_NATIVE` with the rejected diagnostics in
+`error.details` and exits 6. A strict session refuses startup or ends after the
+first request observing an unapproved limitation. This is result validation,
+not an execution sandbox: a one-shot script runs before its result is checked.
+Existing app/host failures retain their error codes. `--bundle-only` does not
+execute native code and therefore does not evaluate this policy.
+
+## Fresh-process agent loop
+
+Use `render`, `run --script`, or `check` after each edit. No Metro server or daemon
+is required. Finished bundles skip Metro when valid; source edits reuse Metro's
+disk transform cache. Bundle keys include project-resolved tooling, ancestor
+package manifests/lockfiles/Babel configs, dotenv files, and `NODE_ENV`,
+`BABEL_ENV`, and `EXPO_PUBLIC_*` values. Build-input changes also invalidate Metro
+transforms. Each rebuilt bundle has a unique bytecode output, so a background
+compiler finishing after another edit cannot replace the current bytecode.
+Arbitrary files/environment variables read by custom Babel plugins
+are not automatically tracked; use `--reset-cache` for those changes.
+
+Measure cold startup, unchanged invocations, and actual source edits separately:
+
+```sh
+RN_A11Y_HOST_BIN=/path/to/rn-a11y-host bun scripts/agent-loop.ts \
+  --app examples/medium/App.tsx --iterations 5 --out /tmp/agent-loop.json
+```
+
+The benchmark creates a disposable wrapper next to the app, verifies a visible
+revision after each edit, checks expected cache hits/misses, and removes the
+wrapper afterward. It never changes the original app. Every sample starts a new
+CLI process. The report includes per-phase timings, wall time and output bytes;
+`--bytecode off` can isolate JS-only performance. It measures the selected screen,
+not an agent's complete task or device fidelity.
 
 ## Formats and queries
 

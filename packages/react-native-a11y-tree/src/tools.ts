@@ -33,6 +33,10 @@ export type CommonInput = {
   dev?: boolean;
   /** Set false to skip mounted-view values (`visualBox`, `effectiveOpacity`). */
   mounted?: boolean;
+  /** Reject unapproved native/runtime fallbacks (exit 6). */
+  failOnFallback?: boolean;
+  /** Exact fallback names approved for this test; unsupported API calls are always rejected. */
+  allowFallback?: string[];
 };
 
 export type TreeFormat = 'json' | 'compact' | 'text' | 'ndjson';
@@ -192,6 +196,8 @@ export function toolArgv(name: ToolName, input: Record<string, unknown>): string
       argv.push('--script', JSON.stringify(value));
     } else if (key === 'rules') {
       argv.push('--rules', JSON.stringify({rules: value}));
+    } else if (key === 'allowFallback') {
+      for (const name of value as string[]) argv.push('--allow-fallback', name);
     } else if (key === 'mounted') {
       if (value === false) argv.push('--no-mounted');
     } else if (key === 'select') {

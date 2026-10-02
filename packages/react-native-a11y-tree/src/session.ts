@@ -13,6 +13,8 @@
  * - The host exits (code 0) when stdin is closed.
  */
 
+import {collectDiagnostics, fidelityError, type FidelityOptions} from './diagnostics.ts';
+
 import type {ChildProcess} from 'node:child_process';
 import readline from 'node:readline';
 
@@ -56,7 +58,7 @@ export type SessionIO = {
 };
 
 /** Starts the host and serves requests until `quit` or end of input. Returns the exit code. */
-export async function runSession(options: {
+export async function runSession(options: FidelityOptions & {
   bundlePath: string;
   windowWidth: number;
   windowHeight: number;
@@ -78,6 +80,13 @@ export async function runSession(options: {
   const treeDefaults: Record<string, unknown> = {...options.treeDefaults};
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   let timedOut = false;
+  let policyFailed = false;
+  const diagnosticLogs: LogEntry[] = [];
+  const runtimeFallbacks = new Set<string>();
+  const diagnosticsFor = (response: HostResponse) => {
+    for (const fallback of response.fallbacks ?? []) runtimeFallbacks.add(fallback);
+    return collectDiagnostics(diagnosticLogs, [...runtimeFallbacks]);
+  };
   const {io} = options;
   const spawnedAt = performance.now();
   const child: ChildProcess = spawnHost(
@@ -152,6 +161,7 @@ export async function runSession(options: {
       case 'console-log': {
         const entry = logEntry(String(message.level ?? 'info'), String(message.message));
         pendingLogs.push(entry);
+        if (collectDiagnostics([entry]).length) diagnosticLogs.push(entry);
         if (!options.quiet || /^\[NATIVE_(?:COMPONENT|MODULE)_FALLBACK\] /.test(entry.message)) io.log(`[app] ${entry.message}`);
         break;
       }
@@ -211,7 +221,10 @@ export async function runSession(options: {
   };
 
   const convert = (response: HostResponse, request: Record<string, unknown>) => {
-    const out: Record<string, unknown> = {id: response.id, ok: response.ok};
+    const diagnostics = diagnosticsFor(response);
+    const policyError = fidelityError(diagnostics, options);
+    if (policyError) policyFailed = true;
+    const out: Record<string, unknown> = {id: response.id, ok: response.ok, ...(diagnostics.length ? {diagnostics} : {})};
     const step = response.step != null ? convertStep(response.step) : null;
     if (response.error != null) {
       out.error =
@@ -232,6 +245,10 @@ export async function runSession(options: {
     }
     const logs = takeLogs();
     if (logs.length > 0) out.logs = logs;
+    if (policyError && out.ok) {
+      out.ok = false;
+      out.error = policyError.toJSON();
+    }
     return out;
   };
 
@@ -248,7 +265,7 @@ export async function runSession(options: {
       if (stderr && !options.verbose) io.log(stderr.trimEnd());
       return EXIT_CODES.HOST_CRASHED;
     }
-    return 0;
+    return policyFailed ? EXIT_CODES.UNSUPPORTED_NATIVE : 0;
   };
 
   // Initial render.
@@ -285,10 +302,18 @@ export async function runSession(options: {
       })}`,
     );
   }
+  const diagnostics = diagnosticsFor(start);
+  const policyError = fidelityError(diagnostics, options);
+  if (policyError) {
+    policyFailed = true;
+    writeLine({ready: false, error: policyError.toJSON(), diagnostics, logs: takeLogs()});
+    return finish();
+  }
   const readyLogs = takeLogs();
   const host = options.host;
   writeLine({
     ready: true,
+    ...(diagnostics.length ? {diagnostics} : {}),
     tree: start.tree ? formatSessionTree(convertShadowTree(start.tree), treeDefaults) : null,
     capabilities: start.capabilities ?? [],
     ...(start.hostInfo != null ? {hostInfo: start.hostInfo} : {}),
@@ -314,12 +339,12 @@ export async function runSession(options: {
     try {
       request = JSON.parse(line);
     } catch (error) {
-      writeLine({id: null, ok: false, error: {code: 'USAGE', message: `invalid JSON: ${(error as Error).message}`}});
+      writeLine({...convert({id: null, ok: false, error: 'invalid JSON'}, {}), error: {code: 'USAGE', message: `invalid JSON: ${(error as Error).message}`}});
       continue;
     }
     const problem = validateRequest(request);
     if (problem != null) {
-      writeLine({id: request?.id ?? null, ok: false, error: {code: 'USAGE', message: problem}});
+      writeLine({...convert({id: request?.id ?? null, ok: false, error: problem}, {}), error: {code: 'USAGE', message: problem}});
       continue;
     }
     const requestStart = performance.now();
@@ -330,17 +355,20 @@ export async function runSession(options: {
         `rn-a11y-tree timing: ${JSON.stringify({id: request.id, requestMs: Math.round((performance.now() - requestStart) * 1000) / 1000})}`,
       );
     }
-    if (timedOut) break;
     if (request.quit === true) {
       quitSent = true;
       break;
     }
-    if (exited) break;
+    if (timedOut || policyFailed || exited) break;
   }
   lines.close();
   if (!exited && !quitSent && !timedOut) {
     // End of input without `quit` behaves like `quit`.
-    await send({id: null, quit: true});
+    const response = await send({id: null, quit: true});
+    const wasFailed = policyFailed;
+    const out = convert(response, {});
+    // Normal EOF remains silent; an unrequested cleanup failure must be visible.
+    if ((!wasFailed && policyFailed) || !response.ok) writeLine(out);
   }
   return finish();
 }

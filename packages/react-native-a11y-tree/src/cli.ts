@@ -1,3 +1,4 @@
+import {collectDiagnostics, fidelityError, type FidelityOptions} from './diagnostics.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -73,7 +74,7 @@ function warnTimeZone(options: {tz?: string; quiet?: boolean}): void {
   }
 }
 
-type RenderOptions = HostConfigOptions & OutputOptions & {
+type RenderOptions = FidelityOptions & HostConfigOptions & OutputOptions & {
   quiet?: boolean;
   timing?: boolean;
   resetCache?: boolean;
@@ -382,6 +383,9 @@ async function render(file: string, options: RenderOptions) {
     const convertStart = performance.now();
     const result = toRenderResult(payload);
     if (logs.length > 0) result.logs = logs;
+    result.diagnostics = collectDiagnostics(logs);
+    const policyError = fidelityError(result.diagnostics, options);
+    if (policyError) throw policyError;
     const text = formatRender(result, output);
     if (timing) {
       timing.convertMs = round3(performance.now() - convertStart);
@@ -422,6 +426,9 @@ async function run(file: string, options: RunOptions) {
     const convertStart = performance.now();
     const result = toRunResult(payload);
     if (logs.length > 0) result.logs = logs;
+    result.diagnostics = collectDiagnostics(logs, fallbacks);
+    const policyError = fidelityError(result.diagnostics, options);
+    if (policyError) throw policyError;
     const text = formatRun(result, output);
     if (timing) {
       timing.convertMs = round3(performance.now() - convertStart);
@@ -496,6 +503,8 @@ async function session(file: string, options: RunOptions) {
       timeoutMs: options.timeout,
       timing: options.timing,
       quiet: isQuiet(options),
+      failOnFallback: options.failOnFallback,
+      allowFallback: options.allowFallback,
       host,
       treeDefaults,
       tz: options.tz,
@@ -540,10 +549,12 @@ async function check(file: string, options: CheckOptions) {
   const timing: Timing | undefined = options.timing ? {} : undefined;
   const logs: LogEntry[] = [];
   let result: CheckResult | undefined;
+  let runtimeFallbacks: string[] = [];
   if (script) {
     const payload = await execute<HostRunPayload>(file, options, {script, tapMode: options.tapMode as TapMode}, timing, logs);
     if (payload) {
       const run = toRunResult(payload);
+      runtimeFallbacks = run.fallbacks;
       result = addStepViolations(
         checkTree(run.final, rules, {viewport: run.viewport, source: run.source, subtree: options.subtree}),
         run.steps,
@@ -562,6 +573,9 @@ async function check(file: string, options: CheckOptions) {
   }
   if (result) {
     if (logs.length > 0) result.logs = logs;
+    result.diagnostics = collectDiagnostics(logs, runtimeFallbacks);
+    const policyError = fidelityError(result.diagnostics, options);
+    if (policyError) throw policyError;
     write(format === 'text' ? checkText(result) : JSON.stringify(result, null, 2) + '\n', options.out);
     if (!result.ok) process.exitCode = EXIT_CODES.CHECK_FAILED;
   }
@@ -603,6 +617,8 @@ function addCommonOptions(command: Command): Command {
     .option('--out <file>', 'write JSON to a file instead of stdout')
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
+    .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls', false)
+    .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect, [])
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
     .option('-q, --quiet', 'no app console output or warnings on stderr (default when stdout is not a terminal)')
     .option('--no-quiet', 'print app console errors/warnings and CLI warnings on stderr')
@@ -706,6 +722,8 @@ addOutputOptions(program.command('session'))
     DEFAULT_TIMEOUT_MS,
   )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
+  .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls', false)
+  .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect, [])
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
   .option('-q, --quiet', 'no app console output on stderr (default when stdout is not a terminal)')
   .option('--no-quiet', 'print app console output on stderr as [app] lines')

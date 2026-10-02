@@ -4,6 +4,21 @@ All notable changes to `react-native-a11y-tree` and its native runtime packages.
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The CLI and platform packages
 share one version.
 
+## [Unreleased]
+
+### Added
+
+- Structured, cumulative native limitation diagnostics in render/run/check/session results, including compact and filtered output.
+- Opt-in `--fail-on-fallback` CI policy with exact-name allowances and exit 6; caught unsupported adapter APIs remain observable.
+- Fresh-process agent-loop benchmark that verifies source-edit cache freshness without a Metro daemon.
+
+### Fixed
+
+- Keep late background Hermes compilation from publishing bytecode selected by a newer bundle generation.
+- Evaluate strict policy during session EOF cleanup and retain diagnostics on invalid requests.
+- Resolve cache-key tooling from the app, and invalidate bundles and Metro transforms when tracked build configuration or public environment inputs change.
+- Report core TurboModule stubs and retain native diagnostics when querying or compacting trees.
+
 ## [0.1.3] - 2026-10-01
 
 ### Added

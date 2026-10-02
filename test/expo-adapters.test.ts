@@ -42,3 +42,12 @@ it('device/linking/font adapters expose only the documented headless behavior', 
   await expect(expo.modules.ExpoFontLoader.loadAsync('Font', 'font.ttf')).rejects.toThrow('not simulated');
   await expect(expo.modules.ExpoWebBrowser.openBrowserAsync('https://example.com')).rejects.toThrow('not simulated');
 });
+
+it('reports unsupported API calls even when the app catches the rejection, once per API', async () => {
+  const {expo, warnings} = setup();
+  await expo.modules.ExpoImage.loadAsync('one').catch(() => {});
+  await expo.modules.ExpoImage.loadAsync('two').catch(() => {});
+  expect(warnings.filter(message => message.startsWith('[NATIVE_API_UNSUPPORTED]'))).toEqual([
+    expect.stringContaining('ExpoImage.loadAsync'),
+  ]);
+});

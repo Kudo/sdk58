@@ -86,6 +86,17 @@
       "mounted": {
         "type": "boolean",
         "description": "Set false to skip mounted-view values (`visualBox`, `effectiveOpacity`)."
+      },
+      "failOnFallback": {
+        "type": "boolean",
+        "description": "Reject unapproved native/runtime fallbacks (exit 6)."
+      },
+      "allowFallback": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Exact fallback names approved for this test; unsupported API calls are always rejected."
       }
     },
     "required": [
@@ -161,6 +172,12 @@
                 "$ref": "#/definitions/HostRuntimeInfo",
                 "description": "The host's own build info (getHostInfo)."
               },
+              "diagnostics": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Diagnostic"
+                }
+              },
               "logs": {
                 "type": "array",
                 "items": {
@@ -184,6 +201,12 @@
               },
               "error": {
                 "$ref": "#/definitions/ErrorInfo"
+              },
+              "diagnostics": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Diagnostic"
+                }
               },
               "logs": {
                 "type": "array",
@@ -507,6 +530,33 @@
         "additionalProperties": {},
         "description": "The host's build info (`NativeFantom.getHostInfo()`), or `{protocolVersion}` from a `protocolVersion:<n>` capability. Absent for hosts that report neither."
       },
+      "Diagnostic": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "NATIVE_MODULE_FALLBACK",
+              "NATIVE_COMPONENT_FALLBACK",
+              "NATIVE_API_UNSUPPORTED",
+              "RUNTIME_FALLBACK"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "target",
+          "message"
+        ],
+        "additionalProperties": false,
+        "description": "Observed limitations, not a certificate of native equivalence when empty."
+      },
       "LogEntry": {
         "type": "object",
         "properties": {
@@ -553,6 +603,7 @@
       "ErrorCode": {
         "type": "string",
         "enum": [
+          "UNSUPPORTED_NATIVE",
           "USAGE",
           "CHECK_FAILED",
           "BUNDLE_FAILED",
@@ -565,7 +616,7 @@
           "HOST_INCOMPATIBLE",
           "HOST_CRASHED"
         ],
-        "description": "Machine-readable errors: `{code, message, hint?, details?}`, with one exit code per class of failure.\n\n| exit | meaning | | --- | --- | | 0 | ok | | 1 | usage (bad arguments, script, selector) | | 2 | check failed (`check` command) | | 3 | bundle failed (Metro) | | 4 | app error (the app threw while loading or rendering) | | 5 | host (missing, unavailable, incompatible, crashed, timeout) |"
+        "description": "Machine-readable errors: `{code, message, hint?, details?}`, with one exit code per class of failure.\n\n| exit | meaning | | --- | --- | | 0 | ok | | 1 | usage (bad arguments, script, selector) | | 2 | check failed (`check` command) | | 3 | bundle failed (Metro) | | 4 | app error (the app threw while loading or rendering) | | 5 | host (missing, unavailable, incompatible, crashed, timeout) | | 6 | unapproved observed native/runtime limitation |"
       },
       "SessionResponse": {
         "type": "object",
@@ -594,6 +645,12 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Diagnostic"
             }
           },
           "logs": {
@@ -899,7 +956,8 @@
       "2": "CHECK_FAILED",
       "3": "BUNDLE_FAILED",
       "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED",
-      "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_INCOMPATIBLE, HOST_CRASHED"
+      "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_INCOMPATIBLE, HOST_CRASHED",
+      "6": "UNSUPPORTED_NATIVE"
     }
   },
   "x-protocol": {

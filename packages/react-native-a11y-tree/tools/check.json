@@ -104,6 +104,17 @@
       "mounted": {
         "type": "boolean",
         "description": "Set false to skip mounted-view values (`visualBox`, `effectiveOpacity`)."
+      },
+      "failOnFallback": {
+        "type": "boolean",
+        "description": "Reject unapproved native/runtime fallbacks (exit 6)."
+      },
+      "allowFallback": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Exact fallback names approved for this test; unsupported API calls are always rejected."
       }
     },
     "required": [
@@ -895,6 +906,12 @@
           "$ref": "#/definitions/Violation"
         }
       },
+      "diagnostics": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Diagnostic"
+        }
+      },
       "logs": {
         "type": "array",
         "items": {
@@ -1022,6 +1039,33 @@
         ],
         "additionalProperties": false
       },
+      "Diagnostic": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "NATIVE_MODULE_FALLBACK",
+              "NATIVE_COMPONENT_FALLBACK",
+              "NATIVE_API_UNSUPPORTED",
+              "RUNTIME_FALLBACK"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "target",
+          "message"
+        ],
+        "additionalProperties": false,
+        "description": "Observed limitations, not a certificate of native equivalence when empty."
+      },
       "LogEntry": {
         "type": "object",
         "properties": {
@@ -1085,7 +1129,8 @@
       "2": "CHECK_FAILED",
       "3": "BUNDLE_FAILED",
       "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED",
-      "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_INCOMPATIBLE, HOST_CRASHED"
+      "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_INCOMPATIBLE, HOST_CRASHED",
+      "6": "UNSUPPORTED_NATIVE"
     }
   }
 }

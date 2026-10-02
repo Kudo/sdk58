@@ -35,6 +35,7 @@ if (args.includes('--interactive')) {
   );
   let buffer = Buffer.alloc(0);
   let evalId = 0;
+  let cleanupFallback = false;
   const respond = (response: Record<string, unknown>) =>
     console.log(JSON.stringify({type: 'rn-a11y-tree-response', fallbacks: [], ...response}));
   const handle = (code: string) => {
@@ -42,6 +43,13 @@ if (args.includes('--interactive')) {
     if (match == null) throw new Error(`fake-host: no request() in ${code}`);
     const request = JSON.parse(JSON.parse(match[1]));
     const {id} = request;
+    if (request.action?.tap?.testID === 'CLEANUP_FALLBACK') cleanupFallback = true;
+    if (request.action?.tap?.testID === 'FALLBACK') {
+      console.log(JSON.stringify({type: 'console-log', level: 'warn', message: '[NATIVE_MODULE_FALLBACK] Demo: fixture only'}));
+    }
+    if (request.quit && cleanupFallback) {
+      console.log(JSON.stringify({type: 'console-log', level: 'warn', message: '[NATIVE_API_UNSUPPORTED] Demo.cleanup is not simulated.'}));
+    }
     console.log(JSON.stringify({type: 'console-log', level: 'info', message: `request ${JSON.stringify(request)}`}));
     if (request.start) {
       respond({id, ok: true, ready: true, tree: shadow, hostInfo: HOST_INFO});

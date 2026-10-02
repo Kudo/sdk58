@@ -10,9 +10,11 @@
  * | 3 | bundle failed (Metro) |
  * | 4 | app error (the app threw while loading or rendering) |
  * | 5 | host (missing, unavailable, incompatible, crashed, timeout) |
+ * | 6 | unapproved observed native/runtime limitation |
  */
 
 export type ErrorCode =
+  | 'UNSUPPORTED_NATIVE'
   | 'USAGE'
   | 'CHECK_FAILED'
   | 'BUNDLE_FAILED'
@@ -26,6 +28,7 @@ export type ErrorCode =
   | 'HOST_CRASHED';
 
 export const EXIT_CODES: Record<ErrorCode, number> = {
+  UNSUPPORTED_NATIVE: 6,
   USAGE: 1,
   CHECK_FAILED: 2,
   BUNDLE_FAILED: 3,

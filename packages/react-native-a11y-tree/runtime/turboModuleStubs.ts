@@ -51,7 +51,10 @@ export function installTurboModuleStubs(): void {
     if (module != null) return module;
     const stub = STUBS[name];
     if (stub == null) return null;
-    if (!cache.has(name)) cache.set(name, stub());
+    if (!cache.has(name)) {
+      cache.set(name, stub());
+      console.warn(`[NATIVE_MODULE_FALLBACK] ${name}: core module stub; native effects and events are not simulated.`);
+    }
     return cache.get(name);
   };
 }

@@ -149,3 +149,9 @@ describe('schema', () => {
     }
   });
 });
+
+it('agent tools expose exact fallback allowances as repeated CLI arguments', () => {
+  expect(toolArgv('render', {file: 'App.tsx', failOnFallback: true, allowFallback: ['ExpoImage', 'RNSVGPath']})).toEqual([
+    'render', 'App.tsx', '--fail-on-fallback', '--allow-fallback', 'ExpoImage', '--allow-fallback', 'RNSVGPath',
+  ]);
+});

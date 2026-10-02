@@ -1,3 +1,4 @@
+import {buildFingerprint} from './bundleCache.ts';
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
 import os from 'node:os';
@@ -10,7 +11,7 @@ import {usage} from './errors.ts';
 import {loadProjectPaths, type ProjectPaths} from './tsconfigPaths.ts';
 import {
   BUNDLE_FILE,
-  BYTECODE_FILE,
+  bytecodePath,
   type BytecodeMode,
   bundleKey,
   cacheRoot,
@@ -456,9 +457,9 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     let bundlePath = jsPath;
     let bytecode = false;
     if (useCache && bytecodeMode !== 'off') {
-      const hbc = path.join(dir, BYTECODE_FILE);
-      if (!fs.existsSync(hbc) && bytecodeMode === 'on') compileBytecode(dir);
-      if (fs.existsSync(hbc)) {
+      const hbc = bytecodePath(dir);
+      if (hbc != null && !fs.existsSync(hbc) && bytecodeMode === 'on') compileBytecode(dir);
+      if (hbc != null && fs.existsSync(hbc)) {
         bundlePath = hbc;
         bytecode = true;
       } else if (bytecodeMode === 'auto') {
@@ -494,7 +495,9 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   const outDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-')));
   const bundlePath = path.resolve(options.out ?? path.join(outDir, 'index.bundle.js'));
 
-  const config = createMetroConfig({projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths});
+  const config = {...createMetroConfig({projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths})};
+  // A bundle miss must also invalidate transformed modules when build inputs change.
+  config.cacheVersion = `${config.cacheVersion}:${buildFingerprint(projectRoot)}`;
   // Persistent Metro caches (transforms, file map) next to the bundle cache.
   const StoreClass = (config.cacheStores[0] as unknown as {constructor: new (o: {root: string}) => unknown})
     .constructor;

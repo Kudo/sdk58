@@ -184,24 +184,25 @@ function hasQuery(options: QueryOptions): boolean {
 
 export function formatRender(result: RenderResult, options: FormatOptions): string {
   const roots = queryTree(result.root, options);
+  const metadata = result.diagnostics?.length ? {diagnostics: result.diagnostics} : {};
   const keepStyle = options.style === true;
   const single = options.select == null || options.select.length === 0;
   switch (options.format) {
     case 'json': {
-      const body = single ? {...result, root: roots[0]} : {viewport: result.viewport, source: result.source, matches: roots};
+      const body = single ? {...result, root: roots[0]} : {viewport: result.viewport, source: result.source, matches: roots, ...metadata};
       return JSON.stringify(body, null, 2) + '\n';
     }
     case 'compact': {
       const nodes = roots.map(r => compactNode(r, keepStyle));
       const body = single
-        ? {viewport: result.viewport, root: nodes[0]}
-        : {viewport: result.viewport, matches: nodes};
+        ? {viewport: result.viewport, root: nodes[0], ...metadata}
+        : {viewport: result.viewport, matches: nodes, ...metadata};
       return JSON.stringify(body) + '\n';
     }
     case 'text':
-      return textTree(roots);
+      return diagnosticText(result) + textTree(roots);
     case 'ndjson':
-      return ndjsonNodes(roots, keepStyle).join('\n') + '\n';
+      return [...diagnosticLines(result), ...ndjsonNodes(roots, keepStyle)].join('\n') + '\n';
   }
 }
 
@@ -228,6 +229,7 @@ export function formatRun(result: RunResult, options: FormatOptions): string {
       const tree = (t: TreeNode) => q(t).map(r => compactNode(r, keepStyle));
       return (
         JSON.stringify({
+          ...(result.diagnostics?.length ? {diagnostics: result.diagnostics} : {}),
           steps: result.steps.map(s => compactStep(s)),
           snapshots: Object.fromEntries(Object.entries(result.snapshots).map(([k, t]) => [k, tree(t)])),
           final: tree(result.final),
@@ -241,10 +243,10 @@ export function formatRun(result: RunResult, options: FormatOptions): string {
         out.push(`snapshot ${name}:`, textTree(q(tree)).trimEnd());
       }
       out.push('final:', textTree(q(result.final)).trimEnd());
-      return out.join('\n') + '\n';
+      return diagnosticText(result) + out.join('\n') + '\n';
     }
     case 'ndjson': {
-      const lines = result.steps.map(s => JSON.stringify({step: compactStep(s)}));
+      const lines = [...diagnosticLines(result), ...result.steps.map(s => JSON.stringify({step: compactStep(s)}))];
       for (const [name, tree] of Object.entries(result.snapshots)) {
         lines.push(...ndjsonNodes(q(tree), keepStyle, {tree: name}));
       }
@@ -279,4 +281,12 @@ function compactStep(step: RunResult['steps'][number]): Record<string, unknown> 
     out[k] = v;
   }
   return out;
+}
+
+function diagnosticLines(result: Pick<RenderResult, 'diagnostics'>): string[] {
+  return result.diagnostics?.length ? [JSON.stringify({diagnostics: result.diagnostics})] : [];
+}
+
+function diagnosticText(result: Pick<RenderResult, 'diagnostics'>): string {
+  return (result.diagnostics ?? []).map(d => `warning ${d.code} ${d.target}: ${d.message}\n`).join('');
 }

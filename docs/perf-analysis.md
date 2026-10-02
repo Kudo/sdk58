@@ -1,5 +1,33 @@
 # Runtime performance analysis
 
+## Fresh-process agent loop (2026-10-02)
+
+Measured with `scripts/agent-loop.ts`, the current CLI changes, and the upstream
+`9f0348c` macOS host from CI run 36971306501. Apple M4, Node 26.5.0, macOS arm64;
+Android phone preset, default automatic bytecode. Every sample starts a fresh
+CLI/host process. Each app starts with a separate empty cache. A disposable
+wrapper adds a revision label and the query returns that label; each edit is
+verified in the resulting tree. Original app files are unchanged.
+
+| Screen | Cold (one sample) | Unchanged median (range) | Source-edit median (range) |
+| --- | --- | --- | --- |
+| Medium (navigation/list/form/animation) | 6,821 ms | 772 ms (604–835), n=5 | 1,822 ms (1,393–2,672), n=5 |
+| SDK 58 starter Home | 5,491 ms | 461 ms (385–476), n=3 | 1,228 ms (1,165–2,150), n=3 |
+
+Raw samples and phase timings: [medium](perf/agent-loop-medium.json),
+[starter](perf/agent-loop-starter.json). These are observations from a shared
+machine, not latency guarantees or a before/after optimization comparison.
+Background bytecode compilation can contend with later invocations. Edits change
+only the wrapper, so this measures a small source edit, not dependency installation
+or a large refactor. Output is filtered; the full screen still mounts and is
+traversed. No simulator, emulator, Metro server, or daemon is used.
+
+## Historical measurements (2026-09-29)
+
+The following predates the finished-bundle cache, bytecode support, and revision-
+based settling; it should not be used as the current CLI baseline.
+
+
 Measured on 2026-09-29 with `scripts/perf.ts` on the medium example
 (`examples/medium/App.tsx`).
 

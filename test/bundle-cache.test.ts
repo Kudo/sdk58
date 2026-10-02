@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 
 import {
   BUNDLE_FILE,
+  bytecodePath,
   bundleKey,
   cacheRoot,
   entryDir,
@@ -119,4 +120,53 @@ describe('bundle-cache', () => {
     expect(second.stderr).toMatch(/Bundle: .* \(\d+ bytes, cached, js\)/);
     fs.rmSync(cache, {recursive: true, force: true});
   });
+});
+
+it('invalidates bundle keys when project tooling, Babel config, or build environment changes', () => {
+  const project = tmpDir();
+  const saved = process.env.EXPO_PUBLIC_A11Y_CACHE_TEST;
+  try {
+    const options = {entry: 'entry', platform: 'android', dev: false, minify: false, projectRoot: project};
+    const versionFile = path.join(project, 'node_modules', 'metro', 'package.json');
+    fs.mkdirSync(path.dirname(versionFile), {recursive: true});
+    fs.writeFileSync(versionFile, JSON.stringify({name: 'metro', version: '1.0.0'}));
+    const first = bundleKey(options);
+    fs.writeFileSync(versionFile, JSON.stringify({name: 'metro', version: '2.0.0'}));
+    expect(bundleKey(options)).not.toBe(first);
+    const second = bundleKey(options);
+    const babel = path.join(project, 'babel.config.js');
+    fs.writeFileSync(babel, 'module.exports = {plugins: []};');
+    expect(bundleKey(options)).not.toBe(second);
+    const third = bundleKey(options);
+    process.env.EXPO_PUBLIC_A11Y_CACHE_TEST = 'changed';
+    expect(bundleKey(options)).not.toBe(third);
+    const fourth = bundleKey(options);
+    fs.writeFileSync(babel, 'module.exports = {};');
+    expect(bundleKey(options)).not.toBe(fourth);
+  } finally {
+    if (saved === undefined) delete process.env.EXPO_PUBLIC_A11Y_CACHE_TEST;
+    else process.env.EXPO_PUBLIC_A11Y_CACHE_TEST = saved;
+    fs.rmSync(project, {recursive: true, force: true});
+  }
+});
+
+
+it('never selects bytecode published late by a compiler for a replaced bundle', () => {
+  const root = tmpDir();
+  try {
+    const js = path.join(root, 'input.js');
+    fs.writeFileSync(js, 'old source');
+    const options = {root, key: 'same-entry', bundleFile: js, files: [js], excludeDir: path.join(root, 'work')};
+    const dir = writeEntry(options);
+    const oldOutput = bytecodePath(dir)!;
+    fs.writeFileSync(js, 'new source');
+    writeEntry(options);
+    const currentOutput = bytecodePath(dir)!;
+    expect(currentOutput).not.toBe(oldOutput);
+    // Reproduce the old detached compiler finishing after the new entry exists.
+    fs.writeFileSync(oldOutput, 'stale bytecode');
+    expect(fs.existsSync(bytecodePath(dir)!)).toBe(false);
+    fs.writeFileSync(currentOutput, 'current bytecode');
+    expect(fs.readFileSync(bytecodePath(dir)!, 'utf8')).toBe('current bytecode');
+  } finally {fs.rmSync(root, {recursive: true, force: true});}
 });

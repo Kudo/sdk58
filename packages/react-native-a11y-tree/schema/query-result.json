@@ -28,6 +28,12 @@
         "$ref": "#/definitions/TreeNode"
       }
     },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Diagnostic"
+      }
+    },
     "logs": {
       "type": "array",
       "items": {
@@ -257,6 +263,33 @@
         "compose"
       ],
       "description": "Layout engine of an Expo Host (`emulatedBy`)."
+    },
+    "Diagnostic": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "NATIVE_MODULE_FALLBACK",
+            "NATIVE_COMPONENT_FALLBACK",
+            "NATIVE_API_UNSUPPORTED",
+            "RUNTIME_FALLBACK"
+          ]
+        },
+        "target": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "target",
+        "message"
+      ],
+      "additionalProperties": false,
+      "description": "Observed limitations, not a certificate of native equivalence when empty."
     },
     "LogEntry": {
       "type": "object",

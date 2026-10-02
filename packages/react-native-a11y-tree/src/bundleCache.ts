@@ -24,7 +24,7 @@ import path from 'node:path';
 const require = createRequire(import.meta.url);
 
 /** Bump when the cache layout or the key inputs change. */
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 export const BUNDLE_FILE = 'index.bundle.js';
 export const BYTECODE_FILE = 'index.bundle.hbc';
@@ -40,6 +40,7 @@ type Manifest = {
   files: Stat[];
   dirs: Array<[string, number]>;
   createdAt: string;
+  generation: string;
 };
 
 /**
@@ -57,12 +58,35 @@ export function cacheRoot(projectRoot: string): string {
   return path.join(os.homedir(), '.cache', 'rn-a11y-tree');
 }
 
-function packageVersion(name: string): string {
-  try {
-    return (require(`${name}/package.json`) as {version: string}).version;
-  } catch {
-    return 'none';
+/** Inputs outside Metro's module graph that can change transforms or resolution. */
+export function buildFingerprint(projectRoot: string): string {
+  const hash = crypto.createHash('sha256');
+  const projectRequire = createRequire(path.join(projectRoot, 'package.json'));
+  for (const name of ['metro', 'expo', '@expo/metro-config', 'babel-preset-expo', 'react-native', 'hermes-compiler']) {
+    let file: string | undefined;
+    try {file = projectRequire.resolve(`${name}/package.json`);} catch {
+      try {file = require.resolve(`${name}/package.json`);} catch { /* unavailable */ }
+    }
+    hash.update(name);
+    if (file) hash.update(file).update(fs.readFileSync(file));
   }
+  // Include workspace ancestors: apps often inherit Babel config and lockfiles.
+  for (let dir = path.resolve(projectRoot);;) {
+    const names = ['package.json', 'bun.lock', 'bun.lockb', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
+      'babel.config.js', 'babel.config.cjs', 'babel.config.mjs', 'babel.config.json',
+      '.babelrc', '.babelrc.js', '.babelrc.cjs', '.babelrc.json'];
+    const dotenv = fs.existsSync(dir) ? fs.readdirSync(dir).filter(name => name === '.env' || name.startsWith('.env.')).sort() : [];
+    for (const name of [...names, ...dotenv]) {
+      const file = path.join(dir, name);
+      try {if (fs.statSync(file).isFile()) hash.update(file).update(fs.readFileSync(file));} catch { /* absent */ }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  const env = Object.keys(process.env).filter(name => name === 'NODE_ENV' || name === 'BABEL_ENV' || name.startsWith('EXPO_PUBLIC_')).sort();
+  hash.update(JSON.stringify(env.map(name => [name, process.env[name]])));
+  return hash.digest('hex');
 }
 
 /** Cache key for a bundle: everything that changes the output besides module files. */
@@ -74,12 +98,10 @@ export function bundleKey(parts: {
   projectRoot: string;
   resolutionConfig?: string;
 }): string {
-  const versions = ['metro', 'expo', '@expo/metro-config', 'babel-preset-expo', 'react-native'].map(
-    name => `${name}@${packageVersion(name)}`,
-  );
+  const buildConfig = buildFingerprint(parts.projectRoot);
   return crypto
     .createHash('sha256')
-    .update(JSON.stringify({v: CACHE_VERSION, ...parts, versions}))
+    .update(JSON.stringify({v: CACHE_VERSION, ...parts, buildConfig}))
     .digest('hex')
     .slice(0, 32);
 }
@@ -160,6 +182,7 @@ export function writeEntry(options: {
     files,
     dirs,
     createdAt: new Date().toISOString(),
+    generation: crypto.randomUUID(),
   };
 
   fs.mkdirSync(path.dirname(dir), {recursive: true});
@@ -174,6 +197,15 @@ export function writeEntry(options: {
     fs.rmSync(tmp, {recursive: true, force: true});
   }
   return dir;
+}
+
+/** Each rebuild owns a separate output: a late compiler cannot replace newer bytecode. */
+export function bytecodePath(dir: string): string | null {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, MANIFEST_FILE), 'utf8')) as Manifest;
+    if (manifest.version !== CACHE_VERSION || !/^[0-9a-f-]{36}$/.test(manifest.generation)) return null;
+    return path.join(dir, `${manifest.generation}.${BYTECODE_FILE}`);
+  } catch {return null;}
 }
 
 /** The `hermesc` from the `hermes-compiler` package, or null. */
@@ -215,15 +247,22 @@ function hermescArgs(js: string, out: string): string[] {
 export function compileBytecode(dir: string): boolean {
   const hermesc = hermescPath();
   if (hermesc == null) return false;
+  const out = bytecodePath(dir);
+  if (out == null) return false;
   const js = path.join(dir, BUNDLE_FILE);
-  const tmp = path.join(dir, `.${BYTECODE_FILE}.${process.pid}`);
+  const tmp = `${out}.${crypto.randomUUID()}.tmp`;
   const result = spawnSync(hermesc, hermescArgs(js, tmp), {stdio: 'ignore'});
   if (result.status !== 0 || !fs.existsSync(tmp)) {
     fs.rmSync(tmp, {force: true});
     return false;
   }
-  fs.renameSync(tmp, path.join(dir, BYTECODE_FILE));
-  return true;
+  try {
+    fs.renameSync(tmp, out);
+    return true;
+  } catch {
+    fs.rmSync(tmp, {force: true});
+    return false;
+  }
 }
 
 // Arguments: hermesc, the temporary output, the final output, hermesc's
@@ -234,17 +273,19 @@ const {spawnSync} = require('node:child_process');
 const fs = require('node:fs');
 const [hermesc, tmp, out, args] = process.argv.slice(-4);
 const result = spawnSync(hermesc, JSON.parse(args), {stdio: 'ignore', windowsHide: true});
-if (result.status === 0 && fs.existsSync(tmp)) fs.renameSync(tmp, out);
-else fs.rmSync(tmp, {force: true});
+try {
+  if (result.status === 0 && fs.existsSync(tmp)) fs.renameSync(tmp, out);
+} finally {fs.rmSync(tmp, {force: true});}
 `;
 
 /** Starts hermesc detached, so it can finish after the CLI exits. */
 export function compileBytecodeInBackground(dir: string): boolean {
   const hermesc = hermescPath();
   if (hermesc == null) return false;
+  const out = bytecodePath(dir);
+  if (out == null) return false;
   const js = path.join(dir, BUNDLE_FILE);
-  const tmp = path.join(dir, `.${BYTECODE_FILE}.bg`);
-  const out = path.join(dir, BYTECODE_FILE);
+  const tmp = `${out}.${crypto.randomUUID()}.tmp`;
   const child = spawn(
     process.execPath,
     ['-e', BACKGROUND_COMPILE_SCRIPT, hermesc, tmp, out, JSON.stringify(hermescArgs(js, tmp))],
@@ -256,5 +297,6 @@ export function compileBytecodeInBackground(dir: string): boolean {
 
 /** Drops a bytecode file the host could not load. */
 export function discardBytecode(dir: string): void {
-  fs.rmSync(path.join(dir, BYTECODE_FILE), {force: true});
+  const out = bytecodePath(dir);
+  if (out) fs.rmSync(out, {force: true});
 }

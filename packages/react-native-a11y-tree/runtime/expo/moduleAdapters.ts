@@ -2,8 +2,14 @@
 type ModuleHost = {NativeModule: new () => object; modules: Record<string, object | undefined>};
 
 export function installExpoModuleAdapters(expo: ModuleHost, warn: (message: string) => void): void {
+  const reported = new Set<string>();
   const unsupported = (name: string): never => {
-    throw new Error(`[NATIVE_API_UNSUPPORTED] ${name} is not simulated by react-native-a11y-tree. Render layout/accessibility without calling this API, or provide an application-level mock.`);
+    const error = new Error(`[NATIVE_API_UNSUPPORTED] ${name} is not simulated by react-native-a11y-tree. Render layout/accessibility without calling this API, or provide an application-level mock.`);
+    if (!reported.has(name)) {
+      reported.add(name);
+      warn(error.message);
+    }
+    throw error;
   };
   const asyncMethods = (module: string, names: string[]) => Object.fromEntries(
     names.map(name => [name, async () => unsupported(`${module}.${name}`)]),

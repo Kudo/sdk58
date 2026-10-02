@@ -37,6 +37,28 @@ describe('session', () => {
     );
   }
 
+  it('strict sessions reject cleanup limitations for both EOF and explicit quit', () => {
+    for (const quit of [[], [{id: 2, quit: true}]]) {
+      const proc = runSession([{id: 1, action: {tap: {testID: 'CLEANUP_FALLBACK'}}}, ...quit], ['--fail-on-fallback']);
+      expect(proc.status, proc.stderr).toBe(6);
+      const out = proc.stdout.trim().split('\n').map(line => JSON.parse(line));
+      expect(out).toHaveLength(3);
+      expect(out.at(-1)).toMatchObject({ok: false, error: {code: 'UNSUPPORTED_NATIVE'}});
+      expect(out.at(-1).diagnostics).toContainEqual(expect.objectContaining({target: 'Demo.cleanup'}));
+    }
+  });
+
+  it('validation errors retain cumulative diagnostics', () => {
+    const proc = runSession([{id: 1, action: {tap: {testID: 'FALLBACK'}}}, 'not json', {id: 2, action: {unknown: true}}, {id: 3, quit: true}]);
+    expect(proc.status, proc.stderr).toBe(0);
+    const out = proc.stdout.trim().split('\n').map(line => JSON.parse(line));
+    for (const response of out.slice(1)) {
+      expect(response.diagnostics).toEqual([{code: 'NATIVE_MODULE_FALLBACK', target: 'Demo', message: '[NATIVE_MODULE_FALLBACK] Demo: fixture only'}]);
+    }
+    expect(out[2].error.code).toBe('USAGE');
+    expect(out[3].error.code).toBe('USAGE');
+  });
+
   it('session: JSON lines over the interactive host protocol (fake host)', {timeout: 120_000}, () => {
     const proc = runSession([
       {id: 1, action: {tap: {testID: 'submit'}}},

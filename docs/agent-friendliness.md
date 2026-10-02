@@ -1,5 +1,10 @@
 # Agent-friendliness assessment
 
+> Historical assessment from September 29. Many proposed features below are now
+> implemented. The current approach keeps fresh CLI invocations and disk caches;
+> a warm Metro daemon is not planned. See the README sections on observed native
+> limitations and the fresh-process benchmark for the current workflow.
+
 Goal: use rn-a11y-tree from `@expo/agent-cli` so an AI agent can check
 component behaviour with a fast feedback loop (like `cargo check`), without a
 screenshot loop. This is an assessment of the CLI as of 2026-09-29 (no code
