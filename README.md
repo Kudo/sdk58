@@ -287,7 +287,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--tap-mode <mode>` | `run`, `session`, `check` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
 | `--rules <json>` | `check` | `rules` in `a11y-tree.json` | Rules file `{"rules": {...}}`, or that JSON itself (a value that starts with `{`) (see [Check](#check)) |
 | `--diff` | `run` | off | Add `diff: {added, removed, changed}` (by `key`) to each step |
-| `--timeout <ms>` | `session` | `30000` | Per-request timeout; on timeout the host is killed and the exit code is 1 |
+| `--timeout <ms>` | `session` | `30000` | Host-frame and output-write timeout; on timeout the host is killed and the exit code is 5 |
 
 ## Presets and a11y-tree.json
 
@@ -1051,14 +1051,23 @@ order, one at a time.
   `key` / `sel` values with their `ref` ("Did you mean ..."), or, for a
   `testID` without a close match, the testIDs in the tree.
 - `fallbacks` is added to a response when JS fallbacks were used.
-- If the app fails to load, the first line is `{"ready": false, "error"}`
-  and the exit code is 1.
-- `quit`, or the end of stdin, unmounts the app and stops the host; the exit
-  code is the host's (0).
-- App console output goes to stderr as `[app] ...` lines.
-- `--timeout <ms>` (default 30000) limits each request. On timeout the
-  response is `{"id", "ok": false, "error": "timeout"}`, the host is killed,
-  and the exit code is 1.
+- An uncaught app error during startup emits `{"ready": false, "error": {"code": "APP_THREW", ...}}`
+  and exits 4. Host failures exit 5; rejected fidelity policy exits 6.
+- `quit`, or the end of stdin, unmounts the app and stops the host. Normal
+  shutdown exits 0; shutdown failures and late diagnostics can change that result.
+- App console output goes to stderr as `[app] ...` lines. `--quiet` suppresses
+  ordinary app logging; `--no-stderr` also suppresses warning prose. Structured
+  logs and diagnostics remain in stdout responses.
+- `--timeout <ms>` (default 30000) limits each host frame and each response
+  write. Host timeouts emit a structured `TIMEOUT` error and exit 5. A blocked
+  or closed output consumer also stops the host and exits 5; an unavailable
+  output stream cannot carry a final JSON error. Waiting for the next client
+  request has no idle deadline.
+- Input is consumed in order with backpressure while requests and writes are
+  pending. Client input buffering is capped at 32 MiB, including unfinished
+  lines; exceeding it emits `USAGE` with `details.inputLimit: true`, stops the
+  host, and exits 1. Embedders must supply a readable that honors backpressure;
+  their own producer-side buffers remain their responsibility.
 
 How it works: the host runs in Fantom's `--interactive` mode. It evaluates the
 bundle, then reads frames from stdin (a line with the byte length, then that

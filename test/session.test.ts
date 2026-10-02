@@ -94,7 +94,9 @@ describe('session', () => {
     const proc = runSession([{id: 1, tree: true}]);
     expect(proc.status, proc.stderr).toBe(0);
     const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
-    expect(out.length).toBe(2);
+    expect(out.length).toBe(3);
+    expect(out[2]).toStrictEqual({id: null, ok: true,
+      logs: [{level: 'info', message: 'request {"id":null,"quit":true}'}]});
     expect(proc.stderr).not.toMatch(/\[app\]/);
   });
 

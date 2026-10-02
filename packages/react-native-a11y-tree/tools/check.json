@@ -53,7 +53,7 @@
       },
       "timeout": {
         "type": "number",
-        "description": "Host execution deadline in milliseconds after bundling (default 30000); session applies it per request."
+        "description": "Host execution deadline in milliseconds after bundling (default 30000); session applies it per host frame and response write."
       },
       "noStderr": {
         "type": "boolean",

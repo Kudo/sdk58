@@ -8,6 +8,9 @@ share one version.
 
 ### Added
 
+- Backpressure and a 32 MiB input buffer ceiling for sessions, bounded response writes, and cleanup when a client closes or stops reading output.
+- Reproducible MMKV 4.3.1/4.3.2 fixture-contract exercise on both presets, with artifact integrity checks and explicit unsupported-boxing results.
+
 - Bound session host output per request, retained diagnostics and stderr tails; preserve long valid sessions, structured terminal errors and streamed diagnostic logs.
 - Bound session shutdown and inherited pipes, with POSIX process-group cancellation and signal-handler cleanup.
 
@@ -34,6 +37,8 @@ share one version.
 - Fresh-process agent-loop benchmark that verifies source-edit cache freshness without a Metro daemon.
 
 ### Fixed
+
+- Preserve session cleanup logs on implicit EOF shutdown and interrupt blocked final responses after the host has already exited. Correct session timeout/error exit-code documentation.
 
 - Core iOS Linking fallback rejects unsupported URL launches, settings launches and handler queries instead of reporting invented native results; caught errors remain visible to strict policy.
 

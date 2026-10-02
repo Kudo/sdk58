@@ -20,7 +20,7 @@ export type CommonInput = {
   projectRoot?: string;
   /** Explicit Metro config file; supported projection only, persistent caches disabled. */
   metroConfig?: string;
-  /** Host execution deadline in milliseconds after bundling (default 30000); session applies it per request. */
+  /** Host execution deadline in milliseconds after bundling (default 30000); session applies it per host frame and response write. */
   timeout?: number;
   /** Suppress all stderr output, including warnings, errors, verbose logs and timings. */
   noStderr?: boolean;

@@ -57,6 +57,15 @@ checks it against installed workspace versions. Review changed native contracts
 before expanding version claims. Application-specific fixtures stay app-owned,
 which avoids maintaining an open-ended library of invented native behavior here.
 
+## Recorded dependency exercise
+
+The [MMKV patch exercise](validation/2026-10-02-mmkv-upgrade/README.md) compares
+4.3.1 and 4.3.2 with Nitro 0.37.1 and unchanged application fixtures. It checks
+storage operations, fresh-process state and strict rejection of unsupported
+boxing on both presets. This is a historical patch comparison of JavaScript
+contracts, not native ABI validation or an independently maintained app pilot.
+No supported version range is inferred from those two package versions.
+
 ## Current reference evidence
 
 [Desktop native layout comparisons](validation/2026-10-02-native-reference/README.md)
@@ -77,18 +86,22 @@ ARM64 execution does not replace the Intel runner result.
   mismatches and explicit exclusions.
 - Successful strict capability gates on every supported platform for the exact
   release candidate, including the actual packaged binary/architecture slices.
-- Windows runner-descendant termination and client-side session input/output
-  backpressure still need further coverage. Host stdout/stderr is bounded to
+- Windows runner-descendant termination still needs further coverage. Session
+  client input now uses backpressure with a 32 MiB buffer ceiling, and response
+  writes have a deadline. Tests exercise pipelining, oversized lines, stalled
+  or closed consumers, cancellation and listener cleanup. Host stdout/stderr is bounded to
   32 MiB per one-shot run or session frame, including unterminated lines and
   console floods. Session tests cover idle floods, retained diagnostics,
   cancellation, hung shutdown and escaped inherited pipes. These host limits
-  do not bound arbitrary client-input lines or a stalled output consumer.
+  are separate from the client-input and response-write limits. Embedders must
+  still bound their own producer-side buffers and honor stream backpressure.
   A descendant that deliberately escapes the POSIX process group may outlive
   the host; the pipe cutoff bounds the CLI wait, not that escaped process.
   One-shot host deadlines cover native execution after bundling; they do not bound
   Metro startup or compilation.
-- Dependency-upgrade exercises and a published support matrix based on those
-  runs, including unsupported combinations.
+- Further dependency-upgrade exercises across React Native, Expo and compiled
+  libraries, including unsupported combinations. The recorded MMKV patch
+  exercise alone does not establish those combinations.
 
 The repository examples and unit tests establish useful regression coverage.
 They do not by themselves demonstrate arbitrary-library compatibility or

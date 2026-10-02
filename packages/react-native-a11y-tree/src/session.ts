@@ -61,13 +61,113 @@ export type SessionIO = {
   log: (line: string) => void;
 };
 
+/** Pull one chunk at a time: no readline queue grows while a request or write
+ * is pending. The caller's readable must honor pause/backpressure; its own
+ * producer-side buffering remains owned by the caller. */
+function clientLines(input: NodeJS.ReadableStream, limit: number, fail: (error: ErrorInfo) => void) {
+  let pending: Buffer | undefined;
+  let ended = (input as NodeJS.ReadableStream & {readableEnded?: boolean}).readableEnded === true;
+  let closed = false;
+  let wake: (() => void) | undefined;
+  let partial = Buffer.alloc(0);
+  let bytes = 0;
+  const close = () => {
+    closed = true;
+    input.removeListener('data', onData);
+    input.removeListener('end', onEnd);
+    input.removeListener('close', onClose);
+    input.removeListener('error', onError);
+    // Re-emit pause even if the per-chunk reader already paused it. Node's
+    // stdin pause hook stops its underlying pipe read on the next tick.
+    input.resume();
+    input.pause();
+    pending = undefined;
+    partial = Buffer.alloc(0);
+    wake?.();
+  };
+  const onError = (error: Error) => {
+    fail({code: 'HOST_CRASHED', message: `Session client input failed: ${error.message}`, details: {clientInput: true}});
+    close();
+  };
+  const onData = (data: Buffer | string) => {
+    input.pause();
+    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (pending || chunk.length + bytes > limit) {
+      fail({code: 'USAGE', message: `Session client input exceeded the ${limit}-byte buffer limit`, details: {inputLimit: true}});
+      close();
+      return;
+    }
+    pending = chunk;
+    wake?.();
+  };
+  const onEnd = () => {ended = true; wake?.();};
+  const onClose = () => {if (!ended) onError(new Error('input closed before EOF'));};
+  input.pause();
+  input.on('data', onData);
+  input.on('end', onEnd);
+  input.on('error', onError);
+  input.on('close', onClose);
+  if ((input as NodeJS.ReadableStream & {destroyed?: boolean}).destroyed && !ended) {
+    queueMicrotask(() => {if (!closed) onClose();});
+  }
+  return {
+    close,
+    async *[Symbol.asyncIterator]() {
+      try {
+        while (!closed) {
+          if (!pending && !ended) {
+            await new Promise<void>(resolve => {wake = resolve; input.resume();});
+            wake = undefined;
+          }
+          if (closed) return;
+          const chunk = pending;
+          pending = undefined;
+          if (!chunk) {
+            if (bytes) yield partial.subarray(0, bytes).toString('utf8');
+            return;
+          }
+          let offset = 0;
+          while (offset < chunk.length && !closed) {
+            const newline = chunk.indexOf(10, offset);
+            const end = newline < 0 ? chunk.length : newline;
+            const part = chunk.subarray(offset, end);
+            if (newline >= 0 && bytes === 0) {
+              yield part.toString('utf8');
+            } else {
+              const size = bytes + part.length;
+              if (size > partial.length) {
+                const grown = Buffer.allocUnsafe(Math.min(limit, Math.max(size, partial.length * 2, 4096)));
+                partial.copy(grown, 0, 0, bytes);
+                partial = grown;
+              }
+              part.copy(partial, bytes);
+              bytes = size;
+              if (newline >= 0) {
+                const line = partial.subarray(0, bytes).toString('utf8');
+                bytes = 0;
+                yield line;
+              }
+            }
+            if (closed) {
+              bytes = 0;
+              return;
+            }
+            offset = end + 1;
+          }
+        }
+      } finally {close();}
+    },
+  };
+}
+
 /** Starts the host and serves requests until `quit` or end of input. Returns the exit code. */
 export async function runSession(options: FidelityOptions & {
   bundlePath: string;
   windowWidth: number;
   windowHeight: number;
   verbose?: boolean;
-  /** Per-request timeout in ms; on timeout the host is killed and the session ends with code 5. */
+  /** Deadline per host frame and client-output write in ms; timeout cleans up
+   * the host and exits 5. Waiting for an idle client has no deadline. */
   timeoutMs?: number;
   /** Print startup timings and per-request latency as JSON on stderr. */
   timing?: boolean;
@@ -99,7 +199,8 @@ export async function runSession(options: FidelityOptions & {
   let exited = false;
   let current: Frame | null = null;
   let nextEvalId = 0;
-  let inputLines: readline.Interface | undefined;
+  let inputLines: ReturnType<typeof clientLines> | undefined;
+  let cancelWrite: (() => void) | undefined;
   let escalation: ReturnType<typeof setTimeout> | undefined;
   let cutoff: ReturnType<typeof setTimeout> | undefined;
   let shutdownTimer: ReturnType<typeof setTimeout> | undefined;
@@ -140,6 +241,7 @@ export async function runSession(options: FidelityOptions & {
     } catch {try {child.kill(signal);} catch {}}
   };
   const stop = (error: ErrorInfo) => {
+    cancelWrite?.();
     if (terminalError || exited) return;
     terminalError = error;
     inputLines?.close(); // Wake an idle client-input wait without destroying it.
@@ -274,6 +376,7 @@ export async function runSession(options: FidelityOptions & {
     }
     exited = true;
     if (terminalError) {
+      cancelWrite?.();
       kill('SIGKILL');
       if (terminalError.code === 'HOST_CRASHED' && stderrTail.length) {
         terminalError.details = {...terminalError.details, stderrTail: stderrTail.toString('utf8')};
@@ -348,11 +451,62 @@ export async function runSession(options: FidelityOptions & {
     });
   }
 
-  const writeLine = (value: unknown) => {
+  let outputFailed = false;
+  const outputFailure = (error: ErrorInfo) => {
+    if (outputFailed) return;
+    outputFailed = true;
+    // The final response can fail after the host has already been reaped.
+    if (exited) terminalError ??= error;
+    else stop(error);
+    cancelWrite?.();
+    io.log(error.message);
+  };
+  const outputError = (error: Error) => outputFailure({code: 'HOST_CRASHED',
+    message: `Session client output failed: ${error.message}`, details: {clientOutput: true}});
+  const outputClose = () => outputError(new Error('output closed'));
+  io.output.on('error', outputError);
+  io.output.on('close', outputClose);
+  io.output.on('finish', outputClose);
+
+  const writeLine = async (value: unknown) => {
+    if (outputFailed) return;
+    if (!io.output.writable) {outputClose(); return;}
+    const version = diagnosticVersion;
+    const delivered = await new Promise<boolean>(resolve => {
+      let settled = false;
+      let callbackDone = false;
+      let drained = false;
+      let returned = false;
+      const settle = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        io.output.removeListener('drain', onDrain);
+        cancelWrite = undefined;
+        resolve(ok);
+      };
+      const complete = () => {if (returned && callbackDone && drained) settle(true);};
+      const onDrain = () => {drained = true; complete();};
+      const timer = setTimeout(() => outputFailure({code: 'TIMEOUT',
+        message: `Session client output timed out after ${timeoutMs} ms`, details: {clientOutput: true}}), timeoutMs);
+      cancelWrite = () => {outputFailed = true; settle(false);};
+      io.output.on('drain', onDrain);
+      try {
+        const accepted = io.output.write(JSON.stringify(value) + '\n', error => {
+          if (settled) return;
+          if (error) {outputError(error); return;}
+          callbackDone = true;
+          complete();
+        });
+        drained ||= accepted;
+        returned = true;
+        complete();
+      } catch (error) {outputError(error as Error);}
+    });
+    if (!delivered) return;
     const record = value as {error?: ErrorInfo; diagnostics?: Diagnostic[]};
     if (terminalError && record.error === terminalError) terminalReported = true;
-    if (record.diagnostics) reportedDiagnosticVersion = diagnosticVersion;
-    io.output.write(JSON.stringify(value) + '\n');
+    if (record.diagnostics) reportedDiagnosticVersion = version;
   };
 
   const convert = (response: HostResponse, request: Record<string, unknown>) => {
@@ -406,7 +560,7 @@ export async function runSession(options: FidelityOptions & {
     if (terminalError) {
       if (!terminalReported) {
         const logs = takeLogs();
-        writeLine({...(!readySent ? {ready: false} : {id: null, ok: false}), error: terminalError,
+        await writeLine({...(!readySent ? {ready: false} : {id: null, ok: false}), error: terminalError,
           ...(diagnostics.length ? {diagnostics} : {}), ...(logs.length ? {logs} : {})});
       }
       if (terminalError.code === 'TIMEOUT') io.log(`request timed out after ${timeoutMs} ms; host killed`);
@@ -423,13 +577,13 @@ export async function runSession(options: FidelityOptions & {
       // Only new evidence needs a follow-up, but rejected evidence must stay
       // explicitly failed even when an earlier response reported policy failure.
       if (latePolicyError) {
-        writeLine({...(!readySent ? {ready: false} : {id: null, ok: false}),
+        await writeLine({...(!readySent ? {ready: false} : {id: null, ok: false}),
           error: latePolicyError.toJSON(), diagnostics, ...(logs.length ? {logs} : {})});
       } else {
-        writeLine({id: null, ok: true, ...(diagnostics.length ? {diagnostics} : {}), ...(logs.length ? {logs} : {})});
+        await writeLine({id: null, ok: true, ...(diagnostics.length ? {diagnostics} : {}), ...(logs.length ? {logs} : {})});
       }
     }
-    return policyFailed ? EXIT_CODES.UNSUPPORTED_NATIVE : 0;
+    return outputFailed ? EXIT_CODES.HOST_CRASHED : policyFailed ? EXIT_CODES.UNSUPPORTED_NATIVE : 0;
   };
 
   const cancel = () => stop({code: 'HOST_CRASHED', message: 'Host execution cancelled', details: {cancelled: true}});
@@ -438,6 +592,7 @@ export async function runSession(options: FidelityOptions & {
   process.on('SIGINT', cancel);
   process.on('SIGTERM', cancel);
   try {
+    inputLines = clientLines(io.input, LIMIT, error => stop(error));
     // Initial render.
     const start = await send({id: null, start: true});
     if (terminalError) return await finish();
@@ -445,7 +600,7 @@ export async function runSession(options: FidelityOptions & {
       const code = exited ? 'HOST_CRASHED' : 'APP_THREW';
       const logs = takeLogs();
       const hint = nativeModuleHint(start.error ?? '');
-      writeLine({ready: false, error: {code, message: start.error, ...(hint ? {hint} : {})}, ...(logs.length > 0 ? {logs} : {})});
+      await writeLine({ready: false, error: {code, message: start.error, ...(hint ? {hint} : {})}, ...(logs.length > 0 ? {logs} : {})});
       const shutdownCode = await finish();
       return shutdownCode || EXIT_CODES[code];
     }
@@ -453,7 +608,7 @@ export async function runSession(options: FidelityOptions & {
       checkHostInfo(start.hostInfo);
     } catch (error) {
       const cliError = error as CliError;
-      writeLine({ready: false, error: cliError.toJSON()});
+      await writeLine({ready: false, error: cliError.toJSON()});
       const shutdownCode = await finish();
       return shutdownCode || EXIT_CODES[cliError.code];
     }
@@ -474,13 +629,13 @@ export async function runSession(options: FidelityOptions & {
     const policyError = fidelityError(diagnostics, options);
     if (policyError) {
       policyFailed = true;
-      writeLine({ready: false, error: policyError.toJSON(), diagnostics, logs: takeLogs()});
+      await writeLine({ready: false, error: policyError.toJSON(), diagnostics, logs: takeLogs()});
       return await finish();
     }
     const readyLogs = takeLogs();
     const host = options.host;
     readySent = true;
-    writeLine({
+    await writeLine({
       ready: true,
       ...(diagnostics.length ? {diagnostics} : {}),
       tree: start.tree ? formatSessionTree(convertShadowTree(start.tree), treeDefaults) : null,
@@ -500,7 +655,7 @@ export async function runSession(options: FidelityOptions & {
 
     // Requests, one at a time, in order.
     let quitSent = false;
-    const lines = inputLines = readline.createInterface({input: io.input});
+    const lines = inputLines;
     for await (const rawLine of lines) {
       if (terminalError || exited) break;
       const line = rawLine.trim();
@@ -509,19 +664,19 @@ export async function runSession(options: FidelityOptions & {
       try {
         request = JSON.parse(line);
       } catch (error) {
-        writeLine({...convert({id: null, ok: false, error: 'invalid JSON'}, {}), error: {code: 'USAGE', message: `invalid JSON: ${(error as Error).message}`}});
+        await writeLine({...convert({id: null, ok: false, error: 'invalid JSON'}, {}), error: {code: 'USAGE', message: `invalid JSON: ${(error as Error).message}`}});
         continue;
       }
       const problem = validateRequest(request);
       if (problem != null) {
-        writeLine({...convert({id: request?.id ?? null, ok: false, error: problem}, {}), error: {code: 'USAGE', message: problem}});
+        await writeLine({...convert({id: request?.id ?? null, ok: false, error: problem}, {}), error: {code: 'USAGE', message: problem}});
         continue;
       }
       const requestStart = performance.now();
       const response = await send(request);
       const out = convert(response, request);
       if (terminalError) await exitPromise;
-      writeLine(out);
+      await writeLine(out);
       if (options.timing) {
         io.log(
           `rn-a11y-tree timing: ${JSON.stringify({id: request.id, requestMs: Math.round((performance.now() - requestStart) * 1000) / 1000})}`,
@@ -539,8 +694,11 @@ export async function runSession(options: FidelityOptions & {
       const response = await send({id: null, quit: true});
       const wasFailed = policyFailed;
       const out = convert(response, {});
-      // Normal EOF remains silent; an unrequested cleanup failure must be visible.
-      if ((!wasFailed && policyFailed) || !response.ok) writeLine(out);
+      // Normal EOF remains silent, but conversion consumes cleanup logs: send
+      // them (and newly retained diagnostics) before finish loses that evidence.
+      if ((!wasFailed && policyFailed) || !response.ok || out.logs != null || diagnosticVersion !== reportedDiagnosticVersion) {
+        await writeLine(out);
+      }
     }
     return await finish();
   } finally {
@@ -549,6 +707,30 @@ export async function runSession(options: FidelityOptions & {
       await exitPromise;
     }
     inputLines?.close();
+    if (outputFailed) {
+      const output = io.output as NodeJS.WritableStream & {destroy?: () => void; closed?: boolean};
+      if (output.destroy && !output.closed) {
+        // A failed write callback can precede its asynchronous error/close.
+        // Retain the error handler through destruction, with a bounded wait
+        // for custom streams whose _destroy callback never completes.
+        await new Promise<void>(resolve => {
+          const done = () => {clearTimeout(timer); output.removeListener('close', done); resolve();};
+          const timer = setTimeout(done, 250);
+          output.once('close', done);
+          output.destroy!();
+        });
+        if (!output.closed) {
+          // Do not retain the session in a delayed custom stream callback.
+          // This small guard removes itself when that stream finally closes.
+          const ignoreError = () => {};
+          output.on('error', ignoreError);
+          output.once('close', () => output.removeListener('error', ignoreError));
+        }
+      }
+    }
+    io.output.removeListener('error', outputError);
+    io.output.removeListener('close', outputClose);
+    io.output.removeListener('finish', outputClose);
     process.off('SIGINT', cancel);
     process.off('SIGTERM', cancel);
   }
