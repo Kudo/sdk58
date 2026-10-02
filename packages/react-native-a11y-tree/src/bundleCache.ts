@@ -24,7 +24,8 @@ import path from 'node:path';
 const require = createRequire(import.meta.url);
 
 /** Bump when the cache layout or the key inputs change. */
-const CACHE_VERSION = 2;
+// v3 pins React/RN resolution to the consuming app across shared packages.
+const CACHE_VERSION = 3;
 
 export const BUNDLE_FILE = 'index.bundle.js';
 export const BYTECODE_FILE = 'index.bundle.hbc';

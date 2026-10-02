@@ -57,6 +57,8 @@ describe('errors', () => {
 
   it('CLI: a bundle error exits 3 with BUNDLE_FAILED', {timeout: 120_000}, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-broken-'));
+    fs.writeFileSync(path.join(dir, 'package.json'), '{"name":"broken-app"}');
+    fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     const broken = path.join(dir, 'App.tsx');
     fs.writeFileSync(broken, "import {View} from 'react-native';\nimport Missing from './does-not-exist';\nexport default () => <View><Missing /></View>;\n");
     const proc = cli(['render', broken, '--platform', 'android', '--bundle-only']);

@@ -41,8 +41,12 @@ line heights from `ControlMetrics::ios()` (UIFont metrics). Widths still come fr
 
 | Platform | Trees | Within 0.5 pt | Within 1 pt |
 |---|---|---|---|
-| macOS (swiftui-ref) | 43 | 42 | 42 |
+| macOS (swiftui-ref) | 43 | 42 | 43 |
 | iOS 26.5 simulator (`--platform ios`) | 43 | 41 | 41 |
+
+macOS results were rechecked at `88ddd44` on macOS 26.5.2, Xcode 26.6,
+SDK 26.5 (arm64), without a simulator. The 0.5 pt run exits 1; all cases
+pass at 1 pt. These desktop results do not revalidate the historical iOS row.
 
 The remaining differences:
 

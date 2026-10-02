@@ -1,3 +1,4 @@
+import {applyProjectMetroConfig} from './metroConfig.ts';
 import {buildFingerprint} from './bundleCache.ts';
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
@@ -73,6 +74,8 @@ export type HostConfig = {
 };
 
 export type BundleOptions = {
+  projectRoot?: string;
+  metroConfigPath?: string;
   /** Path to the user's component file. */
   appPath: string;
   /** Explicit native fixtures loaded after environment setup and before the app. */
@@ -137,6 +140,7 @@ export function findProjectRoot(file: string): string {
 }
 
 export function renderEntry(options: {
+  projectRoot?: string;
   appPath: string;
   /** Explicit native fixtures loaded after environment setup and before the app. */
   setupPath?: string;
@@ -161,7 +165,7 @@ export function renderEntry(options: {
     JSON.stringify(s).slice(1, -1).replaceAll("'", "\\'");
   let safeArea = false;
   try {
-    require.resolve('react-native-safe-area-context/package.json', {paths: [findProjectRoot(options.appPath)]});
+    require.resolve('react-native-safe-area-context/package.json', {paths: [options.projectRoot ?? findProjectRoot(options.appPath)]});
     safeArea = true;
   } catch {}
   return template
@@ -275,6 +279,8 @@ function applyAliases(resolution: Resolution): Resolution {
 }
 
 export function createMetroConfig(options: {
+  base?: ConfigT;
+  appPath?: string;
   projectRoot: string;
   workDir: string;
   platform: string;
@@ -289,7 +295,7 @@ export function createMetroConfig(options: {
   );
   const {mergeConfig} = projectRequire<typeof import('metro-config')>(projectRoot, 'metro-config');
 
-  const base = getDefaultConfig(projectRoot);
+  const base = options.base ?? getDefaultConfig(projectRoot);
   const upstreamResolveRequest = base.resolver.resolveRequest;
   // Platforms react-native and Expo know (ios, android, tvos, macos) resolve
   // normally; only an out-of-tree platform gets the android fallback.
@@ -319,6 +325,7 @@ export function createMetroConfig(options: {
   };
 
   const projectOrigin = path.join(projectRoot, 'package.json');
+  const appNodeModulesPaths = [...new Set([...base.resolver.nodeModulesPaths, path.join(projectRoot, 'node_modules')])];
 
   const overrides: InputConfigT = {
     projectRoot,
@@ -328,6 +335,7 @@ export function createMetroConfig(options: {
         [
           ...(base.watchFolders ?? []),
           ...projectPaths.watchFolders,
+          ...(options.appPath ? [path.dirname(options.appPath)] : []),
           ...(options.setupPath ? [path.dirname(fs.realpathSync(options.setupPath))] : []),
           projectRoot,
           RUNTIME_DIR,
@@ -362,6 +370,11 @@ export function createMetroConfig(options: {
         // react-native, flow-enums-runtime, ...) resolve from the user's
         // project first so there is a single copy of react / react-native.
         const origin = context.originModulePath;
+        // React and RN are process-wide identities. Shared packages may carry
+        // their own node_modules; always resolve these through the consuming app.
+        if (/^(react|react-native)(?:\/|$)/.test(moduleName)) {
+          return applyAliases(resolveForPlatform({...context, originModulePath: projectOrigin, nodeModulesPaths: appNodeModulesPaths}, moduleName, requestPlatform));
+        }
         // App aliases must not rewrite imports inside dependencies or our runtime.
         if (isBareSpecifier(moduleName) && !origin.includes(`${path.sep}node_modules${path.sep}`)
           && !isInside(origin, RUNTIME_DIR) && !isInside(origin, workDir)) {
@@ -404,7 +417,10 @@ export function createMetroConfig(options: {
     },
   };
 
-  return mergeConfig(base, overrides);
+  const merged = mergeConfig(base, overrides);
+  // Expo serializers close over their original base object. Opted-in settings
+  // and the final headless overrides must be visible through that same object.
+  return options.base ? Object.assign(base, merged) : merged;
 }
 
 /** Cached bundles with at most this many changed inputs are rebuilt without Metro worker processes. */
@@ -447,14 +463,15 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   if (options.setupPath && (!fs.existsSync(options.setupPath) || !fs.statSync(options.setupPath).isFile())) {
     throw usage(`Setup file not found: ${path.resolve(options.setupPath)}`);
   }
-  const projectRoot = findProjectRoot(appPath);
+  const projectRoot = options.projectRoot ? fs.realpathSync(path.resolve(options.projectRoot)) : findProjectRoot(appPath);
   const dev = options.dev ?? false;
   const minify = options.minify ?? false;
   const bytecodeMode = options.bytecode ?? 'auto';
-  const useCache = options.out == null && options.cache !== false;
+  const useCache = options.out == null && options.cache !== false && !options.metroConfigPath;
 
   const entry = renderEntry({
     appPath,
+    projectRoot,
     setupPath: options.setupPath,
     viewportWidth: options.viewportWidth,
     viewportHeight: options.viewportHeight,
@@ -513,9 +530,16 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   const outDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-')));
   const bundlePath = path.resolve(options.out ?? path.join(outDir, 'index.bundle.js'));
 
-  const config = {...createMetroConfig({projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths, setupPath: options.setupPath})};
+  let base: ConfigT | undefined;
+  if (options.metroConfigPath) {
+    const {getDefaultConfig} = projectRequire<{getDefaultConfig: (root: string) => ConfigT}>(projectRoot, 'expo/metro-config');
+    base = getDefaultConfig(projectRoot);
+    try { await applyProjectMetroConfig(base, projectRoot, options.metroConfigPath); }
+    catch (error) {fs.rmSync(outDir, {recursive: true, force: true}); throw error;}
+  }
+  const config = createMetroConfig({base, appPath, projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths, setupPath: options.setupPath});
   // A bundle miss must also invalidate transformed modules when build inputs change.
-  config.cacheVersion = `${config.cacheVersion}:${buildFingerprint(projectRoot)}`;
+  Object.assign(config, {cacheVersion: `${config.cacheVersion}:${buildFingerprint(projectRoot)}`});
   // Persistent Metro caches (transforms, file map) next to the bundle cache.
   const StoreClass = (config.cacheStores[0] as unknown as {constructor: new (o: {root: string}) => unknown})
     .constructor;
@@ -523,7 +547,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     new StoreClass({root: path.join(root, 'metro')}),
   ];
   // Metro ignores write errors of this cache, so the directory must exist.
-  const fileMapDir = path.join(root, 'metro-file-map');
+  if (options.metroConfigPath) Object.assign(config, {cacheStores: []});
+  const fileMapDir = options.metroConfigPath ? path.join(outDir, 'metro-file-map') : path.join(root, 'metro-file-map');
   fs.mkdirSync(fileMapDir, {recursive: true});
   (config as {fileMapCacheDirectory?: string}).fileMapCacheDirectory = fileMapDir;
   if (options.resetCache) {
@@ -551,9 +576,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
 
   const showProgress = options.verbose === true && process.stderr.isTTY;
 
-  // The user's metro.config.js is intentionally not loaded: it could re-add
-  // InitializeCore or change platforms.
-  await Metro.runBuild(config, {
+  // Explicit configs are constrained above; headless startup remains trusted.
+  try { await Metro.runBuild(config, {
     entry: entryPath,
     platform,
     dev,
@@ -564,7 +588,10 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
       ? (done, total) => process.stderr.write(`\rMetro: ${done}/${total} files`)
       : undefined,
     onComplete: showProgress ? () => process.stderr.write('\n') : undefined,
-  });
+  }); } catch (error) {
+    fs.rmSync(outDir, {recursive: true, force: true});
+    throw error;
+  }
 
   if (!useCache) {
     return result('off', bundlePath, outDir);

@@ -83,6 +83,7 @@ export const CONFIG_FILE = 'a11y-tree.json';
 const CONFIG_KEYS = [
   '$schema',
   'setup',
+  'metroConfig',
   'failOnFallback',
   'allowFallback',
   'preset',
@@ -104,6 +105,8 @@ export type ProjectConfig = Settings & {
   rules?: Rules;
   /** Native fixture module, resolved relative to a11y-tree.json. */
   setup?: string;
+  /** Opt-in Metro configuration path, relative to the project root. */
+  metroConfig?: string;
   failOnFallback?: boolean;
   /** Exact names of reviewed native/runtime fallbacks or application fixtures. */
   allowFallback?: string[];
@@ -157,7 +160,7 @@ export function loadProjectConfig(projectRoot: string): ProjectConfig | null {
   for (const key of ['platform', 'tapMode', 'format']) {
     if (key in config && typeof config[key] !== 'string') throw usage(`${file}: "${key}" must be a string`);
   }
-  for (const key of ['$schema', 'setup']) {
+  for (const key of ['$schema', 'setup', 'metroConfig']) {
     if (key in config && (typeof config[key] !== 'string' || !(config[key] as string).trim())) {
       throw usage(`${file}: "${key}" must be a non-empty string`);
     }

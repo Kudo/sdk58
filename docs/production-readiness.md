@@ -38,6 +38,18 @@ checks it against installed workspace versions. Review changed native contracts
 before expanding version claims. Application-specific fixtures stay app-owned,
 which avoids maintaining an open-ended library of invented native behavior here.
 
+## Current reference evidence
+
+[Desktop native layout comparisons](validation/2026-10-02-native-reference/README.md)
+record the current Compose results and the known SwiftUI symbol mismatch. They
+cover the reference harness cases, not every native view or real device.
+
+Release verification now extracts the universal macOS host from the npm runtime
+tarball and runs strict E2E on ARM64 and Intel before publication, alongside the
+packaged CLI install smoke test. The gate is `scripts/verify-native-release.sh`;
+its workflow must pass on the actual release candidate before shipping. Local
+ARM64 execution does not replace the Intel runner result.
+
 ## Evidence still needed for broader production claims
 
 - Representative independent applications, with documented fixture/setup effort

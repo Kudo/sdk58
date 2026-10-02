@@ -43,6 +43,14 @@
         "type": "string",
         "description": "Native fixture module loaded before the app."
       },
+      "projectRoot": {
+        "type": "string",
+        "description": "Consuming app root for dependencies and project settings."
+      },
+      "metroConfig": {
+        "type": "string",
+        "description": "Explicit Metro config file; supported projection only, persistent caches disabled."
+      },
       "timeout": {
         "type": "number",
         "description": "Host execution deadline in milliseconds after bundling (default 30000); session applies it per request."
@@ -1053,6 +1061,7 @@
           "code": {
             "type": "string",
             "enum": [
+              "BUILD_CONFIGURATION",
               "DEPENDENCY_COMPATIBILITY",
               "APPLICATION_FIXTURE",
               "NATIVE_MODULE_FALLBACK",

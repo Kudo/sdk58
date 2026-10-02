@@ -51,6 +51,7 @@ describe('presets', () => {
 
   it('CLI: a11y-tree.json supplies the platform and viewport; flags override', {timeout: 180_000}, () => {
     const dir = tmpProject({preset: 'android-tablet', height: 1000});
+    fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     const bundleOnly = (extra: string[]) =>
       spawnSync('node', [CLI, 'render', path.join(dir, 'App.tsx'), '--bundle-only', '--no-cache', ...extra], {
         cwd: ROOT,

@@ -84,6 +84,8 @@ type RenderOptions = FidelityOptions & HostConfigOptions & OutputOptions & {
   cache?: boolean;
   bytecode?: string;
   setup?: string;
+  projectRoot?: string;
+  metroConfig?: string;
   timeout?: number;
   width: number;
   height: number;
@@ -244,11 +246,15 @@ function printTiming(timing: Timing) {
   process.stderr.write(`rn-a11y-tree timing: ${JSON.stringify(timing)}\n`);
 }
 
-function dependencyDiagnostics(file: string, host: import('./host.ts').HostInfo): LogEntry[] {
-  const report = inspectCompatibility(findProjectRoot(file), host);
+function dependencyDiagnostics(file: string, options: RenderOptions, host: import('./host.ts').HostInfo): LogEntry[] {
+  const report = inspectCompatibility(options.projectRoot ?? findProjectRoot(file), host);
   const mismatch = report.issues.find(issue => issue.code === 'RN_VERSION_MISMATCH' && issue.severity === 'error');
   if (mismatch) throw new CliError('HOST_INCOMPATIBLE', mismatch.message, {details: {compatibility: report}});
-  return report.issues.map(issue => ({level: 'warn', message: `[DEPENDENCY_COMPATIBILITY] ${issue.package}: ${issue.message}`}));
+  const logs: LogEntry[] = report.issues.map(issue => ({level: 'warn', message: `[DEPENDENCY_COMPATIBILITY] ${issue.package}: ${issue.message}`}));
+  const root = options.projectRoot ?? findProjectRoot(file);
+  const ignored = ['metro.config.js', 'metro.config.cjs', 'metro.config.mjs', 'metro.config.ts'].find(name => fs.existsSync(path.join(root, name)));
+  if (!options.metroConfig && ignored) logs.push({level: 'warn', message: `[BUILD_CONFIGURATION] metro-config: ${ignored} is not loaded. Use --metro-config to opt in to supported resolver/transformer settings; unsupported native CSS or serializer integrations are rejected.`});
+  return logs;
 }
 
 async function execute<T>(
@@ -262,13 +268,15 @@ async function execute<T>(
   if (!options.bundleOnly) {
     // Fail (or download) before spending time on Metro.
     const host = await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
-    logs?.push(...dependencyDiagnostics(file, host));
+    logs?.push(...dependencyDiagnostics(file, options, host));
     warnTimeZone(options);
   }
   const metroStart = performance.now();
   const result = await bundleOrFail({
     appPath: file,
     setupPath: options.setup,
+    projectRoot: options.projectRoot,
+    metroConfigPath: options.metroConfig,
     viewportWidth: options.width,
     viewportHeight: options.height,
     platform,
@@ -364,10 +372,15 @@ async function execute<T>(
  * the command line, a11y-tree.json and the preset, then built-in defaults.
  */
 function applySettings(file: string, options: RenderOptions & {tapMode?: string; preset?: string}) {
-  const config = loadProjectConfig(findProjectRoot(file));
+  const projectRoot = options.projectRoot ? path.resolve(options.projectRoot) : findProjectRoot(file);
+  if (!fs.existsSync(path.join(projectRoot, 'package.json'))) throw usage(`Project root must contain package.json: ${projectRoot}`, 'Use --project-root <app-directory> for a shared component, or run from an app with installed dependencies.');
+  options.projectRoot = projectRoot;
+  options.metroConfig = options.metroConfig ? path.resolve(options.metroConfig) : undefined;
+  const config = loadProjectConfig(projectRoot);
+  options.metroConfig ??= config?.metroConfig ? path.resolve(projectRoot, config.metroConfig) : undefined;
   applyConfig(options, config);
   options.setup = options.setup != null ? path.resolve(options.setup) :
-    config?.setup != null ? path.resolve(findProjectRoot(file), config.setup) : undefined;
+    config?.setup != null ? path.resolve(projectRoot, config.setup) : undefined;
   return config;
 }
 
@@ -507,10 +520,12 @@ async function session(file: string, options: RunOptions) {
   }
   const host = await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
   warnTimeZone(options);
-  const initialLogs = dependencyDiagnostics(file, host);
+  const initialLogs = dependencyDiagnostics(file, options, host);
   const result = await bundleOrFail({
     appPath: file,
     setupPath: options.setup,
+    projectRoot: options.projectRoot,
+    metroConfigPath: options.metroConfig,
     viewportWidth: options.width,
     viewportHeight: options.height,
     platform,
@@ -650,6 +665,8 @@ function addCommonOptions(command: Command): Command {
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
     .option('--timeout <ms>', 'host execution deadline after bundling; timeout exits 5 (default 30000)', timeoutNumber, 30_000)
+    .option('--project-root <directory>', 'resolve dependencies and project settings from this app directory')
+    .option('--metro-config <file>', 'opt in to supported custom Metro configuration; disables persistent caches')
     .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
     .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')
     .option('--no-fail-on-fallback', 'disable the configured fallback policy')
@@ -763,6 +780,8 @@ addOutputOptions(program.command('session'))
     DEFAULT_TIMEOUT_MS,
   )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
+  .option('--project-root <directory>', 'resolve dependencies and project settings from this app directory')
+  .option('--metro-config <file>', 'opt in to supported custom Metro configuration; disables persistent caches')
   .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
   .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')
   .option('--no-fail-on-fallback', 'disable the configured fallback policy')

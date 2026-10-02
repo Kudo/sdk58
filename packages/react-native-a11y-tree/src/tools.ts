@@ -16,6 +16,10 @@ export type CommonInput = {
   file: string;
   /** Native fixture module loaded before the app. */
   setup?: string;
+  /** Consuming app root for dependencies and project settings. */
+  projectRoot?: string;
+  /** Explicit Metro config file; supported projection only, persistent caches disabled. */
+  metroConfig?: string;
   /** Host execution deadline in milliseconds after bundling (default 30000); session applies it per request. */
   timeout?: number;
   /** Device preset: platform, viewport, safe area insets, header height. */

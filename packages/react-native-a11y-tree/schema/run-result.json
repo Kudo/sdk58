@@ -615,6 +615,7 @@
         "code": {
           "type": "string",
           "enum": [
+            "BUILD_CONFIGURATION",
             "DEPENDENCY_COMPATIBILITY",
             "APPLICATION_FIXTURE",
             "NATIVE_MODULE_FALLBACK",

@@ -5,8 +5,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {DEFAULT_HOST_BIN} from '../packages/react-native-a11y-tree/src/host.ts';
-import {skipUnsupported} from './helpers.ts';
+import {hostBin, skipUnsupported} from './helpers.ts';
 import {hasNpm, npmTool} from '../test/fixtures/npm.ts';
 
 /**
@@ -16,12 +15,11 @@ import {hasNpm, npmTool} from '../test/fixtures/npm.ts';
  */
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-// release-host --pack packs this machine's native/dist host (osx-bin/ on
-// macOS, linux64-bin/ on Linux, win64-bin/ on Windows).
+// Package the selected host, including a release tarball's extracted binary.
 const skip = !hasNpm
   ? 'npm is not available'
-  : !fs.existsSync(DEFAULT_HOST_BIN)
-    ? 'no native/dist host to pack: run `bun run build:host`'
+  : !(hostBin && fs.existsSync(hostBin))
+    ? 'no selected host to pack: build it or set RN_A11Y_HOST_BIN'
     : false;
 
 function run(cmd: string, args: string[], cwd: string, env: Record<string, string> = {}) {
@@ -38,7 +36,7 @@ describe('package', () => {
     const work = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-pkgtest-')));
     try {
       const packagesDir = path.join(work, 'packages');
-      run('bun', [path.join(ROOT, 'scripts', 'release-host.ts'), '--pack', '--packages-dir', packagesDir], ROOT);
+      run('bun', [path.join(ROOT, 'scripts', 'release-host.ts'), '--pack', '--bin', hostBin!, '--packages-dir', packagesDir], ROOT);
       const tarballs = path.join(work, 'tarballs');
       fs.mkdirSync(tarballs);
       const platformName = process.platform === 'darwin' ? 'darwin-universal' : process.platform === 'linux' ? 'linux-x64-gnu' : 'win32-x64-msvc';

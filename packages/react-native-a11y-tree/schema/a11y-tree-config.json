@@ -17,6 +17,10 @@
       "type": "string",
       "description": "Native fixture module, resolved relative to a11y-tree.json."
     },
+    "metroConfig": {
+      "type": "string",
+      "description": "Opt-in Metro configuration path, relative to the project root."
+    },
     "failOnFallback": {
       "type": "boolean"
     },

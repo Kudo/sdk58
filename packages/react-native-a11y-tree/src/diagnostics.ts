@@ -2,7 +2,7 @@ import {CliError, type LogEntry} from './errors.ts';
 
 /** Observed limitations, not a certificate of native equivalence when empty. */
 export type Diagnostic = {
-  code: 'DEPENDENCY_COMPATIBILITY' | 'APPLICATION_FIXTURE' | 'NATIVE_MODULE_FALLBACK' | 'NATIVE_COMPONENT_FALLBACK' | 'NATIVE_API_UNSUPPORTED' | 'RUNTIME_FALLBACK';
+  code: 'BUILD_CONFIGURATION' | 'DEPENDENCY_COMPATIBILITY' | 'APPLICATION_FIXTURE' | 'NATIVE_MODULE_FALLBACK' | 'NATIVE_COMPONENT_FALLBACK' | 'NATIVE_API_UNSUPPORTED' | 'RUNTIME_FALLBACK';
   target: string;
   message: string;
 };
@@ -13,7 +13,7 @@ export type FidelityOptions = {failOnFallback?: boolean; allowFallback?: string[
 export function collectDiagnostics(logs: LogEntry[], fallbacks: string[] = []): Diagnostic[] {
   const found = new Map<string, Diagnostic>();
   for (const {message} of logs) {
-    const match = /^\[(DEPENDENCY_COMPATIBILITY|APPLICATION_FIXTURE|NATIVE_MODULE_FALLBACK|NATIVE_COMPONENT_FALLBACK|NATIVE_API_UNSUPPORTED)\] ([^\s:]+)(?::|\s)/.exec(message);
+    const match = /^\[(BUILD_CONFIGURATION|DEPENDENCY_COMPATIBILITY|APPLICATION_FIXTURE|NATIVE_MODULE_FALLBACK|NATIVE_COMPONENT_FALLBACK|NATIVE_API_UNSUPPORTED)\] ([^\s:]+)(?::|\s)/.exec(message);
     if (match) {
       const [, code, target] = match;
       found.set(`${code}:${target}`, {code: code as Diagnostic['code'], target, message});

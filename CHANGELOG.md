@@ -8,6 +8,11 @@ share one version.
 
 ### Added
 
+- Release gates exercise the npm-packed universal macOS host on ARM64 and Intel; package E2E respects the selected host.
+
+- Explicit consuming-app roots and constrained custom Metro configuration, including real SVG-transformer regression coverage; unsupported worker/serializer integrations are rejected.
+- Diagnostics for detected but ignored Metro configs; custom-config runs bypass persistent caches to preserve config-helper freshness.
+
 - One-shot host deadlines and cancellation, with no bytecode retry after timeout.
 - Strict native E2E capability checks in CI, with bounded CLI subprocess execution.
 

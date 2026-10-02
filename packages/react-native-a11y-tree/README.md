@@ -33,6 +33,45 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
 | `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); see [Expo support](docs/expo-support.md) for other packages |
 
+## App roots and custom Metro configuration
+
+For a shared component outside the consuming app, select that app explicitly:
+
+```sh
+rn-a11y-tree render ../ui/Screen.tsx --project-root ./apps/mobile --preset android-phone
+```
+
+React and React Native imports from shared packages resolve through the consuming
+app to keep one runtime identity. The selected root supplies dependencies, Babel/tsconfig settings, native fixtures,
+and `a11y-tree.json`. It must contain `package.json`.
+
+Metro customization is explicit:
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone --metro-config ./metro.config.js
+```
+
+CLI `--metro-config` paths resolve from the working directory.
+Or set `"metroConfig": "./metro.config.js"` in `a11y-tree.json` (relative to the
+app root). Supported fields are `watchFolders`, resolver `assetExts`, `sourceExts`,
+`nodeModulesPaths`, `extraNodeModules`, `resolveRequest`, and transformer
+`babelTransformerPath`. This includes the tested `react-native-svg-transformer`
+1.5.3 Expo integration. Importing SVG components does not verify native SVG pixels;
+existing native fallback diagnostics still apply.
+
+Custom worker, serializer, polyfill, and other resolver/transformer changes are
+rejected. Native CSS integrations such as NativeWind need a separately verified
+adapter. Default callback recognition compares function source because Metro
+recreates its closures; this is not a semantic guarantee for arbitrary plugins.
+Use a dedicated headless configuration when the app config exceeds this surface.
+
+Explicit custom configuration disables persistent bundle, transform, and file-map
+caches: arbitrary plugin/helper inputs cannot yet be fingerprinted safely. This
+costs rebuild time, but config-helper edits take effect on the next invocation.
+The normal configuration retains its disk caches and needs no Metro daemon.
+Detected app-root Metro configs that are not selected produce a
+`BUILD_CONFIGURATION` diagnostic and fail strict fallback policy unless allowed.
+
 ## Execution deadlines
 
 `render`, `run`, and `check` terminate a hung host after 30 seconds by default.
