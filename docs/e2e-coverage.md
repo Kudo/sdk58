@@ -13,6 +13,8 @@ them in the table. Unit and CLI tests against a fake host are in `test/`
 | Test | Example | `--preset` | Per-preset differences |
 | --- | --- | --- | --- |
 | `e2e/render.test.ts` | basic | android-phone, ios-phone (+ one android-tablet line) | viewport 412x915 / 393x852; `email` `AndroidTextInput` / `TextInput`, `remember` `AndroidSwitch` / `Switch` (same sizes: 36.333 high, 51x31) |
+| `e2e/native-fixtures.test.ts` | temporary Expo/Turbo modules | android-phone, ios-phone | setup edits, strict policy, run/check/session |
+| `e2e/storage-fixture.test.ts` | storage-fixture | android-phone, ios-phone | real AsyncStorage JS; explicit in-memory native contract, fresh-process reset |
 | `e2e/run.test.ts` | basic | android-phone, ios-phone | none |
 | `e2e/check.test.ts` | basic | android-phone, ios-phone | none (same violations) |
 | `e2e/schema.test.ts` | every example | android-phone, ios-phone | none |

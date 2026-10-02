@@ -77,3 +77,14 @@ describe('presets', () => {
     fs.rmSync(dir, {recursive: true, force: true});
   });
 });
+
+it('accepts schema references and validates fixture/policy configuration', () => {
+  const dir = tmpProject({$schema: './schema.json', setup: './fixtures.ts', failOnFallback: true, allowFallback: ['expo/Storage']});
+  try {
+    expect(loadProjectConfig(dir)).toMatchObject({setup: './fixtures.ts', failOnFallback: true, allowFallback: ['expo/Storage']});
+    for (const config of [{setup: []}, {setup: ''}, {failOnFallback: 'yes'}, {allowFallback: 'All'}, {allowFallback: ['']}, {$schema: 123}]) {
+      fs.writeFileSync(path.join(dir, 'a11y-tree.json'), JSON.stringify(config));
+      expect(() => loadProjectConfig(dir)).toThrow();
+    }
+  } finally {fs.rmSync(dir, {recursive: true, force: true});}
+});

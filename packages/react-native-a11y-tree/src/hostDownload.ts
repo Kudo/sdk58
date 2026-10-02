@@ -76,7 +76,7 @@ function sha256File(file: string): string {
  * sha256 marker matches, else downloads, verifies and unpacks it. Throws
  * with a message on any failure.
  */
-export async function downloadHost(options: {baseUrl: string; log?: (line: string) => void}): Promise<string> {
+export async function downloadHost(options: {baseUrl: string; log?: (line: string) => void; cacheOnly?: boolean}): Promise<string> {
   const found = readManifest();
   if (found == null) {
     throw new Error(`no host-version.json (set ${MANIFEST_ENV}, or run scripts/release-host.ts --pin)`);
@@ -93,6 +93,8 @@ export async function downloadHost(options: {baseUrl: string; log?: (line: strin
   if (fs.existsSync(bin) && fs.existsSync(marker) && fs.readFileSync(marker, 'utf8').trim() === asset.sha256) {
     return bin;
   }
+
+  if (options.cacheOnly) throw new Error(`Host ${manifest.version} is not cached; doctor never downloads hosts.`);
 
   const url = `${options.baseUrl.replace(/\/+$/, '')}/${asset.file}`;
   options.log?.(`rn-a11y-tree: downloading host ${manifest.version} from ${url}`);

@@ -69,6 +69,7 @@ export async function runSession(options: FidelityOptions & {
   timing?: boolean;
   /** Do not echo app console output as [app] lines (it is in each response's `logs`). */
   quiet?: boolean;
+  initialLogs?: LogEntry[];
   /** The host found by ensureHost() (reported in the ready line). */
   host?: HostInfo | null;
   /** Output options for the ready tree, and defaults for `tree` / `snapshot` responses (a request's own fields win). */
@@ -81,7 +82,7 @@ export async function runSession(options: FidelityOptions & {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   let timedOut = false;
   let policyFailed = false;
-  const diagnosticLogs: LogEntry[] = [];
+  const diagnosticLogs: LogEntry[] = (options.initialLogs ?? []).filter(entry => collectDiagnostics([entry]).length > 0);
   const runtimeFallbacks = new Set<string>();
   const diagnosticsFor = (response: HostResponse) => {
     for (const fallback of response.fallbacks ?? []) runtimeFallbacks.add(fallback);
@@ -111,7 +112,7 @@ export async function runSession(options: FidelityOptions & {
 
   let current: Frame | null = null;
   // App console output since the last response.
-  let pendingLogs: LogEntry[] = [];
+  let pendingLogs: LogEntry[] = [...(options.initialLogs ?? [])];
   const takeLogs = () => {
     const logs = pendingLogs;
     pendingLogs = [];

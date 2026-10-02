@@ -81,6 +81,10 @@ export const PRESET_NAMES = Object.keys(PRESETS) as PresetName[];
 export const CONFIG_FILE = 'a11y-tree.json';
 
 const CONFIG_KEYS = [
+  '$schema',
+  'setup',
+  'failOnFallback',
+  'allowFallback',
   'preset',
   'platform',
   'width',
@@ -95,7 +99,15 @@ const CONFIG_KEYS = [
 ];
 
 /** `rules` are the default rules for `check` (same shape as a rules file's `rules`). */
-export type ProjectConfig = Settings & {preset?: PresetName; rules?: Rules};
+export type ProjectConfig = Settings & {
+  preset?: PresetName;
+  rules?: Rules;
+  /** Native fixture module, resolved relative to a11y-tree.json. */
+  setup?: string;
+  failOnFallback?: boolean;
+  /** Exact names of reviewed native/runtime fallbacks or application fixtures. */
+  allowFallback?: string[];
+};
 
 function checkPreset(name: unknown, where: string): PresetName {
   if (typeof name !== 'string' || !PRESET_NAMES.includes(name as PresetName)) {
@@ -144,6 +156,18 @@ export function loadProjectConfig(projectRoot: string): ProjectConfig | null {
   }
   for (const key of ['platform', 'tapMode', 'format']) {
     if (key in config && typeof config[key] !== 'string') throw usage(`${file}: "${key}" must be a string`);
+  }
+  for (const key of ['$schema', 'setup']) {
+    if (key in config && (typeof config[key] !== 'string' || !(config[key] as string).trim())) {
+      throw usage(`${file}: "${key}" must be a non-empty string`);
+    }
+  }
+  if ('failOnFallback' in config && typeof config.failOnFallback !== 'boolean') {
+    throw usage(`${file}: "failOnFallback" must be a boolean`);
+  }
+  if ('allowFallback' in config && (!Array.isArray(config.allowFallback) ||
+    !config.allowFallback.every(value => typeof value === 'string' && value.trim().length > 0))) {
+    throw usage(`${file}: "allowFallback" must be an array of non-empty strings`);
   }
   if ('rules' in config) validateRules(config.rules, `${file}: "rules"`);
   return config as ProjectConfig;

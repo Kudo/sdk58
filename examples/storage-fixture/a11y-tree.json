@@ -1,0 +1,4 @@
+{
+  "$schema": "../../packages/react-native-a11y-tree/schema/a11y-tree-config.json",
+  "setup": "./fixtures.ts"
+}

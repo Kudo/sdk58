@@ -21,6 +21,10 @@
         "type": "string",
         "description": "Component file (default export or `App` named export)."
       },
+      "setup": {
+        "type": "string",
+        "description": "Native fixture module loaded before the app."
+      },
       "preset": {
         "type": "string",
         "enum": [
@@ -536,6 +540,8 @@
           "code": {
             "type": "string",
             "enum": [
+              "DEPENDENCY_COMPATIBILITY",
+              "APPLICATION_FIXTURE",
               "NATIVE_MODULE_FALLBACK",
               "NATIVE_COMPONENT_FALLBACK",
               "NATIVE_API_UNSUPPORTED",

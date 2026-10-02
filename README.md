@@ -33,6 +33,60 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
 | `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); see [Expo support](docs/expo-support.md) for other packages |
 
+## Dependency checks and application fixtures
+
+See [production adoption and remaining validation](docs/production-readiness.md)
+for the supported use case, maintenance policy and evidence still needed.
+
+Run `rn-a11y-tree doctor ./path/to/app` before bundling. JSON output reports
+app-resolved dependency versions, local host metadata, and compatibility issues.
+`--strict` also rejects dependency versions outside the tested tuple. Doctor does
+not execute or download a host; a successful result is a dependency preflight,
+not proof that all native APIs or device behavior are supported. Rendering rejects
+known React Native major/minor host mismatches before Metro starts.
+
+For native services specific to your app, provide an explicit fixture file:
+
+```ts
+// fixtures.ts
+export default {
+  turboModules: {
+    MyNativeService: {getValue: () => 'deterministic fixture value'},
+  },
+  expoModules: {
+    MyExpoService: {getStatusAsync: async () => 'available'},
+  },
+};
+```
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone --setup ./fixtures.ts
+```
+
+Fixtures install before the app imports. They override named modules, emit an
+`APPLICATION_FIXTURE` diagnostic when used, and reset with each fresh CLI process.
+Their source participates in bundle cache invalidation. Implement the actual JS
+library's native contract, including callback and Promise behavior; these fixtures
+do not verify native implementation, persistence, permissions, or device lifecycle.
+See [the AsyncStorage example](examples/storage-fixture) for a real third-party JS
+library backed by an explicit in-memory native fixture.
+
+Commit shared policy in the app's `a11y-tree.json`:
+
+```json
+{
+  "setup": "./fixtures.ts",
+  "failOnFallback": true,
+  "allowFallback": ["turbo/MyNativeService", "expo/MyExpoService"]
+}
+```
+
+Config `setup` paths resolve from the project root; CLI `--setup` paths resolve
+from the working directory. `--no-fail-on-fallback` overrides configured strict
+policy. Allowances acknowledge specific simulated modules; unsupported built-in
+adapter APIs still fail strict policy. Native UI libraries that need descriptors,
+layout, gestures, or rendering may require host integration beyond these fixtures.
+
 ## Install
 
 Changes per version: [CHANGELOG.md](CHANGELOG.md).

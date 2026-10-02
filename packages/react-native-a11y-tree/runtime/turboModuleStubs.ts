@@ -39,6 +39,13 @@ const STUBS: Record<string, (() => object) | undefined> = {
   }),
 };
 
+// The installed proxy closes over this registry, so setup can add fixtures after
+// RN captures the proxy but before the app imports its native dependencies.
+const fixtures = new Map<string, () => object>();
+export function registerTurboModuleFixture(name: string, factory: () => object): void {
+  fixtures.set(name, factory);
+}
+
 let installed = false;
 
 export function installTurboModuleStubs(): void {
@@ -47,6 +54,8 @@ export function installTurboModuleStubs(): void {
   const original = global.__turboModuleProxy;
   const cache = new Map<string, object>();
   global.__turboModuleProxy = (name: string) => {
+    const fixture = fixtures.get(name);
+    if (fixture) return fixture();
     const module = original != null ? original(name) : null;
     if (module != null) return module;
     const stub = STUBS[name];

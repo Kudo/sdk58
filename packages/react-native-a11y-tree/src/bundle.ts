@@ -75,6 +75,8 @@ export type HostConfig = {
 export type BundleOptions = {
   /** Path to the user's component file. */
   appPath: string;
+  /** Explicit native fixtures loaded after environment setup and before the app. */
+  setupPath?: string;
   viewportWidth: number;
   viewportHeight: number;
   /** Ask the host for raw debug props on each node (`getA11yTree` only). */
@@ -136,6 +138,8 @@ export function findProjectRoot(file: string): string {
 
 export function renderEntry(options: {
   appPath: string;
+  /** Explicit native fixtures loaded after environment setup and before the app. */
+  setupPath?: string;
   viewportWidth: number;
   viewportHeight: number;
   includeDebugProps?: boolean;
@@ -174,6 +178,14 @@ export function renderEntry(options: {
     .replaceAll('__SESSION__', String(options.session === true))
     .replaceAll('__HOST_CONFIG__', () => JSON.stringify(options.hostConfig ?? {}))
     .replaceAll('__RUN_OPTIONS__', () => JSON.stringify(options.runOptions ?? {}))
+    .replaceAll('/* __APP_SETUP__ */', () => options.setupPath ? `
+      const fixtureModule = require('${quote(path.resolve(options.setupPath))}');
+      require('${quote(path.join(RUNTIME_DIR, 'nativeFixtures'))}').installNativeFixtures(fixtureModule.default ?? fixtureModule, {
+        expo: globalThis.expo,
+        registerTurbo: require('${quote(path.join(RUNTIME_DIR, 'turboModuleStubs'))}').registerTurboModuleFixture,
+        warn: message => console.warn(message),
+      });
+    ` : '')
     .replaceAll('/* __APP_PROVIDERS__ */', () => safeArea ? `
       const {SafeAreaInsetsContext, SafeAreaFrameContext} = require('react-native-safe-area-context');
       const Screen = App as React.ComponentType;
@@ -267,6 +279,7 @@ export function createMetroConfig(options: {
   workDir: string;
   platform: string;
   projectPaths?: ProjectPaths;
+  setupPath?: string;
 }): ConfigT {
   const {projectRoot, workDir, platform} = options;
   const projectPaths = options.projectPaths ?? loadProjectPaths(projectRoot);
@@ -315,6 +328,7 @@ export function createMetroConfig(options: {
         [
           ...(base.watchFolders ?? []),
           ...projectPaths.watchFolders,
+          ...(options.setupPath ? [path.dirname(fs.realpathSync(options.setupPath))] : []),
           projectRoot,
           RUNTIME_DIR,
           ...toolNodeModules,
@@ -430,6 +444,9 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   }
   // Metro's file map uses real paths (e.g. /tmp -> /private/tmp on macOS).
   const appPath = fs.realpathSync(options.appPath);
+  if (options.setupPath && (!fs.existsSync(options.setupPath) || !fs.statSync(options.setupPath).isFile())) {
+    throw usage(`Setup file not found: ${path.resolve(options.setupPath)}`);
+  }
   const projectRoot = findProjectRoot(appPath);
   const dev = options.dev ?? false;
   const minify = options.minify ?? false;
@@ -438,6 +455,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
 
   const entry = renderEntry({
     appPath,
+    setupPath: options.setupPath,
     viewportWidth: options.viewportWidth,
     viewportHeight: options.viewportHeight,
     includeDebugProps: options.includeDebugProps,
@@ -495,7 +513,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   const outDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-')));
   const bundlePath = path.resolve(options.out ?? path.join(outDir, 'index.bundle.js'));
 
-  const config = {...createMetroConfig({projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths})};
+  const config = {...createMetroConfig({projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths, setupPath: options.setupPath})};
   // A bundle miss must also invalidate transformed modules when build inputs change.
   config.cacheVersion = `${config.cacheVersion}:${buildFingerprint(projectRoot)}`;
   // Persistent Metro caches (transforms, file map) next to the bundle cache.

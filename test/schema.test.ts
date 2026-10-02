@@ -138,7 +138,7 @@ describe('schema', () => {
     expect(toolArgv('render', {file: 'A.tsx', safeAreaInsets: {top: 47, left: 0, right: 0, bottom: 34}, headerHeight: 0, dev: true})).toStrictEqual(['render', 'A.tsx', '--safe-area-insets', '47,0,0,34', '--header-height', '0', '--dev']);
 
     // Run each tool's example with format json through the CLI (inline --script / --rules).
-    const modes: Partial<Record<ToolName, string>> = {render: 'shadow-tree', query: 'shadow-tree', act: 'run', diff: 'run', check: 'shadow-tree'};
+    const modes: Partial<Record<ToolName, string>> = {doctor: 'shadow-tree', render: 'shadow-tree', query: 'shadow-tree', act: 'run', diff: 'run', check: 'shadow-tree'};
     for (const [name, mode] of Object.entries(modes) as Array<[ToolName, string]>) {
       const tool = TOOLS.find(t => t.name === name)!;
       // The fake host has a fixed 390x844 viewport; preset only changes the bundle.

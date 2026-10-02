@@ -8,6 +8,10 @@ share one version.
 
 ### Added
 
+- Dependency doctor with app-resolved versions, local host metadata and strict tested-version checks; reject known React Native host mismatches before bundling.
+- Explicit application Expo/TurboModule fixtures with lazy diagnostics, cache invalidation and project-level strict policy.
+- Real AsyncStorage JS integration example and headless action coverage on both presets.
+
 - Structured, cumulative native limitation diagnostics in render/run/check/session results, including compact and filtered output.
 - Opt-in `--fail-on-fallback` CI policy with exact-name allowances and exit 6; caught unsupported adapter APIs remain observable.
 - Fresh-process agent-loop benchmark that verifies source-edit cache freshness without a Metro daemon.

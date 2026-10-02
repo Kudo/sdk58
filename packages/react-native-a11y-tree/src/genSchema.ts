@@ -19,6 +19,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Output file (without .json) -> exported type in src/schema.ts. */
 export const SCHEMAS: Record<string, string> = {
+  'doctor-result': 'DoctorResult',
   'render-result': 'RenderResult',
   'query-result': 'QueryResult',
   'run-result': 'RunResult',
@@ -102,6 +103,9 @@ export function generate(): Map<string, string> {
         },
       },
     };
+    if (tool.name === 'doctor') {
+      (descriptor['x-cli'] as Record<string, unknown>).exitCodes = {0: 'no blocking preflight problems', 1: 'preflight problem or untested dependencies with --strict'};
+    }
     if (tool.name === 'session') {
       descriptor['x-protocol'] = {
         stdin: 'one JSON request per line (schema/session-request.json)',

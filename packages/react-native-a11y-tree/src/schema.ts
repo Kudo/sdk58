@@ -1,3 +1,4 @@
+export type {DoctorResult} from './doctor.ts';
 /**
  * Output schema of `rn-a11y-tree` (render, run, check, session, errors).
  * Keep in sync with README.md. `bun run schema` generates `schema/*.json` from

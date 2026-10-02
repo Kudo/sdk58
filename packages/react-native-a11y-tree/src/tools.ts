@@ -14,6 +14,8 @@ type Insets = {top: number; left: number; right: number; bottom: number};
 export type CommonInput = {
   /** Component file (default export or `App` named export). */
   file: string;
+  /** Native fixture module loaded before the app. */
+  setup?: string;
   /** Device preset: platform, viewport, safe area insets, header height. */
   preset?: 'android-phone' | 'ios-phone' | 'android-tablet' | 'ios-tablet';
   /** Metro platform (`android`, `ios`, `a11ytree`, ...). Required unless a preset or a11y-tree.json sets it. */
@@ -98,11 +100,13 @@ export type SessionInput = CommonInput & {
   timeout?: number;
 };
 
-export type ToolName = 'render' | 'query' | 'act' | 'diff' | 'check' | 'session';
+export type DoctorInput = {file: string; strict?: boolean; format?: 'json' | 'text'};
+
+export type ToolName = 'doctor' | 'render' | 'query' | 'act' | 'diff' | 'check' | 'session';
 
 type ToolDef = {
   name: ToolName;
-  command: 'render' | 'run' | 'check' | 'session';
+  command: 'doctor' | 'render' | 'run' | 'check' | 'session';
   inputType: string;
   /** Generated schema (schema/<file>.json) of the JSON output. */
   output: string[];
@@ -113,6 +117,11 @@ type ToolDef = {
 const BASIC = 'examples/basic/App.tsx';
 
 export const TOOLS: ToolDef[] = [
+  {
+    name: 'doctor', command: 'doctor', inputType: 'DoctorInput', output: ['doctor-result'],
+    description: 'Inspect installed app dependency versions and local host metadata without starting Metro or native code. Reports missing dependencies, incompatible React Native versions, and untested library versions. Exact dependency matches do not establish device parity.',
+    example: {file: BASIC, format: 'json'},
+  },
   {
     name: 'render',
     command: 'render',
@@ -198,6 +207,8 @@ export function toolArgv(name: ToolName, input: Record<string, unknown>): string
       argv.push('--rules', JSON.stringify({rules: value}));
     } else if (key === 'allowFallback') {
       for (const name of value as string[]) argv.push('--allow-fallback', name);
+    } else if (key === 'failOnFallback') {
+      argv.push(value ? '--fail-on-fallback' : '--no-fail-on-fallback');
     } else if (key === 'mounted') {
       if (value === false) argv.push('--no-mounted');
     } else if (key === 'select') {

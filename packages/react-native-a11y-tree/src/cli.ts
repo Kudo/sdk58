@@ -1,3 +1,5 @@
+import {inspectCompatibility} from './compatibility.ts';
+import {inspectDoctor} from './doctor.ts';
 import {collectDiagnostics, fidelityError, type FidelityOptions} from './diagnostics.ts';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -81,6 +83,7 @@ type RenderOptions = FidelityOptions & HostConfigOptions & OutputOptions & {
   /** --no-cache sets false. */
   cache?: boolean;
   bytecode?: string;
+  setup?: string;
   width: number;
   height: number;
   platform?: string;
@@ -240,6 +243,13 @@ function printTiming(timing: Timing) {
   process.stderr.write(`rn-a11y-tree timing: ${JSON.stringify(timing)}\n`);
 }
 
+function dependencyDiagnostics(file: string, host: import('./host.ts').HostInfo): LogEntry[] {
+  const report = inspectCompatibility(findProjectRoot(file), host);
+  const mismatch = report.issues.find(issue => issue.code === 'RN_VERSION_MISMATCH' && issue.severity === 'error');
+  if (mismatch) throw new CliError('HOST_INCOMPATIBLE', mismatch.message, {details: {compatibility: report}});
+  return report.issues.map(issue => ({level: 'warn', message: `[DEPENDENCY_COMPATIBILITY] ${issue.package}: ${issue.message}`}));
+}
+
 async function execute<T>(
   file: string,
   options: RenderOptions,
@@ -250,12 +260,14 @@ async function execute<T>(
   const platform = requirePlatform(options.platform);
   if (!options.bundleOnly) {
     // Fail (or download) before spending time on Metro.
-    await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
+    const host = await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
+    logs?.push(...dependencyDiagnostics(file, host));
     warnTimeZone(options);
   }
   const metroStart = performance.now();
   const result = await bundleOrFail({
     appPath: file,
+    setupPath: options.setup,
     viewportWidth: options.width,
     viewportHeight: options.height,
     platform,
@@ -340,6 +352,8 @@ async function execute<T>(
 function applySettings(file: string, options: RenderOptions & {tapMode?: string; preset?: string}) {
   const config = loadProjectConfig(findProjectRoot(file));
   applyConfig(options, config);
+  options.setup = options.setup != null ? path.resolve(options.setup) :
+    config?.setup != null ? path.resolve(findProjectRoot(file), config.setup) : undefined;
   return config;
 }
 
@@ -371,6 +385,8 @@ function applyConfig(
   options.fontScale = resolved.fontScale;
   options.tapMode = resolved.tapMode ?? 'touch';
   options.format = resolved.format ?? 'json';
+  options.failOnFallback ??= config?.failOnFallback;
+  options.allowFallback ??= config?.allowFallback;
 }
 
 async function render(file: string, options: RenderOptions) {
@@ -477,8 +493,10 @@ async function session(file: string, options: RunOptions) {
   }
   const host = await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
   warnTimeZone(options);
+  const initialLogs = dependencyDiagnostics(file, host);
   const result = await bundleOrFail({
     appPath: file,
+    setupPath: options.setup,
     viewportWidth: options.width,
     viewportHeight: options.height,
     platform,
@@ -503,6 +521,7 @@ async function session(file: string, options: RunOptions) {
       timeoutMs: options.timeout,
       timing: options.timing,
       quiet: isQuiet(options),
+      initialLogs,
       failOnFallback: options.failOnFallback,
       allowFallback: options.allowFallback,
       host,
@@ -528,8 +547,7 @@ const CHECK_FORMATS = ['json', 'text'];
 async function check(file: string, options: CheckOptions) {
   // `format` in a11y-tree.json is for render/run output; check has its own.
   const format = options.format ?? 'json';
-  const config = loadProjectConfig(findProjectRoot(file));
-  applyConfig(options, config);
+  const config = applySettings(file, options);
   requirePlatform(options.platform);
   if (!CHECK_FORMATS.includes(format)) {
     throw usage(`--format must be one of: ${CHECK_FORMATS.join(', ')} (for check)`);
@@ -617,8 +635,10 @@ function addCommonOptions(command: Command): Command {
     .option('--out <file>', 'write JSON to a file instead of stdout')
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
-    .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls', false)
-    .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect, [])
+    .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
+    .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')
+    .option('--no-fail-on-fallback', 'disable the configured fallback policy')
+    .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect)
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
     .option('-q, --quiet', 'no app console output or warnings on stderr (default when stdout is not a terminal)')
     .option('--no-quiet', 'print app console errors/warnings and CLI warnings on stderr')
@@ -651,7 +671,7 @@ function timeZone(value: string): string {
   return value;
 }
 
-function collect(value: string, previous: string[]): string[] {
+function collect(value: string, previous: string[] = []): string[] {
   return [...previous, value];
 }
 
@@ -722,8 +742,10 @@ addOutputOptions(program.command('session'))
     DEFAULT_TIMEOUT_MS,
   )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
-  .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls', false)
-  .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect, [])
+  .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
+  .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')
+  .option('--no-fail-on-fallback', 'disable the configured fallback policy')
+  .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect)
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
   .option('-q, --quiet', 'no app console output on stderr (default when stdout is not a terminal)')
   .option('--no-quiet', 'print app console output on stderr as [app] lines')
@@ -755,6 +777,23 @@ addOutputOptions(program.command('session'))
       scriptHelp().split('\n').slice(3).join('\n'),
   )
   .action(session);
+
+program.command('doctor')
+  .description('inspect app dependencies and local host metadata without starting Metro or native code')
+  .argument('[file]', 'app file or project directory', '.')
+  .option('--strict', 'exit 1 for untested dependency combinations as well as errors')
+  .option('--format <format>', 'json (default) or text', 'json')
+  .action(async (file: string, options: {strict?: boolean; format: string}) => {
+    if (!['json', 'text'].includes(options.format)) throw usage('--format must be json or text');
+    const absolute = path.resolve(file);
+    if (!fs.existsSync(absolute)) throw usage(`File or directory not found: ${absolute}`);
+    const root = findProjectRoot(fs.statSync(absolute).isDirectory() ? path.join(absolute, '__doctor__') : absolute);
+    const report = await inspectDoctor(root, options.strict);
+    const text = [report.ok ? 'ok' : 'failed', `project: ${root}`, `tested dependency tuple: ${report.tested}`, `host: ${report.host.found ? report.host.info.bin : report.host.error.message}`,
+      ...report.issues.map(issue => `${issue.severity} ${issue.code} ${issue.package}: ${issue.message}`)].join('\n') + '\n';
+    write(options.format === 'text' ? text : JSON.stringify(report, null, 2) + '\n', undefined);
+    if (!report.ok) process.exitCode = 1;
+  });
 
 program
   .command('schema')

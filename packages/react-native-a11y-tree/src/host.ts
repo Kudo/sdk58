@@ -109,9 +109,11 @@ export type HostInfo = {
   /** From host-version.json (package or downloaded manifest). */
   version?: string;
   protocolVersion?: number;
+  rnVersion?: string;
+  nativeLibs?: Record<string, string | null>;
 };
 
-type HostManifestLike = {version?: unknown; protocolVersion?: unknown} | null;
+type HostManifestLike = {version?: unknown; protocolVersion?: unknown; reactNative?: unknown; rnVersion?: unknown; nativeLibs?: unknown} | null;
 
 /** Probes used by findHost (replaced in tests). */
 export type HostProbes = {
@@ -132,9 +134,15 @@ export type HostProbes = {
 };
 
 function info(bin: string, source: HostSource, manifest: HostManifestLike): HostInfo {
+  manifest ??= readJson(path.join(path.dirname(bin), 'host-version.json'));
   const result: HostInfo = {bin, source};
   if (typeof manifest?.version === 'string') result.version = manifest.version;
   if (typeof manifest?.protocolVersion === 'number') result.protocolVersion = manifest.protocolVersion;
+  const rnVersion = manifest?.reactNative ?? manifest?.rnVersion;
+  if (typeof rnVersion === 'string') result.rnVersion = rnVersion;
+  if (manifest?.nativeLibs && typeof manifest.nativeLibs === 'object' && !Array.isArray(manifest.nativeLibs)) {
+    result.nativeLibs = Object.fromEntries(Object.entries(manifest.nativeLibs).filter((entry): entry is [string, string | null] => typeof entry[1] === 'string' || entry[1] === null));
+  }
   return result;
 }
 
@@ -236,14 +244,14 @@ function packageHost(): {bin: string; manifest: HostManifestLike} | null {
   }
 }
 
-export function defaultProbes(log: (line: string) => void): HostProbes {
+export function defaultProbes(log: (line: string) => void, cacheOnly = false): HostProbes {
   return {
     env: process.env[HOST_BIN_ENV],
     baseUrl: process.env[BASE_URL_ENV],
     exists: fs.existsSync,
     packageHost,
     download: async baseUrl => {
-      const bin = await downloadHost({baseUrl, log});
+      const bin = await downloadHost({baseUrl, log, cacheOnly});
       return {bin, manifest: readManifest()?.manifest ?? null};
     },
     distBin: DEFAULT_HOST_BIN,
