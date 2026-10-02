@@ -2,7 +2,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
 import type {RunResult, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
-import {cli, E2E_PRESETS, get, hostSkip, ROOT} from './helpers.ts';
+import {cli, E2E_PRESETS, get, hostSkip, skipUnsupported, requireInStrictMode, ROOT} from './helpers.ts';
 
 const APP = path.join(ROOT, 'examples', 'reanimated', 'App.tsx');
 const SCRIPT = path.join(ROOT, 'examples', 'reanimated', 'actions.json');
@@ -21,7 +21,7 @@ describe('reanimated', () => {
     if (proc.status !== 0) {
       if (NO_REANIMATED.test(proc.stderr)) {
         const first = proc.stderr.split('\n').find(l => l.startsWith('rn-a11y-tree:')) ?? '';
-        t.skip(`host lacks reanimated support (${first.replace(/^rn-a11y-tree: /, '')})`);
+        skipUnsupported(t, `host lacks reanimated support (${first.replace(/^rn-a11y-tree: /, '')})`);
       }
       expect.unreachable(`CLI failed:\n${proc.stderr}`);
     }
@@ -29,7 +29,7 @@ describe('reanimated', () => {
     const stepErrors = result.steps.filter(s => s.error);
     const errorText = (e: unknown) => (typeof e === 'string' ? e : ((e as {message?: string})?.message ?? ''));
     if (stepErrors.some(s => NO_REANIMATED.test(errorText(s.error)))) {
-      t.skip(`host lacks reanimated support (${errorText(stepErrors[0].error)})`);
+      skipUnsupported(t, `host lacks reanimated support (${errorText(stepErrors[0].error)})`);
     }
     expect(stepErrors).toStrictEqual([]);
     const s = result.snapshots;
@@ -51,6 +51,7 @@ describe('reanimated', () => {
     // FadeIn.duration(300) entering animation. It only changes the mounted
     // view, so this needs the host's mounted-view overrides in getA11yTree.
     const opacity = (node: TreeNode) => node.effectiveOpacity ?? 1;
+    requireInStrictMode(result.capabilities.includes('getA11yTree.mounted'), 'host lacks getA11yTree.mounted');
     if (result.capabilities.includes('getA11yTree.mounted')) {
       expect(opacity(get(s['fade-start'], 'fade')) < 1, 'fade is fully opaque at fade-start').toBeTruthy();
     } else {

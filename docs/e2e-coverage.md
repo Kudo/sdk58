@@ -2,6 +2,9 @@
 
 Each e2e test runs the CLI against the real host (`native/dist/<arch>/rn-a11y-host`
 or `RN_A11Y_HOST_BIN`) and skips with a reason when there is no host binary.
+Native CI sets `RN_A11Y_E2E_STRICT=1`: missing hosts and required capabilities
+fail instead of silently reducing coverage. Explicit preset exclusions remain
+skips. CLI subprocesses have a separate 120-second backstop.
 The suites run once per preset in `RN_A11Y_E2E_PRESETS` (default
 `android-phone,ios-phone`; `e2e/helpers.ts`), and every test name starts with
 `[<preset>]`. Expectations that legitimately differ between the platforms
@@ -13,6 +16,9 @@ them in the table. Unit and CLI tests against a fake host are in `test/`
 | Test | Example | `--preset` | Per-preset differences |
 | --- | --- | --- | --- |
 | `e2e/render.test.ts` | basic | android-phone, ios-phone (+ one android-tablet line) | viewport 412x915 / 393x852; `email` `AndroidTextInput` / `TextInput`, `remember` `AndroidSwitch` / `Switch` (same sizes: 36.333 high, 51x31) |
+| `e2e/metro-config.test.ts` | temporary shared component / consuming app | android-phone, ios-phone | real SVG transformer, resolver config edits, ignored/unsupported config diagnostics |
+| `e2e/native-fixtures.test.ts` | temporary Expo/Turbo modules | android-phone, ios-phone | setup edits, strict policy, run/check/session |
+| `e2e/storage-fixture.test.ts` | storage-fixture | android-phone, ios-phone | real AsyncStorage JS; explicit in-memory native contract, fresh-process reset |
 | `e2e/run.test.ts` | basic | android-phone, ios-phone | none |
 | `e2e/check.test.ts` | basic | android-phone, ios-phone | none (same violations) |
 | `e2e/schema.test.ts` | every example | android-phone, ios-phone | none |

@@ -138,7 +138,7 @@ describe('schema', () => {
     expect(toolArgv('render', {file: 'A.tsx', safeAreaInsets: {top: 47, left: 0, right: 0, bottom: 34}, headerHeight: 0, dev: true})).toStrictEqual(['render', 'A.tsx', '--safe-area-insets', '47,0,0,34', '--header-height', '0', '--dev']);
 
     // Run each tool's example with format json through the CLI (inline --script / --rules).
-    const modes: Partial<Record<ToolName, string>> = {render: 'shadow-tree', query: 'shadow-tree', act: 'run', diff: 'run', check: 'shadow-tree'};
+    const modes: Partial<Record<ToolName, string>> = {doctor: 'shadow-tree', render: 'shadow-tree', query: 'shadow-tree', act: 'run', diff: 'run', check: 'shadow-tree'};
     for (const [name, mode] of Object.entries(modes) as Array<[ToolName, string]>) {
       const tool = TOOLS.find(t => t.name === name)!;
       // The fake host has a fixed 390x844 viewport; preset only changes the bundle.
@@ -148,4 +148,24 @@ describe('schema', () => {
       assertValid(`tools/${name}.json`, JSON.parse(proc.stdout), d => d.outputSchema);
     }
   });
+});
+
+it('agent tools expose exact fallback allowances as repeated CLI arguments', () => {
+  expect(toolArgv('render', {file: 'App.tsx', failOnFallback: true, allowFallback: ['ExpoImage', 'RNSVGPath']})).toEqual([
+    'render', 'App.tsx', '--fail-on-fallback', '--allow-fallback', 'ExpoImage', '--allow-fallback', 'RNSVGPath',
+  ]);
+});
+
+it.each(TOOLS)('$name tool accepts boolean noStderr and emits the flag only when true', tool => {
+  const input = validator(`tools/${tool.name}.json`, d => d.inputSchema);
+  for (const noStderr of [true, false]) {
+    expect(input({...tool.example, noStderr}), ajv.errorsText(input.errors)).toBe(true);
+  }
+  expect(input({...tool.example, noStderr: 'true'})).toBe(false);
+  const ordinary = toolArgv(tool.name, tool.example);
+  const silent = toolArgv(tool.name, {...tool.example, noStderr: true});
+  expect(silent.filter(arg => arg === '--no-stderr')).toHaveLength(1);
+  expect(silent.filter(arg => arg !== '--no-stderr')).toEqual(ordinary);
+  expect(toolArgv(tool.name, {...tool.example, noStderr: false})).toEqual(ordinary);
+  expect(toolArgv(tool.name, {...tool.example, noStderr: undefined})).toEqual(ordinary);
 });

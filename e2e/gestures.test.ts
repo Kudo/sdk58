@@ -2,7 +2,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
 import type {RunResult, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
-import {cli, E2E_PRESETS, get, hostSkip, isIOS, ROOT} from './helpers.ts';
+import {cli, E2E_PRESETS, get, hostSkip, skipUnsupported, isIOS, ROOT} from './helpers.ts';
 
 const APP = path.join(ROOT, 'examples', 'gestures', 'App.tsx');
 const SCRIPT = path.join(ROOT, 'examples', 'gestures', 'actions.json');
@@ -26,7 +26,7 @@ describe('gestures', () => {
     const rootView = result.final.children.find(n => n.type === rootType);
     if (rootView == null) expect.unreachable(`the root has no ${rootType} child`);
     if (rootView.box.width === 0) {
-      t.skip('host lacks react-native-gesture-handler support (RNGestureHandlerRootView has no size)');
+      skipUnsupported(t, 'host lacks react-native-gesture-handler support (RNGestureHandlerRootView has no size)');
     }
 
     for (const step of result.steps) {

@@ -14,6 +14,16 @@ type Insets = {top: number; left: number; right: number; bottom: number};
 export type CommonInput = {
   /** Component file (default export or `App` named export). */
   file: string;
+  /** Native fixture module loaded before the app. */
+  setup?: string;
+  /** Consuming app root for dependencies and project settings. */
+  projectRoot?: string;
+  /** Explicit Metro config file; supported projection only, persistent caches disabled. */
+  metroConfig?: string;
+  /** Host execution deadline in milliseconds after bundling (default 30000); session applies it per host frame and response write. */
+  timeout?: number;
+  /** Suppress all stderr output, including warnings, errors, verbose logs and timings. */
+  noStderr?: boolean;
   /** Device preset: platform, viewport, safe area insets, header height. */
   preset?: 'android-phone' | 'ios-phone' | 'android-tablet' | 'ios-tablet';
   /** Metro platform (`android`, `ios`, `a11ytree`, ...). Required unless a preset or a11y-tree.json sets it. */
@@ -33,6 +43,10 @@ export type CommonInput = {
   dev?: boolean;
   /** Set false to skip mounted-view values (`visualBox`, `effectiveOpacity`). */
   mounted?: boolean;
+  /** Reject unapproved native/runtime fallbacks (exit 6). */
+  failOnFallback?: boolean;
+  /** Exact fallback names approved for this test; unsupported API calls are always rejected. */
+  allowFallback?: string[];
 };
 
 export type TreeFormat = 'json' | 'compact' | 'text' | 'ndjson';
@@ -90,15 +104,21 @@ export type CheckInput = CommonInput & {
 
 export type SessionInput = CommonInput & {
   tapMode?: 'touch' | 'click' | 'both';
-  /** Per-request timeout in ms. */
-  timeout?: number;
 };
 
-export type ToolName = 'render' | 'query' | 'act' | 'diff' | 'check' | 'session';
+export type DoctorInput = {
+  file: string;
+  strict?: boolean;
+  format?: 'json' | 'text';
+  /** Suppress all stderr output, including warnings, errors, verbose logs and timings. */
+  noStderr?: boolean;
+};
+
+export type ToolName = 'doctor' | 'render' | 'query' | 'act' | 'diff' | 'check' | 'session';
 
 type ToolDef = {
   name: ToolName;
-  command: 'render' | 'run' | 'check' | 'session';
+  command: 'doctor' | 'render' | 'run' | 'check' | 'session';
   inputType: string;
   /** Generated schema (schema/<file>.json) of the JSON output. */
   output: string[];
@@ -109,6 +129,11 @@ type ToolDef = {
 const BASIC = 'examples/basic/App.tsx';
 
 export const TOOLS: ToolDef[] = [
+  {
+    name: 'doctor', command: 'doctor', inputType: 'DoctorInput', output: ['doctor-result'],
+    description: 'Inspect installed app dependency versions and local host metadata without starting Metro or native code. Reports missing dependencies, incompatible React Native versions, and untested library versions. Exact dependency matches do not establish device parity.',
+    example: {file: BASIC, format: 'json'},
+  },
   {
     name: 'render',
     command: 'render',
@@ -192,6 +217,10 @@ export function toolArgv(name: ToolName, input: Record<string, unknown>): string
       argv.push('--script', JSON.stringify(value));
     } else if (key === 'rules') {
       argv.push('--rules', JSON.stringify({rules: value}));
+    } else if (key === 'allowFallback') {
+      for (const name of value as string[]) argv.push('--allow-fallback', name);
+    } else if (key === 'failOnFallback') {
+      argv.push(value ? '--fail-on-fallback' : '--no-fail-on-fallback');
     } else if (key === 'mounted') {
       if (value === false) argv.push('--no-mounted');
     } else if (key === 'select') {

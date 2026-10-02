@@ -7,6 +7,8 @@
  * `ignore: [selector, ...]` (see `--select`) to skip nodes.
  */
 
+import type {Diagnostic} from './diagnostics.ts';
+
 import fs from 'node:fs';
 
 import {type LogEntry, usage} from './errors.ts';
@@ -76,6 +78,7 @@ export type CheckResult = {
   summary: {nodes: number; checked: number; violations: number; byRule: Partial<Record<RuleName | 'step', number>>};
   nodes: CheckedNode[];
   violations: Violation[];
+  diagnostics?: Diagnostic[];
   logs?: LogEntry[];
 };
 
@@ -576,6 +579,7 @@ export function addStepViolations(
 /** `--format text`: one line per violation, then a summary line. */
 export function checkText(result: CheckResult): string {
   const lines = result.violations.map(v => `FAIL ${v.rule} ${v.key}${v.prop ? ` ${v.prop}` : ''}: ${v.message}`);
+  lines.unshift(...(result.diagnostics ?? []).map(d => `warning ${d.code} ${d.target}: ${d.message}`));
   const {nodes, checked, violations} = result.summary;
   lines.push(`${result.ok ? 'ok' : 'failed'}: ${violations} violation(s), ${checked} of ${nodes} nodes checked`);
   return lines.join('\n') + '\n';

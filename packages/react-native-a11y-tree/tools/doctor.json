@@ -1,0 +1,277 @@
+{
+  "name": "doctor",
+  "description": "Inspect installed app dependency versions and local host metadata without starting Metro or native code. Reports missing dependencies, incompatible React Native versions, and untested library versions. Exact dependency matches do not establish device parity.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file": {
+        "type": "string"
+      },
+      "strict": {
+        "type": "boolean"
+      },
+      "format": {
+        "type": "string",
+        "enum": [
+          "json",
+          "text"
+        ]
+      },
+      "noStderr": {
+        "type": "boolean",
+        "description": "Suppress all stderr output, including warnings, errors, verbose logs and timings."
+      }
+    },
+    "required": [
+      "file"
+    ],
+    "additionalProperties": false,
+    "definitions": {}
+  },
+  "outputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "DoctorResult",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "strict": {
+        "type": "boolean"
+      },
+      "host": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "found": {
+                "type": "boolean",
+                "const": true
+              },
+              "info": {
+                "$ref": "#/definitions/HostInfo"
+              }
+            },
+            "required": [
+              "found",
+              "info"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "found": {
+                "type": "boolean",
+                "const": false
+              },
+              "error": {
+                "$ref": "#/definitions/ErrorInfo"
+              }
+            },
+            "required": [
+              "found",
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "description": "File/metadata discovery only: doctor never executes or downloads a host."
+      },
+      "projectRoot": {
+        "type": "string"
+      },
+      "packages": {
+        "type": "object",
+        "additionalProperties": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": "Installed app versions; missing or unreadable packages are null."
+      },
+      "issues": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/CompatibilityIssue"
+        }
+      },
+      "ok": {
+        "type": "boolean"
+      },
+      "tested": {
+        "type": "boolean",
+        "description": "Only the tested dependency tuple. Does not establish device parity."
+      }
+    },
+    "required": [
+      "host",
+      "issues",
+      "ok",
+      "packages",
+      "projectRoot",
+      "strict",
+      "tested"
+    ],
+    "definitions": {
+      "HostInfo": {
+        "type": "object",
+        "properties": {
+          "bin": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/definitions/HostSource"
+          },
+          "version": {
+            "type": "string",
+            "description": "From host-version.json (package or downloaded manifest)."
+          },
+          "protocolVersion": {
+            "type": "number"
+          },
+          "rnVersion": {
+            "type": "string"
+          },
+          "nativeLibs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "required": [
+          "bin",
+          "source"
+        ],
+        "additionalProperties": false
+      },
+      "HostSource": {
+        "type": "string",
+        "enum": [
+          "env",
+          "package",
+          "download",
+          "dist"
+        ]
+      },
+      "ErrorInfo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/definitions/ErrorCode"
+          },
+          "message": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "UNSUPPORTED_NATIVE",
+          "USAGE",
+          "CHECK_FAILED",
+          "BUNDLE_FAILED",
+          "APP_THREW",
+          "TARGET_NOT_FOUND",
+          "TARGET_COVERED",
+          "TIMEOUT",
+          "HOST_MISSING",
+          "HOST_UNAVAILABLE",
+          "HOST_INCOMPATIBLE",
+          "HOST_CRASHED"
+        ],
+        "description": "Machine-readable errors: `{code, message, hint?, details?}`, with one exit code per class of failure.\n\n| exit | meaning | | --- | --- | | 0 | ok | | 1 | usage (bad arguments, script, selector) | | 2 | check failed (`check` command) | | 3 | bundle failed (Metro) | | 4 | app error (the app threw while loading or rendering) | | 5 | host (missing, unavailable, incompatible, crashed, timeout) | | 6 | unapproved observed native/runtime limitation |"
+      },
+      "CompatibilityIssue": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "MISSING_DEPENDENCY",
+              "INVALID_PACKAGE_MANIFEST",
+              "PACKAGE_RESOLUTION_FAILED",
+              "RN_VERSION_MISMATCH",
+              "DEPENDENCY_VERSION_MISMATCH",
+              "UNTESTED_DEPENDENCY_VERSION"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning"
+            ]
+          },
+          "package": {
+            "type": "string"
+          },
+          "expected": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actual": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "package",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "examples": [
+    {
+      "input": {
+        "file": "examples/basic/App.tsx",
+        "format": "json"
+      },
+      "argv": [
+        "rn-a11y-tree",
+        "doctor",
+        "examples/basic/App.tsx",
+        "--format",
+        "json"
+      ]
+    }
+  ],
+  "x-cli": {
+    "command": "doctor",
+    "outputSchemaFiles": [
+      "schema/doctor-result.json"
+    ],
+    "note": "Output matches outputSchema with format \"json\" (the default). Errors: schema/error-output.json.",
+    "exitCodes": {
+      "0": "no blocking preflight problems",
+      "1": "preflight problem or untested dependencies with --strict"
+    }
+  }
+}

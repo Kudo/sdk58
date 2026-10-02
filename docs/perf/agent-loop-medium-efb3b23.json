@@ -1,0 +1,311 @@
+{
+  "app": "examples/medium/App.tsx",
+  "preset": "android-phone",
+  "bytecode": "auto",
+  "timestamp": "2026-10-02T10:46:06.092Z",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "node": "v26.5.0"
+  },
+  "summary": {
+    "cold": {
+      "n": 1,
+      "medianMs": 6414,
+      "minMs": 6414,
+      "maxMs": 6414
+    },
+    "unchanged": {
+      "n": 5,
+      "medianMs": 571,
+      "minMs": 295,
+      "maxMs": 695
+    },
+    "source-edit": {
+      "n": 5,
+      "medianMs": 1809,
+      "minMs": 1520,
+      "maxMs": 2455
+    }
+  },
+  "samples": [
+    {
+      "scenario": "cold",
+      "wallMs": 6414,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 5775.232,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 446.039,
+        "hostStartupMs": 101.206,
+        "hostSpawnToExitMs": 462.12,
+        "js": {
+          "evalMs": 185.16,
+          "renderMs": 138.474,
+          "settleMs": 8.062,
+          "dumpMs": 11.716,
+          "jsTotalMs": 344.833,
+          "settleRounds": 3
+        },
+        "convertMs": 4.897,
+        "outputBytes": 831,
+        "totalMs": 6333.926
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 525,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 11.65,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 377.585,
+        "hostStartupMs": 63.082,
+        "hostSpawnToExitMs": 394.678,
+        "js": {
+          "evalMs": 172.246,
+          "renderMs": 121.176,
+          "settleMs": 8.593,
+          "dumpMs": 11.387,
+          "jsTotalMs": 314.503,
+          "settleRounds": 3
+        },
+        "convertMs": 6.458,
+        "outputBytes": 831,
+        "totalMs": 506.037
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 571,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 11.074,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 428.425,
+        "hostStartupMs": 67.513,
+        "hostSpawnToExitMs": 449.445,
+        "js": {
+          "evalMs": 203.014,
+          "renderMs": 135.879,
+          "settleMs": 9.161,
+          "dumpMs": 11.575,
+          "jsTotalMs": 360.912,
+          "settleRounds": 3
+        },
+        "convertMs": 6.072,
+        "outputBytes": 831,
+        "totalMs": 553.469
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 669,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 17.859,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 503.465,
+        "hostStartupMs": 88.485,
+        "hostSpawnToExitMs": 525.975,
+        "js": {
+          "evalMs": 246.547,
+          "renderMs": 145.349,
+          "settleMs": 8.378,
+          "dumpMs": 13.462,
+          "jsTotalMs": 414.98,
+          "settleRounds": 3
+        },
+        "convertMs": 7.242,
+        "outputBytes": 831,
+        "totalMs": 649.401
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 695,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 12.7,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 521.012,
+        "hostStartupMs": 88.78,
+        "hostSpawnToExitMs": 549.024,
+        "js": {
+          "evalMs": 222.105,
+          "renderMs": 183.634,
+          "settleMs": 10.861,
+          "dumpMs": 13.436,
+          "jsTotalMs": 432.232,
+          "settleRounds": 3
+        },
+        "convertMs": 7.434,
+        "outputBytes": 831,
+        "totalMs": 673.502
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 295,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": true,
+        "metroMs": 12.628,
+        "bundleBytes": 3140442,
+        "hostSpawnToResultMs": 143.275,
+        "hostStartupMs": 24.991,
+        "hostSpawnToExitMs": 148.422,
+        "js": {
+          "evalMs": 20.869,
+          "renderMs": 78.088,
+          "settleMs": 3.116,
+          "dumpMs": 15.3,
+          "jsTotalMs": 118.284,
+          "settleRounds": 3
+        },
+        "convertMs": 9.387,
+        "outputBytes": 831,
+        "totalMs": 270.882
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 1815,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 1199.883,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 463.58,
+        "hostStartupMs": 78.156,
+        "hostSpawnToExitMs": 480.445,
+        "js": {
+          "evalMs": 217.206,
+          "renderMs": 145.447,
+          "settleMs": 9.604,
+          "dumpMs": 11.888,
+          "jsTotalMs": 385.424,
+          "settleRounds": 3
+        },
+        "convertMs": 5.45,
+        "outputBytes": 831,
+        "totalMs": 1787.96
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 2455,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 1592.819,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 680.816,
+        "hostStartupMs": 76.845,
+        "hostSpawnToExitMs": 703.352,
+        "js": {
+          "evalMs": 248.334,
+          "renderMs": 326.161,
+          "settleMs": 9.74,
+          "dumpMs": 10.851,
+          "jsTotalMs": 603.971,
+          "settleRounds": 3
+        },
+        "convertMs": 5.005,
+        "outputBytes": 831,
+        "totalMs": 2427.486
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 1543,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 986.072,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 420.021,
+        "hostStartupMs": 70.724,
+        "hostSpawnToExitMs": 440.18,
+        "js": {
+          "evalMs": 190.682,
+          "renderMs": 136.488,
+          "settleMs": 9.07,
+          "dumpMs": 11.807,
+          "jsTotalMs": 349.297,
+          "settleRounds": 3
+        },
+        "convertMs": 5.064,
+        "outputBytes": 831,
+        "totalMs": 1519.512
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 1520,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 964.319,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 411.127,
+        "hostStartupMs": 68.498,
+        "hostSpawnToExitMs": 432.059,
+        "js": {
+          "evalMs": 182.078,
+          "renderMs": 135.513,
+          "settleMs": 12.053,
+          "dumpMs": 11.784,
+          "jsTotalMs": 342.629,
+          "settleRounds": 3
+        },
+        "convertMs": 5.263,
+        "outputBytes": 831,
+        "totalMs": 1494.961
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 1809,
+      "outputBytes": 831,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 1188.676,
+        "bundleBytes": 5609938,
+        "hostSpawnToResultMs": 473,
+        "hostStartupMs": 78.666,
+        "hostSpawnToExitMs": 490.951,
+        "js": {
+          "evalMs": 215.941,
+          "renderMs": 154.166,
+          "settleMs": 10.27,
+          "dumpMs": 12.632,
+          "jsTotalMs": 394.334,
+          "settleRounds": 3
+        },
+        "convertMs": 7.199,
+        "outputBytes": 831,
+        "totalMs": 1782.195
+      }
+    }
+  ],
+  "cliCommit": "efb3b2362b81753c7d9f553d266fa1b5e35d4d81",
+  "hostArtifactCommit": "9f0348c"
+}

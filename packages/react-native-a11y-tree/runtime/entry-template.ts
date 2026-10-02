@@ -50,6 +50,8 @@ registerRender(() => {
   // Dimensions/PixelRatio before the app module: apps read them at import.
   (require('__RUNTIME_DIR__/hostConfig') as typeof HostConfigModule).applyDeviceMetrics(hostConfig.deviceMetrics);
 
+  /* __APP_SETUP__ */
+
   const appModule = require('__APP_PATH__') as {default?: unknown; App?: unknown};
   let App = appModule.default ?? appModule.App;
   if (typeof App !== 'function' && (typeof App !== 'object' || App == null)) {

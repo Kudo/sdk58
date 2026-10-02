@@ -1,3 +1,6 @@
+import {inspectCompatibility} from './compatibility.ts';
+import {inspectDoctor} from './doctor.ts';
+import {collectDiagnostics, fidelityError, type FidelityOptions} from './diagnostics.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -73,13 +76,17 @@ function warnTimeZone(options: {tz?: string; quiet?: boolean}): void {
   }
 }
 
-type RenderOptions = HostConfigOptions & OutputOptions & {
+type RenderOptions = FidelityOptions & HostConfigOptions & OutputOptions & {
   quiet?: boolean;
   timing?: boolean;
   resetCache?: boolean;
   /** --no-cache sets false. */
   cache?: boolean;
   bytecode?: string;
+  setup?: string;
+  projectRoot?: string;
+  metroConfig?: string;
+  timeout?: number;
   width: number;
   height: number;
   platform?: string;
@@ -104,7 +111,7 @@ function write(text: string, out: string | undefined) {
 const PLATFORM_REQUIRED_MESSAGE = `--platform <name> is required (or --preset, or "platform"/"preset" in a11y-tree.json). Known values: android, ios, a11ytree. Any Metro platform name is accepted.
 Note: React Native core components branch on Platform.OS (e.g. TextInput, Switch), so use android or ios for them to render.`;
 
-type RunOptions = RenderOptions & {script?: string; tapMode: string; timeout?: number; diff?: boolean};
+type RunOptions = RenderOptions & {script?: string; tapMode: string; diff?: boolean};
 
 const TAP_MODES: TapMode[] = ['touch', 'click', 'both'];
 
@@ -239,6 +246,17 @@ function printTiming(timing: Timing) {
   process.stderr.write(`rn-a11y-tree timing: ${JSON.stringify(timing)}\n`);
 }
 
+function dependencyDiagnostics(file: string, options: RenderOptions, host: import('./host.ts').HostInfo): LogEntry[] {
+  const report = inspectCompatibility(options.projectRoot ?? findProjectRoot(file), host);
+  const mismatch = report.issues.find(issue => issue.code === 'RN_VERSION_MISMATCH' && issue.severity === 'error');
+  if (mismatch) throw new CliError('HOST_INCOMPATIBLE', mismatch.message, {details: {compatibility: report}});
+  const logs: LogEntry[] = report.issues.map(issue => ({level: 'warn', message: `[DEPENDENCY_COMPATIBILITY] ${issue.package}: ${issue.message}`}));
+  const root = options.projectRoot ?? findProjectRoot(file);
+  const ignored = ['metro.config.js', 'metro.config.cjs', 'metro.config.mjs', 'metro.config.ts'].find(name => fs.existsSync(path.join(root, name)));
+  if (!options.metroConfig && ignored) logs.push({level: 'warn', message: `[BUILD_CONFIGURATION] metro-config: ${ignored} is not loaded. Use --metro-config to opt in to supported resolver/transformer settings; unsupported native CSS or serializer integrations are rejected.`});
+  return logs;
+}
+
 async function execute<T>(
   file: string,
   options: RenderOptions,
@@ -249,12 +267,16 @@ async function execute<T>(
   const platform = requirePlatform(options.platform);
   if (!options.bundleOnly) {
     // Fail (or download) before spending time on Metro.
-    await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
+    const host = await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
+    logs?.push(...dependencyDiagnostics(file, options, host));
     warnTimeZone(options);
   }
   const metroStart = performance.now();
   const result = await bundleOrFail({
     appPath: file,
+    setupPath: options.setup,
+    projectRoot: options.projectRoot,
+    metroConfigPath: options.metroConfig,
     viewportWidth: options.width,
     viewportHeight: options.height,
     platform,
@@ -286,8 +308,14 @@ async function execute<T>(
     return undefined;
   }
 
+  const cancellation = new AbortController();
+  const cancel = () => cancellation.abort();
+  process.on('SIGINT', cancel);
+  process.on('SIGTERM', cancel);
+  const hostDeadline = performance.now() + (options.timeout ?? 30_000);
   const hostTiming: HostTiming = {};
   const hostOptions = {
+    signal: cancellation.signal,
     windowWidth: options.width,
     windowHeight: options.height,
     verbose: options.verbose,
@@ -296,19 +324,24 @@ async function execute<T>(
     quiet: isQuiet(options),
     tz: options.tz,
   };
+  const attempt = (bundlePath: string) => {
+    const remaining = Math.ceil(hostDeadline - performance.now());
+    if (remaining <= 0) throw new CliError('TIMEOUT', 'Host execution deadline exceeded before retry.');
+    return runHost<T>({...hostOptions, bundlePath, timeoutMs: remaining});
+  };
   try {
     let payload: T;
     try {
-      payload = await runHost<T>({...hostOptions, bundlePath: result.bundlePath});
+      payload = await attempt(result.bundlePath);
     } catch (error) {
       // A bytecode file the host cannot load (e.g. a Hermes bytecode version
       // mismatch) makes the host fail before any JS runs: drop it and use JS.
-      const jsError = error instanceof CliError && error.code === 'APP_THREW';
-      if (!result.bytecode || jsError || result.cacheDir == null) throw error;
-      discardBytecode(result.cacheDir);
+      const noRetry = cancellation.signal.aborted || (error instanceof CliError && (error.code === 'APP_THREW' || error.code === 'TIMEOUT' || error.details?.outputLimit === true));
+      if (!result.bytecode || noRetry || result.cacheDir == null) throw error;
+      discardBytecode(result.cacheDir, result.bundlePath);
       process.stderr.write('rn-a11y-tree: warning: the host could not load the bytecode bundle; using JS\n');
       if (timing) timing.bytecode = false;
-      payload = await runHost<T>({...hostOptions, bundlePath: result.jsBundlePath});
+      payload = await attempt(result.jsBundlePath);
     }
     checkHostInfo((payload as {hostInfo?: HostRuntimeInfo | null}).hostInfo, {verbose: options.verbose});
     if (timing && hostTiming.spawn != null) {
@@ -328,6 +361,8 @@ async function execute<T>(
     }
     return payload;
   } finally {
+    process.off('SIGINT', cancel);
+    process.off('SIGTERM', cancel);
     cleanUp();
   }
 }
@@ -337,8 +372,15 @@ async function execute<T>(
  * the command line, a11y-tree.json and the preset, then built-in defaults.
  */
 function applySettings(file: string, options: RenderOptions & {tapMode?: string; preset?: string}) {
-  const config = loadProjectConfig(findProjectRoot(file));
+  const projectRoot = options.projectRoot ? path.resolve(options.projectRoot) : findProjectRoot(file);
+  if (!fs.existsSync(path.join(projectRoot, 'package.json'))) throw usage(`Project root must contain package.json: ${projectRoot}`, 'Use --project-root <app-directory> for a shared component, or run from an app with installed dependencies.');
+  options.projectRoot = projectRoot;
+  options.metroConfig = options.metroConfig ? path.resolve(options.metroConfig) : undefined;
+  const config = loadProjectConfig(projectRoot);
+  options.metroConfig ??= config?.metroConfig ? path.resolve(projectRoot, config.metroConfig) : undefined;
   applyConfig(options, config);
+  options.setup = options.setup != null ? path.resolve(options.setup) :
+    config?.setup != null ? path.resolve(projectRoot, config.setup) : undefined;
   return config;
 }
 
@@ -370,6 +412,8 @@ function applyConfig(
   options.fontScale = resolved.fontScale;
   options.tapMode = resolved.tapMode ?? 'touch';
   options.format = resolved.format ?? 'json';
+  options.failOnFallback ??= config?.failOnFallback;
+  options.allowFallback ??= config?.allowFallback;
 }
 
 async function render(file: string, options: RenderOptions) {
@@ -382,6 +426,9 @@ async function render(file: string, options: RenderOptions) {
     const convertStart = performance.now();
     const result = toRenderResult(payload);
     if (logs.length > 0) result.logs = logs;
+    result.diagnostics = collectDiagnostics(logs);
+    const policyError = fidelityError(result.diagnostics, options);
+    if (policyError) throw policyError;
     const text = formatRender(result, output);
     if (timing) {
       timing.convertMs = round3(performance.now() - convertStart);
@@ -422,6 +469,9 @@ async function run(file: string, options: RunOptions) {
     const convertStart = performance.now();
     const result = toRunResult(payload);
     if (logs.length > 0) result.logs = logs;
+    result.diagnostics = collectDiagnostics(logs, fallbacks);
+    const policyError = fidelityError(result.diagnostics, options);
+    if (policyError) throw policyError;
     const text = formatRun(result, output);
     if (timing) {
       timing.convertMs = round3(performance.now() - convertStart);
@@ -470,8 +520,12 @@ async function session(file: string, options: RunOptions) {
   }
   const host = await ensureHost({quiet: isQuiet(options), verbose: options.verbose});
   warnTimeZone(options);
+  const initialLogs = dependencyDiagnostics(file, options, host);
   const result = await bundleOrFail({
     appPath: file,
+    setupPath: options.setup,
+    projectRoot: options.projectRoot,
+    metroConfigPath: options.metroConfig,
     viewportWidth: options.width,
     viewportHeight: options.height,
     platform,
@@ -496,6 +550,9 @@ async function session(file: string, options: RunOptions) {
       timeoutMs: options.timeout,
       timing: options.timing,
       quiet: isQuiet(options),
+      initialLogs,
+      failOnFallback: options.failOnFallback,
+      allowFallback: options.allowFallback,
       host,
       treeDefaults,
       tz: options.tz,
@@ -519,8 +576,7 @@ const CHECK_FORMATS = ['json', 'text'];
 async function check(file: string, options: CheckOptions) {
   // `format` in a11y-tree.json is for render/run output; check has its own.
   const format = options.format ?? 'json';
-  const config = loadProjectConfig(findProjectRoot(file));
-  applyConfig(options, config);
+  const config = applySettings(file, options);
   requirePlatform(options.platform);
   if (!CHECK_FORMATS.includes(format)) {
     throw usage(`--format must be one of: ${CHECK_FORMATS.join(', ')} (for check)`);
@@ -540,10 +596,12 @@ async function check(file: string, options: CheckOptions) {
   const timing: Timing | undefined = options.timing ? {} : undefined;
   const logs: LogEntry[] = [];
   let result: CheckResult | undefined;
+  let runtimeFallbacks: string[] = [];
   if (script) {
     const payload = await execute<HostRunPayload>(file, options, {script, tapMode: options.tapMode as TapMode}, timing, logs);
     if (payload) {
       const run = toRunResult(payload);
+      runtimeFallbacks = run.fallbacks;
       result = addStepViolations(
         checkTree(run.final, rules, {viewport: run.viewport, source: run.source, subtree: options.subtree}),
         run.steps,
@@ -562,6 +620,9 @@ async function check(file: string, options: CheckOptions) {
   }
   if (result) {
     if (logs.length > 0) result.logs = logs;
+    result.diagnostics = collectDiagnostics(logs, runtimeFallbacks);
+    const policyError = fidelityError(result.diagnostics, options);
+    if (policyError) throw policyError;
     write(format === 'text' ? checkText(result) : JSON.stringify(result, null, 2) + '\n', options.out);
     if (!result.ok) process.exitCode = EXIT_CODES.CHECK_FAILED;
   }
@@ -587,6 +648,7 @@ const program = new Command()
     'Render a React Native component headlessly and print its accessibility/layout tree as JSON',
   )
   // Commander errors become USAGE errors (reportError); subcommands inherit this.
+  .enablePositionalOptions()
   .exitOverride()
   .configureOutput({writeErr: () => {}});
 
@@ -603,8 +665,15 @@ function addCommonOptions(command: Command): Command {
     .option('--out <file>', 'write JSON to a file instead of stdout')
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
+    .option('--timeout <ms>', 'host execution deadline after bundling; timeout exits 5 (default 30000)', timeoutNumber, 30_000)
+    .option('--project-root <directory>', 'resolve dependencies and project settings from this app directory')
+    .option('--metro-config <file>', 'opt in to supported custom Metro configuration; disables persistent caches')
+    .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
+    .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')
+    .option('--no-fail-on-fallback', 'disable the configured fallback policy')
+    .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect)
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
-    .option('-q, --quiet', 'no app console output or warnings on stderr (default when stdout is not a terminal)')
+    .option('-q, --quiet', 'suppress ordinary app console output and warnings; fallback warnings still print (default when stdout is not a terminal)')
     .option('--no-quiet', 'print app console errors/warnings and CLI warnings on stderr')
     .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
     .option('--timing', 'print phase timings as JSON on stderr', false)
@@ -635,7 +704,13 @@ function timeZone(value: string): string {
   return value;
 }
 
-function collect(value: string, previous: string[]): string[] {
+function timeoutNumber(value: string): number {
+  const n = positiveNumber(value);
+  if (!Number.isInteger(n) || n > 2_147_483_647) throw new InvalidArgumentError('Timeout must be an integer between 1 and 2147483647 milliseconds.');
+  return n;
+}
+
+function collect(value: string, previous: string[] = []): string[] {
   return [...previous, value];
 }
 
@@ -701,13 +776,19 @@ addOutputOptions(program.command('session'))
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option(
     '--timeout <ms>',
-    'per-request timeout; on timeout the host is killed and the exit code is 1',
-    positiveNumber,
+    'host-frame, output-write and graceful-shutdown timeout; on timeout the host is killed and the exit code is 5',
+    timeoutNumber,
     DEFAULT_TIMEOUT_MS,
   )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
+  .option('--project-root <directory>', 'resolve dependencies and project settings from this app directory')
+  .option('--metro-config <file>', 'opt in to supported custom Metro configuration; disables persistent caches')
+  .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
+  .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')
+  .option('--no-fail-on-fallback', 'disable the configured fallback policy')
+  .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect)
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
-  .option('-q, --quiet', 'no app console output on stderr (default when stdout is not a terminal)')
+  .option('-q, --quiet', 'suppress ordinary app console output; fallback warnings still print (default when stdout is not a terminal)')
   .option('--no-quiet', 'print app console output on stderr as [app] lines')
   .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
   .option('--timing', 'print phase timings as JSON on stderr', false)
@@ -738,11 +819,58 @@ addOutputOptions(program.command('session'))
   )
   .action(session);
 
+program.command('doctor')
+  .description('inspect app dependencies and local host metadata without starting Metro or native code')
+  .argument('[file]', 'app file or project directory', '.')
+  .option('--strict', 'exit 1 for untested dependency combinations as well as errors')
+  .option('--format <format>', 'json (default) or text', 'json')
+  .action(async (file: string, options: {strict?: boolean; format: string}) => {
+    if (!['json', 'text'].includes(options.format)) throw usage('--format must be json or text');
+    const absolute = path.resolve(file);
+    if (!fs.existsSync(absolute)) throw usage(`File or directory not found: ${absolute}`);
+    const root = findProjectRoot(fs.statSync(absolute).isDirectory() ? path.join(absolute, '__doctor__') : absolute);
+    const report = await inspectDoctor(root, options.strict);
+    const text = [report.ok ? 'ok' : 'failed', `project: ${root}`, `tested dependency tuple: ${report.tested}`, `host: ${report.host.found ? report.host.info.bin : report.host.error.message}`,
+      ...report.issues.map(issue => `${issue.severity} ${issue.code} ${issue.package}: ${issue.message}`)].join('\n') + '\n';
+    write(options.format === 'text' ? text : JSON.stringify(report, null, 2) + '\n', undefined);
+    if (!report.ok) process.exitCode = 1;
+  });
+
 program
   .command('schema')
   .description('print a JSON Schema of the CLI inputs and outputs (script, rules-file, session-request, ...); no name: list them')
   .argument('[name]', 'schema name, e.g. script')
   .action(printSchema);
+
+// Register locally as well as globally so every subcommand's help exposes the
+// flag. Positional options keep global parsing from stealing a subcommand's
+// required value (for example, --subtree --no-stderr).
+const commands = [program, ...program.commands];
+for (const command of commands) command.option('--no-stderr', 'suppress all stderr output, including fallback warnings, errors, verbose logs and timings');
+
+// Parse only option syntax before the real parse can reject an argument. Reuse
+// Commander's arity/quoting rules, but not value validators or actions. A flat
+// union also recognizes explicit output options when the command is invalid.
+const outputProbe = new Command().exitOverride().configureOutput({writeErr: () => {}, writeOut: () => {}});
+const seenFlags = new Set<string>();
+for (const command of commands) {
+  for (const option of command.options) {
+    if (seenFlags.has(option.flags)) continue;
+    seenFlags.add(option.flags);
+    outputProbe.option(option.flags);
+  }
+}
+try { outputProbe.parseOptions(process.argv.slice(2)); } catch { /* Real parsing reports missing values below. */ }
+const outputFlags = outputProbe.opts<{stderr?: boolean; format?: string; quiet?: boolean}>();
+if (outputFlags.stderr === false) {
+  // One sink covers Commander, Metro, forwarded host/session output, console
+  // methods, and our error/timing reporters without discarding diagnostics.
+  process.stderr.write = (...args: unknown[]): boolean => {
+    const callback = args.at(-1);
+    if (typeof callback === 'function') process.nextTick(() => callback());
+    return true;
+  };
+}
 
 try {
   await program.parseAsync(process.argv);
@@ -765,7 +893,7 @@ function toCliError(error: unknown): CliError | null {
 }
 
 /**
- * Errors go to stdout as {"error": …} with an explicit --format json;
+ * Errors go to stdout as {"error": …} with explicit --format json or ndjson;
  * otherwise to stderr: JSON when stderr is not a terminal or with --quiet,
  * else a readable message.
  */
@@ -776,11 +904,9 @@ function reportError(error: unknown) {
     return;
   }
   const info = cliError.toJSON();
-  const argv = process.argv.slice(2);
-  const explicitJson = argv.some((a, i) => a === '--format=json' || (a === '--format' && argv[i + 1] === 'json'));
-  const quiet = argv.includes('-q') || argv.includes('--quiet');
-  if (explicitJson) {
-    process.stdout.write(JSON.stringify({error: info}, null, 2) + '\n');
+  const {format, quiet} = outputFlags;
+  if (format === 'json' || format === 'ndjson') {
+    process.stdout.write(JSON.stringify({error: info}, null, format === 'ndjson' ? undefined : 2) + '\n');
   } else if (quiet || !process.stderr.isTTY) {
     process.stderr.write(JSON.stringify({error: info}) + '\n');
   } else {

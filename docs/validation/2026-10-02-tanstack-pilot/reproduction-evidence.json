@@ -1,0 +1,1030 @@
+{
+  "freshApp": "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+  "prepare": {
+    "status": 0,
+    "files": 26,
+    "license": true,
+    "gitBlobHashesVerified": true,
+    "unchangedFilesReverified": true,
+    "appLockSha256": "f55cf175bbca825b06b5b6e61e2f52aa475c9b3393bfe93f7ce5d3bb7f0d325f",
+    "installLog": "npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).\n\nadded 571 packages in 4s\n"
+  },
+  "sourceMatchesCommit": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+  "sourceMatchMethod": "Compared each recorded src/runtime file hash to git show <commit>:<path>. Start/end source hashes also matched within each run.",
+  "flows": [
+    {
+      "name": "android-phone",
+      "preset": "android-phone",
+      "startedAt": "2026-10-02T12:50:45.080Z",
+      "sourceAtStart": {
+        "head": "482ef300c06798495c093434237c32b03bf18b0b",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M e2e/require-context.test.ts\n M packages/react-native-a11y-tree/src/bundle.ts\n M packages/react-native-a11y-tree/src/bundleCache.ts\n M packages/react-native-a11y-tree/src/cli.ts\n M packages/react-native-a11y-tree/src/host.ts\n M packages/react-native-a11y-tree/src/session.ts\n M test/bundle-cache.test.ts\n M test/bundle-publication.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? e2e/cache-snapshot.test.ts\n?? packages/react-native-a11y-tree/src/processCleanup.ts\n?? test/cache-snapshot.test.ts\n?? test/process-cleanup.test.ts\n?? test/windows-cleanup.test.ts\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "real movie list resolved",
+        "navigation reached partial movie details",
+        "partial details have no plot yet",
+        "full detail query resolved plot",
+        "full detail query resolved actors",
+        "back returns to list",
+        "details removed after back",
+        "focus refetch invoked list query again",
+        "detail query invoked"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "RNGestureHandlerRootView",
+          "View",
+          "RNSScreenContainer",
+          "RNSScreen",
+          "Paragraph"
+        ],
+        "movieControl": {
+          "ref": "n31",
+          "name": "Rush 2013"
+        },
+        "backControl": {
+          "ref": "n720",
+          "name": "Movies, back"
+        },
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "android-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/pilot-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off"
+      ],
+      "status": {
+        "code": 0,
+        "signal": null
+      },
+      "success": true,
+      "sourceAtEnd": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T12:50:54.560Z",
+      "diagnostics": [
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "StatusBarManager",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidProgressBar",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidSwipeRefreshLayout",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidSwipeRefreshLayout is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidSwipeRefreshLayout is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        }
+      ]
+    },
+    {
+      "name": "ios-phone",
+      "preset": "ios-phone",
+      "startedAt": "2026-10-02T12:50:54.633Z",
+      "sourceAtStart": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "real movie list resolved",
+        "navigation reached partial movie details",
+        "partial details have no plot yet",
+        "full detail query resolved plot",
+        "full detail query resolved actors",
+        "back returns to list",
+        "details removed after back",
+        "focus refetch invoked list query again",
+        "detail query invoked"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "View",
+          "Paragraph",
+          "RNSScreenContainer",
+          "RNSScreen"
+        ],
+        "movieControl": {
+          "ref": "n29",
+          "name": "Rush 2013"
+        },
+        "backControl": {
+          "ref": "n24",
+          "name": "Movies, back"
+        },
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "ios-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/pilot-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off"
+      ],
+      "status": {
+        "code": 0,
+        "signal": null
+      },
+      "success": true,
+      "sourceAtEnd": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.render-errors-Nh0mz3/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T12:51:14.537Z",
+      "diagnostics": [
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "ActivityIndicatorView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "PullToRefreshView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        }
+      ]
+    },
+    {
+      "name": "android-phone-strict",
+      "preset": "android-phone",
+      "startedAt": "2026-10-02T12:51:26.113Z",
+      "sourceAtStart": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.render-errors-Nh0mz3/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "real movie list resolved",
+        "navigation reached partial movie details",
+        "partial details have no plot yet",
+        "full detail query resolved plot",
+        "full detail query resolved actors",
+        "back returns to list",
+        "details removed after back",
+        "focus refetch invoked list query again",
+        "detail query invoked"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "RNGestureHandlerRootView",
+          "View",
+          "RNSScreenContainer",
+          "RNSScreen",
+          "Paragraph"
+        ],
+        "movieControl": {
+          "ref": "n31",
+          "name": "Rush 2013"
+        },
+        "backControl": {
+          "ref": "n720",
+          "name": "Movies, back"
+        },
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "android-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/pilot-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "StatusBarManager",
+        "--allow-fallback",
+        "AndroidProgressBar",
+        "--allow-fallback",
+        "AndroidSwipeRefreshLayout"
+      ],
+      "status": {
+        "code": 0,
+        "signal": null
+      },
+      "success": true,
+      "sourceAtEnd": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.not-router-5xDcXh/\n?? examples/.render-errors-66KngZ/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T12:51:38.645Z",
+      "diagnostics": [
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "StatusBarManager",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidProgressBar",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidSwipeRefreshLayout",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidSwipeRefreshLayout is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidSwipeRefreshLayout is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        }
+      ]
+    },
+    {
+      "name": "ios-phone-strict",
+      "preset": "ios-phone",
+      "startedAt": "2026-10-02T12:52:49.135Z",
+      "sourceAtStart": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.render-errors-u2B0Ma/\n?? examples/.router-discovery-oEuYEo/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "real movie list resolved",
+        "navigation reached partial movie details",
+        "partial details have no plot yet",
+        "full detail query resolved plot",
+        "full detail query resolved actors",
+        "back returns to list",
+        "details removed after back",
+        "focus refetch invoked list query again",
+        "detail query invoked"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "View",
+          "Paragraph",
+          "RNSScreenContainer",
+          "RNSScreen"
+        ],
+        "movieControl": {
+          "ref": "n29",
+          "name": "Rush 2013"
+        },
+        "backControl": {
+          "ref": "n24",
+          "name": "Movies, back"
+        },
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "ios-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/pilot-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "ActivityIndicatorView",
+        "--allow-fallback",
+        "PullToRefreshView"
+      ],
+      "status": {
+        "code": 0,
+        "signal": null
+      },
+      "success": true,
+      "sourceAtEnd": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.not-router-KvJZ1o/\n?? examples/.render-errors-5mm1wC/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T12:53:06.277Z",
+      "diagnostics": [
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "ActivityIndicatorView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "PullToRefreshView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        }
+      ],
+      "protocolErrors": []
+    }
+  ],
+  "strictRejections": [
+    {
+      "platform": "android",
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "render",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--preset",
+        "android-phone",
+        "--format",
+        "json",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/pilot-fixtures.ts",
+        "--fail-on-fallback",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--no-cache",
+        "--bytecode",
+        "off"
+      ],
+      "status": 6,
+      "signal": null,
+      "elapsedMs": 10263,
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "sourceAtStart": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.not-router-5xDcXh/\n?? examples/.render-errors-66KngZ/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceAtEnd": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.render-errors-skVcgm/\n?? examples/.router-discovery-TlRs4n/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceStable": true,
+      "assertions": [
+        "CLI status 6",
+        "UNSUPPORTED_NATIVE",
+        "nonempty rejected diagnostics",
+        "source stable"
+      ],
+      "diagnostics": [
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "StatusBarManager",
+          "message": "[NATIVE_MODULE_FALLBACK] StatusBarManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "AndroidProgressBar",
+          "message": "[NATIVE_COMPONENT_FALLBACK] AndroidProgressBar is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        }
+      ]
+    },
+    {
+      "platform": "ios",
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "render",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--preset",
+        "ios-phone",
+        "--format",
+        "json",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/pilot-fixtures.ts",
+        "--fail-on-fallback",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--no-cache",
+        "--bytecode",
+        "off"
+      ],
+      "status": 6,
+      "signal": null,
+      "elapsedMs": 9718,
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "sourceAtStart": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.render-errors-kzjVMt/\n?? examples/.router-discovery-TlRs4n/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceAtEnd": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.render-errors-kzjVMt/\n?? examples/.router-discovery-oEuYEo/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceStable": true,
+      "assertions": [
+        "CLI status 6",
+        "UNSUPPORTED_NATIVE",
+        "nonempty rejected diagnostics",
+        "source stable"
+      ],
+      "diagnostics": [
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "ActivityIndicatorView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        }
+      ]
+    }
+  ],
+  "failedAttempts": [
+    {
+      "preset": "ios-phone",
+      "startedAt": "2026-10-02T12:51:43.399Z",
+      "sourceAtStart": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.not-router-5xDcXh/\n?? examples/.render-errors-66KngZ/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+      "assertions": [
+        "whole app initially loading, no Rush list row",
+        "real movie list resolved",
+        "navigation reached partial movie details",
+        "partial details have no plot yet",
+        "full detail query resolved plot",
+        "full detail query resolved actors",
+        "back returns to list",
+        "details removed after back",
+        "focus refetch invoked list query again",
+        "detail query invoked"
+      ],
+      "observations": {
+        "loadingTypes": [
+          "RootView",
+          "View",
+          "Paragraph",
+          "RNSScreenContainer",
+          "RNSScreen"
+        ],
+        "movieControl": {
+          "ref": "n29",
+          "name": "Rush 2013"
+        },
+        "backControl": {
+          "ref": "n24",
+          "name": "Movies, back"
+        },
+        "queryLogs": [
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          },
+          {
+            "level": "info",
+            "message": "'fetchMovie', 'Rush'"
+          },
+          {
+            "level": "info",
+            "message": "fetchMovies"
+          }
+        ]
+      },
+      "args": [
+        "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/packages/react-native-a11y-tree/src/cli.ts",
+        "session",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/App.tsx",
+        "--project-root",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+        "--preset",
+        "ios-phone",
+        "--setup",
+        "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n/pilot-fixtures.ts",
+        "--no-cache",
+        "--bytecode",
+        "off",
+        "--fail-on-fallback",
+        "--allow-fallback",
+        "KeyboardObserver",
+        "--allow-fallback",
+        "LinkingManager",
+        "--allow-fallback",
+        "turbo/RNCNetInfo",
+        "--allow-fallback",
+        "ActivityIndicatorView",
+        "--allow-fallback",
+        "PullToRefreshView"
+      ],
+      "success": false,
+      "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n5 !== 0\n\n    at file:///Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/docs/validation/2026-10-02-tanstack-pilot/flow.mjs:215:10\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "status": {
+        "code": 5,
+        "signal": null
+      },
+      "sourceAtEnd": {
+        "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+        "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n?? docs/validation/2026-10-02-tanstack-pilot/\n?? examples/.render-errors-skVcgm/\n?? examples/.router-discovery-TlRs4n/\n",
+        "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+      },
+      "sourceStable": true,
+      "finishedAt": "2026-10-02T12:51:58.156Z",
+      "diagnostics": [
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "KeyboardObserver",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "APPLICATION_FIXTURE",
+          "target": "turbo/RNCNetInfo",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "ActivityIndicatorView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "code": "NATIVE_MODULE_FALLBACK",
+          "target": "LinkingManager",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "code": "NATIVE_COMPONENT_FALLBACK",
+          "target": "PullToRefreshView",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        }
+      ],
+      "logs": [
+        {
+          "level": "error",
+          "message": "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available in the new React Native architecture. If 'RNCMaskedView' has a ViewManager and you want to retrieve its native ViewConfig, please turn on the native ViewConfig interop layer. If you want to see if this component is registered with React Native, please call hasViewManagerConfig('RNCMaskedView') instead.",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] KeyboardObserver: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "DrawerLayoutAndroid is deprecated and will be removed in a future release. Use 'react-native-drawer-layout' instead. See https://reactnavigation.org/docs/drawer-layout/",
+          "known": true
+        },
+        {
+          "level": "warn",
+          "message": "[APPLICATION_FIXTURE] turbo/RNCNetInfo: using an application-supplied module; native behavior is not verified."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] ActivityIndicatorView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_MODULE_FALLBACK] LinkingManager: core module stub; native effects and events are not simulated."
+        },
+        {
+          "level": "warn",
+          "message": "[NATIVE_COMPONENT_FALLBACK] PullToRefreshView is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated."
+        },
+        {
+          "level": "info",
+          "message": "'fetchMovie', 'Rush'"
+        },
+        {
+          "level": "info",
+          "message": "fetchMovies"
+        }
+      ],
+      "limitation": "All ten flow assertions and quit acknowledgement passed, CLI exited 5. Trailing structured response was not saved by the earlier harness. Cause undetermined. Single targeted retry passed; retained as intermittent shutdown failure."
+    }
+  ],
+  "negativeAssertionTest": {
+    "underlyingCliStatus": 0,
+    "helperExit": 1,
+    "expectedAssertion": "Strict rejection must exit 6",
+    "logTail": "oot\\\": {\\n    \\\"ref\\\": \\\"n0\\\",\\n    \\\"key\\\": \\\"RootView\\\",\\n    \\\"type\\\": \\\"RootView\\\",\\n    \\\"sel\\\": \\\"RootView\\\",\\n    \\\"role\\\": null,\\n    \\\"name\\\": null,\\n    \\\"a11y\\\": {},\\n    \\\"box\\\": {\\n      \\\"x\\\": 0,\\n      \\\"y\\\": 0,\\n      \\\"width\\\": 412,\\n      \\\"height\\\": 915\\n    },\\n    \\\"style\\\": {\\n      \\\"effectiveBackground\\\": \\\"rgba(255, 255, 255, 1)\\\",\\n      \\\"layoutDirection\\\": \\\"ltr\\\"\\n    },\\n    \\\"text\\\": null,\\n    \\\"testID\\\": null,\\n    \\\"children\\\": [\\n      {\\n        \\\"ref\\\": \\\"n1\\\",\\n        \\\"key\\\": \\\"RootView/RNGestureHandlerRootView:1\\\",\\n        \\\"type\\\": \\\"RNGestureHandlerRootView\\\",\\n        \\\"sel\\\": \\\"RootView>RNGestureHandlerRootView\\\",\\n        \\\"role\\\": null,\\n        \\\"name\\\": null,\\n        \\\"a11y\\\": {},\\n        \\\"box\\\": {\\n          \\\"x\\\": 0,\\n          \\\"y\\\": 0,\\n          \\\"width\\\": 412,\\n          \\\"height\\\": 915\\n        },\\n        \\\"style\\\": {\\n          \\\"effectiveBackground\\\": \\\"rgba(255, 255, 255, 1)\\\",\\n          \\\"layoutDirection\\\": \\\"ltr\\\",\\n          \\\"flex\\\": 1\\n        },\\n        \\\"tex\"}\nnode:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Strict rejection must exit 6\n\n0 !== 6\n\n    at file:///Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/docs/validation/2026-10-02-tanstack-pilot/run-cli.mjs:73:8\n    at ModuleJob.run (node:internal/modules/esm/module_job:569:25)\n    at async node:internal/modules/esm/loader:650:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 6,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.5.0\n"
+  },
+  "sourceSnapshots": {
+    "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a": {
+      "packages/react-native-a11y-tree/src/bundle.ts": "3a6141630197c0b9f6a3e2b449f531c37e39f3fd17598a095e8db3cc170a2481",
+      "packages/react-native-a11y-tree/src/bundleCache.ts": "cf671da10984fe65e6975f49c256e182621e36bb1a1d3d1a332e3a094c98a63f",
+      "packages/react-native-a11y-tree/src/check.ts": "5109ed73bc2cf60fa29197b5cd1c03e59c88610e9ed3f6667b32fc04e96ecbd1",
+      "packages/react-native-a11y-tree/src/cli.ts": "ea66dc1a48e6bcfcb7ab4ba874af0444bbb1a4eed275ee666b7c52ab27a17d53",
+      "packages/react-native-a11y-tree/src/compatibility.ts": "adf4597060e16be44087c7bff76d6670870e1d9bb0505b71960e9234edeba9f4",
+      "packages/react-native-a11y-tree/src/diagnostics.ts": "3f3f056b7551b65a16a6ea91f0e25237ba660c81cfa2a4f8647344e4f24022a5",
+      "packages/react-native-a11y-tree/src/diff.ts": "d576f655706446f0fb1a41ef860ea7597209f75713e2759d007fafae83384f62",
+      "packages/react-native-a11y-tree/src/doctor.ts": "5ef23ffadf2bc91f53a772f35480575d6cd38caceffabfb7d37f4c645f53cc25",
+      "packages/react-native-a11y-tree/src/errors.ts": "d31d95aa56a1ae82c39a64b39a14e09ee0b28eea3fcf371aff9dd1004f592c3f",
+      "packages/react-native-a11y-tree/src/expo.ts": "dae4be1e487b45d2f8a943453def120597b4cacc825336f7cfe30fe94fba0754",
+      "packages/react-native-a11y-tree/src/format.ts": "b7a3a0c6b048b9454af62fcb390c1c6630863d2ee0c754577da908128295a8ec",
+      "packages/react-native-a11y-tree/src/genSchema.ts": "cb03e09665e13c3f27e9b865655cdd28efc6a9c38658258db4a6136733f5cca3",
+      "packages/react-native-a11y-tree/src/host.ts": "087e5d30325d32cc327a2fbde84539fc0115d2dbde065cf3a3729e8ef89943f2",
+      "packages/react-native-a11y-tree/src/hostDownload.ts": "cbd23f349987bf5371fdad2a4ac2d636bd09cfc199609dfc15614c5b8084faf4",
+      "packages/react-native-a11y-tree/src/metroConfig.ts": "f74fa57d00a27eb8cbd404fe565bf7725d3bb33f1490314b80b50e84463316eb",
+      "packages/react-native-a11y-tree/src/presets.ts": "7fdd3303d89c615d774986ca4d63ce85819b9fdf3a68ce7007023f60c7be8750",
+      "packages/react-native-a11y-tree/src/processCleanup.ts": "20676fababb5e076a6c653f2235b149546c497c3a5d114db3c770c82e9460ca2",
+      "packages/react-native-a11y-tree/src/runtimePackage.ts": "f63e3df1703190950affb7b7770cdd903f8d241021d1e4b830964e0566641673",
+      "packages/react-native-a11y-tree/src/schema.ts": "de38cb6b07ad6b48484dcbcbe0fc177d86151f32a21674e8334a51c60e152ad1",
+      "packages/react-native-a11y-tree/src/script.ts": "b685d0c58488073d4554ce8753308a8b2a2ab492405fd71d2bb1956ddcf74367",
+      "packages/react-native-a11y-tree/src/session.ts": "d785d30593954a232b828ae7ffe6a19465e5874297ee362e16e307c794fdb4a2",
+      "packages/react-native-a11y-tree/src/tools.ts": "e15abba577b9c351209f6dfe981f330b1decc4160d51d78e071d58390485ba6d",
+      "packages/react-native-a11y-tree/src/tree.ts": "6b7a69e8f8fdddbc30ef6e05ada8db91075918bdbe82e2de7f864dcb0343516e",
+      "packages/react-native-a11y-tree/src/tsconfigPaths.ts": "73920c840b71ca5e1e494a6e0bc799a94fc6418e2189fa19919d77505cc69d41",
+      "packages/react-native-a11y-tree/runtime/actions.ts": "afeb316359c4e75257bfefb3afa4bea0b4980474c26bfcf12635d340eaa23270",
+      "packages/react-native-a11y-tree/runtime/capabilities.ts": "296cf05f500abdf7991628a5dcea56ef4023705173c9b39baaed20143b8440cd",
+      "packages/react-native-a11y-tree/runtime/entry-template.ts": "9b14cb1f458cc807926d2946b259a563af2b69bee330fc303f4f33a1a57a39c6",
+      "packages/react-native-a11y-tree/runtime/expo/actions.ts": "09b88fcdd4ebbed229a0f799e5d454dcb5b770f266b8e055504da70324a6146c",
+      "packages/react-native-a11y-tree/runtime/expo/moduleAdapters.ts": "ccb9d185ecbfc883f443cfee5e562883b9564745df4b9f8ba32db96d01285a65",
+      "packages/react-native-a11y-tree/runtime/expo/prelude.ts": "7995bfef3c4b86b8f2e49c5e9d704311bbd5ce9ef83d5a2c455718e70a5e0c64",
+      "packages/react-native-a11y-tree/runtime/expo/viewConfigs.json": "0bd8db75b06d9ab42eea8c249ad4aad1a4712213395c83ad1dfe583bba5528fe",
+      "packages/react-native-a11y-tree/runtime/fantom/Constants.ts": "a63c2b272609bd01089adcbdec559860d11daa315a40873582f2f4c69c5001d5",
+      "packages/react-native-a11y-tree/runtime/fantom/getFantomRenderedOutput.tsx": "395236e1ef904b7fd7db0c66e233d1da76f845bb6134fe8339f946e5f0f3f789",
+      "packages/react-native-a11y-tree/runtime/fantom/HighResTimeStampMock.ts": "1b39a96c49ed086707e1b3a7903135f14c06c61a8348dad67200d85f594b2377",
+      "packages/react-native-a11y-tree/runtime/fantom/index.ts": "64ef853488fd25fedb8e9ee877778dc3d9c572573e7004fdb264de733209b572",
+      "packages/react-native-a11y-tree/runtime/fantom/LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+      "packages/react-native-a11y-tree/runtime/fantom/mocks/ReactNativeInternalFeatureFlags.ts": "ffe6849a6970ed9de4b801642b829dfa3fb4483fcf77bef7afef4ac67e7fe617",
+      "packages/react-native-a11y-tree/runtime/fantom/setup.ts": "0b6bc4d8e9e5ae22b051179fd38bd43f4b698fd65d0ae36c4186a37204642e21",
+      "packages/react-native-a11y-tree/runtime/fantom/setUpDefaultReactNativeEnvironment.ts": "ff7193b78074928ec438a6b1e8c4713524accc16484d4bcba0b08f33035738d5",
+      "packages/react-native-a11y-tree/runtime/fantom/specs/NativeFantom.ts": "d179fe823f9a150bae0a434d1e95a890fe93cb7df6b23e2e30916c328b0b6a7b",
+      "packages/react-native-a11y-tree/runtime/fantom/TimerMock.ts": "533221cf57e5cd31b56a64d82fa2c05722d6ee5208cd5ad18eaea764f98fabfd",
+      "packages/react-native-a11y-tree/runtime/fantom/VENDORED.md": "d277524305eaf6158a624fe9f53cfb743bd17e925b1d1bcc48c3547c7c0fe6ac",
+      "packages/react-native-a11y-tree/runtime/gh/hostContext.ts": "5f8a5ca9b7d48c73afbe01409e281bc36822d31c20a4cf4d6ce6dbafcda1b9d0",
+      "packages/react-native-a11y-tree/runtime/gh/HostGestureDetector.tsx": "3a2320ee021c5c5443749443d871f71a23dd913cca7dc663b579d6a0e7e4debf",
+      "packages/react-native-a11y-tree/runtime/gh/NativeRNGestureHandlerModule.ts": "4c4247ba0d73c3a4aabb9d35426af5445eeb10d66eafc0ad7490e2169a816530",
+      "packages/react-native-a11y-tree/runtime/globals.d.ts": "a1891e89a62db290365f904e24a95255890d4b116af2bef1a080a2e0f1e162d5",
+      "packages/react-native-a11y-tree/runtime/hostConfig.ts": "16213d048de86b291fd7e15e3bf2e36d6550f0067999c548dac643b626ccc735",
+      "packages/react-native-a11y-tree/runtime/modules.d.ts": "d7060fda898410a3d50081085a109dc0eee977519ec1c4d5dca0a007645db705",
+      "packages/react-native-a11y-tree/runtime/nativeComponentFallback.ts": "1d5206490b1730c8074a6ccabb7125bbc206ddf5e72174f4ad191f735c85b9a8",
+      "packages/react-native-a11y-tree/runtime/nativeFixtures.ts": "e42f53fbb833ee6ad79e4bbdf1c061e9387f2ff28b7ac2f20b04317c4b816d5f",
+      "packages/react-native-a11y-tree/runtime/nitroFixtures.ts": "a0e5ec4672810e7476af17d64337271ad384b6a022a08a70edc0d6ee7b97897c",
+      "packages/react-native-a11y-tree/runtime/session.ts": "f472876f4cf9c6d9a35da1e9b95349eb153965164d137c6f2a0b93ac9244bfeb",
+      "packages/react-native-a11y-tree/runtime/settle.ts": "399743fb8cad3f5af1311ef04f6fa3cd03e1da83c10939cec95f14e64dad067f",
+      "packages/react-native-a11y-tree/runtime/timings.ts": "0bb25a24b150c90c30e4705594e46897dc2982dcfc6609abd4f4d84a11b6e42c",
+      "packages/react-native-a11y-tree/runtime/tree-index.ts": "f5cee6f5b2917952a014e663838c9227104c4eeee57e43b50ceba9c48817b825",
+      "packages/react-native-a11y-tree/runtime/tsconfig.json": "13e62bf014eb68b282ba21fd5001c2bf3acb296db65af504202b4303913e7128",
+      "packages/react-native-a11y-tree/runtime/turboModuleStubs.ts": "417087f12b0e3669f1b39cfe39f404da60201024659ae5782960219f3cefd02f"
+    }
+  }
+}

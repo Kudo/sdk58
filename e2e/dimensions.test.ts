@@ -2,7 +2,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
 import type {RenderResult} from '../packages/react-native-a11y-tree/src/schema.ts';
-import {cliJson, E2E_PRESETS, get, hostCapabilities, hostSkip, ROOT} from './helpers.ts';
+import {cliJson, E2E_PRESETS, get, hostCapabilities, hostSkip, skipUnsupported, ROOT} from './helpers.ts';
 
 const APP = path.join(ROOT, 'examples', 'dimensions', 'App.tsx');
 
@@ -10,7 +10,7 @@ describe('dimensions', () => {
   it.for(E2E_PRESETS)('[$name] Dimensions and PixelRatio follow the preset (examples/dimensions)', {timeout: 180_000}, (preset, t) => {
     if (hostSkip) t.skip(hostSkip);
     if (!hostCapabilities(preset).includes('deviceMetrics')) {
-      t.skip('host lacks deviceMetrics (NativeFantom.setDeviceMetrics)');
+      skipUnsupported(t, 'host lacks deviceMetrics (NativeFantom.setDeviceMetrics)');
     }
     const {width, height, scale, fontScale} = preset;
     const result = cliJson<RenderResult>(['render', APP], preset);

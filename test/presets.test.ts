@@ -51,6 +51,7 @@ describe('presets', () => {
 
   it('CLI: a11y-tree.json supplies the platform and viewport; flags override', {timeout: 180_000}, () => {
     const dir = tmpProject({preset: 'android-tablet', height: 1000});
+    fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     const bundleOnly = (extra: string[]) =>
       spawnSync('node', [CLI, 'render', path.join(dir, 'App.tsx'), '--bundle-only', '--no-cache', ...extra], {
         cwd: ROOT,
@@ -76,4 +77,15 @@ describe('presets', () => {
     expect(overridden).toMatch(/headerHeight": 40/);
     fs.rmSync(dir, {recursive: true, force: true});
   });
+});
+
+it('accepts schema references and validates fixture/policy configuration', () => {
+  const dir = tmpProject({$schema: './schema.json', setup: './fixtures.ts', failOnFallback: true, allowFallback: ['expo/Storage']});
+  try {
+    expect(loadProjectConfig(dir)).toMatchObject({setup: './fixtures.ts', failOnFallback: true, allowFallback: ['expo/Storage']});
+    for (const config of [{setup: []}, {setup: ''}, {failOnFallback: 'yes'}, {allowFallback: 'All'}, {allowFallback: ['']}, {$schema: 123}]) {
+      fs.writeFileSync(path.join(dir, 'a11y-tree.json'), JSON.stringify(config));
+      expect(() => loadProjectConfig(dir)).toThrow();
+    }
+  } finally {fs.rmSync(dir, {recursive: true, force: true});}
 });

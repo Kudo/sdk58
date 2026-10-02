@@ -216,7 +216,17 @@ jobs:
           RN_A11Y_HOST_STDERR_LOG: ${{ runner.temp }}/host-stderr.log
         run: |
           : > "$RN_A11Y_HOST_STDERR_LOG"
-          bun run test:e2e --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/e2e-report.json"
+          RN_A11Y_E2E_STRICT=1 bun run test:e2e --exclude e2e/package.test.ts --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/e2e-report.json"
+
+      - name: Package install and installed CLI E2E
+        # Cold npm installation otherwise competes with all Metro-heavy suites.
+        # Keep this a required test, and run it even if another suite failed.
+        if: ${{ !cancelled() }}
+        env:
+          RN_A11Y_HOST_STDERR_LOG: ${{ runner.temp }}/package-host-stderr.log
+        run: |
+          : > "$RN_A11Y_HOST_STDERR_LOG"
+          RN_A11Y_E2E_STRICT=1 bun run test:e2e e2e/package.test.ts --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/package-e2e-report.json"
 
       - name: Upload the e2e report and the host stderr
         if: always()
@@ -226,4 +236,6 @@ jobs:
           path: |
             ${{ runner.temp }}/e2e-report.json
             ${{ runner.temp }}/host-stderr.log
+            ${{ runner.temp }}/package-e2e-report.json
+            ${{ runner.temp }}/package-host-stderr.log
           if-no-files-found: warn

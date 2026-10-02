@@ -69,6 +69,9 @@ describe('host-download', () => {
     const baseUrl = pathToFileURL(release.out).href;
     await withEnv({RN_A11Y_HOST_MANIFEST: release.manifestFile, RN_A11Y_HOST_CACHE_DIR: release.cache}, async () => {
       const logs: string[] = [];
+      await expect(downloadHost({baseUrl, cacheOnly: true, log: l => logs.push(l)})).rejects.toThrow('doctor never downloads hosts');
+      expect(fs.existsSync(release.cache)).toBe(false);
+      expect(logs).toEqual([]);
       const bin = await downloadHost({baseUrl, log: l => logs.push(l)});
       expect(bin).toBe(path.join(release.cache, release.manifest.version, hostFileName()));
       if (process.platform !== 'win32') expect(fs.statSync(bin).mode & 0o100).toBeTruthy();
@@ -79,7 +82,7 @@ describe('host-download', () => {
       const asset = release.manifest.assets[assetKey()];
       fs.renameSync(path.join(release.out, asset.file), path.join(release.dir, 'moved.tar.gz'));
       logs.length = 0;
-      expect(await downloadHost({baseUrl, log: l => logs.push(l)})).toBe(bin);
+      expect(await downloadHost({baseUrl, cacheOnly: true, log: l => logs.push(l)})).toBe(bin);
       expect(logs).toStrictEqual([]);
 
       // A wrong checksum in the manifest: the cache does not match and the download is rejected.

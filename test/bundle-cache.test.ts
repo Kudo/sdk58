@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 
 import {
   BUNDLE_FILE,
+  bytecodePath,
   bundleKey,
   cacheRoot,
   entryDir,
@@ -111,12 +112,122 @@ describe('bundle-cache', () => {
         encoding: 'utf8',
         env: {...process.env, RN_A11Y_TREE_CACHE_DIR: cache},
       });
-    const first = run();
-    expect(first.status, first.stderr).toBe(0);
-    expect(first.stderr).toMatch(/Bundle: .* \(\d+ bytes, built, js\)/);
-    const second = run();
-    expect(second.status, second.stderr).toBe(0);
-    expect(second.stderr).toMatch(/Bundle: .* \(\d+ bytes, cached, js\)/);
-    fs.rmSync(cache, {recursive: true, force: true});
+    const snapshots: string[] = [];
+    try {
+      const first = run();
+      const firstPath = /Bundle: (.+) \(\d+ bytes/.exec(first.stderr)?.[1];
+      if (firstPath) snapshots.push(path.dirname(firstPath));
+      expect(first.status, first.stderr).toBe(0);
+      expect(first.stderr).toMatch(/Bundle: .* \(\d+ bytes, built, js\)/);
+      const second = run();
+      const secondPath = /Bundle: (.+) \(\d+ bytes/.exec(second.stderr)?.[1];
+      if (secondPath) snapshots.push(path.dirname(secondPath));
+      expect(second.status, second.stderr).toBe(0);
+      expect(second.stderr).toMatch(/Bundle: .* \(\d+ bytes, cached, js\)/);
+    } finally {
+      for (const dir of snapshots) fs.rmSync(dir, {recursive: true, force: true});
+      fs.rmSync(cache, {recursive: true, force: true});
+    }
   });
+
+  it.each([true, false])('tracks empty context directories according to recursive=%s', recursive => {
+    const temp = tmpDir();
+    try {
+      const routes = path.join(temp, 'routes');
+      const empty = path.join(routes, 'empty/deep');
+      fs.mkdirSync(empty, {recursive: true});
+      const work = path.join(temp, 'work');
+      fs.mkdirSync(work);
+      const bundleFile = path.join(work, 'bundle.js');
+      fs.writeFileSync(bundleFile, '// bundle');
+      const save = () => writeEntry({root: path.join(temp, 'cache'), key: 'context', bundleFile, files: [], excludeDir: work, contexts: [{root: routes, recursive}]});
+      const dir = save();
+      expect(isEntryValid(dir, 'context')).toBe(true);
+      fs.writeFileSync(path.join(empty, 'route.js'), 'route');
+      expect(isEntryValid(dir, 'context')).toBe(!recursive);
+      save();
+      fs.renameSync(path.join(empty, 'route.js'), path.join(empty, 'renamed.js'));
+      expect(isEntryValid(dir, 'context')).toBe(!recursive);
+      save();
+      fs.rmSync(path.join(empty, 'renamed.js'));
+      expect(isEntryValid(dir, 'context')).toBe(!recursive);
+      save();
+      fs.mkdirSync(path.join(routes, 'new-directory'));
+      expect(isEntryValid(dir, 'context')).toBe(false);
+    } finally {fs.rmSync(temp, {recursive: true, force: true});}
+  });
+
+  it('tracks absent context roots without crawling unrelated directories for normal apps', () => {
+    const temp = tmpDir();
+    try {
+      const source = path.join(temp, 'App.js');
+      fs.writeFileSync(source, 'app');
+      const unrelated = path.join(temp, 'unrelated');
+      fs.mkdirSync(unrelated);
+      const work = path.join(temp, 'work');
+      fs.mkdirSync(work);
+      const bundleFile = path.join(work, 'bundle.js');
+      fs.writeFileSync(bundleFile, '// bundle');
+      // Pre-create cache directories so writing the entry does not change the
+      // source parent directory being measured by this test.
+      const root = path.join(work, 'cache');
+      const missing = path.join(unrelated, 'missing');
+      const dir = writeEntry({root, key: 'context', bundleFile, files: [source], excludeDir: work, contexts: [{root: missing, recursive: true}]});
+      expect(isEntryValid(dir, 'context')).toBe(true);
+      fs.mkdirSync(missing);
+      expect(isEntryValid(dir, 'context')).toBe(false);
+      const normal = writeEntry({root, key: 'normal', bundleFile, files: [source], excludeDir: work});
+      fs.writeFileSync(path.join(missing, 'unimported.js'), 'unused');
+      expect(isEntryValid(normal, 'normal')).toBe(true);
+    } finally {fs.rmSync(temp, {recursive: true, force: true});}
+  });
+});
+
+it('invalidates bundle keys when project tooling, Babel config, or build environment changes', () => {
+  const project = tmpDir();
+  const saved = process.env.EXPO_PUBLIC_A11Y_CACHE_TEST;
+  try {
+    const options = {entry: 'entry', platform: 'android', dev: false, minify: false, projectRoot: project};
+    const versionFile = path.join(project, 'node_modules', 'metro', 'package.json');
+    fs.mkdirSync(path.dirname(versionFile), {recursive: true});
+    fs.writeFileSync(versionFile, JSON.stringify({name: 'metro', version: '1.0.0'}));
+    const first = bundleKey(options);
+    fs.writeFileSync(versionFile, JSON.stringify({name: 'metro', version: '2.0.0'}));
+    expect(bundleKey(options)).not.toBe(first);
+    const second = bundleKey(options);
+    const babel = path.join(project, 'babel.config.js');
+    fs.writeFileSync(babel, 'module.exports = {plugins: []};');
+    expect(bundleKey(options)).not.toBe(second);
+    const third = bundleKey(options);
+    process.env.EXPO_PUBLIC_A11Y_CACHE_TEST = 'changed';
+    expect(bundleKey(options)).not.toBe(third);
+    const fourth = bundleKey(options);
+    fs.writeFileSync(babel, 'module.exports = {};');
+    expect(bundleKey(options)).not.toBe(fourth);
+  } finally {
+    if (saved === undefined) delete process.env.EXPO_PUBLIC_A11Y_CACHE_TEST;
+    else process.env.EXPO_PUBLIC_A11Y_CACHE_TEST = saved;
+    fs.rmSync(project, {recursive: true, force: true});
+  }
+});
+
+
+it('never selects bytecode published late by a compiler for a replaced bundle', () => {
+  const root = tmpDir();
+  try {
+    const js = path.join(root, 'input.js');
+    fs.writeFileSync(js, 'old source');
+    const options = {root, key: 'same-entry', bundleFile: js, files: [js], excludeDir: path.join(root, 'work')};
+    const dir = writeEntry(options);
+    const oldOutput = bytecodePath(dir)!;
+    fs.writeFileSync(js, 'new source');
+    writeEntry(options);
+    const currentOutput = bytecodePath(dir)!;
+    expect(currentOutput).not.toBe(oldOutput);
+    // Reproduce the old detached compiler finishing after the new entry exists.
+    fs.writeFileSync(oldOutput, 'stale bytecode');
+    expect(fs.existsSync(bytecodePath(dir)!)).toBe(false);
+    fs.writeFileSync(currentOutput, 'current bytecode');
+    expect(fs.readFileSync(bytecodePath(dir)!, 'utf8')).toBe('current bytecode');
+  } finally {fs.rmSync(root, {recursive: true, force: true});}
 });

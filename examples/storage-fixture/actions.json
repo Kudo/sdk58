@@ -1,0 +1,11 @@
+[
+  {"type": {"testID": "note", "text": "Remember this"}},
+  {"tap": {"testID": "save"}},
+  {"snapshot": "saved"},
+  {"type": {"testID": "note", "text": "Temporary"}},
+  {"tap": {"testID": "load"}},
+  {"snapshot": "loaded"},
+  {"tap": {"testID": "remove"}},
+  {"tap": {"testID": "load"}},
+  {"snapshot": "removed"}
+]

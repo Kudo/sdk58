@@ -4,6 +4,63 @@ All notable changes to `react-native-a11y-tree` and its native runtime packages.
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The CLI and platform packages
 share one version.
 
+## [Unreleased]
+
+### Added
+
+- Bounded Windows process-tree cleanup using the system taskkill command, with explicit incomplete-cleanup metadata and Windows-only descendant lifecycle tests.
+
+- Backpressure and a 32 MiB input buffer ceiling for sessions, bounded response writes, and cleanup when a client closes or stops reading output.
+- Reproducible MMKV 4.3.1/4.3.2 fixture-contract exercise on both presets, with artifact integrity checks and explicit unsupported-boxing results.
+
+- Bound session host output per request, retained diagnostics and stderr tails; preserve long valid sessions, structured terminal errors and streamed diagnostic logs.
+- Bound session shutdown and inherited pipes, with POSIX process-group cancellation and signal-handler cleanup.
+
+- `--no-stderr` (also `noStderr` in agent tool inputs) suppresses CLI stderr while preserving structured stdout diagnostics and exit codes; explicit NDJSON errors are emitted on stdout.
+
+- Bound combined one-shot host output to 32 MiB before protocol parsing; terminate output floods and do not retry their bytecode.
+
+- Explicit Nitro HybridObject fixture factories and E2E coverage of real MMKV JS and Nitro Image view registration, with native limitations exposed in diagnostics.
+
+- Release gates exercise the npm-packed universal macOS host on ARM64 and Intel; package E2E respects the selected host.
+
+- Explicit consuming-app roots and constrained custom Metro configuration, including real SVG-transformer regression coverage; unsupported worker/serializer integrations are rejected.
+- Diagnostics for detected but ignored Metro configs; custom-config runs bypass persistent caches to preserve config-helper freshness.
+
+- One-shot host deadlines and cancellation, with no bytecode retry after timeout.
+- Strict native E2E capability checks in CI, with bounded CLI subprocess execution.
+
+- Dependency doctor with app-resolved versions, local host metadata and strict tested-version checks; reject known React Native host mismatches before bundling.
+- Explicit application Expo/TurboModule fixtures with lazy diagnostics, cache invalidation and project-level strict policy.
+- Real AsyncStorage JS integration example and headless action coverage on both presets.
+
+- Structured, cumulative native limitation diagnostics in render/run/check/session results, including compact and filtered output.
+- Opt-in `--fail-on-fallback` CI policy with exact-name allowances and exit 6; caught unsupported adapter APIs remain observable.
+- Fresh-process agent-loop benchmark that verifies source-edit cache freshness without a Metro daemon.
+
+### Fixed
+
+- Clean up POSIX process groups after natural host failures even when descendants close inherited pipes; preserve Windows incomplete-cleanup details when an exited runner produces no result.
+
+- Keep per-invocation JS/bytecode snapshots independent of shared-cache replacement and eviction; discard only the bytecode generation that failed and recover from malformed cache metadata.
+
+- Allow graceful session shutdown to use the configured timeout instead of a fixed 250 ms, while retaining bounded forced cleanup.
+- Preserve session cleanup logs on implicit EOF shutdown and interrupt blocked final responses after the host has already exited. Correct session timeout/error exit-code documentation.
+
+- Core iOS Linking fallback rejects unsupported URL launches, settings launches and handler queries instead of reporting invented native results; caught errors remain visible to strict policy.
+
+- Keep fresh JavaScript usable when a locked or unwritable finished-bundle cache cannot be published; never select stale bytecode after publication failure.
+- Correct Windows Metro fixture path handling and isolate the bounded npm-install test from concurrent Metro suites.
+- Match Expo Router `app`, `src/app` and custom-root discovery and invalidate route caches after config-helper changes.
+
+- Capture uncaught React render/effect errors through the Fabric root callback; preserve handled Error Boundary fallbacks and report failures after actions.
+- Invalidate finished bundles for `require.context` additions, renames and removals, including previously empty route directories.
+
+- Keep late background Hermes compilation from publishing bytecode selected by a newer bundle generation.
+- Evaluate strict policy during session EOF cleanup and retain diagnostics on invalid requests.
+- Resolve cache-key tooling from the app, and invalidate bundles and Metro transforms when tracked build configuration or public environment inputs change.
+- Report core TurboModule stubs and retain native diagnostics when querying or compacting trees.
+
 ## [0.1.3] - 2026-10-01
 
 ### Added

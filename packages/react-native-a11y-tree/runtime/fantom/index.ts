@@ -109,7 +109,11 @@ class Root {
     const surfaceIdIsNumber = this.#surfaceId as unknown as number;
     // @ts-expect-error: react-native's generated type of `render` (Flow
     // `callback: ?() => void, options?: ...`) does not allow null or omitting options.
-    ReactFabric.render(element, surfaceIdIsNumber, null, true);
+    ReactFabric.render(element, surfaceIdIsNumber, null, true, {
+      // React reports uncaught render/effect failures directly to the root's
+      // handler, bypassing ErrorUtils. Capture them before returning a tree.
+      onUncaughtError: captureError,
+    });
 
     if (this.#document == null) {
       this.#document =
@@ -172,7 +176,20 @@ export function scheduleTask(task: () => void | Promise<void>) {
 
 let flushingQueue = false;
 let isLogBoxCheckEnabled = true;
-let pendingError: unknown = null;
+let pendingError: Error | null = null;
+
+function captureError(error: unknown): void {
+  if (pendingError != null) return;
+  if (error instanceof Error) {
+    pendingError = error;
+    return;
+  }
+  // React also allows throwing null or arbitrary objects. Neither should be
+  // confused with our empty sentinel, nor should a throwing toString hide it.
+  let message = 'Non-error value thrown';
+  try { message += `: ${String(error)}`; } catch {}
+  pendingError = new Error(message);
+}
 
 // Install a Fantom-specific global error handler that captures the first error
 // reported during the current work loop into `pendingError`. `runWorkLoop()`
@@ -185,11 +202,7 @@ let pendingError: unknown = null;
 // Subsequent errors during the same work loop are ignored: only the first one
 // is re-thrown, since it is typically the most informative; subsequent errors
 // are usually follow-on noise.
-ErrorUtils.setGlobalHandler((error: unknown, _isFatal: boolean) => {
-  if (pendingError == null) {
-    pendingError = error;
-  }
-});
+ErrorUtils.setGlobalHandler(captureError);
 
 /**
  * Runs a task on the event loop.

@@ -1,5 +1,66 @@
 # Runtime performance analysis
 
+## Fresh-process agent loop (2026-10-02)
+
+Measured with `scripts/agent-loop.ts`, the initial CLI hardening changes, and the upstream
+`9f0348c` macOS host from CI run 36971306501. Apple M4, Node 26.5.0, macOS arm64;
+Android phone preset, default automatic bytecode. Every sample starts a fresh
+CLI/host process. Each app starts with a separate empty cache. A disposable
+wrapper adds a revision label and the query returns that label; each edit is
+verified in the resulting tree. Original app files are unchanged.
+
+| Screen | Cold (one sample) | Unchanged median (range) | Source-edit median (range) |
+| --- | --- | --- | --- |
+| Medium (navigation/list/form/animation) | 6,821 ms | 772 ms (604–835), n=5 | 1,822 ms (1,393–2,672), n=5 |
+| SDK 58 starter Home | 5,491 ms | 461 ms (385–476), n=3 | 1,228 ms (1,165–2,150), n=3 |
+
+Raw samples and phase timings: [medium](perf/agent-loop-medium.json),
+[starter](perf/agent-loop-starter.json). These are observations from a shared
+machine, not latency guarantees or a before/after optimization comparison.
+Background bytecode compilation can contend with later invocations. Edits change
+only the wrapper, so this measures a small source edit, not dependency installation
+or a large refactor. Output is filtered; the full screen still mounts and is
+traversed. No simulator, emulator, Metro server, or daemon is used.
+
+## Router/cache hardening recheck (2026-10-02)
+
+Revision `efb3b23`, the same M4/Node/native-host setup, fresh CLI processes and
+separate empty caches. Samples run sequentially, on the same shared machine;
+other test work may contend for resources. This is additional coverage, not a
+controlled speedup comparison with the earlier samples.
+
+| Screen / preset | Cold (one sample) | Unchanged median (range) | Source-edit median (range) |
+| --- | --- | --- | --- |
+| Medium / Android phone | 6,414 ms | 571 ms (295–695), n=5 | 1,809 ms (1,520–2,455), n=5 |
+| SDK 58 full Router root / iOS phone | 7,736 ms | 644 ms (582–730), n=3 | 2,438 ms (2,105–3,057), n=3 |
+
+Raw samples: [medium](perf/agent-loop-medium-efb3b23.json),
+[Router root](perf/agent-loop-router-efb3b23.json). App paths are normalized to
+repository-relative paths; timings are unmodified. Each source edit changes the
+benchmark wrapper and verifies its revision label in the output. Router root
+resolution runs before finished-cache lookup. Native-tab diagnostics still
+apply: these timings do not establish native selected-tab visibility or drawing.
+No Metro daemon, simulator or emulator is involved.
+
+## Private cache snapshot recheck (2026-10-02)
+
+Revision `19acac0` includes private per-invocation bundle snapshots and the
+configured graceful session shutdown budget. On the same M4/Node/native-host
+setup, the medium screen Android preset measured 6,137 ms cold (one sample),
+656 ms unchanged median (327–721 ms, n=5), and 1,583 ms source-edit median
+(1,459–2,285 ms, n=5). Every invocation starts fresh; revision labels and expected
+cache hit/miss outcomes are asserted. No Metro daemon or simulator is used.
+
+[Raw samples](perf/agent-loop-medium-19acac0.json) retain phase timings. This is a
+shared-machine observation with automatic bytecode compilation, not a controlled
+before/after comparison or a guarantee. Other validation ran concurrently.
+
+## Historical measurements (2026-09-29)
+
+The following predates the finished-bundle cache, bytecode support, and revision-
+based settling; it should not be used as the current CLI baseline.
+
+
 Measured on 2026-09-29 with `scripts/perf.ts` on the medium example
 (`examples/medium/App.tsx`).
 

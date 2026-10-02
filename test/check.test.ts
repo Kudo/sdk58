@@ -301,6 +301,7 @@ describe('check', () => {
 
     // Default rules (and preset) from a11y-tree.json.
     fs.writeFileSync(path.join(dir, 'package.json'), '{"name":"p"}');
+    fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     fs.copyFileSync(APP, path.join(dir, 'App.tsx'));
     fs.writeFileSync(
       path.join(dir, 'a11y-tree.json'),

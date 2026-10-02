@@ -1,0 +1,211 @@
+{
+  "app": "examples/sdk58-default/RouterApp.tsx",
+  "preset": "ios-phone",
+  "bytecode": "auto",
+  "timestamp": "2026-10-02T10:46:34.917Z",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "node": "v26.5.0"
+  },
+  "summary": {
+    "cold": {
+      "n": 1,
+      "medianMs": 7736,
+      "minMs": 7736,
+      "maxMs": 7736
+    },
+    "unchanged": {
+      "n": 3,
+      "medianMs": 644,
+      "minMs": 582,
+      "maxMs": 730
+    },
+    "source-edit": {
+      "n": 3,
+      "medianMs": 2438,
+      "minMs": 2105,
+      "maxMs": 3057
+    }
+  },
+  "samples": [
+    {
+      "scenario": "cold",
+      "wallMs": 7736,
+      "outputBytes": 1959,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 7099.621,
+        "bundleBytes": 6025178,
+        "hostSpawnToResultMs": 437.66,
+        "hostStartupMs": 101.446,
+        "hostSpawnToExitMs": 458.523,
+        "js": {
+          "evalMs": 111.357,
+          "renderMs": 215.941,
+          "settleMs": 6.697,
+          "dumpMs": 1.846,
+          "jsTotalMs": 336.214,
+          "settleRounds": 10
+        },
+        "convertMs": 2.29,
+        "outputBytes": 1959,
+        "totalMs": 7657.891
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 582,
+      "outputBytes": 1959,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 53.261,
+        "bundleBytes": 6025178,
+        "hostSpawnToResultMs": 385.115,
+        "hostStartupMs": 65.696,
+        "hostSpawnToExitMs": 403.651,
+        "js": {
+          "evalMs": 107.791,
+          "renderMs": 202.047,
+          "settleMs": 8.035,
+          "dumpMs": 1.171,
+          "jsTotalMs": 319.419,
+          "settleRounds": 10
+        },
+        "convertMs": 2.109,
+        "outputBytes": 1959,
+        "totalMs": 560.981
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 644,
+      "outputBytes": 1959,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 27.939,
+        "bundleBytes": 6025178,
+        "hostSpawnToResultMs": 483.948,
+        "hostStartupMs": 71.452,
+        "hostSpawnToExitMs": 501.773,
+        "js": {
+          "evalMs": 126.58,
+          "renderMs": 276.772,
+          "settleMs": 7.561,
+          "dumpMs": 1.273,
+          "jsTotalMs": 412.496,
+          "settleRounds": 10
+        },
+        "convertMs": 3.961,
+        "outputBytes": 1959,
+        "totalMs": 624.94
+      }
+    },
+    {
+      "scenario": "unchanged",
+      "wallMs": 730,
+      "outputBytes": 1959,
+      "timing": {
+        "bundleCache": "hit",
+        "bytecode": false,
+        "metroMs": 37.784,
+        "bundleBytes": 6025178,
+        "hostSpawnToResultMs": 543.897,
+        "hostStartupMs": 88.596,
+        "hostSpawnToExitMs": 565.869,
+        "js": {
+          "evalMs": 144.672,
+          "renderMs": 300.761,
+          "settleMs": 8.193,
+          "dumpMs": 1.282,
+          "jsTotalMs": 455.301,
+          "settleRounds": 10
+        },
+        "convertMs": 3.293,
+        "outputBytes": 1959,
+        "totalMs": 709.478
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 3057,
+      "outputBytes": 1959,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 2303.493,
+        "bundleBytes": 6025178,
+        "hostSpawnToResultMs": 579.453,
+        "hostStartupMs": 96.446,
+        "hostSpawnToExitMs": 602.891,
+        "js": {
+          "evalMs": 193.682,
+          "renderMs": 279.058,
+          "settleMs": 8.63,
+          "dumpMs": 1.299,
+          "jsTotalMs": 483.007,
+          "settleRounds": 10
+        },
+        "convertMs": 2.465,
+        "outputBytes": 1959,
+        "totalMs": 3017.805
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 2438,
+      "outputBytes": 1959,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 1834.127,
+        "bundleBytes": 6025178,
+        "hostSpawnToResultMs": 438.204,
+        "hostStartupMs": 72.048,
+        "hostSpawnToExitMs": 456.51,
+        "js": {
+          "evalMs": 118.901,
+          "renderMs": 238.503,
+          "settleMs": 7.144,
+          "dumpMs": 1.247,
+          "jsTotalMs": 366.156,
+          "settleRounds": 10
+        },
+        "convertMs": 2.203,
+        "outputBytes": 1959,
+        "totalMs": 2406.862
+      }
+    },
+    {
+      "scenario": "source-edit",
+      "wallMs": 2105,
+      "outputBytes": 1959,
+      "timing": {
+        "bundleCache": "miss",
+        "bytecode": false,
+        "metroMs": 1563.048,
+        "bundleBytes": 6025178,
+        "hostSpawnToResultMs": 393.387,
+        "hostStartupMs": 67.135,
+        "hostSpawnToExitMs": 411.829,
+        "js": {
+          "evalMs": 108.902,
+          "renderMs": 208.695,
+          "settleMs": 7.133,
+          "dumpMs": 1.2,
+          "jsTotalMs": 326.252,
+          "settleRounds": 10
+        },
+        "convertMs": 2.122,
+        "outputBytes": 1959,
+        "totalMs": 2071.549
+      }
+    }
+  ],
+  "cliCommit": "efb3b2362b81753c7d9f553d266fa1b5e35d4d81",
+  "hostArtifactCommit": "9f0348c"
+}

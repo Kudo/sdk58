@@ -19,3 +19,15 @@ it('preserves supported view configs and propagates their errors', () => {
   expect(wrapNativeViewConfig('RCTText', () => original, deps)()).toBe(original);
   expect(() => wrapNativeViewConfig('SupportedButBroken', () => {throw new Error('broken config');}, deps)()).toThrow('broken config');
 });
+
+it.each(['RNSTabsHostIOS', 'RNSTabsHostAndroid'])('reports descriptor-only %s semantics without replacing its registered config', name => {
+  const warnings: string[] = [];
+  const original = {uiViewClassName: name, validAttributes: {navStateRequest: true}};
+  const get = wrapNativeViewConfig(name, () => original, {
+    hasComponent: () => true, viewConfig: () => {throw new Error('must keep registered descriptor');}, warn: message => warnings.push(message),
+  });
+  expect(get()).toBe(original);
+  expect(get()).toBe(original);
+  expect(warnings).toEqual([expect.stringContaining(`[NATIVE_COMPONENT_FALLBACK] ${name}:`)]);
+  expect(warnings[0]).toContain('selected-page visibility');
+});

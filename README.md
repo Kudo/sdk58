@@ -20,18 +20,170 @@ macOS arm64 only (the host is built by `bun run build:host`).
 
 | Feature | How it is real | E2E | Known gaps |
 | --- | --- | --- | --- |
-| Rendering and layout | Real Fabric (React, ShadowTree, Yoga) in the Fantom host | `e2e/render.test.ts` | macOS only; one surface per run |
+| Rendering and layout | Real Fabric (React, ShadowTree, Yoga) in the Fantom host | `e2e/render.test.ts` | One surface per run; native platform UI is not instantiated |
 | Text measurement | CoreText `TextLayoutManager` in the host; or the portable layout (stb_truetype, embedded Roboto; `RN_A11Y_TEXT_LAYOUT=portable`, see `native/README.md`) | `e2e/render.test.ts` (heights > 10) | macOS fonts, not Android/iOS fonts; portable: Roboto stands in for SF |
 | Accessibility tree | Host `NativeFantom.getA11yTree` (typed ShadowTree dump) → `src/tree.ts` | `e2e/render.test.ts` | Role/name derivation is simpler than real screen readers |
 | TextInput, Switch | Host `AndroidTextInput` / iOS `TextInput` (CoreText measured) and `AndroidSwitch` / `Switch` shadow nodes | `e2e/render.test.ts`, `e2e/run.test.ts` (both presets) | |
 | Tap, long press, typing | Host `hitTest` + by-tag native events, Pressable responder events, `setTextInputTextByTag` | `e2e/run.test.ts` | No multi-touch responder events; `click` does not bubble |
 | Scrolling, FlatList | Host scroll events and ScrollView state; `onLayout` delivered by settling the event queue | `e2e/scrolling.test.ts` | One scroll event per `scroll` action (no fling) |
 | Session mode | Host `--interactive` mode, one bundle | `e2e/session.test.ts` | No recovery after a host crash |
-| react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No transitions |
-| react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts` (default insets) | No e2e with non-zero insets yet |
+| react-native-screens | Library C++ compiled into the host; screen state emulated by the host | `e2e/navigation-stack.test.ts` | No native transitions or native-tab controller |
+| react-native-safe-area-context | Library C++ compiled into the host; insets from `--safe-area-insets` | `e2e/navigation-stack.test.ts`, `e2e/expo-modules.test.ts` (preset insets) | Insets are configured, not measured from a device |
 | react-native-gesture-handler | Host descriptors for detector/root/button; JS module on RNGH's web handlers fed by the runner; worklet callbacks through Reanimated | `e2e/gestures.test.ts` | No v3 Reanimated detector events, virtual detectors, or transforms in `absoluteToLocal` |
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
 | `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); see [Expo support](docs/expo-support.md) for other packages |
+
+## App roots and custom Metro configuration
+
+For a shared component outside the consuming app, select that app explicitly:
+
+```sh
+rn-a11y-tree render ../ui/Screen.tsx --project-root ./apps/mobile --preset android-phone
+```
+
+React and React Native imports from shared packages resolve through the consuming
+app to keep one runtime identity. The selected root supplies dependencies, Babel/tsconfig settings, native fixtures,
+and `a11y-tree.json`. It must contain `package.json`.
+
+Metro customization is explicit:
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone --metro-config ./metro.config.js
+```
+
+CLI `--metro-config` paths resolve from the working directory.
+Or set `"metroConfig": "./metro.config.js"` in `a11y-tree.json` (relative to the
+app root). Supported fields are `watchFolders`, resolver `assetExts`, `sourceExts`,
+`nodeModulesPaths`, `extraNodeModules`, `resolveRequest`, and transformer
+`babelTransformerPath`. This includes the tested `react-native-svg-transformer`
+1.5.3 Expo integration. Importing SVG components does not verify native SVG pixels;
+existing native fallback diagnostics still apply.
+
+Custom worker, serializer, polyfill, and other resolver/transformer changes are
+rejected. Native CSS integrations such as NativeWind need a separately verified
+adapter. Default callback recognition compares function source because Metro
+recreates its closures; this is not a semantic guarantee for arbitrary plugins.
+Use a dedicated headless configuration when the app config exceeds this surface.
+
+Explicit custom configuration disables persistent bundle, transform, and file-map
+caches: arbitrary plugin/helper inputs cannot yet be fingerprinted safely. This
+costs rebuild time, but config-helper edits take effect on the next invocation.
+The normal configuration retains its disk caches and needs no Metro daemon.
+Detected app-root Metro configs that are not selected produce a
+`BUILD_CONFIGURATION` diagnostic and fail strict fallback policy unless allowed.
+
+## Execution deadlines
+
+`render`, `run`, and `check` terminate a hung host after 30 seconds by default.
+Use `--timeout <ms>` to choose a positive integer deadline. It starts when the
+host launches, after Metro bundling, and reports `TIMEOUT` with exit code 5.
+The deadline is shared across bytecode fallback attempts. Shutdown allows a
+bounded grace period (up to 1.25 seconds). A timeout does not retry the app with
+JavaScript after a bytecode attempt.
+On POSIX, SIGINT/SIGTERM during host execution cancel that run and terminate its host process group.
+Session mode continues to apply `--timeout` separately to each request.
+
+One-shot host execution accepts at most 32 MiB of combined stdout and stderr,
+including the result and application logs. Exceeding this limit terminates the
+host with `HOST_CRASHED` (exit 5), `error.details.outputLimit: true`, and no
+bytecode retry. Reduce console output or render a smaller screen. This bounds
+protocol buffering even when a line has no newline. Diagnostic stderr files
+contain only output accepted before the limit.
+
+Sessions apply the same 32 MiB combined host-output budget separately to each
+request, including startup. Output between requests counts toward the next
+request; extra completion markers cannot reset it. Valid long sessions may
+produce more than 32 MiB overall. Retained diagnostics are deduplicated and
+bounded by both bytes and unique entries; overflow fails explicitly rather than
+dropping evidence. Stderr retention is limited to a 64 KiB tail, while accepted
+stderr can stream to `RN_A11Y_HOST_STDERR_LOG`.
+
+Session shutdown and inherited-pipe cleanup are bounded too. An idle host
+failure emits `{id: null, ok: false, error: ...}`; an active request retains its
+request ID, and startup failures use `ready: false`. Late shutdown logs or
+diagnostics may produce an additional `id: null` record. Rejected late evidence
+remains an error and causes exit 6 in strict mode. SIGINT/SIGTERM cancel the
+session with `HOST_CRASHED`, `details.cancelled: true`, and exit 5. POSIX host
+process groups are terminated. Windows requests bounded process-tree termination
+through the system `taskkill.exe` before killing the runner itself. A failed or
+unavailable tree cleanup is reported through `details.cleanupIncomplete` and
+`details.cleanupReason`, preserving the original timeout/cancellation error.
+Windows cannot guarantee descendant cleanup after the runner has already exited;
+the pipe cutoff still bounds the CLI wait. This is best-effort cleanup, not a
+Windows Job Object ownership guarantee.
+
+## Dependency checks and application fixtures
+
+See [production adoption and remaining validation](docs/production-readiness.md)
+for the supported use case, maintenance policy and evidence still needed.
+
+Run `rn-a11y-tree doctor ./path/to/app` before bundling. JSON output reports
+app-resolved dependency versions, local host metadata, and compatibility issues.
+`--strict` also rejects dependency versions outside the tested tuple. Doctor does
+not execute or download a host; a successful result is a dependency preflight,
+not proof that all native APIs or device behavior are supported. Rendering rejects
+known React Native major/minor host mismatches before Metro starts.
+
+For native services specific to your app, provide an explicit fixture file:
+
+```ts
+// fixtures.ts
+export default {
+  turboModules: {
+    MyNativeService: {getValue: () => 'deterministic fixture value'},
+  },
+  expoModules: {
+    MyExpoService: {getStatusAsync: async () => 'available'},
+  },
+  nitroModules: {
+    // A factory per HybridObject creation, not a shared module singleton.
+    MyHybridService: () => ({getValue: () => 'fixture value'}),
+  },
+};
+```
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone --setup ./fixtures.ts
+```
+
+Fixtures install before the app imports. They override named modules, emit an
+`APPLICATION_FIXTURE` diagnostic when used, and reset with each fresh CLI process.
+Their source participates in bundle cache invalidation. Implement the actual JS
+library's native contract, including callback and Promise behavior; these fixtures
+do not verify native implementation, persistence, permissions, or device lifecycle.
+See [the AsyncStorage example](examples/storage-fixture) for a real third-party JS
+library backed by an explicit in-memory native fixture.
+
+Nitro fixtures require the app's `react-native-nitro-modules` dependency. They
+provide explicit HybridObject factories through the package's normal JS bootstrap;
+used factories report `APPLICATION_FIXTURE` with target `nitro/<name>`. Unknown
+objects and unsupported native proxy operations throw and report
+`NATIVE_API_UNSUPPORTED`, including when the app catches the error. No native
+Nitro/JSI objects, persistence, cross-runtime sharing, or native state are created.
+Nitro 0.37.1 also attempts boxing during import when Worklets is installed; that
+caught error remains a `NitroModules.box` diagnostic and fails strict mode even
+when all fixture names are allowed.
+Nitro views use the existing unsupported-view fallback: layout and standard View
+props can be inspected, but native drawing, `hybridRef`, and native callbacks
+are not executed. Strict mode requires an explicit allowance for each view.
+See [the Nitro example](examples/nitro-fixture) for MMKV and Nitro Image coverage
+and the exact package versions and limitations.
+
+Commit shared policy in the app's `a11y-tree.json`:
+
+```json
+{
+  "setup": "./fixtures.ts",
+  "failOnFallback": true,
+  "allowFallback": ["turbo/MyNativeService", "expo/MyExpoService"]
+}
+```
+
+Config `setup` paths resolve from the project root; CLI `--setup` paths resolve
+from the working directory. `--no-fail-on-fallback` overrides configured strict
+policy. Allowances acknowledge specific simulated modules; unsupported built-in
+adapter APIs still fail strict policy. Native UI libraries that need descriptors,
+layout, gestures, or rendering may require host integration beyond these fixtures.
 
 ## Install
 
@@ -127,7 +279,8 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--dev` | all | off | Development bundle (`__DEV__ = true`) |
 | `--keep-bundle` | all | off | Keep the bundle and print its path to stderr |
 | `-v, --verbose` | all | off | Metro progress, host glog and console output on stderr |
-| `-q, --quiet` / `--no-quiet` | all | quiet when stdout is not a terminal | No app console output or CLI warnings on stderr (they are in `logs` / `fallbacks`) |
+| `-q, --quiet` / `--no-quiet` | all | quiet when stdout is not a terminal | Suppress ordinary app console output and CLI warnings; native fallback warnings still print |
+| `--no-stderr` | all | off | Suppress all CLI stderr output, including fallback warnings, errors, verbose logs and timings; preserve stdout diagnostics and exit codes |
 | `--out <file>` | `render`, `run` | stdout | Write the output to a file |
 | `--format <f>` | `render`, `run` | `json` | `json`, `compact` (no defaults/empties, no `style`), `text` (one line per node), `ndjson` (one node per line) |
 | `--select <sel>` | `render`, `run` | all | Only nodes matching `field=value` or `field~text` (fields: `testID`, `role`, `name`, `type`, `key`, `ref`, `sel`, `text`); repeat to AND. Matches only, unless `--depth` |
@@ -140,7 +293,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--tap-mode <mode>` | `run`, `session`, `check` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
 | `--rules <json>` | `check` | `rules` in `a11y-tree.json` | Rules file `{"rules": {...}}`, or that JSON itself (a value that starts with `{`) (see [Check](#check)) |
 | `--diff` | `run` | off | Add `diff: {added, removed, changed}` (by `key`) to each step |
-| `--timeout <ms>` | `session` | `30000` | Per-request timeout; on timeout the host is killed and the exit code is 1 |
+| `--timeout <ms>` | `session` | `30000` | Host-frame, output-write and graceful-shutdown timeout; on timeout the host is killed and the exit code is 5 |
 
 ## Presets and a11y-tree.json
 
@@ -291,10 +444,11 @@ adds a violation with `rule: "step"` and `key: "step:<index>"`.
 
 - `tools/*.json`: MCP-style tool descriptors `{name, description,
   inputSchema, outputSchema, examples: [{input, argv}], x-cli}` for
-  `render`, `query`, `act` (`run`), `diff` (`run --diff`), `check` and
+  `doctor`, `render`, `query`, `act` (`run`), `diff` (`run --diff`), `check` and
   `session` (with `x-protocol` for the stdin/stdout lines). Input types are
   in `src/tools.ts`; `toolArgv(name, input)` maps an input to CLI arguments
-  (`actions` and `rules` are passed inline as JSON). Example:
+  (`actions` and `rules` are passed inline as JSON). Every tool accepts
+  `noStderr: true` to suppress CLI stderr while retaining structured output. Example:
 
   ```sh
   rn-a11y-tree run examples/basic/App.tsx --platform android \
@@ -353,8 +507,19 @@ about 55 ms). Measure with `--bytecode off`: in `auto` mode the background
 ## Errors and exit codes
 
 Errors are `{"error": {code, message, hint?, details?}}`: on stdout with an
-explicit `--format json`, else on stderr (one JSON line when stderr is not a
-terminal or with `--quiet`, a readable message otherwise).
+explicit `--format json` or `--format ndjson` (one line for NDJSON), else on stderr
+(one JSON line when stderr is not a terminal or with `--quiet`, a readable
+message otherwise). `--no-stderr` suppresses stderr entirely; use an explicit
+machine format to retain error details on stdout. Exit codes are unchanged.
+For example:
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone --format ndjson --no-stderr
+```
+
+Fallback diagnostics remain in stdout, including the NDJSON diagnostics record.
+`--no-stderr` overrides `--verbose`, `--no-quiet` and `--timing`; it does not
+change `--fail-on-fallback` policy.
 
 | Exit | Codes | Meaning |
 | --- | --- | --- |
@@ -364,6 +529,12 @@ terminal or with `--quiet`, a readable message otherwise).
 | 3 | `BUNDLE_FAILED` | Metro failed (syntax error, missing import) |
 | 4 | `APP_THREW` | the app threw while loading or rendering (`details.stack`) |
 | 5 | `HOST_MISSING`, `HOST_UNAVAILABLE`, `HOST_INCOMPATIBLE`, `HOST_CRASHED`, `TIMEOUT` | host problems (`details.stderrTail`) |
+| 6 | `UNSUPPORTED_NATIVE` | `--fail-on-fallback` rejected an observed native/runtime limitation |
+
+Uncaught React render/effect failures are captured from the renderer and reported
+as `APP_THREW`; they cannot silently produce an empty successful tree. Errors
+handled by an application Error Boundary still render its fallback normally.
+A plain `console.error` is a log, not an uncaught render exception.
 
 - Step errors are `{code, message}` with `TARGET_NOT_FOUND`,
   `TARGET_COVERED`, `TIMEOUT` or `APP_THREW`; session error responses use the
@@ -373,6 +544,83 @@ terminal or with `--quiet`, a readable message otherwise).
   common noise (`getViewManagerConfig('RNCMaskedView')`, deprecation
   warnings). With `--no-quiet`, errors and warnings that are not known noise
   are also printed on stderr.
+
+## Observed native limitations and CI policy
+
+Successful renders are not proof of native equivalence. `diagnostics` reports observed
+native component substitutions, module adapters (including core TurboModule stubs),
+unsupported adapter API calls, and action-runner fallbacks. Each entry has
+`{code, target, message}`. Entries are deduplicated by code and target. An empty
+list does not certify device behavior: platform emulation and unexercised APIs
+still need device validation. See [Expo support](docs/expo-support.md).
+
+Diagnostics survive `--select` (including no matches), `--subtree`, `--depth`, and
+compact output. Text output prints warning lines; render/run NDJSON can include
+an envelope `{diagnostics: [...]}` before node/step lines. Session ready lines and
+responses report cumulative observed limitations, so querying later cannot hide
+an earlier fallback. App logs remain available separately.
+
+The default stays permissive for exploration. Opt in to a CI policy:
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone --format json --fail-on-fallback
+# After reviewing the reported limitations, allow only the intentional ones:
+rn-a11y-tree render App.tsx --preset android-phone --format compact \
+  --fail-on-fallback --allow-fallback ExpoImage --allow-fallback StatusBarManager
+```
+
+`--allow-fallback` is repeatable and matches exact `target` names; there are no
+wildcards. Allowed limitations remain in diagnostics. Unsupported adapter API
+calls cannot be allowed, even when app code catches the exception. Model those
+operations explicitly in an application fixture instead. The flags work with
+`render`, `run`, `check`, `session`, and generated agent tool descriptors.
+
+A policy rejection emits `UNSUPPORTED_NATIVE` with the rejected diagnostics in
+`error.details` and exits 6. A strict session refuses startup or ends after the
+first request observing an unapproved limitation. This is result validation,
+not an execution sandbox: a one-shot script runs before its result is checked.
+Existing app/host failures retain their error codes. `--bundle-only` does not
+execute native code and therefore does not evaluate this policy.
+
+## Fresh-process agent loop
+
+Use `render`, `run --script`, or `check` after each edit. No Metro server or daemon
+is required. Finished bundles skip Metro when valid; source edits reuse Metro's
+disk transform cache. Bundle keys include project-resolved tooling, ancestor
+package manifests/lockfiles/Babel configs, dotenv files, and `NODE_ENV`,
+`BABEL_ENV`, and `EXPO_PUBLIC_*` values. Build-input changes also invalidate Metro
+transforms. Each rebuilt bundle has a unique bytecode output, so a background
+compiler finishing after another edit cannot replace the current bytecode.
+Arbitrary files/environment variables read by custom Babel plugins
+are not automatically tracked; use `--reset-cache` for those changes.
+`require.context` directories are tracked even when empty, including recursive
+subdirectories. Adding, renaming, or deleting a matching route invalidates the
+finished bundle; ordinary apps without context imports do not scan directory trees.
+If publishing a finished cache entry fails (for example, a Windows file lock),
+the invocation uses its fresh temporary JavaScript bundle without cached bytecode.
+Verbose output reports the skipped publication. Before execution, cached JS and
+any selected bytecode are copied into a private temporary snapshot. The cache
+generation and inputs are rechecked after copying; a racing replacement becomes
+a miss. Later cache replacement or eviction cannot change that invocation's
+artifacts. A failed bytecode load attempts to discard only its selected generation; a
+locked cache file does not prevent the JS retry. Snapshots
+are removed after the invocation unless `--keep-bundle` or `--bundle-only` retains
+them. These snapshots do not make concurrent edits to the application's sources
+an atomic transaction.
+
+Measure cold startup, unchanged invocations, and actual source edits separately:
+
+```sh
+RN_A11Y_HOST_BIN=/path/to/rn-a11y-host bun scripts/agent-loop.ts \
+  --app examples/medium/App.tsx --iterations 5 --out /tmp/agent-loop.json
+```
+
+The benchmark creates a disposable wrapper next to the app, verifies a visible
+revision after each edit, checks expected cache hits/misses, and removes the
+wrapper afterward. It never changes the original app. Every sample starts a new
+CLI process. The report includes per-phase timings, wall time and output bytes;
+`--bytecode off` can isolate JS-only performance. It measures the selected screen,
+not an agent's complete task or device fidelity.
 
 ## Formats and queries
 
@@ -777,7 +1025,12 @@ host lacks but libraries require at import time: `StatusBarManager` (RNGH
 imports `DrawerLayoutAndroid`, which imports `StatusBar`), and for
 `--platform ios` `KeyboardObserver` (`Keyboard` creates a
 `NativeEventEmitter` with it) and `LinkingManager` (`Linking`; React
-Navigation imports it).
+Navigation imports it). The Linking stand-in returns no initial URL and emits no
+native URL events. `openURL`, `openSettings`, and `canOpenURL` reject with
+`NATIVE_API_UNSUPPORTED`: this host neither launches native screens nor knows
+which URL handlers a device has installed. An app may provide an explicit
+`LinkingManager` fixture for those branches. Caught unsupported calls still fail
+`--fail-on-fallback`, even when the import fallback is allowed.
 
 ## Session mode
 
@@ -812,14 +1065,25 @@ order, one at a time.
   `key` / `sel` values with their `ref` ("Did you mean ..."), or, for a
   `testID` without a close match, the testIDs in the tree.
 - `fallbacks` is added to a response when JS fallbacks were used.
-- If the app fails to load, the first line is `{"ready": false, "error"}`
-  and the exit code is 1.
-- `quit`, or the end of stdin, unmounts the app and stops the host; the exit
-  code is the host's (0).
-- App console output goes to stderr as `[app] ...` lines.
-- `--timeout <ms>` (default 30000) limits each request. On timeout the
-  response is `{"id", "ok": false, "error": "timeout"}`, the host is killed,
-  and the exit code is 1.
+- An uncaught app error during startup emits `{"ready": false, "error": {"code": "APP_THREW", ...}}`
+  and exits 4. Host failures exit 5; rejected fidelity policy exits 6.
+- `quit`, or the end of stdin, unmounts the app and stops the host. Normal
+  shutdown exits 0; shutdown failures and late diagnostics can change that result.
+- App console output goes to stderr as `[app] ...` lines. `--quiet` suppresses
+  ordinary app logging; `--no-stderr` also suppresses warning prose. Structured
+  logs and diagnostics remain in stdout responses.
+- `--timeout <ms>` (default 30000) limits each host frame, each response
+  write, and graceful host shutdown separately. Host-frame timeouts emit a
+  structured `TIMEOUT` error and exit 5. Shutdown that exceeds this budget emits
+  `HOST_CRASHED` and exits 5. A blocked
+  or closed output consumer also stops the host and exits 5; an unavailable
+  output stream cannot carry a final JSON error. Waiting for the next client
+  request has no idle deadline.
+- Input is consumed in order with backpressure while requests and writes are
+  pending. Client input buffering is capped at 32 MiB, including unfinished
+  lines; exceeding it emits `USAGE` with `details.inputLimit: true`, stops the
+  host, and exits 1. Embedders must supply a readable that honors backpressure;
+  their own producer-side buffers remain their responsibility.
 
 How it works: the host runs in Fantom's `--interactive` mode. It evaluates the
 bundle, then reads frames from stdin (a line with the byte length, then that
@@ -1234,7 +1498,8 @@ With the 0.1.2 runtime, unsupported native components render as a plain React
 Native View. Standard View props (including style, testID and accessibility),
 children and child interactions are preserved. A `[NATIVE_COMPONENT_FALLBACK]`
 warning names each substituted component once when it is first rendered. Warnings
-go to stderr even with piped JSON or `--quiet`, and are retained in output logs.
+go to stderr even with piped JSON or `--quiet`, unless `--no-stderr` is set.
+Structured diagnostics and output logs are retained when stderr is suppressed.
 
 This allows screens using libraries such as `react-native-svg` to be inspected
 without their native renderer. SVG paths, fills, native geometry, custom events
@@ -1250,7 +1515,8 @@ Starting with 0.1.3, explicit adapters allow SDK 58 starter Home/Explore screens
 and `expo-image` imports to render headlessly. Images retain layout, source props
 and accessibility; image loading/decoding/caching and native events are not
 simulated. Unsupported operations reject with `[NATIVE_API_UNSUPPORTED]`.
-Adapters warn once on stderr with `[NATIVE_MODULE_FALLBACK]`, even under `--quiet`.
+Adapters warn once on stderr with `[NATIVE_MODULE_FALLBACK]`, even under `--quiet`
+(unless `--no-stderr` is set). Structured diagnostics remain available.
 
 Unknown optional modules remain unavailable so the library can use its own
 fallback. Unknown required modules still fail, with an adapter/mock hint. Native

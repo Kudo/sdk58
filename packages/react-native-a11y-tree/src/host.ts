@@ -3,8 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
+import {PassThrough} from 'node:stream';
 import {fileURLToPath} from 'node:url';
 import {getHostPath, getHostVersionPath} from './runtimePackage.ts';
+import {terminateWindowsTree, type ProcessCleanupResult} from './processCleanup.ts';
 
 import {CliError, type ErrorCode, type LogEntry, logEntry, nativeModuleHint} from './errors.ts';
 import {BASE_URL_ENV, downloadHost, hostFileName, readManifest} from './hostDownload.ts';
@@ -47,6 +49,9 @@ export type HostOptions = {
   quiet?: boolean;
   /** Time zone of the host process (`TZ`); default DEFAULT_TZ. */
   tz?: string;
+  /** Whole subprocess lifetime, including shutdown after a result. Default 30 seconds. */
+  timeoutMs?: number;
+  signal?: AbortSignal;
 };
 
 /** The host runs in UTC unless `--tz` says otherwise, so date strings do not depend on the machine. */
@@ -61,18 +66,26 @@ export type HostTiming = {spawn?: number; result?: number; exit?: number};
 
 /** Host or app failure; `code` is APP_THREW, HOST_MISSING or HOST_CRASHED. */
 export class HostError extends CliError {
-  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null};
+  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean; outputLimit?: boolean} & ProcessCleanupResult;
 
   constructor(
     code: ErrorCode,
     message: string,
-    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null},
+    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean; outputLimit?: boolean} & ProcessCleanupResult,
     hint?: string,
   ) {
     const details: Record<string, unknown> = {};
     if (hostDetails?.stack) details.stack = hostDetails.stack;
     if (hostDetails?.exitCode != null) details.exitCode = hostDetails.exitCode;
     if (hostDetails?.stderr) details.stderrTail = hostDetails.stderr.trimEnd().split('\n').slice(-20).join('\n');
+    if (hostDetails?.outputLimit) details.outputLimit = true;
+    if (hostDetails?.cancelled) details.cancelled = true;
+    if (hostDetails?.cleanupTimedOut) details.cleanupTimedOut = true;
+    if (hostDetails?.cleanupIncomplete) {
+      details.cleanupIncomplete = true;
+      details.cleanupReason = hostDetails.cleanupReason;
+      if (hostDetails.cleanupExitCode !== undefined) details.cleanupExitCode = hostDetails.cleanupExitCode;
+    }
     super(code, message, {hint, details});
     this.hostDetails = hostDetails;
     this.name = 'HostError';
@@ -109,9 +122,11 @@ export type HostInfo = {
   /** From host-version.json (package or downloaded manifest). */
   version?: string;
   protocolVersion?: number;
+  rnVersion?: string;
+  nativeLibs?: Record<string, string | null>;
 };
 
-type HostManifestLike = {version?: unknown; protocolVersion?: unknown} | null;
+type HostManifestLike = {version?: unknown; protocolVersion?: unknown; reactNative?: unknown; rnVersion?: unknown; nativeLibs?: unknown} | null;
 
 /** Probes used by findHost (replaced in tests). */
 export type HostProbes = {
@@ -132,9 +147,15 @@ export type HostProbes = {
 };
 
 function info(bin: string, source: HostSource, manifest: HostManifestLike): HostInfo {
+  manifest ??= readJson(path.join(path.dirname(bin), 'host-version.json'));
   const result: HostInfo = {bin, source};
   if (typeof manifest?.version === 'string') result.version = manifest.version;
   if (typeof manifest?.protocolVersion === 'number') result.protocolVersion = manifest.protocolVersion;
+  const rnVersion = manifest?.reactNative ?? manifest?.rnVersion;
+  if (typeof rnVersion === 'string') result.rnVersion = rnVersion;
+  if (manifest?.nativeLibs && typeof manifest.nativeLibs === 'object' && !Array.isArray(manifest.nativeLibs)) {
+    result.nativeLibs = Object.fromEntries(Object.entries(manifest.nativeLibs).filter((entry): entry is [string, string | null] => typeof entry[1] === 'string' || entry[1] === null));
+  }
   return result;
 }
 
@@ -236,14 +257,14 @@ function packageHost(): {bin: string; manifest: HostManifestLike} | null {
   }
 }
 
-export function defaultProbes(log: (line: string) => void): HostProbes {
+export function defaultProbes(log: (line: string) => void, cacheOnly = false): HostProbes {
   return {
     env: process.env[HOST_BIN_ENV],
     baseUrl: process.env[BASE_URL_ENV],
     exists: fs.existsSync,
     packageHost,
     download: async baseUrl => {
-      const bin = await downloadHost({baseUrl, log});
+      const bin = await downloadHost({baseUrl, log, cacheOnly});
       return {bin, manifest: readManifest()?.manifest ?? null};
     },
     distBin: DEFAULT_HOST_BIN,
@@ -357,23 +378,76 @@ type HostLine =
  * `{"type":"rn-a11y-tree-result","rnA11yTree":{...}}`); glog goes to stderr.
  */
 export async function runHost<T = HostPayload>(options: HostOptions): Promise<T> {
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647) {
+    throw new CliError('USAGE', 'Host timeoutMs must be an integer from 1 through 2147483647.');
+  }
+  if (options.signal?.aborted) {
+    throw new HostError('HOST_CRASHED', 'Host execution cancelled', {cancelled: true});
+  }
   const bin = getHostBin();
   if (options.timing) options.timing.spawn = performance.now();
   const child = spawnHost(bin, hostArgs(options), {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: hostEnv(options.tz),
+    // POSIX uses a process group; Windows uses bounded taskkill tree cleanup.
+    // A root that already exited (Windows), or escaped descendants (POSIX),
+    // can still retain pipes, so cleanup always has a hard cutoff.
+    detached: process.platform !== 'win32',
   });
 
-  const stderrChunks: Buffer[] = [];
-  child.stderr!.on('data', (chunk: Buffer) => {
-    stderrChunks.push(chunk);
+  // Bound raw bytes before readline can accumulate an unterminated line or
+  // console records can grow the retained logs indefinitely. Includes results.
+  const outputLimitBytes = 32 * 1024 * 1024;
+  let outputBytes = 0;
+  let outputLimit = false;
+  let stopForOutput = () => {};
+  const acceptOutput = (chunk: Buffer): boolean => {
+    if (outputLimit) return false;
+    outputBytes += chunk.length;
+    if (outputBytes <= outputLimitBytes) return true;
+    outputLimit = true;
+    stopForOutput();
+    return false;
+  };
+  let stderrTail = Buffer.alloc(0);
+  let stderrLog: number | undefined;
+  const closeStderrLog = () => {
+    if (stderrLog === undefined) return;
+    try { fs.closeSync(stderrLog); } catch {} // Diagnostic logging is best effort.
+    stderrLog = undefined;
+  };
+  const logFile = process.env.RN_A11Y_HOST_STDERR_LOG;
+  if (logFile) {
+    try {
+      stderrLog = fs.openSync(logFile, 'a');
+      fs.writeSync(stderrLog, `--- ${bin} (pid ${process.pid}) ---\n`);
+    } catch { closeStderrLog(); }
+  }
+  const onStderr = (chunk: Buffer) => {
+    if (!acceptOutput(chunk)) return;
+    // Bound retained diagnostics even if the subprocess floods stderr.
+    const tail = chunk.subarray(-65536);
+    stderrTail = Buffer.concat([stderrTail.subarray(-Math.max(0, 65536 - tail.length)), tail]).subarray(-65536);
+    // Preserve accepted sanitizer output without adding headers between chunks.
+    if (stderrLog !== undefined) {
+      try { fs.writeSync(stderrLog, chunk); } catch { closeStderrLog(); }
+    }
     if (options.verbose) process.stderr.write(chunk);
-  });
+  };
+  child.stderr!.on('data', onStderr);
 
   let result: T | undefined;
   let jsError: {message: string; stack?: string} | undefined;
 
-  const rl = readline.createInterface({input: child.stdout!});
+  const boundedStdout = new PassThrough();
+  const onStdout = (chunk: Buffer) => {
+    if (acceptOutput(chunk)) boundedStdout.write(chunk);
+  };
+  const onStdoutEnd = () => boundedStdout.end();
+  const rl = readline.createInterface({input: boundedStdout});
+  child.stdout!.on('data', onStdout);
+  child.stdout!.once('end', onStdoutEnd);
   rl.on('line', rawLine => {
     const line = rawLine.trim();
     if (!line) return;
@@ -403,20 +477,100 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     }
   });
 
-  const [exitCode, signal] = await new Promise<[number | null, NodeJS.Signals | null]>(
-    (resolve, reject) => {
-      child.on('error', reject);
-      child.on('close', (code, sig) => {
+  let stopped: 'timeout' | 'cancelled' | 'error' | 'output-limit' | undefined;
+  let spawnError: Error | undefined;
+  let cleanupTimedOut = false;
+  let windowsCleanup: Promise<ProcessCleanupResult> | undefined;
+  let cleanupDetails: ProcessCleanupResult = {};
+  const [exitCode, signal] = await new Promise<[number | null, NodeJS.Signals | null]>(resolve => {
+    let settled = false;
+    let escalation: ReturnType<typeof setTimeout> | undefined;
+    let cutoff: ReturnType<typeof setTimeout> | undefined;
+    const kill = (signal: NodeJS.Signals) => {
+      try {
+        if (process.platform !== 'win32' && child.pid != null) process.kill(-child.pid, signal);
+        else child.kill(signal);
+      } catch {
+        // ESRCH means the group has exited. Other kill failures still reach
+        // the bounded cutoff rather than leaving this request pending forever.
+        try { child.kill(signal); } catch {}
+      }
+    };
+    const finish = (code: number | null, signal: NodeJS.Signals | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      if (escalation !== undefined) clearTimeout(escalation);
+      if (cutoff !== undefined) clearTimeout(cutoff);
+      options.signal?.removeEventListener('abort', onAbort);
+      const failed = stopped !== undefined || code !== 0 || jsError !== undefined || !result;
+      if (process.platform !== 'win32') {
+        if (failed) kill('SIGKILL'); // Also clean up runner descendants after leader exit.
+      } else if (failed && !windowsCleanup) {
+        // Closed pipes do not prove descendant cleanup on Windows. A root
+        // exiting without a result is still a failure, even with exit code 0.
+        windowsCleanup = terminateWindowsTree(child);
+      }
+      child.removeListener('error', onError);
+      child.removeListener('close', finish);
+      rl.removeAllListeners('line');
+      rl.close();
+      boundedStdout.destroy();
+      child.stdout!.removeListener('data', onStdout);
+      child.stdout!.removeListener('end', onStdoutEnd);
+      child.stderr!.removeListener('data', onStderr);
+      child.stdout!.destroy();
+      child.stderr!.destroy();
+      if (stderrLog !== undefined) {
+        try { fs.writeSync(stderrLog, '\n'); } catch {}
+        closeStderrLog();
+      }
+      child.unref();
+      const complete = () => {
         if (options.timing) options.timing.exit = performance.now();
-        resolve([code, sig]);
-      });
-    },
-  );
-  const stderr = Buffer.concat(stderrChunks).toString('utf8');
-  appendHostStderr(bin, stderr);
+        resolve([code, signal]);
+      };
+      if (windowsCleanup) void windowsCleanup.then(details => {cleanupDetails = details; complete();});
+      else complete();
+    };
+    const stop = (reason: typeof stopped) => {
+      if (settled || stopped) return;
+      stopped = reason;
+      if (process.platform === 'win32') windowsCleanup = terminateWindowsTree(child);
+      else {
+        kill('SIGTERM');
+        escalation = setTimeout(() => kill('SIGKILL'), 250);
+      }
+      cutoff = setTimeout(() => {
+        cleanupTimedOut = true;
+        finish(child.exitCode, child.signalCode);
+      }, 1250);
+    };
+    stopForOutput = () => stop('output-limit');
+    const onAbort = () => stop('cancelled');
+    const onError = (error: Error) => {
+      spawnError = error;
+      stop('error');
+    };
+    const deadline = setTimeout(() => stop('timeout'), timeoutMs);
+    child.on('error', onError);
+    child.once('close', finish);
+    options.signal?.addEventListener('abort', onAbort, {once: true});
+    // Cover cancellation between the pre-spawn check and listener registration.
+    if (options.signal?.aborted) onAbort();
+  });
+  const stderr = stderrTail.toString('utf8');
 
+  if (stopped) {
+    throw new HostError(stopped === 'timeout' ? 'TIMEOUT' : 'HOST_CRASHED',
+      stopped === 'timeout' ? `Host execution timed out after ${timeoutMs} ms` :
+        stopped === 'cancelled' ? 'Host execution cancelled' :
+        stopped === 'output-limit' ? `Host exceeded the ${outputLimitBytes}-byte combined stdout/stderr output limit` : `Host failed: ${spawnError?.message}`,
+      {...cleanupDetails, stderr, exitCode, cancelled: stopped === 'cancelled', cleanupTimedOut: cleanupTimedOut || cleanupDetails.cleanupTimedOut, outputLimit});
+  }
   if (jsError) {
     throw new HostError('APP_THREW', `Render failed in JS: ${jsError.message}`, {
+      ...cleanupDetails,
       stack: jsError.stack,
       exitCode,
     }, nativeModuleHint(jsError.message));
@@ -425,11 +579,12 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     throw new HostError(
       'HOST_CRASHED',
       `Host exited with ${signal ? `signal ${signal}` : `code ${exitCode}`}`,
-      {stderr, exitCode},
+      {...cleanupDetails, stderr, exitCode},
     );
   }
   if (!result) {
     throw new HostError('HOST_CRASHED', 'Host exited without printing a rn-a11y-tree result', {
+      ...cleanupDetails,
       stderr,
       exitCode,
     });

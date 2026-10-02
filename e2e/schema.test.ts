@@ -18,7 +18,8 @@ describe('schema', () => {
     const checkResult = schema('check-result');
     const examples = fs
       .readdirSync(path.join(ROOT, 'examples'))
-      .filter(name => fs.existsSync(path.join(ROOT, 'examples', name, 'App.tsx')));
+      // Other suites create hidden scratch apps while this matrix runs.
+      .filter(name => !name.startsWith('.') && fs.existsSync(path.join(ROOT, 'examples', name, 'App.tsx')));
     expect(examples.length).toBeGreaterThanOrEqual(5);
     for (const example of examples) {
       const app = path.join('examples', example, 'App.tsx');

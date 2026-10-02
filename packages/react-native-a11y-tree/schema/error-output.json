@@ -39,6 +39,7 @@
     "ErrorCode": {
       "type": "string",
       "enum": [
+        "UNSUPPORTED_NATIVE",
         "USAGE",
         "CHECK_FAILED",
         "BUNDLE_FAILED",
@@ -51,7 +52,7 @@
         "HOST_INCOMPATIBLE",
         "HOST_CRASHED"
       ],
-      "description": "Machine-readable errors: `{code, message, hint?, details?}`, with one exit code per class of failure.\n\n| exit | meaning | | --- | --- | | 0 | ok | | 1 | usage (bad arguments, script, selector) | | 2 | check failed (`check` command) | | 3 | bundle failed (Metro) | | 4 | app error (the app threw while loading or rendering) | | 5 | host (missing, unavailable, incompatible, crashed, timeout) |"
+      "description": "Machine-readable errors: `{code, message, hint?, details?}`, with one exit code per class of failure.\n\n| exit | meaning | | --- | --- | | 0 | ok | | 1 | usage (bad arguments, script, selector) | | 2 | check failed (`check` command) | | 3 | bundle failed (Metro) | | 4 | app error (the app threw while loading or rendering) | | 5 | host (missing, unavailable, incompatible, crashed, timeout) | | 6 | unapproved observed native/runtime limitation |"
     }
   }
 }

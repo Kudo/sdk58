@@ -1,8 +1,11 @@
+export type {DoctorResult} from './doctor.ts';
 /**
  * Output schema of `rn-a11y-tree` (render, run, check, session, errors).
  * Keep in sync with README.md. `bun run schema` generates `schema/*.json` from
  * the exported types listed in scripts/gen-schema.ts.
  */
+
+import type {Diagnostic} from './diagnostics.ts';
 
 import type {CheckResult, Rules} from './check.ts';
 import type {TreeDiff} from './diff.ts';
@@ -152,6 +155,7 @@ export type RenderResult = {
   root: TreeNode;
   hostInfo?: HostRuntimeInfo;
   /** App console output (only when there was any); `known: true` marks common React Native noise. */
+  diagnostics?: Diagnostic[];
   logs?: LogEntry[];
 };
 
@@ -335,6 +339,7 @@ export type RunResult = {
   /** Optional host features found (NativeFantom methods and getCapabilities()). */
   capabilities: string[];
   hostInfo?: HostRuntimeInfo;
+  diagnostics?: Diagnostic[];
   logs?: LogEntry[];
 };
 
@@ -376,6 +381,7 @@ export type QueryResult = {
   viewport: {width: number; height: number};
   source: TreeSource;
   matches: TreeNode[];
+  diagnostics?: Diagnostic[];
   logs?: LogEntry[];
 };
 
@@ -437,9 +443,10 @@ export type SessionReady =
       host?: {source: 'env' | 'package' | 'download' | 'dist'; version?: string; protocolVersion?: number};
       /** The host's own build info (getHostInfo). */
       hostInfo?: HostRuntimeInfo;
+      diagnostics?: Diagnostic[];
       logs?: LogEntry[];
     }
-  | {ready: false; error: ErrorInfo; logs?: LogEntry[]};
+  | {ready: false; error: ErrorInfo; diagnostics?: Diagnostic[]; logs?: LogEntry[]};
 
 /** One line on the session's stdout per request. */
 export type SessionResponse = {
@@ -455,6 +462,7 @@ export type SessionResponse = {
   /** Action requests with `diff: true`. */
   diff?: TreeDiff;
   fallbacks?: string[];
+  diagnostics?: Diagnostic[];
   logs?: LogEntry[];
 };
 

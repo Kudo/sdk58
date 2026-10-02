@@ -1,0 +1,32 @@
+TRANSCRIPT COPY — not an original redirected process log. No SwiftUI commands rerun.
+Source: tool responses from the preceding validation in this conversation.
+Worktree: /Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree
+Commit: 88ddd44083a0bac5b02fbac73bf79d39dcc67d68
+
+$ native/tools/swiftui-layout-test/build.sh
+(no output)
+Exit: 0
+
+$ bun native/tools/swiftui-layout-test/compare.ts
+FAIL swiftui-layout-test/cases/41-symbols.json (6)
+       0 VStack frame.height: ref 184.92 engine 184
+       0 VStack contentFrame.height: ref 184.92 engine 184
+       0/4 Label frame.height: ref 31.84 engine 31
+       0/4 Label contentFrame.height: ref 31.84 engine 31
+       0/5 Image frame.y: ref 134.92 engine 134
+       0/5 Image contentFrame.y: ref 134.92 engine 134
+
+macos: 42/43 trees match within 0.5 pt
+Exit: 1
+
+$ bun native/tools/swiftui-layout-test/compare.ts --tolerance 1
+
+macos: 43/43 trees match within 1 pt
+Exit: 0
+
+Environment observed during that run:
+macOS 26.5.2 (25F84), arm64
+Xcode 26.6 (17F113), macOS SDK 26.5
+Apple Swift 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)
+Apple clang 21.0.0 (clang-2100.1.1.101)
+Bun 1.3.14

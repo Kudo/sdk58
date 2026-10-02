@@ -1,0 +1,606 @@
+{
+  "conclusion": "Original exit-5 cause remains unknown. Neither four-attempt batch reproduced a failure; passing changed-source runs do not prove a fix.",
+  "baseline": {
+    "commit": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+    "archive": "/tmp/tanstack-baseline-MP0r4A",
+    "method": "git archive full commit, tar extraction outside shared checkout; no clone and no .git",
+    "symlinks": {
+      "node_modules": "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/node_modules",
+      "nativeDist": "/Users/bonsai/.config/tuft/sessions/1790927603.626939/worktrees/react-native-a11y-tree/native/dist"
+    },
+    "shutdownGraceMs": 250
+  },
+  "app": {
+    "path": "/private/var/folders/0p/spc2yh1d22s8h3wwj18qptg40000gn/T/tanstack-pilot-16KS2n",
+    "unchangedUpstreamSourceVerified": true,
+    "lockSha256": "f55cf175bbca825b06b5b6e61e2f52aa475c9b3393bfe93f7ce5d3bb7f0d325f"
+  },
+  "groups": [
+    {
+      "name": "current-grace-change",
+      "directory": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx",
+      "concurrency": 2,
+      "artifacts": {
+        "flow.mjs": {
+          "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/flow.mjs",
+          "sha256": "3d2c2a4d3b587d1cca1726254b6abb6d9ba8a8ad68a0c8c2dcdddd301e1689e0"
+        },
+        "batch.json": {
+          "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/batch.json",
+          "sha256": "07edc41581e2fab7b7710158e3a70d769787b61308c522091c928da6c782f2eb"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "startedAt": "2026-10-02T12:59:23.249Z",
+          "finishedAt": "2026-10-02T12:59:28.858Z",
+          "elapsedMs": 5608.400709,
+          "cliPid": 84692,
+          "status": {
+            "code": 0,
+            "signal": null
+          },
+          "assertions": [
+            "whole app initially loading, no Rush list row",
+            "real movie list resolved",
+            "navigation reached partial movie details",
+            "partial details have no plot yet",
+            "full detail query resolved plot",
+            "full detail query resolved actors",
+            "back returns to list",
+            "details removed after back",
+            "focus refetch invoked list query again",
+            "detail query invoked"
+          ],
+          "sourceAtStart": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n M packages/react-native-a11y-tree/src/session.ts\n M test/session-lifecycle.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+            "hash": "57339d4aaa141bdf36fd1ee967dd4e08b027879aaeab8e312f89e6d9e10430dc"
+          },
+          "sourceAtEnd": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n M packages/react-native-a11y-tree/src/session.ts\n M test/session-lifecycle.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+            "hash": "57339d4aaa141bdf36fd1ee967dd4e08b027879aaeab8e312f89e6d9e10430dc"
+          },
+          "sourceStable": true,
+          "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+          "recordCount": 11,
+          "finalRecord": {
+            "id": 10,
+            "ok": true
+          },
+          "protocolErrors": [],
+          "artifacts": {
+            "stdout.ndjson": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-1/stdout.ndjson",
+              "bytes": 1740966,
+              "sha256": "dcbaffc063cf708b943bffa7ab8a4a1638adfc486740da59871a66ed5d82c85d"
+            },
+            "stderr.log": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-1/stderr.log",
+              "bytes": 554,
+              "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+            },
+            "native.stderr": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-1/native.stderr",
+              "bytes": 11501,
+              "sha256": "dd5b0d4bd68b39cd5a2d276e516612cbe67625b11b9012201d713f974b7db935"
+            },
+            "metadata.json": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-1/metadata.json",
+              "bytes": 1840882,
+              "sha256": "b544f9cba2bb50390ac830bf25abb307bdb3a0c9a05df94029d9682bf42abfe4"
+            },
+            "harness.log": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-1/harness.log",
+              "bytes": 1746,
+              "sha256": "b48f3edfbc90083ef1b2b941b1832b91fd502c09bdec2d1cfb5336dfcff4d06f"
+            }
+          }
+        },
+        {
+          "attempt": 2,
+          "startedAt": "2026-10-02T12:59:23.249Z",
+          "finishedAt": "2026-10-02T12:59:28.858Z",
+          "elapsedMs": 5608.513583,
+          "cliPid": 84691,
+          "status": {
+            "code": 0,
+            "signal": null
+          },
+          "assertions": [
+            "whole app initially loading, no Rush list row",
+            "real movie list resolved",
+            "navigation reached partial movie details",
+            "partial details have no plot yet",
+            "full detail query resolved plot",
+            "full detail query resolved actors",
+            "back returns to list",
+            "details removed after back",
+            "focus refetch invoked list query again",
+            "detail query invoked"
+          ],
+          "sourceAtStart": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n M packages/react-native-a11y-tree/src/session.ts\n M test/session-lifecycle.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+            "hash": "57339d4aaa141bdf36fd1ee967dd4e08b027879aaeab8e312f89e6d9e10430dc"
+          },
+          "sourceAtEnd": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n M packages/react-native-a11y-tree/src/session.ts\n M test/session-lifecycle.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+            "hash": "57339d4aaa141bdf36fd1ee967dd4e08b027879aaeab8e312f89e6d9e10430dc"
+          },
+          "sourceStable": true,
+          "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+          "recordCount": 11,
+          "finalRecord": {
+            "id": 10,
+            "ok": true
+          },
+          "protocolErrors": [],
+          "artifacts": {
+            "stdout.ndjson": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-2/stdout.ndjson",
+              "bytes": 1740966,
+              "sha256": "dcbaffc063cf708b943bffa7ab8a4a1638adfc486740da59871a66ed5d82c85d"
+            },
+            "stderr.log": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-2/stderr.log",
+              "bytes": 554,
+              "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+            },
+            "native.stderr": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-2/native.stderr",
+              "bytes": 11501,
+              "sha256": "2deda4d9b26bbdae7a74cc4c9b7372f8821390733adc2398c735bc5e6f249651"
+            },
+            "metadata.json": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-2/metadata.json",
+              "bytes": 1840882,
+              "sha256": "69a499bc51ce467ed4aba2d7e1b32d5e7f2e39549cfb0aaabe395ad0608ac915"
+            },
+            "harness.log": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-2/harness.log",
+              "bytes": 1746,
+              "sha256": "b48f3edfbc90083ef1b2b941b1832b91fd502c09bdec2d1cfb5336dfcff4d06f"
+            }
+          }
+        },
+        {
+          "attempt": 3,
+          "startedAt": "2026-10-02T12:59:28.907Z",
+          "finishedAt": "2026-10-02T12:59:33.719Z",
+          "elapsedMs": 4811.718709,
+          "cliPid": 85340,
+          "status": {
+            "code": 0,
+            "signal": null
+          },
+          "assertions": [
+            "whole app initially loading, no Rush list row",
+            "real movie list resolved",
+            "navigation reached partial movie details",
+            "partial details have no plot yet",
+            "full detail query resolved plot",
+            "full detail query resolved actors",
+            "back returns to list",
+            "details removed after back",
+            "focus refetch invoked list query again",
+            "detail query invoked"
+          ],
+          "sourceAtStart": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n M packages/react-native-a11y-tree/src/session.ts\n M test/session-lifecycle.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+            "hash": "57339d4aaa141bdf36fd1ee967dd4e08b027879aaeab8e312f89e6d9e10430dc"
+          },
+          "sourceAtEnd": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n M packages/react-native-a11y-tree/src/session.ts\n M test/session-lifecycle.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+            "hash": "57339d4aaa141bdf36fd1ee967dd4e08b027879aaeab8e312f89e6d9e10430dc"
+          },
+          "sourceStable": true,
+          "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+          "recordCount": 11,
+          "finalRecord": {
+            "id": 10,
+            "ok": true
+          },
+          "protocolErrors": [],
+          "artifacts": {
+            "stdout.ndjson": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-3/stdout.ndjson",
+              "bytes": 1740966,
+              "sha256": "dcbaffc063cf708b943bffa7ab8a4a1638adfc486740da59871a66ed5d82c85d"
+            },
+            "stderr.log": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-3/stderr.log",
+              "bytes": 554,
+              "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+            },
+            "native.stderr": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-3/native.stderr",
+              "bytes": 11501,
+              "sha256": "df21382098bcaf5f1c9b35429272a3cdcd7af22b699aeee5e04fc413dda9ac0b"
+            },
+            "metadata.json": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-3/metadata.json",
+              "bytes": 1840882,
+              "sha256": "ea45a7128121e15249f54a54654cd001387974c107171deb0d07a109bd8d6934"
+            },
+            "harness.log": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-3/harness.log",
+              "bytes": 1746,
+              "sha256": "b48f3edfbc90083ef1b2b941b1832b91fd502c09bdec2d1cfb5336dfcff4d06f"
+            }
+          }
+        },
+        {
+          "attempt": 4,
+          "startedAt": "2026-10-02T12:59:28.907Z",
+          "finishedAt": "2026-10-02T12:59:33.719Z",
+          "elapsedMs": 4811.627167,
+          "cliPid": 85339,
+          "status": {
+            "code": 0,
+            "signal": null
+          },
+          "assertions": [
+            "whole app initially loading, no Rush list row",
+            "real movie list resolved",
+            "navigation reached partial movie details",
+            "partial details have no plot yet",
+            "full detail query resolved plot",
+            "full detail query resolved actors",
+            "back returns to list",
+            "details removed after back",
+            "focus refetch invoked list query again",
+            "detail query invoked"
+          ],
+          "sourceAtStart": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n M packages/react-native-a11y-tree/src/session.ts\n M test/session-lifecycle.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+            "hash": "57339d4aaa141bdf36fd1ee967dd4e08b027879aaeab8e312f89e6d9e10430dc"
+          },
+          "sourceAtEnd": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "status": " M CHANGELOG.md\n M README.md\n M docs/production-readiness.md\n M packages/react-native-a11y-tree/README.md\n M packages/react-native-a11y-tree/src/session.ts\n M test/session-lifecycle.test.ts\n?? docs/validation/2026-10-02-tanstack-pilot/\n",
+            "hash": "57339d4aaa141bdf36fd1ee967dd4e08b027879aaeab8e312f89e6d9e10430dc"
+          },
+          "sourceStable": true,
+          "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+          "recordCount": 11,
+          "finalRecord": {
+            "id": 10,
+            "ok": true
+          },
+          "protocolErrors": [],
+          "artifacts": {
+            "stdout.ndjson": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-4/stdout.ndjson",
+              "bytes": 1740966,
+              "sha256": "dcbaffc063cf708b943bffa7ab8a4a1638adfc486740da59871a66ed5d82c85d"
+            },
+            "stderr.log": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-4/stderr.log",
+              "bytes": 554,
+              "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+            },
+            "native.stderr": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-4/native.stderr",
+              "bytes": 11501,
+              "sha256": "c4f30f2f17df4b75937bc11ff6ec59183688e1bbaba64ecc5d3cb16bc0e416ae"
+            },
+            "metadata.json": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-4/metadata.json",
+              "bytes": 1840882,
+              "sha256": "e9a0f2bdb77c3b6cf8d2a25c8c189b41835fe831c50166362782fa6c55974de5"
+            },
+            "harness.log": {
+              "path": "/tmp/tanstack-shutdown-diagnostic-wxk5Nx/attempt-4/harness.log",
+              "bytes": 1746,
+              "sha256": "b48f3edfbc90083ef1b2b941b1832b91fd502c09bdec2d1cfb5336dfcff4d06f"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "archived-250ms-baseline",
+      "directory": "/tmp/tanstack-baseline-diagnostic-LKHiFl",
+      "concurrency": 2,
+      "artifacts": {
+        "flow.mjs": {
+          "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/flow.mjs",
+          "sha256": "c62ae8d5734906dc434d1eba435ba1c7caf03fb058adb107731081e1a27c38af"
+        },
+        "batch.json": {
+          "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/batch.json",
+          "sha256": "4b74d0a4094154321dbc5e399de45a7528db33e5cb08324c6a4ad0b66cb82547"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "startedAt": "2026-10-02T13:01:55.377Z",
+          "finishedAt": "2026-10-02T13:02:02.795Z",
+          "elapsedMs": 7418.239541,
+          "cliPid": 2269,
+          "status": {
+            "code": 0,
+            "signal": null
+          },
+          "assertions": [
+            "whole app initially loading, no Rush list row",
+            "real movie list resolved",
+            "navigation reached partial movie details",
+            "partial details have no plot yet",
+            "full detail query resolved plot",
+            "full detail query resolved actors",
+            "back returns to list",
+            "details removed after back",
+            "focus refetch invoked list query again",
+            "detail query invoked"
+          ],
+          "sourceAtStart": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "provenance": "git archive baseline; no .git; dependencies and host symlinked from shared checkout",
+            "status": "archive without .git",
+            "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+          },
+          "sourceAtEnd": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "provenance": "git archive baseline; no .git; dependencies and host symlinked from shared checkout",
+            "status": "archive without .git",
+            "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+          },
+          "sourceStable": true,
+          "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+          "recordCount": 11,
+          "finalRecord": {
+            "id": 10,
+            "ok": true
+          },
+          "protocolErrors": [],
+          "artifacts": {
+            "stdout.ndjson": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-1/stdout.ndjson",
+              "bytes": 1740966,
+              "sha256": "dcbaffc063cf708b943bffa7ab8a4a1638adfc486740da59871a66ed5d82c85d"
+            },
+            "stderr.log": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-1/stderr.log",
+              "bytes": 554,
+              "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+            },
+            "native.stderr": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-1/native.stderr",
+              "bytes": 11451,
+              "sha256": "9d668ff452ced0a6a3b24c176b112044fa4f3d212ba5dd19cf32266334c76ce0"
+            },
+            "metadata.json": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-1/metadata.json",
+              "bytes": 1840596,
+              "sha256": "03d61fe5799a9df11da3b50368a064ca0143b947be2334dfc4685dd4b6772b89"
+            },
+            "harness.log": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-1/harness.log",
+              "bytes": 1746,
+              "sha256": "b48f3edfbc90083ef1b2b941b1832b91fd502c09bdec2d1cfb5336dfcff4d06f"
+            }
+          }
+        },
+        {
+          "attempt": 2,
+          "startedAt": "2026-10-02T13:01:55.377Z",
+          "finishedAt": "2026-10-02T13:02:02.785Z",
+          "elapsedMs": 7407.881042,
+          "cliPid": 2268,
+          "status": {
+            "code": 0,
+            "signal": null
+          },
+          "assertions": [
+            "whole app initially loading, no Rush list row",
+            "real movie list resolved",
+            "navigation reached partial movie details",
+            "partial details have no plot yet",
+            "full detail query resolved plot",
+            "full detail query resolved actors",
+            "back returns to list",
+            "details removed after back",
+            "focus refetch invoked list query again",
+            "detail query invoked"
+          ],
+          "sourceAtStart": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "provenance": "git archive baseline; no .git; dependencies and host symlinked from shared checkout",
+            "status": "archive without .git",
+            "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+          },
+          "sourceAtEnd": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "provenance": "git archive baseline; no .git; dependencies and host symlinked from shared checkout",
+            "status": "archive without .git",
+            "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+          },
+          "sourceStable": true,
+          "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+          "recordCount": 11,
+          "finalRecord": {
+            "id": 10,
+            "ok": true
+          },
+          "protocolErrors": [],
+          "artifacts": {
+            "stdout.ndjson": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-2/stdout.ndjson",
+              "bytes": 1740966,
+              "sha256": "dcbaffc063cf708b943bffa7ab8a4a1638adfc486740da59871a66ed5d82c85d"
+            },
+            "stderr.log": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-2/stderr.log",
+              "bytes": 554,
+              "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+            },
+            "native.stderr": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-2/native.stderr",
+              "bytes": 11451,
+              "sha256": "16127bccbed50859eb481cabf788262a42ffcb88007081e65637c36f11aeba0c"
+            },
+            "metadata.json": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-2/metadata.json",
+              "bytes": 1840596,
+              "sha256": "e70621da9a2b4d4741ffaf5535da6e98606e5fda503119d69bb671358e689824"
+            },
+            "harness.log": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-2/harness.log",
+              "bytes": 1746,
+              "sha256": "b48f3edfbc90083ef1b2b941b1832b91fd502c09bdec2d1cfb5336dfcff4d06f"
+            }
+          }
+        },
+        {
+          "attempt": 3,
+          "startedAt": "2026-10-02T13:02:02.851Z",
+          "finishedAt": "2026-10-02T13:02:07.987Z",
+          "elapsedMs": 5136.755292,
+          "cliPid": 3115,
+          "status": {
+            "code": 0,
+            "signal": null
+          },
+          "assertions": [
+            "whole app initially loading, no Rush list row",
+            "real movie list resolved",
+            "navigation reached partial movie details",
+            "partial details have no plot yet",
+            "full detail query resolved plot",
+            "full detail query resolved actors",
+            "back returns to list",
+            "details removed after back",
+            "focus refetch invoked list query again",
+            "detail query invoked"
+          ],
+          "sourceAtStart": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "provenance": "git archive baseline; no .git; dependencies and host symlinked from shared checkout",
+            "status": "archive without .git",
+            "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+          },
+          "sourceAtEnd": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "provenance": "git archive baseline; no .git; dependencies and host symlinked from shared checkout",
+            "status": "archive without .git",
+            "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+          },
+          "sourceStable": true,
+          "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+          "recordCount": 11,
+          "finalRecord": {
+            "id": 10,
+            "ok": true
+          },
+          "protocolErrors": [],
+          "artifacts": {
+            "stdout.ndjson": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-3/stdout.ndjson",
+              "bytes": 1740966,
+              "sha256": "dcbaffc063cf708b943bffa7ab8a4a1638adfc486740da59871a66ed5d82c85d"
+            },
+            "stderr.log": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-3/stderr.log",
+              "bytes": 554,
+              "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+            },
+            "native.stderr": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-3/native.stderr",
+              "bytes": 11451,
+              "sha256": "e0dad19349bd8120616b1e2b99868c521402f7f2750e2c4df8130057fab91625"
+            },
+            "metadata.json": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-3/metadata.json",
+              "bytes": 1840596,
+              "sha256": "c5f8665d04da01551e36f1d651b8a726134b759d864b294c845795fa3a9bd0d9"
+            },
+            "harness.log": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-3/harness.log",
+              "bytes": 1746,
+              "sha256": "b48f3edfbc90083ef1b2b941b1832b91fd502c09bdec2d1cfb5336dfcff4d06f"
+            }
+          }
+        },
+        {
+          "attempt": 4,
+          "startedAt": "2026-10-02T13:02:02.851Z",
+          "finishedAt": "2026-10-02T13:02:07.975Z",
+          "elapsedMs": 5125.3345,
+          "cliPid": 3114,
+          "status": {
+            "code": 0,
+            "signal": null
+          },
+          "assertions": [
+            "whole app initially loading, no Rush list row",
+            "real movie list resolved",
+            "navigation reached partial movie details",
+            "partial details have no plot yet",
+            "full detail query resolved plot",
+            "full detail query resolved actors",
+            "back returns to list",
+            "details removed after back",
+            "focus refetch invoked list query again",
+            "detail query invoked"
+          ],
+          "sourceAtStart": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "provenance": "git archive baseline; no .git; dependencies and host symlinked from shared checkout",
+            "status": "archive without .git",
+            "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+          },
+          "sourceAtEnd": {
+            "head": "d5b3d9867b4c7c2b7d31f6ba49e6888d42c0b9ca",
+            "provenance": "git archive baseline; no .git; dependencies and host symlinked from shared checkout",
+            "status": "archive without .git",
+            "hash": "86a54e07eb1d312c1cadb0a255a597905a97c5df3267f2c7d8d5917c4df5ac2a"
+          },
+          "sourceStable": true,
+          "hostSha256": "4059b4db684490664ac26b6932f3fee0a011d824b8e3e19114ae53190171d945",
+          "recordCount": 11,
+          "finalRecord": {
+            "id": 10,
+            "ok": true
+          },
+          "protocolErrors": [],
+          "artifacts": {
+            "stdout.ndjson": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-4/stdout.ndjson",
+              "bytes": 1566162,
+              "sha256": "fc562f5c1aacde6b9b7407b8030a86dfe3350f60a8745e8ae8954d5aecabdcf3"
+            },
+            "stderr.log": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-4/stderr.log",
+              "bytes": 554,
+              "sha256": "ac0e1544975b383e69bd384a3f189709e26d11aadfd078e162cc8de89e03b6bb"
+            },
+            "native.stderr": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-4/native.stderr",
+              "bytes": 11451,
+              "sha256": "ac6b97fe484e4fc202a52bae9feaa474bac7ab58b104cb35140d3d4940e00b7e"
+            },
+            "metadata.json": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-4/metadata.json",
+              "bytes": 1840594,
+              "sha256": "f921075706a57d39019eb0e007e7a269847f01e7e3bee2b72871de21c4bf63a8"
+            },
+            "harness.log": {
+              "path": "/tmp/tanstack-baseline-diagnostic-LKHiFl/attempt-4/harness.log",
+              "bytes": 1746,
+              "sha256": "b48f3edfbc90083ef1b2b941b1832b91fd502c09bdec2d1cfb5336dfcff4d06f"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
