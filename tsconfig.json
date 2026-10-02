@@ -14,5 +14,6 @@
     "verbatimModuleSyntax": false,
     "erasableSyntaxOnly": true
   },
+  "exclude": ["examples/sdk58-default"],
   "include": ["packages/react-native-a11y-tree/src", "e2e", "test", "examples", "scripts", "native/tools/*/*.ts"]
 }

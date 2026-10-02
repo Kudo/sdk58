@@ -29,12 +29,12 @@ are inferred from source paths; a conditional call may have a narrower platform.
 | `expo-clipboard` | 1 | Unverified: native paste-button behavior is not tested. |
 | `expo-contacts` | 1 | Unverified: native contact-access button and permission flow are not tested. |
 | `expo-gl` | 1 | Unverified: no GL context/rendering simulation. |
-| `expo-image` | 1 | Unverified: native image-module APIs, loading and decoding need explicit support. |
+| `expo-image` | 1 | Tested approximation: image props/source metadata, explicit layout and accessibility. Module adapter allows imports; loading, decoding, caching, hashes, native refs and load events are not simulated. |
 | `expo-live-photo` | 1 | Unverified: loading and playback are not tested. |
 | `expo-maps` | 3 | Unverified: Apple/Google Maps and Street View need module and interaction support. |
 | `expo-mesh-gradient` | 1 | Unverified: props/layout have no dedicated test; no pixel rendering. |
 | `expo-router` | 8 | Unverified: native link previews, transitions and toolbars. The existing React Navigation stack tests do not cover these. |
-| `expo-symbols` | 1 | Unverified: symbol props/layout have no dedicated test; no glyph rendering. |
+| `expo-symbols` | 1 | Starter-screen coverage: iOS symbol props and frames; Android retains its unloaded-font placeholder. No glyph rendering, animation or custom-font loading. |
 | `expo-video` | 4 | Unverified: video surfaces, shared player objects, playback and AirPlay are not simulated. |
 
 Evidence: [`e2e/expo-effects.test.ts`](../e2e/expo-effects.test.ts) exercises real
@@ -71,7 +71,55 @@ expressions remain in the inventory for manual review instead of being silently
 omitted. Update this matrix and add real render/action tests before promoting a
 view from unverified to supported or approximate.
 
-Next coverage work should start with image, symbols and mesh-gradient imports,
-props and accessibility; then clipboard/authentication/contact buttons and
-Router views. Camera, maps, GL, video and Live Photo need explicit deterministic
+Next coverage work should extend image/symbol native APIs and mesh-gradient
+props/accessibility; then clipboard/authentication/contact buttons and Router views. Camera, maps, GL, video and Live Photo need explicit deterministic
 native API contracts rather than success-returning placeholder methods.
+
+
+## Native modules (0.1.3)
+
+The [module inventory](expo-native-modules.json) contains **109 entries
+from 119 call sites in 74 packages**, pinned to the same SDK 58 commit.
+It scans `requireNativeModule` and `requireOptionalNativeModule`, renamed imports,
+namespace imports and local factories, including core-internal imports. Required
+versus optional status stays attached to each source location. Dynamic names are
+retained as unresolved expressions. Platform labels are inferred from file paths.
+`members` lists conservative, same-file static accesses on a module binding; it
+is **not** the API surface or a complete cross-file usage graph. An empty list
+does not mean the module has no APIs. Generated files, tests and mocks are excluded.
+
+```sh
+bun scripts/expo-module-inventory.ts --expo-root /path/to/expo \
+  --ref cfbcecdb6835a3241aff68061827a59a41d9080c
+# Reproduce without modifying the checkout or generated output:
+bun scripts/expo-module-inventory.ts --expo-root /path/to/expo \
+  --ref cfbcecdb6835a3241aff68061827a59a41d9080c --check
+```
+
+A missing native module can fail at import time, before the View fallback runs.
+There is no generic module proxy that invents methods or returns success. Known
+modules use explicit adapters, installed lazily with one
+`[NATIVE_MODULE_FALLBACK]` stderr warning per module, including in quiet/session
+mode. Existing modules are retained. Unknown optional modules remain unavailable;
+unknown required modules fail with a hint to use an application mock or add an
+adapter. Unsupported adapter operations throw/reject `[NATIVE_API_UNSUPPORTED]`.
+
+| Adapter | Headless contract |
+| --- | --- |
+| `ExpoImage` | Allows importing/rendering Image. View props, source metadata and accessibility survive. Explicit sizes/aspect ratios determine layout. Does not infer remote image dimensions or emit successful load events. Native image construction, loading, prefetching, caching and hash generation fail explicitly. |
+| `ExpoDevice` | `isDevice=false`; hardware/OS metadata is unknown (`null`). Native device queries reject. Does not identify the host machine or pretend to be the preset's physical device. |
+| `ExpoLinking` | No initial URL (`null`) and no native URL events; clearing the absent initial URL is a no-op. |
+| `ExpoFontLoader` | Empty custom-font inventory; native loading/unloading rejects. Libraries may retain their unloaded-font fallback. |
+| `ExpoWebBrowser` | Allows import; browser/authentication launch, warmup and dismissal are unsupported. No browser is opened. |
+
+These supplement the existing ExpoUI, glass, asset and constants shims. They do
+not make the other inventoried modules supported. Optional modules such as
+ExpoSplashScreen and ExpoFontUtils are deliberately left absent.
+
+`e2e/expo-template.test.ts` renders the unchanged SDK 58 Home and Explore screens
+from `examples/sdk58-default` on both presets and opens Explore's Images section.
+`e2e/expo-modules.test.ts` covers image layout/accessibility/source metadata,
+rejected APIs, optional absence, required-module errors and session stderr.
+Standalone screens receive safe-area inset/frame contexts based on CLI settings
+when `react-native-safe-area-context` is installed. An application's own providers
+take precedence. These are screen tests, not full Expo Router navigation tests.

@@ -1,3 +1,5 @@
+import {installExpoModuleAdapters} from './moduleAdapters';
+
 /**
  * Expo module support in the host (`@expo/ui`, `expo-modules-core`), after
  * native/tests/fantomExpoUIPrelude.js. The entry calls this after Expo's
@@ -56,6 +58,8 @@ const effectViews: Record<string, ViewConfigEntry> = {
   ExpoGlassEffect_GlassContainer: {attributes: ['spacing'], events: []},
   ExpoBlur_ExpoBlurView: {attributes: ['intensity', 'tint', 'blurReductionFactor', 'blurMethod', 'blurTargetId', 'borderRadii'], events: []},
   ExpoBlur_ExpoBlurTargetView: {attributes: [], events: []},
+  ExpoImage: {attributes: ['source', 'placeholder', 'contentFit', 'contentPosition', 'transition', 'tintColor', 'cachePolicy', 'priority', 'recyclingKey', 'allowDownscaling', 'autoplay', 'decodeFormat', 'enforceEarlyResizing', 'useAppleWebpCodec', 'enableLiveTextInteraction'], events: ['onLoadStart', 'onLoad', 'onError', 'onProgress', 'onDisplay']},
+  SymbolModule: {attributes: ['name', 'size', 'weight', 'scale', 'type', 'tint', 'colors', 'animated', 'animationSpec'], events: []},
   ExpoLinearGradient: {attributes: ['colors', 'locations', 'startPoint', 'endPoint', 'borderRadii', 'dither'], events: []},
 };
 
@@ -72,11 +76,14 @@ export function installExpoPrelude(): void {
     const name = `${moduleName}${viewName != null ? '_' + viewName : ''}`;
     let config = cache.get(name);
     if (config == null) {
+      if (name === 'SymbolModule') console.warn('[NATIVE_COMPONENT_FALLBACK] SymbolModule uses layout and props only; symbol glyphs and animations are not drawn.');
       config = toViewConfig(effectViews[name] ?? configs.views[name] ?? configs.union);
       cache.set(name, config);
     }
     return config;
   };
+
+  installExpoModuleAdapters(expo, message => console.warn(message));
 
   const {SharedObject, NativeModule} = expo;
 

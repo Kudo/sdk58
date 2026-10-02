@@ -20,7 +20,7 @@ import {appendHostStderr, checkHostInfo, getHostBin, type HostInfo, hostArgs, ho
 import type {HostRuntimeInfo, SessionTreeOptions, ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
 import {diffTrees} from './diff.ts';
-import {type CliError, type ErrorCode, EXIT_CODES, type LogEntry, logEntry, stepErrorCode} from './errors.ts';
+import {type CliError, type ErrorCode, EXIT_CODES, type LogEntry, logEntry, nativeModuleHint, stepErrorCode} from './errors.ts';
 import {type Format, FORMATS, formatRender, parseSelector} from './format.ts';
 import type {TreeNode} from './schema.ts';
 import {convertShadowTree, convertStep} from './tree.ts';
@@ -152,7 +152,7 @@ export async function runSession(options: {
       case 'console-log': {
         const entry = logEntry(String(message.level ?? 'info'), String(message.message));
         pendingLogs.push(entry);
-        if (!options.quiet || entry.message.startsWith('[NATIVE_COMPONENT_FALLBACK] ')) io.log(`[app] ${entry.message}`);
+        if (!options.quiet || /^\[NATIVE_(?:COMPONENT|MODULE)_FALLBACK\] /.test(entry.message)) io.log(`[app] ${entry.message}`);
         break;
       }
       default:
@@ -260,7 +260,8 @@ export async function runSession(options: {
   if (!start.ok) {
     const code = exited ? 'HOST_CRASHED' : 'APP_THREW';
     const logs = takeLogs();
-    writeLine({ready: false, error: {code, message: start.error}, ...(logs.length > 0 ? {logs} : {})});
+    const hint = nativeModuleHint(start.error ?? '');
+    writeLine({ready: false, error: {code, message: start.error, ...(hint ? {hint} : {})}, ...(logs.length > 0 ? {logs} : {})});
     await finish();
     return EXIT_CODES[code];
   }

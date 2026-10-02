@@ -154,6 +154,11 @@ export function renderEntry(options: {
   // single-quoted string literals of the template.
   const quote = (s: string) =>
     JSON.stringify(s).slice(1, -1).replaceAll("'", "\\'");
+  let safeArea = false;
+  try {
+    require.resolve('react-native-safe-area-context/package.json', {paths: [findProjectRoot(options.appPath)]});
+    safeArea = true;
+  } catch {}
   return template
     .replaceAll('__RUNTIME_DIR__', quote(RUNTIME_DIR))
     .replaceAll('__APP_PATH__', quote(path.resolve(options.appPath)))
@@ -168,6 +173,15 @@ export function renderEntry(options: {
     .replaceAll('__SESSION__', String(options.session === true))
     .replaceAll('__HOST_CONFIG__', () => JSON.stringify(options.hostConfig ?? {}))
     .replaceAll('__RUN_OPTIONS__', () => JSON.stringify(options.runOptions ?? {}))
+    .replaceAll('/* __APP_PROVIDERS__ */', () => safeArea ? `
+      const {SafeAreaInsetsContext, SafeAreaFrameContext} = require('react-native-safe-area-context');
+      const Screen = App as React.ComponentType;
+      App = function StandaloneScreen() {
+        return React.createElement(SafeAreaInsetsContext.Provider, {value: hostConfig.safeAreaInsets ?? {top: 0, right: 0, bottom: 0, left: 0}},
+          React.createElement(SafeAreaFrameContext.Provider, {value: {x: 0, y: 0, width: ${options.viewportWidth}, height: ${options.viewportHeight}}},
+            React.createElement(Screen)));
+      };
+    ` : '')
     .replaceAll('/* __EXPO_PRELUDE__ */', () =>
       options.expoPolyfill != null
         ? `require('${quote(options.expoPolyfill)}').installExpoGlobalPolyfill();\n  ` +

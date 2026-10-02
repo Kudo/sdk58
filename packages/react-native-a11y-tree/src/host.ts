@@ -6,7 +6,7 @@ import readline from 'node:readline';
 import {fileURLToPath} from 'node:url';
 import {getHostPath, getHostVersionPath} from './runtimePackage.ts';
 
-import {CliError, type ErrorCode, type LogEntry, logEntry} from './errors.ts';
+import {CliError, type ErrorCode, type LogEntry, logEntry, nativeModuleHint} from './errors.ts';
 import {BASE_URL_ENV, downloadHost, hostFileName, readManifest} from './hostDownload.ts';
 
 export {hostFileName};
@@ -395,7 +395,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
       options.logs?.push(entry);
       // Fallback warnings always explain reduced fidelity. Otherwise, unless
       // quiet: unknown errors/warnings, or everything with --verbose.
-      if (message.startsWith('[NATIVE_COMPONENT_FALLBACK] ') || options.verbose || (!options.quiet && !entry.known && (level === 'error' || level === 'warn'))) {
+      if (/^\[NATIVE_(?:COMPONENT|MODULE)_FALLBACK\] /.test(message) || options.verbose || (!options.quiet && !entry.known && (level === 'error' || level === 'warn'))) {
         process.stderr.write(`[console.${level}] ${message}\n`);
       }
     } else if (options.verbose) {
@@ -419,7 +419,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     throw new HostError('APP_THREW', `Render failed in JS: ${jsError.message}`, {
       stack: jsError.stack,
       exitCode,
-    });
+    }, nativeModuleHint(jsError.message));
   }
   if (exitCode !== 0) {
     throw new HostError(

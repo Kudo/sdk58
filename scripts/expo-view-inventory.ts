@@ -22,7 +22,7 @@ function platforms(file: string): string[] {
   return ['android', 'ios'];
 }
 
-export function scanNativeViews(file: string, source: string): Call[] {
+export function scanNativeFactories(file: string, source: string, factories: ReadonlySet<string>): (Call & {position: number})[] {
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const imports = new Map<string, string>();
   const namespaces = new Set<string>();
@@ -30,14 +30,15 @@ export function scanNativeViews(file: string, source: string): Call[] {
   for (const statement of ast.statements) {
     if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
       const from = statement.moduleSpecifier.text;
-      if (!/^(expo|expo-modules-core|react-native)(\/|$)/.test(from)) continue;
+      const coreModuleImport = factories.has('requireNativeModule') && from.startsWith('.') && path.posix.normalize(path.posix.join(path.posix.dirname(file), from)) === 'packages/expo-modules-core/src/requireNativeModule';
+      if (!/^(expo|expo-modules-core|react-native)(\/|$)/.test(from) && !coreModuleImport) continue;
       const clause = statement.importClause;
-      if (clause?.name && from.endsWith('/codegenNativeComponent')) imports.set(clause.name.text, 'codegenNativeComponent');
+      if (clause?.name && factories.has('codegenNativeComponent') && from.endsWith('/codegenNativeComponent')) imports.set(clause.name.text, 'codegenNativeComponent');
       const bindings = clause?.namedBindings;
       if (bindings && ts.isNamespaceImport(bindings)) namespaces.add(bindings.name.text);
       if (bindings && ts.isNamedImports(bindings)) for (const binding of bindings.elements) {
         const name = (binding.propertyName ?? binding.name).text;
-        if (FACTORIES.has(name)) imports.set(binding.name.text, name);
+        if (factories.has(name)) imports.set(binding.name.text, name);
       }
     }
     if (ts.isVariableStatement(statement) && statement.declarationList.flags & ts.NodeFlags.Const) {
@@ -62,12 +63,12 @@ export function scanNativeViews(file: string, source: string): Call[] {
     ts.forEachChild(node, collect);
   }
   collect(ast);
-  const calls: Call[] = [];
+  const calls: (Call & {position: number})[] = [];
   function visit(node: ts.Node) {
     if (ts.isCallExpression(node)) {
       const expr = node.expression;
       const factory = ts.isIdentifier(expr) ? imports.get(expr.text)
-        : ts.isPropertyAccessExpression(expr) && ts.isIdentifier(expr.expression) && namespaces.has(expr.expression.text) && FACTORIES.has(expr.name.text)
+        : ts.isPropertyAccessExpression(expr) && ts.isIdentifier(expr.expression) && namespaces.has(expr.expression.text) && factories.has(expr.name.text)
           ? expr.name.text : undefined;
       if (factory) {
         let environments = [new Map<string, ts.Expression>()];
@@ -91,7 +92,7 @@ export function scanNativeViews(file: string, source: string): Call[] {
           const names = factory.startsWith('requireNativeView') ? values(node.arguments[1], env) : [];
           for (const module of modules.length ? modules : [null]) for (const view of names.length ? names : [null]) {
             const dynamic = module == null || (factory.startsWith('requireNativeView') && node.arguments.length > 1 && view == null);
-            calls.push({file, line: ast.getLineAndCharacterOfPosition(node.getStart()).line + 1,
+            calls.push({position: node.getStart(), file, line: ast.getLineAndCharacterOfPosition(node.getStart()).line + 1,
               factory, module, view, platforms: platforms(file), ...(dynamic ? {expression: node.getText(ast)} : {})});
           }
         }
@@ -101,6 +102,10 @@ export function scanNativeViews(file: string, source: string): Call[] {
   }
   visit(ast);
   return calls;
+}
+
+export function scanNativeViews(file: string, source: string): Call[] {
+  return scanNativeFactories(file, source, FACTORIES).map(({position: _, ...call}) => call);
 }
 
 export function mergeNativeViews(calls: PackageCall[]) {

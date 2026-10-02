@@ -1,0 +1,2750 @@
+{
+  "repository": "https://github.com/expo/expo",
+  "ref": "sdk-58",
+  "commit": "cfbcecdb6835a3241aff68061827a59a41d9080c",
+  "note": "Required/optional native module call sites, not a claim of support. Members are same-file static property accesses only; empty does not mean no APIs. Dynamic names are retained. Platforms are inferred from file paths.",
+  "modules": [
+    {
+      "package": "@expo/app-integrity",
+      "module": "ExpoAppIntegrity",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-app-integrity/src/ExpoAppIntegrity.ts",
+          "line": 8,
+          "factory": "requireNativeModule",
+          "module": "ExpoAppIntegrity",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "@expo/dom-webview",
+      "module": "ExpoDomWebViewModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/@expo/dom-webview/src/ExpoDomWebViewModule.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoDomWebViewModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "@expo/log-box",
+      "module": "ExpoGo",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/@expo/log-box/src/logbox-rn-polyfill.tsx",
+          "line": 22,
+          "factory": "requireNativeModule",
+          "module": "ExpoGo",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "@expo/ui",
+      "module": "ExpoUI",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "ObservableState",
+        "WorkletCallback",
+        "completeRefresh",
+        "withAnimation"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-ui/src/State/useNativeState.ts",
+          "line": 6,
+          "factory": "requireNativeModule",
+          "module": "ExpoUI",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "ObservableState",
+            "WorkletCallback"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/State/useWorkletProp.ts",
+          "line": 9,
+          "factory": "requireNativeModule",
+          "module": "ExpoUI",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "WorkletCallback"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/jetpack-compose/ExpoUIModule.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoUI",
+          "platforms": [
+            "android"
+          ],
+          "optional": false,
+          "members": []
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/modifiers/index.ts",
+          "line": 29,
+          "factory": "requireNativeModule",
+          "module": "ExpoUI",
+          "platforms": [
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "completeRefresh"
+          ]
+        },
+        {
+          "file": "packages/expo-ui/src/swift-ui/withAnimation.ts",
+          "line": 7,
+          "factory": "requireNativeModule",
+          "module": "ExpoUI",
+          "platforms": [
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "WorkletCallback",
+            "withAnimation"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-age-range",
+      "module": "ExpoAgeRange",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-age-range/src/ExpoAgeRange.ts",
+          "line": 8,
+          "factory": "requireNativeModule",
+          "module": "ExpoAgeRange",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-ai",
+      "module": "ExpoAI",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-ai/src/ExpoAI.ts",
+          "line": 5,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoAI",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-app-intents",
+      "module": "ExpoAppIntents",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-app-intents/src/ExpoAppIntentsModule.ts",
+          "line": 19,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoAppIntents",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-app-metrics",
+      "module": "ExpoAppMetrics",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-app-metrics/src/module.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoAppMetrics",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-apple-authentication",
+      "module": "ExpoAppleAuthentication",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-apple-authentication/src/ExpoAppleAuthentication.ts",
+          "line": 6,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoAppleAuthentication",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-application",
+      "module": "ExpoApplication",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-application/src/ExpoApplication.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoApplication",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-asset",
+      "module": "ExpoAsset",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "downloadAsync"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-asset/src/ExpoAsset.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoAsset",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "downloadAsync"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-asset",
+      "module": "ExpoGo",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-asset/src/PlatformUtils.ts",
+          "line": 12,
+          "factory": "requireNativeModule",
+          "module": "ExpoGo",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-asset",
+      "module": "ExpoUpdates",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "isEnabled",
+        "isUsingEmbeddedAssets",
+        "localAssets"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-asset/src/PlatformUtils.ts",
+          "line": 8,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoUpdates",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": [
+            "isEnabled",
+            "isUsingEmbeddedAssets",
+            "localAssets"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-audio",
+      "module": "ExpoAudio",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-audio/src/AudioModule.ts",
+          "line": 8,
+          "factory": "requireNativeModule",
+          "module": "ExpoAudio",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-background-fetch",
+      "module": "ExpoBackgroundFetch",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-background-fetch/src/ExpoBackgroundFetch.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoBackgroundFetch",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-background-task",
+      "module": "ExpoBackgroundTask",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-background-task/src/ExpoBackgroundTaskModule.ts",
+          "line": 16,
+          "factory": "requireNativeModule",
+          "module": "ExpoBackgroundTask",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-battery",
+      "module": "ExpoBattery",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-battery/src/ExpoBattery.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoBattery",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-blob",
+      "module": "ExpoBlob",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "Blob"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-blob/src/ExpoBlob.ts",
+          "line": 21,
+          "factory": "requireNativeModule",
+          "module": "ExpoBlob",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "Blob"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-brightness",
+      "module": "ExpoBrightness",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-brightness/src/ExpoBrightness.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoBrightness",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-brownfield",
+      "module": "ExpoBrownfieldModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "addListener",
+        "listenerCount",
+        "popToNative",
+        "removeAllListeners",
+        "removeListener",
+        "sendMessage",
+        "setNativeBackEnabled"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-brownfield/src/ExpoBrownfieldModule.ts",
+          "line": 10,
+          "factory": "requireNativeModule",
+          "module": "ExpoBrownfieldModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "addListener",
+            "listenerCount",
+            "popToNative",
+            "removeAllListeners",
+            "removeListener",
+            "sendMessage",
+            "setNativeBackEnabled"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-brownfield",
+      "module": "ExpoBrownfieldStateModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "addListener",
+        "deleteSharedState",
+        "getSharedState"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-brownfield/src/ExpoBrownfieldStateModule.ts",
+          "line": 11,
+          "factory": "requireNativeModule",
+          "module": "ExpoBrownfieldStateModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "addListener",
+            "deleteSharedState",
+            "getSharedState"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-calendar",
+      "module": "CalendarNext",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-calendar/src/ExpoCalendar.ts",
+          "line": 53,
+          "factory": "requireNativeModule",
+          "module": "CalendarNext",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-calendar",
+      "module": "ExpoCalendar",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-calendar/src/legacy/ExpoCalendar.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoCalendar",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-camera",
+      "module": "ExpoCamera",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-camera/src/ExpoCameraManager.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoCamera",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-cellular",
+      "module": "ExpoCellular",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-cellular/src/ExpoCellular.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoCellular",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-clipboard",
+      "module": "ExpoClipboard",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-clipboard/src/ExpoClipboard.ts",
+          "line": 32,
+          "factory": "requireNativeModule",
+          "module": "ExpoClipboard",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-constants",
+      "module": "ExponentConstants",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-constants/src/ExponentConstants.ts",
+          "line": 3,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExponentConstants",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-constants",
+      "module": "ExpoUpdates",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "isEmbeddedLaunch",
+        "manifest",
+        "manifestString"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-constants/src/Constants.ts",
+          "line": 39,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoUpdates",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": [
+            "isEmbeddedLaunch",
+            "manifest",
+            "manifestString"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-contacts",
+      "module": "ExpoContactAccessButton",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-contacts/src/ContactAccessButton.tsx",
+          "line": 82,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoContactAccessButton",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        },
+        {
+          "file": "packages/expo-contacts/src/legacy/ContactAccessButton.tsx",
+          "line": 82,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoContactAccessButton",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-contacts",
+      "module": "ExpoContacts",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-contacts/src/legacy/ExpoContacts.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoContacts",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-contacts",
+      "module": "ExpoContactsNext",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "Contact",
+        "ContactNext"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-contacts/src/ExpoContactsNext.ts",
+          "line": 21,
+          "factory": "requireNativeModule",
+          "module": "ExpoContactsNext",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "Contact",
+            "ContactNext"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-crypto",
+      "module": "ExpoCrypto",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-crypto/src/ExpoCrypto.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoCrypto",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-crypto",
+      "module": "ExpoCryptoAES",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-crypto/src/aes/ExpoCryptoAES.ts",
+          "line": 147,
+          "factory": "requireNativeModule",
+          "module": "ExpoCryptoAES",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-dev-menu",
+      "module": "ExpoDevMenu",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-dev-menu/src/ExpoDevMenu.ts",
+          "line": 3,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoDevMenu",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-device",
+      "module": "ExpoDevice",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-device/src/ExpoDevice.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoDevice",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-document-picker",
+      "module": "ExpoDocumentPicker",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-document-picker/src/ExpoDocumentPicker.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoDocumentPicker",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-eas-client",
+      "module": "EASClient",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-eas-client/src/EASClient.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "EASClient",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-file-system",
+      "module": "ExponentFileSystem",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-file-system/src/legacy/ExponentFileSystem.ts",
+          "line": 5,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExponentFileSystem",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-file-system",
+      "module": "FileSystem",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-file-system/src/ExpoFileSystem.ts",
+          "line": 45,
+          "factory": "requireNativeModule",
+          "module": "FileSystem",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-font",
+      "module": "ExpoFontLoader",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-font/src/ExpoFontLoader.ts",
+          "line": 38,
+          "factory": "requireNativeModule",
+          "module": "ExpoFontLoader",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-font",
+      "module": "ExpoFontUtils",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-font/src/ExpoFontUtils.ts",
+          "line": 3,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoFontUtils",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-gl",
+      "module": "ExpoGL",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "createCameraTextureAsync",
+        "createContextAsync",
+        "destroyContextAsync",
+        "destroyObjectAsync",
+        "takeSnapshotAsync"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-gl/src/GLView.tsx",
+          "line": 26,
+          "factory": "requireNativeModule",
+          "module": "ExpoGL",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "createCameraTextureAsync",
+            "createContextAsync",
+            "destroyContextAsync",
+            "destroyObjectAsync",
+            "takeSnapshotAsync"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-glass-effect",
+      "module": "ExpoGlassEffect",
+      "platforms": [
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-glass-effect/src/isGlassEffectAPIAvailable.ios.ts",
+          "line": 16,
+          "factory": "requireNativeModule",
+          "module": "ExpoGlassEffect",
+          "platforms": [
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        },
+        {
+          "file": "packages/expo-glass-effect/src/isLiquidGlassAvailable.ios.ts",
+          "line": 18,
+          "factory": "requireNativeModule",
+          "module": "ExpoGlassEffect",
+          "platforms": [
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-haptics",
+      "module": "ExpoHaptics",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-haptics/src/ExpoHaptics.ts",
+          "line": 3,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoHaptics",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-image-manipulator",
+      "module": "ExpoImageManipulator",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-image-manipulator/src/NativeImageManipulatorModule.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoImageManipulator",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-image-picker",
+      "module": "ExponentImagePicker",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-image-picker/src/ExponentImagePicker.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExponentImagePicker",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-image",
+      "module": "ExpoAppMetrics",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-image/src/observe.ts",
+          "line": 218,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoAppMetrics",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-image",
+      "module": "ExpoImage",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-image/src/ImageModule.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoImage",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        },
+        {
+          "file": "packages/expo-image/src/observe.ts",
+          "line": 219,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoImage",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-image",
+      "module": "ExpoObserve",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "addListener",
+        "getIntegrations"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-image/src/observe.ts",
+          "line": 208,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoObserve",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": [
+            "addListener",
+            "getIntegrations"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-intent-launcher",
+      "module": "ExpoIntentLauncher",
+      "platforms": [
+        "android"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-intent-launcher/src/ExpoIntentLauncher.android.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoIntentLauncher",
+          "platforms": [
+            "android"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-keep-awake",
+      "module": "ExpoKeepAwake",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-keep-awake/src/ExpoKeepAwake.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoKeepAwake",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-linking",
+      "module": "ExpoLinking",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-linking/src/ExpoLinking.ts",
+          "line": 12,
+          "factory": "requireNativeModule",
+          "module": "ExpoLinking",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-live-photo",
+      "module": "ExpoLivePhoto",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-live-photo/src/LivePhotoModule.ts",
+          "line": 3,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoLivePhoto",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-local-authentication",
+      "module": "ExpoLocalAuthentication",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-local-authentication/src/ExpoLocalAuthentication.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoLocalAuthentication",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-localization",
+      "module": "ExpoLocalization",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "addListener"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-localization/src/ExpoLocalization.native.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoLocalization",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "addListener"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-location",
+      "module": "ExpoLocation",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-location/src/ExpoLocation.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoLocation",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-mail-composer",
+      "module": "ExpoMailComposer",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-mail-composer/src/ExpoMailComposer.ts",
+          "line": 4,
+          "factory": "requireNativeModule",
+          "module": "ExpoMailComposer",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-maps",
+      "module": "ExpoMaps",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-maps/src/ExpoMaps.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoMaps",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-media-library",
+      "module": "ExpoMediaLibrary",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-media-library/src/legacy/ExpoMediaLibrary.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoMediaLibrary",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-media-library",
+      "module": "ExpoMediaLibraryNext",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "Album",
+        "Asset",
+        "Query"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-media-library/src/next/native/NativeMediaLibraryModule.ts",
+          "line": 6,
+          "factory": "requireNativeModule",
+          "module": "ExpoMediaLibraryNext",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "Album",
+            "Asset",
+            "Query"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-modules-core",
+      "module": "ExpoModulesCoreJSLogger",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "addListener"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-modules-core/src/sweet/NativeJSLogger.ts",
+          "line": 3,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoModulesCoreJSLogger",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": []
+        },
+        {
+          "file": "packages/expo-modules-core/src/sweet/setUpJsLogger.fx.ts",
+          "line": 16,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoModulesCoreJSLogger",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": [
+            "addListener"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-modules-core",
+      "module": null,
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "ViewPrototypes"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-modules-core/src/NativeViewManagerAdapter.native.tsx",
+          "line": 166,
+          "factory": "requireNativeModule",
+          "module": null,
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "expression": "requireNativeModule(moduleName)",
+          "optional": false,
+          "members": [
+            "ViewPrototypes"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-navigation-bar",
+      "module": "ExpoNavigationBar",
+      "platforms": [
+        "android"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-navigation-bar/src/ExpoNavigationBar.android.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoNavigationBar",
+          "platforms": [
+            "android"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-network",
+      "module": "ExpoNetwork",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-network/src/ExpoNetwork.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoNetwork",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoBackgroundNotificationTasksModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/BackgroundNotificationTasksModule.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoBackgroundNotificationTasksModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoBadgeModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "setBadgeCountAsync"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/BadgeModule.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoBadgeModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": [
+            "setBadgeCountAsync"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoNotificationCategoriesModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/NotificationCategoriesModule.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoNotificationCategoriesModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoNotificationChannelGroupManager",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/NotificationChannelGroupManager.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoNotificationChannelGroupManager",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoNotificationChannelManager",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/NotificationChannelManager.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoNotificationChannelManager",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoNotificationPermissionsModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/NotificationPermissionsModule.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoNotificationPermissionsModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoNotificationPresenter",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/NotificationPresenterModule.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoNotificationPresenter",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoNotificationScheduler",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/NotificationScheduler.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoNotificationScheduler",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoNotificationsEmitter",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/NotificationsEmitterModule.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoNotificationsEmitter",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoNotificationsHandlerModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/NotificationsHandlerModule.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoNotificationsHandlerModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoPushTokenManager",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/PushTokenManager.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoPushTokenManager",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "ExpoTopicSubscriptionModule",
+      "platforms": [
+        "android"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/TopicSubscriptionModule.android.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "ExpoTopicSubscriptionModule",
+          "platforms": [
+            "android"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-notifications",
+      "module": "NotificationsServerRegistrationModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-notifications/src/ServerRegistrationModule.native.ts",
+          "line": 5,
+          "factory": "requireNativeModule",
+          "module": "NotificationsServerRegistrationModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-observe",
+      "module": "ExpoObserve",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-observe/src/module.ts",
+          "line": 38,
+          "factory": "requireNativeModule",
+          "module": "ExpoObserve",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-print",
+      "module": "ExpoPrint",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-print/src/ExponentPrint.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoPrint",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoRouter",
+      "platforms": [
+        "android"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/color/materialColor.android.ts",
+          "line": 62,
+          "factory": "requireNativeModule",
+          "module": "ExpoRouter",
+          "platforms": [
+            "android"
+          ],
+          "optional": false,
+          "members": []
+        },
+        {
+          "file": "packages/expo-router/src/color/materialColor.android.ts",
+          "line": 69,
+          "factory": "requireNativeModule",
+          "module": "ExpoRouter",
+          "platforms": [
+            "android"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-router",
+      "module": "ExpoSplashScreen",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "hide",
+        "internalMaybeHideAsync",
+        "internalPreventAutoHideAsync",
+        "preventAutoHideAsync"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-router/src/utils/splash.ts",
+          "line": 3,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoSplashScreen",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": [
+            "hide",
+            "internalMaybeHideAsync",
+            "internalPreventAutoHideAsync",
+            "preventAutoHideAsync"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-screen-capture",
+      "module": "ExpoScreenCapture",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-screen-capture/src/ExpoScreenCapture.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoScreenCapture",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-screen-orientation",
+      "module": "ExpoScreenOrientation",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-screen-orientation/src/ExpoScreenOrientation.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoScreenOrientation",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-secure-store",
+      "module": "ExpoSecureStore",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-secure-store/src/ExpoSecureStore.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoSecureStore",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sensors",
+      "module": "ExpoBarometer",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sensors/src/ExpoBarometer.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoBarometer",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sensors",
+      "module": "ExpoLightSensor",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sensors/src/ExpoLightSensor.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoLightSensor",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sensors",
+      "module": "ExponentAccelerometer",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sensors/src/ExponentAccelerometer.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExponentAccelerometer",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sensors",
+      "module": "ExponentDeviceMotion",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sensors/src/ExponentDeviceMotion.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExponentDeviceMotion",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sensors",
+      "module": "ExponentGyroscope",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sensors/src/ExponentGyroscope.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExponentGyroscope",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sensors",
+      "module": "ExponentMagnetometer",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sensors/src/ExponentMagnetometer.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExponentMagnetometer",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sensors",
+      "module": "ExponentMagnetometerUncalibrated",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sensors/src/ExponentMagnetometerUncalibrated.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExponentMagnetometerUncalibrated",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sensors",
+      "module": "ExponentPedometer",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sensors/src/ExponentPedometer.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExponentPedometer",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sharing",
+      "module": "ExpoSharing",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sharing/src/SharingNativeModule.ts",
+          "line": 13,
+          "factory": "requireNativeModule",
+          "module": "ExpoSharing",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-sms",
+      "module": "ExpoSMS",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sms/src/ExpoSMS.native.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoSMS",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-speech",
+      "module": "ExpoSpeech",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-speech/src/ExponentSpeech.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoSpeech",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-splash-screen",
+      "module": "ExpoSplashScreen",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [
+        "hide",
+        "preventAutoHideAsync",
+        "setOptions"
+      ],
+      "callSites": [
+        {
+          "file": "packages/expo-splash-screen/src/SplashScreen.native.ts",
+          "line": 5,
+          "factory": "requireOptionalNativeModule",
+          "module": "ExpoSplashScreen",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": true,
+          "members": [
+            "hide",
+            "preventAutoHideAsync",
+            "setOptions"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "expo-sqlite",
+      "module": "ExpoSQLite",
+      "platforms": [
+        "android",
+        "ios",
+        "web"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-sqlite/src/ExpoSQLite.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoSQLite",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        },
+        {
+          "file": "packages/expo-sqlite/src/ExpoSQLite.web.ts",
+          "line": 8,
+          "factory": "requireNativeModule",
+          "module": "ExpoSQLite",
+          "platforms": [
+            "web"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-store-review",
+      "module": "ExpoStoreReview",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-store-review/src/ExpoStoreReview.native.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoStoreReview",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-symbols",
+      "module": "SymbolModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-symbols/src/SymbolModule.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "SymbolModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-system-ui",
+      "module": "ExpoSystemUI",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-system-ui/src/ExpoSystemUI.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoSystemUI",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-task-manager",
+      "module": "ExpoTaskManager",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-task-manager/src/ExpoTaskManager.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoTaskManager",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-tracking-transparency",
+      "module": "ExpoTrackingTransparency",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-tracking-transparency/src/ExpoTrackingTransparency.ts",
+          "line": 4,
+          "factory": "requireNativeModule",
+          "module": "ExpoTrackingTransparency",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-updates",
+      "module": "ExpoUpdates",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-updates/src/ExpoUpdates.ts",
+          "line": 8,
+          "factory": "requireNativeModule",
+          "module": "ExpoUpdates",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-video-thumbnails",
+      "module": "ExpoVideoThumbnails",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-video-thumbnails/src/ExpoVideoThumbnails.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoVideoThumbnails",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-video",
+      "module": "ExpoVideo",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-video/src/ExpoVideo.ts",
+          "line": 16,
+          "factory": "requireNativeModule",
+          "module": "ExpoVideo",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-web-browser",
+      "module": "ExpoWebBrowser",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-web-browser/src/ExpoWebBrowser.ts",
+          "line": 2,
+          "factory": "requireNativeModule",
+          "module": "ExpoWebBrowser",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo-widgets",
+      "module": "ExpoWidgets",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo-widgets/src/ExpoWidgets.native.ts",
+          "line": 18,
+          "factory": "requireNativeModule",
+          "module": "ExpoWidgets",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo",
+      "module": "ExpoFetchModule",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo/src/winter/fetch/ExpoFetchModule.ts",
+          "line": 3,
+          "factory": "requireNativeModule",
+          "module": "ExpoFetchModule",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    },
+    {
+      "package": "expo",
+      "module": "ExpoGo",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "members": [],
+      "callSites": [
+        {
+          "file": "packages/expo/src/environment/ExpoGo.ts",
+          "line": 34,
+          "factory": "requireNativeModule",
+          "module": "ExpoGo",
+          "platforms": [
+            "android",
+            "ios"
+          ],
+          "optional": false,
+          "members": []
+        }
+      ]
+    }
+  ]
+}

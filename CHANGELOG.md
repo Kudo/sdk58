@@ -4,6 +4,20 @@ All notable changes to `react-native-a11y-tree` and its native runtime packages.
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The CLI and platform packages
 share one version.
 
+## [0.1.3] - 2026-10-01
+
+### Added
+
+- SDK 58 required/optional native-module inventory with source references and conservative static API usage.
+- Explicit headless ExpoImage, ExpoDevice, ExpoLinking, ExpoFontLoader and ExpoWebBrowser adapters, with stderr warnings on first use and clear errors for unsupported native operations.
+- Image and symbol props/layout support, including image accessibility and source metadata; no pixels, network loading or glyph rendering.
+- Regression coverage for the unchanged SDK 58 Home and Explore screens on both presets.
+
+### Fixed
+
+- Supply preset-backed safe-area contexts when rendering standalone screens; application providers can override them.
+- Explain missing native-module failures with an actionable adapter/mock hint, while keeping optional modules unavailable.
+
 ## [0.1.2] - 2026-10-01
 
 ### Changed

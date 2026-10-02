@@ -51,12 +51,14 @@ registerRender(() => {
   (require('__RUNTIME_DIR__/hostConfig') as typeof HostConfigModule).applyDeviceMetrics(hostConfig.deviceMetrics);
 
   const appModule = require('__APP_PATH__') as {default?: unknown; App?: unknown};
-  const App = appModule.default ?? appModule.App;
+  let App = appModule.default ?? appModule.App;
   if (typeof App !== 'function' && (typeof App !== 'object' || App == null)) {
     throw new Error(
       'rn-a11y-tree: "__APP_PATH__" must have a default export or an `App` named export that is a React component',
     );
   }
+
+  /* __APP_PROVIDERS__ */
 
   const viewportWidth = __VIEWPORT_WIDTH__;
   const viewportHeight = __VIEWPORT_HEIGHT__;

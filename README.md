@@ -1242,3 +1242,26 @@ and native methods are not simulated. Missing TurboModules and application error
 still surface normally. Supported native components keep their real descriptors.
 Older custom binaries without the registry probe retain their previous behavior;
 use the matching optional runtime package for fallback support.
+
+
+### Expo native modules
+
+Starting with 0.1.3, explicit adapters allow SDK 58 starter Home/Explore screens
+and `expo-image` imports to render headlessly. Images retain layout, source props
+and accessibility; image loading/decoding/caching and native events are not
+simulated. Unsupported operations reject with `[NATIVE_API_UNSUPPORTED]`.
+Adapters warn once on stderr with `[NATIVE_MODULE_FALLBACK]`, even under `--quiet`.
+
+Unknown optional modules remain unavailable so the library can use its own
+fallback. Unknown required modules still fail, with an adapter/mock hint. Native
+module APIs cannot be replaced by the generic View fallback. See the
+[Expo support matrix](docs/expo-support.md#native-modules-013) and
+[native-module inventory](docs/expo-native-modules.json) for coverage and limits.
+
+Standalone screens get preset-backed safe-area inset/frame contexts when
+`react-native-safe-area-context` is installed; your own providers override them.
+The SDK 58 starter screens are tested directly without loading the Router layout:
+
+```sh
+bunx react-native-a11y-tree@0.1.3 render src/app/explore.tsx --preset ios-phone --format text
+```

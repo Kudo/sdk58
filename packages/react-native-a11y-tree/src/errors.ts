@@ -96,3 +96,9 @@ export function logEntry(level: string, message: string): LogEntry {
   if (KNOWN_NOISE.some(re => re.test(message))) entry.known = true;
   return entry;
 }
+
+/** Missing Expo modules fail before the native-view fallback can run. */
+export function nativeModuleHint(message: string): string | undefined {
+  const name = /Cannot find native module ['"]([^'"]+)['"]/.exec(message)?.[1];
+  return name ? `The headless runtime has no adapter for ${name}. Native-view fallback cannot replace module APIs. Use an application-level mock or add an explicit runtime adapter; see docs/expo-support.md.` : undefined;
+}
