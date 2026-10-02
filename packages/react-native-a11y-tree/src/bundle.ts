@@ -21,6 +21,7 @@ import {
   compileBytecode,
   compileBytecodeInBackground,
   entryDir,
+  snapshotEntry,
   writeEntry,
 } from './bundleCache.ts';
 import type {CustomResolutionContext, Resolution} from 'metro-resolver';
@@ -539,34 +540,33 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     resolutionConfig: JSON.stringify({paths: projectPaths.key, routerRoot})});
   const dir = entryDir(root, key);
 
-  const result = (cache: BundleResult['cache'], jsPath: string, workDir: string | null): BundleResult => {
-    let bundlePath = jsPath;
-    let bytecode = false;
-    if (cache !== 'off' && bytecodeMode !== 'off') {
-      const hbc = bytecodePath(dir);
-      if (hbc != null && !fs.existsSync(hbc) && bytecodeMode === 'on') compileBytecode(dir);
-      if (hbc != null && fs.existsSync(hbc)) {
-        bundlePath = hbc;
-        bytecode = true;
-      } else if (bytecodeMode === 'auto') {
-        compileBytecodeInBackground(dir);
+  const result = (cache: BundleResult['cache'], jsPath: string, workDir: string | null, selectedPath = jsPath): BundleResult => ({
+    bundlePath: selectedPath,
+    jsBundlePath: jsPath,
+    workDir,
+    cacheDir: cache !== 'off' ? dir : null,
+    projectRoot,
+    sizeBytes: fs.statSync(selectedPath).size,
+    cache,
+    bytecode: selectedPath !== jsPath,
+  });
+  const cachedResult = (cache: 'hit' | 'miss'): BundleResult | null => {
+    try {
+      if (bytecodeMode !== 'off') {
+        const hbc = bytecodePath(dir);
+        if (hbc != null && !fs.existsSync(hbc) && bytecodeMode === 'on') compileBytecode(dir);
+        else if (hbc != null && !fs.existsSync(hbc) && bytecodeMode === 'auto') compileBytecodeInBackground(dir);
       }
-    }
-    return {
-      bundlePath,
-      jsBundlePath: jsPath,
-      workDir,
-      cacheDir: cache !== 'off' ? dir : null,
-      projectRoot,
-      sizeBytes: fs.statSync(bundlePath).size,
-      cache,
-      bytecode,
-    };
+      const snapshot = snapshotEntry(dir, key, bytecodeMode !== 'off');
+      if (!snapshot) return null;
+      return result(cache, snapshot.jsBundlePath, snapshot.workDir, snapshot.bundlePath);
+    } catch {return null;} // Cache races cannot invalidate this invocation's build.
   };
 
   const changed = useCache && !options.resetCache ? changedInputs(dir, key, SMALL_EDIT + 1) : null;
   if (changed === 0) {
-    return result('hit', path.join(dir, BUNDLE_FILE), null);
+    const hit = cachedResult('hit');
+    if (hit) return hit;
   }
 
   // A fixed work dir keeps Metro's roots, and so its file map cache key,
@@ -677,6 +677,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     if (options.verbose) process.stderr.write(`rn-a11y-tree: cache publication skipped: ${error instanceof Error ? error.message : String(error)}\n`);
     return result('off', bundlePath, outDir);
   }
+  const published = cachedResult('miss');
+  if (!published) return result('off', bundlePath, outDir);
   fs.rmSync(outDir, {recursive: true, force: true});
-  return result('miss', path.join(dir, BUNDLE_FILE), null);
+  return published;
 }

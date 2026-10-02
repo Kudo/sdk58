@@ -338,7 +338,7 @@ async function execute<T>(
       // mismatch) makes the host fail before any JS runs: drop it and use JS.
       const noRetry = cancellation.signal.aborted || (error instanceof CliError && (error.code === 'APP_THREW' || error.code === 'TIMEOUT' || error.details?.outputLimit === true));
       if (!result.bytecode || noRetry || result.cacheDir == null) throw error;
-      discardBytecode(result.cacheDir);
+      discardBytecode(result.cacheDir, result.bundlePath);
       process.stderr.write('rn-a11y-tree: warning: the host could not load the bytecode bundle; using JS\n');
       if (timing) timing.bytecode = false;
       payload = await attempt(result.jsBundlePath);

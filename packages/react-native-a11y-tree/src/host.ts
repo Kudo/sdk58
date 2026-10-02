@@ -6,6 +6,7 @@ import readline from 'node:readline';
 import {PassThrough} from 'node:stream';
 import {fileURLToPath} from 'node:url';
 import {getHostPath, getHostVersionPath} from './runtimePackage.ts';
+import {terminateWindowsTree, type ProcessCleanupResult} from './processCleanup.ts';
 
 import {CliError, type ErrorCode, type LogEntry, logEntry, nativeModuleHint} from './errors.ts';
 import {BASE_URL_ENV, downloadHost, hostFileName, readManifest} from './hostDownload.ts';
@@ -65,12 +66,12 @@ export type HostTiming = {spawn?: number; result?: number; exit?: number};
 
 /** Host or app failure; `code` is APP_THREW, HOST_MISSING or HOST_CRASHED. */
 export class HostError extends CliError {
-  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean; outputLimit?: boolean};
+  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean; outputLimit?: boolean} & ProcessCleanupResult;
 
   constructor(
     code: ErrorCode,
     message: string,
-    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean; outputLimit?: boolean},
+    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean; outputLimit?: boolean} & ProcessCleanupResult,
     hint?: string,
   ) {
     const details: Record<string, unknown> = {};
@@ -80,6 +81,11 @@ export class HostError extends CliError {
     if (hostDetails?.outputLimit) details.outputLimit = true;
     if (hostDetails?.cancelled) details.cancelled = true;
     if (hostDetails?.cleanupTimedOut) details.cleanupTimedOut = true;
+    if (hostDetails?.cleanupIncomplete) {
+      details.cleanupIncomplete = true;
+      details.cleanupReason = hostDetails.cleanupReason;
+      if (hostDetails.cleanupExitCode !== undefined) details.cleanupExitCode = hostDetails.cleanupExitCode;
+    }
     super(code, message, {hint, details});
     this.hostDetails = hostDetails;
     this.name = 'HostError';
@@ -384,9 +390,9 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   const child = spawnHost(bin, hostArgs(options), {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: hostEnv(options.tz),
-    // Include a runner's descendants in termination on POSIX. Windows can only
-    // terminate the immediate process here; detached descendants on any OS are
-    // outside our control. The hard cutoff still bounds waiting on their pipes.
+    // POSIX uses a process group; Windows uses bounded taskkill tree cleanup.
+    // A root that already exited (Windows), or escaped descendants (POSIX),
+    // can still retain pipes, so cleanup always has a hard cutoff.
     detached: process.platform !== 'win32',
   });
 
@@ -474,6 +480,8 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   let stopped: 'timeout' | 'cancelled' | 'error' | 'output-limit' | undefined;
   let spawnError: Error | undefined;
   let cleanupTimedOut = false;
+  let windowsCleanup: Promise<ProcessCleanupResult> | undefined;
+  let cleanupDetails: ProcessCleanupResult = {};
   const [exitCode, signal] = await new Promise<[number | null, NodeJS.Signals | null]>(resolve => {
     let settled = false;
     let escalation: ReturnType<typeof setTimeout> | undefined;
@@ -495,7 +503,11 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
       if (escalation !== undefined) clearTimeout(escalation);
       if (cutoff !== undefined) clearTimeout(cutoff);
       options.signal?.removeEventListener('abort', onAbort);
-      if (stopped) kill('SIGKILL'); // Also clean up runner descendants after leader exit.
+      if (process.platform !== 'win32') {
+        if (stopped) kill('SIGKILL'); // Also clean up runner descendants after leader exit.
+      } else if (code !== 0 && !windowsCleanup) {
+        windowsCleanup = terminateWindowsTree(child);
+      }
       child.removeListener('error', onError);
       child.removeListener('close', finish);
       rl.removeAllListeners('line');
@@ -511,14 +523,21 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
         closeStderrLog();
       }
       child.unref();
-      if (options.timing) options.timing.exit = performance.now();
-      resolve([code, signal]);
+      const complete = () => {
+        if (options.timing) options.timing.exit = performance.now();
+        resolve([code, signal]);
+      };
+      if (windowsCleanup) void windowsCleanup.then(details => {cleanupDetails = details; complete();});
+      else complete();
     };
     const stop = (reason: typeof stopped) => {
       if (settled || stopped) return;
       stopped = reason;
-      kill('SIGTERM');
-      escalation = setTimeout(() => kill('SIGKILL'), 250);
+      if (process.platform === 'win32') windowsCleanup = terminateWindowsTree(child);
+      else {
+        kill('SIGTERM');
+        escalation = setTimeout(() => kill('SIGKILL'), 250);
+      }
       cutoff = setTimeout(() => {
         cleanupTimedOut = true;
         finish(child.exitCode, child.signalCode);
@@ -544,10 +563,11 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
       stopped === 'timeout' ? `Host execution timed out after ${timeoutMs} ms` :
         stopped === 'cancelled' ? 'Host execution cancelled' :
         stopped === 'output-limit' ? `Host exceeded the ${outputLimitBytes}-byte combined stdout/stderr output limit` : `Host failed: ${spawnError?.message}`,
-      {stderr, exitCode, cancelled: stopped === 'cancelled', cleanupTimedOut, outputLimit});
+      {...cleanupDetails, stderr, exitCode, cancelled: stopped === 'cancelled', cleanupTimedOut: cleanupTimedOut || cleanupDetails.cleanupTimedOut, outputLimit});
   }
   if (jsError) {
     throw new HostError('APP_THREW', `Render failed in JS: ${jsError.message}`, {
+      ...cleanupDetails,
       stack: jsError.stack,
       exitCode,
     }, nativeModuleHint(jsError.message));
@@ -556,7 +576,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     throw new HostError(
       'HOST_CRASHED',
       `Host exited with ${signal ? `signal ${signal}` : `code ${exitCode}`}`,
-      {stderr, exitCode},
+      {...cleanupDetails, stderr, exitCode},
     );
   }
   if (!result) {

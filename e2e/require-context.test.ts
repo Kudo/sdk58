@@ -24,7 +24,8 @@ it('invalidates finished bundles when recursive context routes are added, rename
       expect(proc.status, proc.stdout + proc.stderr).toBe(0);
       expect(proc.stderr).toContain(`bytes, ${state}, js)`);
       const bundle = /Bundle: (.+) \(\d+ bytes,/.exec(proc.stderr)![1];
-      return fs.readFileSync(bundle, 'utf8');
+      try {return fs.readFileSync(bundle, 'utf8');}
+      finally {fs.rmSync(path.dirname(bundle), {recursive: true, force: true});}
     };
     expect(build('built')).toContain('CONTEXT_INITIAL_ROUTE');
     build('cached');

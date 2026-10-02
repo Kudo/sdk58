@@ -112,13 +112,22 @@ describe('bundle-cache', () => {
         encoding: 'utf8',
         env: {...process.env, RN_A11Y_TREE_CACHE_DIR: cache},
       });
-    const first = run();
-    expect(first.status, first.stderr).toBe(0);
-    expect(first.stderr).toMatch(/Bundle: .* \(\d+ bytes, built, js\)/);
-    const second = run();
-    expect(second.status, second.stderr).toBe(0);
-    expect(second.stderr).toMatch(/Bundle: .* \(\d+ bytes, cached, js\)/);
-    fs.rmSync(cache, {recursive: true, force: true});
+    const snapshots: string[] = [];
+    try {
+      const first = run();
+      const firstPath = /Bundle: (.+) \(\d+ bytes/.exec(first.stderr)?.[1];
+      if (firstPath) snapshots.push(path.dirname(firstPath));
+      expect(first.status, first.stderr).toBe(0);
+      expect(first.stderr).toMatch(/Bundle: .* \(\d+ bytes, built, js\)/);
+      const second = run();
+      const secondPath = /Bundle: (.+) \(\d+ bytes/.exec(second.stderr)?.[1];
+      if (secondPath) snapshots.push(path.dirname(secondPath));
+      expect(second.status, second.stderr).toBe(0);
+      expect(second.stderr).toMatch(/Bundle: .* \(\d+ bytes, cached, js\)/);
+    } finally {
+      for (const dir of snapshots) fs.rmSync(dir, {recursive: true, force: true});
+      fs.rmSync(cache, {recursive: true, force: true});
+    }
   });
 
   it.each([true, false])('tracks empty context directories according to recursive=%s', recursive => {

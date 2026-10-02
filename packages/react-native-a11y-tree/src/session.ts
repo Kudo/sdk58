@@ -20,6 +20,7 @@ import readline from 'node:readline';
 import fs from 'node:fs';
 import {PassThrough} from 'node:stream';
 
+import {terminateWindowsTree, type ProcessCleanupResult} from './processCleanup.ts';
 import {checkHostInfo, getHostBin, type HostInfo, hostArgs, hostEnv, spawnHost} from './host.ts';
 import type {HostRuntimeInfo, SessionTreeOptions, ShadowNodeJSON, Step} from './schema.ts';
 import {validateScript} from './script.ts';
@@ -201,6 +202,7 @@ export async function runSession(options: FidelityOptions & {
   let nextEvalId = 0;
   let inputLines: ReturnType<typeof clientLines> | undefined;
   let cancelWrite: (() => void) | undefined;
+  let windowsCleanup: Promise<ProcessCleanupResult> | undefined;
   let escalation: ReturnType<typeof setTimeout> | undefined;
   let cutoff: ReturnType<typeof setTimeout> | undefined;
   let shutdownTimer: ReturnType<typeof setTimeout> | undefined;
@@ -214,8 +216,8 @@ export async function runSession(options: FidelityOptions & {
     windowHeight: options.windowHeight, verbose: options.verbose,
   })], {
     stdio: ['pipe', 'pipe', 'pipe'], env: hostEnv(options.tz),
-    // POSIX runners share a process group. Windows only kills the immediate
-    // child; escaped descendants on any OS are bounded by the pipe cutoff.
+    // POSIX runners share a process group; Windows uses taskkill before
+    // terminating the root. Already-exited roots remain a Windows limitation.
     detached: process.platform !== 'win32',
   });
 
@@ -245,8 +247,11 @@ export async function runSession(options: FidelityOptions & {
     if (terminalError || exited) return;
     terminalError = error;
     inputLines?.close(); // Wake an idle client-input wait without destroying it.
-    kill('SIGTERM');
-    escalation = setTimeout(() => kill('SIGKILL'), 250);
+    if (process.platform === 'win32') windowsCleanup = terminateWindowsTree(child);
+    else {
+      kill('SIGTERM');
+      escalation = setTimeout(() => kill('SIGKILL'), 250);
+    }
     cutoff = setTimeout(() => {
       error.details = {...error.details, cleanupTimedOut: true};
       finalize(child.exitCode);
@@ -377,7 +382,8 @@ export async function runSession(options: FidelityOptions & {
     exited = true;
     if (terminalError) {
       cancelWrite?.();
-      kill('SIGKILL');
+      if (process.platform !== 'win32') kill('SIGKILL');
+      else windowsCleanup ??= terminateWindowsTree(child);
       if (terminalError.code === 'HOST_CRASHED' && stderrTail.length) {
         terminalError.details = {...terminalError.details, stderrTail: stderrTail.toString('utf8')};
       }
@@ -400,9 +406,14 @@ export async function runSession(options: FidelityOptions & {
       closeLog();
     }
     child.unref();
-    current?.resolve();
-    current = null;
-    resolveExit(code ?? 1);
+    const complete = (details: ProcessCleanupResult = {}) => {
+      if (terminalError && details.cleanupIncomplete) terminalError.details = {...terminalError.details, ...details};
+      current?.resolve();
+      current = null;
+      resolveExit(code ?? 1);
+    };
+    if (windowsCleanup) void windowsCleanup.then(complete);
+    else complete();
   }
   const onExit = () => {
     // 'exit' reaps the leader, but 'close' can wait forever on inherited pipes.

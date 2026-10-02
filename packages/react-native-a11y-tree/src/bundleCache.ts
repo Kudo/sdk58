@@ -134,7 +134,12 @@ export function changedInputs(dir: string, key: string, limit = Infinity): numbe
   } catch {
     return null;
   }
-  if (manifest.version !== CACHE_VERSION || manifest.key !== key) return null;
+  if (!manifest || manifest.version !== CACHE_VERSION || manifest.key !== key
+    || !Array.isArray(manifest.files) || !Array.isArray(manifest.dirs)
+    || manifest.files.some(item => !Array.isArray(item) || item.length !== 3
+      || typeof item[0] !== 'string' || !Number.isFinite(item[1]) || !Number.isFinite(item[2]))
+    || manifest.dirs.some(item => !Array.isArray(item) || item.length !== 2
+      || typeof item[0] !== 'string' || (item[1] !== null && !Number.isFinite(item[1])))) return null;
   if (!fs.existsSync(path.join(dir, BUNDLE_FILE))) return null;
   let changed = 0;
   for (const [file, mtimeMs, size] of manifest.files) {
@@ -237,6 +242,39 @@ export function bytecodePath(dir: string): string | null {
   } catch {return null;}
 }
 
+/** A private snapshot keeps a running invocation independent of cache eviction
+ * and replacement. Validate the generation and inputs after copying so a
+ * publication racing the copy becomes a miss, never a mixed JS/HBC artifact. */
+export function snapshotEntry(dir: string, key: string, includeBytecode: boolean): {
+  workDir: string; jsBundlePath: string; bundlePath: string;
+} | null {
+  let workDir: string | undefined;
+  try {
+    const before = fs.readFileSync(path.join(dir, MANIFEST_FILE), 'utf8');
+    const manifest = JSON.parse(before) as Manifest;
+    if (manifest.version !== CACHE_VERSION || manifest.key !== key || !/^[0-9a-f-]{36}$/.test(manifest.generation)) return null;
+    workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-tree-snapshot-'));
+    const jsBundlePath = path.join(workDir, BUNDLE_FILE);
+    fs.copyFileSync(path.join(dir, BUNDLE_FILE), jsBundlePath);
+    let bundlePath = jsBundlePath;
+    const hbcName = `${manifest.generation}.${BYTECODE_FILE}`;
+    if (includeBytecode && fs.existsSync(path.join(dir, hbcName))) {
+      bundlePath = path.join(workDir, hbcName);
+      fs.copyFileSync(path.join(dir, hbcName), bundlePath);
+    }
+    // Identity is checked last: input validation itself reads the manifest.
+    // A newer generation must not validate an older generation's copied files.
+    if (!isEntryValid(dir, key) || fs.readFileSync(path.join(dir, MANIFEST_FILE), 'utf8') !== before) {
+      fs.rmSync(workDir, {recursive: true, force: true});
+      return null;
+    }
+    return {workDir, jsBundlePath, bundlePath};
+  } catch {
+    if (workDir) {try {fs.rmSync(workDir, {recursive: true, force: true});} catch {}}
+    return null;
+  }
+}
+
 /** The `hermesc` from the `hermes-compiler` package, or null. */
 export function hermescPath(): string | null {
   const sub =
@@ -325,7 +363,11 @@ export function compileBytecodeInBackground(dir: string): boolean {
 }
 
 /** Drops a bytecode file the host could not load. */
-export function discardBytecode(dir: string): void {
-  const out = bytecodePath(dir);
-  if (out) fs.rmSync(out, {force: true});
+export function discardBytecode(dir: string, selectedPath?: string): void {
+  // An older invocation must not evict bytecode from a newer publication.
+  const name = selectedPath ? path.basename(selectedPath) : null;
+  if (name && !/^[0-9a-f-]{36}\.index\.bundle\.hbc$/.test(name)) return;
+  const out = name ? path.join(dir, name) : bytecodePath(dir);
+  // Eviction is optional: a locked cache file must not prevent the JS retry.
+  if (out) {try {fs.rmSync(out, {force: true});} catch {}}
 }
