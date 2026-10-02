@@ -648,6 +648,7 @@ const program = new Command()
     'Render a React Native component headlessly and print its accessibility/layout tree as JSON',
   )
   // Commander errors become USAGE errors (reportError); subcommands inherit this.
+  .enablePositionalOptions()
   .exitOverride()
   .configureOutput({writeErr: () => {}});
 
@@ -672,7 +673,7 @@ function addCommonOptions(command: Command): Command {
     .option('--no-fail-on-fallback', 'disable the configured fallback policy')
     .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect)
     .option('--dev', 'build a development bundle (__DEV__ = true)', false)
-    .option('-q, --quiet', 'no app console output or warnings on stderr (default when stdout is not a terminal)')
+    .option('-q, --quiet', 'suppress ordinary app console output and warnings; fallback warnings still print (default when stdout is not a terminal)')
     .option('--no-quiet', 'print app console errors/warnings and CLI warnings on stderr')
     .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
     .option('--timing', 'print phase timings as JSON on stderr', false)
@@ -787,7 +788,7 @@ addOutputOptions(program.command('session'))
   .option('--no-fail-on-fallback', 'disable the configured fallback policy')
   .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect)
   .option('--dev', 'build a development bundle (__DEV__ = true)', false)
-  .option('-q, --quiet', 'no app console output on stderr (default when stdout is not a terminal)')
+  .option('-q, --quiet', 'suppress ordinary app console output; fallback warnings still print (default when stdout is not a terminal)')
   .option('--no-quiet', 'print app console output on stderr as [app] lines')
   .option('--no-mounted', 'do not read mounted-view values (getA11yTree includeMountedProps)')
   .option('--timing', 'print phase timings as JSON on stderr', false)
@@ -841,6 +842,36 @@ program
   .argument('[name]', 'schema name, e.g. script')
   .action(printSchema);
 
+// Register locally as well as globally so every subcommand's help exposes the
+// flag. Positional options keep global parsing from stealing a subcommand's
+// required value (for example, --subtree --no-stderr).
+const commands = [program, ...program.commands];
+for (const command of commands) command.option('--no-stderr', 'suppress all stderr output, including fallback warnings, errors, verbose logs and timings');
+
+// Parse only option syntax before the real parse can reject an argument. Reuse
+// Commander's arity/quoting rules, but not value validators or actions. A flat
+// union also recognizes explicit output options when the command is invalid.
+const outputProbe = new Command().exitOverride().configureOutput({writeErr: () => {}, writeOut: () => {}});
+const seenFlags = new Set<string>();
+for (const command of commands) {
+  for (const option of command.options) {
+    if (seenFlags.has(option.flags)) continue;
+    seenFlags.add(option.flags);
+    outputProbe.option(option.flags);
+  }
+}
+try { outputProbe.parseOptions(process.argv.slice(2)); } catch { /* Real parsing reports missing values below. */ }
+const outputFlags = outputProbe.opts<{stderr?: boolean; format?: string; quiet?: boolean}>();
+if (outputFlags.stderr === false) {
+  // One sink covers Commander, Metro, forwarded host/session output, console
+  // methods, and our error/timing reporters without discarding diagnostics.
+  process.stderr.write = (...args: unknown[]): boolean => {
+    const callback = args.at(-1);
+    if (typeof callback === 'function') process.nextTick(() => callback());
+    return true;
+  };
+}
+
 try {
   await program.parseAsync(process.argv);
 } catch (error) {
@@ -862,7 +893,7 @@ function toCliError(error: unknown): CliError | null {
 }
 
 /**
- * Errors go to stdout as {"error": …} with an explicit --format json;
+ * Errors go to stdout as {"error": …} with explicit --format json or ndjson;
  * otherwise to stderr: JSON when stderr is not a terminal or with --quiet,
  * else a readable message.
  */
@@ -873,11 +904,9 @@ function reportError(error: unknown) {
     return;
   }
   const info = cliError.toJSON();
-  const argv = process.argv.slice(2);
-  const explicitJson = argv.some((a, i) => a === '--format=json' || (a === '--format' && argv[i + 1] === 'json'));
-  const quiet = argv.includes('-q') || argv.includes('--quiet');
-  if (explicitJson) {
-    process.stdout.write(JSON.stringify({error: info}, null, 2) + '\n');
+  const {format, quiet} = outputFlags;
+  if (format === 'json' || format === 'ndjson') {
+    process.stdout.write(JSON.stringify({error: info}, null, format === 'ndjson' ? undefined : 2) + '\n');
   } else if (quiet || !process.stderr.isTTY) {
     process.stderr.write(JSON.stringify({error: info}) + '\n');
   } else {

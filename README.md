@@ -258,7 +258,8 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--dev` | all | off | Development bundle (`__DEV__ = true`) |
 | `--keep-bundle` | all | off | Keep the bundle and print its path to stderr |
 | `-v, --verbose` | all | off | Metro progress, host glog and console output on stderr |
-| `-q, --quiet` / `--no-quiet` | all | quiet when stdout is not a terminal | No app console output or CLI warnings on stderr (they are in `logs` / `fallbacks`) |
+| `-q, --quiet` / `--no-quiet` | all | quiet when stdout is not a terminal | Suppress ordinary app console output and CLI warnings; native fallback warnings still print |
+| `--no-stderr` | all | off | Suppress all CLI stderr output, including fallback warnings, errors, verbose logs and timings; preserve stdout diagnostics and exit codes |
 | `--out <file>` | `render`, `run` | stdout | Write the output to a file |
 | `--format <f>` | `render`, `run` | `json` | `json`, `compact` (no defaults/empties, no `style`), `text` (one line per node), `ndjson` (one node per line) |
 | `--select <sel>` | `render`, `run` | all | Only nodes matching `field=value` or `field~text` (fields: `testID`, `role`, `name`, `type`, `key`, `ref`, `sel`, `text`); repeat to AND. Matches only, unless `--depth` |
@@ -484,8 +485,19 @@ about 55 ms). Measure with `--bytecode off`: in `auto` mode the background
 ## Errors and exit codes
 
 Errors are `{"error": {code, message, hint?, details?}}`: on stdout with an
-explicit `--format json`, else on stderr (one JSON line when stderr is not a
-terminal or with `--quiet`, a readable message otherwise).
+explicit `--format json` or `--format ndjson` (one line for NDJSON), else on stderr
+(one JSON line when stderr is not a terminal or with `--quiet`, a readable
+message otherwise). `--no-stderr` suppresses stderr entirely; use an explicit
+machine format to retain error details on stdout. Exit codes are unchanged.
+For example:
+
+```sh
+rn-a11y-tree render App.tsx --preset android-phone --format ndjson --no-stderr
+```
+
+Fallback diagnostics remain in stdout, including the NDJSON diagnostics record.
+`--no-stderr` overrides `--verbose`, `--no-quiet` and `--timing`; it does not
+change `--fail-on-fallback` policy.
 
 | Exit | Codes | Meaning |
 | --- | --- | --- |
@@ -1429,7 +1441,8 @@ With the 0.1.2 runtime, unsupported native components render as a plain React
 Native View. Standard View props (including style, testID and accessibility),
 children and child interactions are preserved. A `[NATIVE_COMPONENT_FALLBACK]`
 warning names each substituted component once when it is first rendered. Warnings
-go to stderr even with piped JSON or `--quiet`, and are retained in output logs.
+go to stderr even with piped JSON or `--quiet`, unless `--no-stderr` is set.
+Structured diagnostics and output logs are retained when stderr is suppressed.
 
 This allows screens using libraries such as `react-native-svg` to be inspected
 without their native renderer. SVG paths, fills, native geometry, custom events
@@ -1445,7 +1458,8 @@ Starting with 0.1.3, explicit adapters allow SDK 58 starter Home/Explore screens
 and `expo-image` imports to render headlessly. Images retain layout, source props
 and accessibility; image loading/decoding/caching and native events are not
 simulated. Unsupported operations reject with `[NATIVE_API_UNSUPPORTED]`.
-Adapters warn once on stderr with `[NATIVE_MODULE_FALLBACK]`, even under `--quiet`.
+Adapters warn once on stderr with `[NATIVE_MODULE_FALLBACK]`, even under `--quiet`
+(unless `--no-stderr` is set). Structured diagnostics remain available.
 
 Unknown optional modules remain unavailable so the library can use its own
 fallback. Unknown required modules still fail, with an adapter/mock hint. Native
