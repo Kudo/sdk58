@@ -34,6 +34,18 @@ storage, image decoding/drawing, hybrid refs, and cross-runtime boxing remain
 unsupported. Nitro's caught boxing error still fails strict policy. These tests
 do not mean that the native Nitro runtime is compiled into the host.
 
+The unchanged SDK 58 starter layout now has full-root E2E coverage through
+Expo Router. Tests verify `src/app` precedence, `app` fallback, plugin-defined
+roots, config-helper cache invalidation, and Router pathname transitions.
+The [starter fixture](../examples/sdk58-default/README.md) documents the
+explicit Android palette and linking contracts and remaining native limits.
+
+Native-tab descriptors likewise do not implement the platform tab controller.
+The runner reports this limitation even for registered iOS/Android tab hosts:
+native tab buttons, selected-page visibility and tab lifecycle events are not
+simulated. Router state can change while both pages remain in the tree; do not
+interpret those overlapping pages as the visible selected screen.
+
 For each maintained adapter, record the tested package version, supported methods,
 unsupported operations, observable diagnostics, and regression examples. Test
 caught unsupported errors as well as successful actions: a caught exception must

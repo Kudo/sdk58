@@ -120,6 +120,58 @@ describe('bundle-cache', () => {
     expect(second.stderr).toMatch(/Bundle: .* \(\d+ bytes, cached, js\)/);
     fs.rmSync(cache, {recursive: true, force: true});
   });
+
+  it.each([true, false])('tracks empty context directories according to recursive=%s', recursive => {
+    const temp = tmpDir();
+    try {
+      const routes = path.join(temp, 'routes');
+      const empty = path.join(routes, 'empty/deep');
+      fs.mkdirSync(empty, {recursive: true});
+      const work = path.join(temp, 'work');
+      fs.mkdirSync(work);
+      const bundleFile = path.join(work, 'bundle.js');
+      fs.writeFileSync(bundleFile, '// bundle');
+      const save = () => writeEntry({root: path.join(temp, 'cache'), key: 'context', bundleFile, files: [], excludeDir: work, contexts: [{root: routes, recursive}]});
+      const dir = save();
+      expect(isEntryValid(dir, 'context')).toBe(true);
+      fs.writeFileSync(path.join(empty, 'route.js'), 'route');
+      expect(isEntryValid(dir, 'context')).toBe(!recursive);
+      save();
+      fs.renameSync(path.join(empty, 'route.js'), path.join(empty, 'renamed.js'));
+      expect(isEntryValid(dir, 'context')).toBe(!recursive);
+      save();
+      fs.rmSync(path.join(empty, 'renamed.js'));
+      expect(isEntryValid(dir, 'context')).toBe(!recursive);
+      save();
+      fs.mkdirSync(path.join(routes, 'new-directory'));
+      expect(isEntryValid(dir, 'context')).toBe(false);
+    } finally {fs.rmSync(temp, {recursive: true, force: true});}
+  });
+
+  it('tracks absent context roots without crawling unrelated directories for normal apps', () => {
+    const temp = tmpDir();
+    try {
+      const source = path.join(temp, 'App.js');
+      fs.writeFileSync(source, 'app');
+      const unrelated = path.join(temp, 'unrelated');
+      fs.mkdirSync(unrelated);
+      const work = path.join(temp, 'work');
+      fs.mkdirSync(work);
+      const bundleFile = path.join(work, 'bundle.js');
+      fs.writeFileSync(bundleFile, '// bundle');
+      // Pre-create cache directories so writing the entry does not change the
+      // source parent directory being measured by this test.
+      const root = path.join(work, 'cache');
+      const missing = path.join(unrelated, 'missing');
+      const dir = writeEntry({root, key: 'context', bundleFile, files: [source], excludeDir: work, contexts: [{root: missing, recursive: true}]});
+      expect(isEntryValid(dir, 'context')).toBe(true);
+      fs.mkdirSync(missing);
+      expect(isEntryValid(dir, 'context')).toBe(false);
+      const normal = writeEntry({root, key: 'normal', bundleFile, files: [source], excludeDir: work});
+      fs.writeFileSync(path.join(missing, 'unimported.js'), 'unused');
+      expect(isEntryValid(normal, 'normal')).toBe(true);
+    } finally {fs.rmSync(temp, {recursive: true, force: true});}
+  });
 });
 
 it('invalidates bundle keys when project tooling, Babel config, or build environment changes', () => {

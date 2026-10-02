@@ -23,10 +23,10 @@ describe('opt-in Metro configuration', () => {
     const root = project(`${defaults}
       config.resolver.assetExts = config.resolver.assetExts.filter(ext => ext !== 'svg');
       config.resolver.sourceExts.push('svg');
-      config.watchFolders.push(__dirname + '/shared');
-      config.resolver.nodeModulesPaths.push(__dirname + '/vendor');
-      config.resolver.extraNodeModules = {'shared': __dirname + '/shared'};
-      config.resolver.resolveRequest = (ctx, name, platform) => name === 'virtual' ? {type: 'sourceFile', filePath: __dirname + '/shared/index.js'} : ctx.resolveRequest(ctx, name, platform);
+      config.watchFolders.push(require('node:path').join(__dirname, 'shared'));
+      config.resolver.nodeModulesPaths.push(require('node:path').join(__dirname, 'vendor'));
+      config.resolver.extraNodeModules = {'shared': require('node:path').join(__dirname, 'shared')};
+      config.resolver.resolveRequest = (ctx, name, platform) => name === 'virtual' ? {type: 'sourceFile', filePath: require('node:path').join(__dirname, 'shared/index.js')} : ctx.resolveRequest(ctx, name, platform);
       config.transformer.babelTransformerPath = require.resolve('./svg-transformer.cjs');
       module.exports = config;
     `);
@@ -77,7 +77,7 @@ describe('opt-in Metro configuration', () => {
     expect(base.serializer).toBe(originalSerializer);
   });
   it('preserves dynamic dependency maps rather than dropping their proxy lookups', async () => {
-    const root = project("module.exports = {resolver: {extraNodeModules: new Proxy({}, {get: (_, name) => __dirname + '/vendor/' + name})}};");
+    const root = project("module.exports = {resolver: {extraNodeModules: new Proxy({}, {get: (_, name) => require('node:path').join(__dirname, 'vendor', name)})}};");
     const projection = await loadProjectMetroConfig(root, 'metro.custom.cjs');
     expect(projection.resolver.extraNodeModules['dynamic-package']).toBe(path.join(root, 'vendor/dynamic-package'));
   });

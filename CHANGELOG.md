@@ -32,6 +32,13 @@ share one version.
 
 ### Fixed
 
+- Keep fresh JavaScript usable when a locked or unwritable finished-bundle cache cannot be published; never select stale bytecode after publication failure.
+- Correct Windows Metro fixture path handling and isolate the bounded npm-install test from concurrent Metro suites.
+- Match Expo Router `app`, `src/app` and custom-root discovery and invalidate route caches after config-helper changes.
+
+- Capture uncaught React render/effect errors through the Fabric root callback; preserve handled Error Boundary fallbacks and report failures after actions.
+- Invalidate finished bundles for `require.context` additions, renames and removals, including previously empty route directories.
+
 - Keep late background Hermes compilation from publishing bytecode selected by a newer bundle generation.
 - Evaluate strict policy during session EOF cleanup and retain diagnostics on invalid requests.
 - Resolve cache-key tooling from the app, and invalidate bundles and Metro transforms when tracked build configuration or public environment inputs change.

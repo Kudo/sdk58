@@ -14,6 +14,7 @@ import {
   BUNDLE_FILE,
   bytecodePath,
   type BytecodeMode,
+  type ContextRoot,
   bundleKey,
   cacheRoot,
   changedInputs,
@@ -39,6 +40,42 @@ function projectRequire<T>(projectRoot: string, id: string): T {
     resolved = require.resolve(id);
   }
   return require(resolved) as T;
+}
+
+/** Match Expo CLI's route discovery, including evaluated app-config plugins. */
+function projectRouterRoot(projectRoot: string): string | undefined {
+  // A hoisted Router may be resolvable by every workspace package. Do not
+  // evaluate an unrelated component app's Expo config merely because of that.
+  const manifestPath = path.join(projectRoot, 'package.json');
+  const pkg = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
+  const declared = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']
+    .some(field => pkg[field] && Object.hasOwn(pkg[field], 'expo-router'));
+  const routerEntry = typeof pkg.main === 'string' && /^expo-router(?:\/|$)/.test(pkg.main);
+  const routeDirectory = ['src/app', 'app'].some(dir => {
+    try { return fs.statSync(path.join(projectRoot, dir)).isDirectory(); }
+    catch { return false; }
+  });
+  if (!declared && !routerEntry && !routeDirectory) return undefined;
+  const appRequire = createRequire(path.join(projectRoot, 'package.json'));
+  try { appRequire.resolve('expo-router/package.json'); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND') return undefined;
+    throw error;
+  }
+  try {
+    // Resolve through the app's Expo, never substitute the tool's Expo CLI.
+    const expoRequire = createRequire(appRequire.resolve('expo/package.json'));
+    const {getConfig} = appRequire('expo/config') as {
+      getConfig: (root: string, options: {skipSDKVersionRequirement: boolean}) => {exp: Record<string, unknown>};
+    };
+    const {getRouterDirectoryModuleIdWithManifest} = expoRequire('@expo/cli/build/src/start/server/metro/router') as {
+      getRouterDirectoryModuleIdWithManifest: (root: string, exp: Record<string, unknown>) => string;
+    };
+    const {exp} = getConfig(projectRoot, {skipSDKVersionRequirement: true});
+    return getRouterDirectoryModuleIdWithManifest(projectRoot, exp);
+  } catch (error) {
+    throw usage(`Cannot resolve Expo Router routes for ${projectRoot}: ${error instanceof Error ? error.message : String(error)}. Check the app's Expo configuration and installed Expo CLI.`);
+  }
 }
 
 /** Root of this package (contains `runtime/`). */
@@ -474,6 +511,9 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     throw usage(`Setup file not found: ${path.resolve(options.setupPath)}`);
   }
   const projectRoot = options.projectRoot ? fs.realpathSync(path.resolve(options.projectRoot)) : findProjectRoot(appPath);
+  // Evaluate before cache lookup: a config helper or environment change can
+  // select a different route tree without changing any bundled module.
+  const routerRoot = projectRouterRoot(projectRoot);
   const dev = options.dev ?? false;
   const minify = options.minify ?? false;
   const bytecodeMode = options.bytecode ?? 'auto';
@@ -495,13 +535,14 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   });
   const root = cacheRoot(projectRoot);
   const projectPaths = loadProjectPaths(projectRoot);
-  const key = bundleKey({entry, platform, dev, minify, projectRoot, resolutionConfig: projectPaths.key});
+  const key = bundleKey({entry, platform, dev, minify, projectRoot,
+    resolutionConfig: JSON.stringify({paths: projectPaths.key, routerRoot})});
   const dir = entryDir(root, key);
 
   const result = (cache: BundleResult['cache'], jsPath: string, workDir: string | null): BundleResult => {
     let bundlePath = jsPath;
     let bytecode = false;
-    if (useCache && bytecodeMode !== 'off') {
+    if (cache !== 'off' && bytecodeMode !== 'off') {
       const hbc = bytecodePath(dir);
       if (hbc != null && !fs.existsSync(hbc) && bytecodeMode === 'on') compileBytecode(dir);
       if (hbc != null && fs.existsSync(hbc)) {
@@ -515,7 +556,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
       bundlePath,
       jsBundlePath: jsPath,
       workDir,
-      cacheDir: useCache ? dir : null,
+      cacheDir: cache !== 'off' ? dir : null,
       projectRoot,
       sizeBytes: fs.statSync(bundlePath).size,
       cache,
@@ -576,10 +617,23 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   // serializer filters the modules of the graph it already built
   // (Server.getOrderedDependencyPaths would build the graph again, ~55 ms).
   const modulePaths = new Set<string>();
-  const baseFilter = config.serializer.processModuleFilter as (module: {path: string}) => boolean;
-  (config.serializer as {processModuleFilter: unknown}).processModuleFilter = (module: {path: string}) => {
+  const contexts = new Map<string, ContextRoot>();
+  const baseFilter = config.serializer.processModuleFilter;
+  (config.serializer as {processModuleFilter: typeof baseFilter}).processModuleFilter = module => {
     const keep = baseFilter(module);
-    if (keep && useCache) modulePaths.add(module.path);
+    if (useCache) {
+      if (keep) modulePaths.add(module.path);
+      // Metro's Graph keeps resolvedContexts private. Public dependency
+      // metadata retains the original request and context parameters; derive
+      // its root exactly as Metro's buildSubgraph.resolveDependencies does.
+      // Do not parse opaque virtual module paths containing "?ctx=".
+      for (const dependency of module.dependencies.values()) {
+        const params = dependency.data.data.contextParams;
+        if (!params) continue;
+        const root = path.join(module.path, '..', dependency.data.name);
+        contexts.set(root, {root, recursive: params.recursive || contexts.get(root)?.recursive === true});
+      }
+    }
     return keep;
   };
   const Metro = projectRequire<typeof import('metro')>(projectRoot, 'metro');
@@ -589,6 +643,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   // Explicit configs are constrained above; headless startup remains trusted.
   try { await Metro.runBuild(config, {
     entry: entryPath,
+    customTransformOptions: routerRoot === undefined ? undefined : {routerRoot: encodeURI(routerRoot)},
     platform,
     dev,
     minify,
@@ -606,13 +661,22 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   if (!useCache) {
     return result('off', bundlePath, outDir);
   }
-  writeEntry({
-    root,
-    key,
-    bundleFile: bundlePath,
-    files: await moduleFiles(projectRoot, modulePaths, config.resolver.assetExts, platform),
-    excludeDir: fs.realpathSync(workDir),
-  });
+  const files = await moduleFiles(projectRoot, modulePaths, config.resolver.assetExts, platform);
+  try {
+    writeEntry({
+      root,
+      key,
+      bundleFile: bundlePath,
+      files,
+      contexts: [...contexts.values()],
+      excludeDir: fs.realpathSync(workDir),
+    });
+  } catch (error) {
+    // Cache publication is optional. Keep this invocation's fresh JS instead
+    // of failing a valid build or selecting a competing/stale cached bytecode.
+    if (options.verbose) process.stderr.write(`rn-a11y-tree: cache publication skipped: ${error instanceof Error ? error.message : String(error)}\n`);
+    return result('off', bundlePath, outDir);
+  }
   fs.rmSync(outDir, {recursive: true, force: true});
   return result('miss', path.join(dir, BUNDLE_FILE), null);
 }

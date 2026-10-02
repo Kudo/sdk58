@@ -1,4 +1,4 @@
-/** Substitute only unsupported native views. Application errors still propagate. */
+/** Substitute missing native views and report incomplete descriptor semantics. */
 type ViewConfig = Record<string, unknown>;
 type FallbackDependencies = {
   hasComponent: (name: string) => boolean;
@@ -9,7 +9,16 @@ type FallbackDependencies = {
 export function wrapNativeViewConfig(name: string, load: () => ViewConfig, deps: FallbackDependencies): () => ViewConfig {
   let warned = false;
   return () => {
-    if (deps.hasComponent(name)) return load();
+    if (deps.hasComponent(name)) {
+      // Screens registers native tab descriptors, but this runner does not
+      // emulate the platform tab controller that selects/hides its pages.
+      // A descriptor probe alone must not imply usable native navigation.
+      if (!warned && (name === 'RNSTabsHostIOS' || name === 'RNSTabsHostAndroid')) {
+        warned = true;
+        deps.warn(`[NATIVE_COMPONENT_FALLBACK] ${name}: descriptor layout only; native tab controls, selected-page visibility and tab lifecycle events are not simulated. Check Router state separately; overlapping pages do not identify the selected screen.`);
+      }
+      return load();
+    }
     if (!warned) {
       warned = true;
       deps.warn(`[NATIVE_COMPONENT_FALLBACK] ${name} is unsupported; using View for layout and children. Native drawing, custom props and methods are not simulated.`);

@@ -509,6 +509,11 @@ change `--fail-on-fallback` policy.
 | 5 | `HOST_MISSING`, `HOST_UNAVAILABLE`, `HOST_INCOMPATIBLE`, `HOST_CRASHED`, `TIMEOUT` | host problems (`details.stderrTail`) |
 | 6 | `UNSUPPORTED_NATIVE` | `--fail-on-fallback` rejected an observed native/runtime limitation |
 
+Uncaught React render/effect failures are captured from the renderer and reported
+as `APP_THREW`; they cannot silently produce an empty successful tree. Errors
+handled by an application Error Boundary still render its fallback normally.
+A plain `console.error` is a log, not an uncaught render exception.
+
 - Step errors are `{code, message}` with `TARGET_NOT_FOUND`,
   `TARGET_COVERED`, `TIMEOUT` or `APP_THREW`; session error responses use the
   same object (`USAGE` for invalid requests).
@@ -566,6 +571,12 @@ transforms. Each rebuilt bundle has a unique bytecode output, so a background
 compiler finishing after another edit cannot replace the current bytecode.
 Arbitrary files/environment variables read by custom Babel plugins
 are not automatically tracked; use `--reset-cache` for those changes.
+`require.context` directories are tracked even when empty, including recursive
+subdirectories. Adding, renaming, or deleting a matching route invalidates the
+finished bundle; ordinary apps without context imports do not scan directory trees.
+If publishing a finished cache entry fails (for example, a Windows file lock),
+the invocation uses its fresh temporary JavaScript bundle without cached bytecode.
+Verbose output reports the skipped publication.
 
 Measure cold startup, unchanged invocations, and actual source edits separately:
 

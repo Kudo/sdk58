@@ -7,7 +7,9 @@
  *   tool versions). An entry is valid while every module file of its
  *   dependency graph and every directory holding one keeps its mtime and
  *   size. Directory mtimes change when a file is added or removed, which
- *   catches new files that would change module resolution. A valid entry
+ *   catches new files that would change module resolution. Context roots
+ *   additionally track every discoverable subdirectory, including empty ones.
+ *   A valid entry
  *   skips Metro completely.
  * - Hermes bytecode: compiling the medium example takes about 2 s, so a
  *   cache miss uses the JS bundle and starts `hermesc` in the background;
@@ -24,8 +26,8 @@ import path from 'node:path';
 const require = createRequire(import.meta.url);
 
 /** Bump when the cache layout or the key inputs change. */
-// v3 pins React/RN resolution to the consuming app across shared packages.
-const CACHE_VERSION = 3;
+// v4 tracks require.context discovery directories, including empty subtrees.
+const CACHE_VERSION = 4;
 
 export const BUNDLE_FILE = 'index.bundle.js';
 export const BYTECODE_FILE = 'index.bundle.hbc';
@@ -39,7 +41,7 @@ type Manifest = {
   version: number;
   key: string;
   files: Stat[];
-  dirs: Array<[string, number]>;
+  dirs: Array<[string, number | null]>;
   createdAt: string;
   generation: string;
 };
@@ -143,7 +145,7 @@ export function changedInputs(dir: string, key: string, limit = Infinity): numbe
   }
   for (const [dirPath, mtimeMs] of manifest.dirs) {
     const s = statFile(dirPath);
-    if (s == null || s[1] !== mtimeMs) {
+    if ((s?.[1] ?? null) !== mtimeMs) {
       if (++changed >= limit) return changed;
     }
   }
@@ -153,6 +155,31 @@ export function changedInputs(dir: string, key: string, limit = Infinity): numbe
 /** True if the cached entry exists and all its inputs are unchanged. */
 export function isEntryValid(dir: string, key: string): boolean {
   return changedInputs(dir, key, 1) === 0;
+}
+
+export type ContextRoot = {root: string; recursive: boolean};
+
+/** Only context roots are walked; ordinary apps do not scan directory trees. */
+function contextDirectories(contexts: ContextRoot[]): Set<string> {
+  const dirs = new Set<string>();
+  const traversed = new Set<string>();
+  const visit = (dir: string, recursive: boolean) => {
+    dirs.add(dir);
+    let real: string;
+    try { real = fs.realpathSync(dir); } catch (error) {
+      // Empty contexts can refer to a root that does not exist yet.
+      if (['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code ?? '')) return;
+      throw error;
+    }
+    if (!recursive || traversed.has(real)) return;
+    traversed.add(real); // Symlink cycles and overlapping contexts terminate.
+    for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+      const child = path.join(dir, entry.name);
+      if (entry.isDirectory() || (entry.isSymbolicLink() && fs.statSync(child, {throwIfNoEntry: false})?.isDirectory())) visit(child, true);
+    }
+  };
+  for (const context of contexts) visit(context.root, context.recursive);
+  return dirs;
 }
 
 /**
@@ -167,16 +194,16 @@ export function writeEntry(options: {
   bundleFile: string;
   files: string[];
   excludeDir: string;
+  contexts?: ContextRoot[];
 }): string {
   const dir = entryDir(options.root, options.key);
   const files = options.files
     .filter(f => path.isAbsolute(f) && !f.startsWith(options.excludeDir + path.sep))
     .map(statFile)
     .filter((s): s is Stat => s != null);
-  const dirs = [...new Set(files.map(([f]) => path.dirname(f)))]
-    .map(d => statFile(d))
-    .filter((s): s is Stat => s != null)
-    .map(([d, mtimeMs]) => [d, mtimeMs] as [string, number]);
+  const directories = contextDirectories(options.contexts ?? []);
+  for (const [file] of files) directories.add(path.dirname(file));
+  const dirs = [...directories].map(d => [d, statFile(d)?.[1] ?? null] as [string, number | null]);
   const manifest: Manifest = {
     version: CACHE_VERSION,
     key: options.key,
@@ -188,14 +215,15 @@ export function writeEntry(options: {
 
   fs.mkdirSync(path.dirname(dir), {recursive: true});
   const tmp = fs.mkdtempSync(path.join(path.dirname(dir), `.tmp-${options.key}-`));
-  fs.copyFileSync(options.bundleFile, path.join(tmp, BUNDLE_FILE));
-  fs.writeFileSync(path.join(tmp, MANIFEST_FILE), JSON.stringify(manifest));
-  fs.rmSync(dir, {recursive: true, force: true});
   try {
+    fs.copyFileSync(options.bundleFile, path.join(tmp, BUNDLE_FILE));
+    fs.writeFileSync(path.join(tmp, MANIFEST_FILE), JSON.stringify(manifest));
+    // Windows readers or a detached compiler may briefly hold an entry open.
+    fs.rmSync(dir, {recursive: true, force: true, maxRetries: 2, retryDelay: 50});
     fs.renameSync(tmp, dir);
-  } catch {
-    // Another process wrote the same entry first; keep theirs.
-    fs.rmSync(tmp, {recursive: true, force: true});
+  } finally {
+    // Preserve the publication error; cleanup failure must not replace it.
+    try { fs.rmSync(tmp, {recursive: true, force: true, maxRetries: 2, retryDelay: 50}); } catch {}
   }
   return dir;
 }
