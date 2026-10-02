@@ -503,9 +503,12 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
       if (escalation !== undefined) clearTimeout(escalation);
       if (cutoff !== undefined) clearTimeout(cutoff);
       options.signal?.removeEventListener('abort', onAbort);
+      const failed = stopped !== undefined || code !== 0 || jsError !== undefined || !result;
       if (process.platform !== 'win32') {
-        if (stopped) kill('SIGKILL'); // Also clean up runner descendants after leader exit.
-      } else if (code !== 0 && !windowsCleanup) {
+        if (failed) kill('SIGKILL'); // Also clean up runner descendants after leader exit.
+      } else if (failed && !windowsCleanup) {
+        // Closed pipes do not prove descendant cleanup on Windows. A root
+        // exiting without a result is still a failure, even with exit code 0.
         windowsCleanup = terminateWindowsTree(child);
       }
       child.removeListener('error', onError);
@@ -581,6 +584,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   }
   if (!result) {
     throw new HostError('HOST_CRASHED', 'Host exited without printing a rn-a11y-tree result', {
+      ...cleanupDetails,
       stderr,
       exitCode,
     });

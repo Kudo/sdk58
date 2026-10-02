@@ -40,6 +40,8 @@ share one version.
 
 ### Fixed
 
+- Clean up POSIX process groups after natural host failures even when descendants close inherited pipes; preserve Windows incomplete-cleanup details when an exited runner produces no result.
+
 - Keep per-invocation JS/bytecode snapshots independent of shared-cache replacement and eviction; discard only the bytecode generation that failed and recover from malformed cache metadata.
 
 - Allow graceful session shutdown to use the configured timeout instead of a fixed 250 ms, while retaining bounded forced cleanup.

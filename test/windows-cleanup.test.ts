@@ -29,11 +29,11 @@ beforeAll(() => {
     const fs=require('node:fs');
     const mode=process.env.TEST_WINDOWS_MODE;
     fs.appendFileSync(process.env.TEST_WINDOWS_PIDS,process.pid+'\n');
-    const child=require('node:child_process').spawn(process.execPath,[process.env.TEST_WINDOWS_WORKER,'1'],{stdio:['ignore','inherit','inherit','ipc']});
+    const child=require('node:child_process').spawn(process.execPath,[process.env.TEST_WINDOWS_WORKER,'1'],{stdio:['ignore',mode==='root-gone-closed'?'ignore':'inherit',mode==='root-gone-closed'?'ignore':'inherit','ipc']});
     const ready=new Promise(resolve=>child.once('message',()=>{
       fs.writeFileSync(process.env.TEST_WINDOWS_READY,'ready');
       if(mode==='result') console.log(JSON.stringify({type:'rn-a11y-tree-result',rnA11yTree:{done:true}}));
-      if(mode==='root-gone') process.exit(0);
+      if(mode.startsWith('root-gone')) process.exit(0);
       if(mode==='overflow') {
         let sent=0; const chunk=Buffer.alloc(65536,120);
         const pump=()=>{while(sent<40*1024*1024){sent+=chunk.length;if(!process.stderr.write(chunk)){process.stderr.once('drain',pump);return;}}}; pump();
@@ -149,11 +149,25 @@ it.skipIf(!WINDOWS).each(['timeout','quit','cancel'])('real Windows session clea
   } finally {test.dispose();input.destroy();output.destroy();}
 });
 
+it('reports incomplete Windows cleanup when a zero-exit root closes pipes without a result', TEST, async()=>{
+  const test=prepare('root-gone-closed');
+  Object.defineProperty(process,'platform',{...platformDescriptor,value:'win32'});
+  const terminate=vi.spyOn(cleanup,'terminateWindowsTree');
+  try {
+    const result=await runHost({bundlePath:'unused',timeoutMs:3000,quiet:true}).catch(error=>error);
+    expect(result).toMatchObject({code:'HOST_CRASHED',details:{exitCode:0,cleanupIncomplete:true,cleanupReason:'root-exited'}});
+    expect(result.message).toBe('Host exited without printing a rn-a11y-tree result');
+    expect(terminate).toHaveBeenCalledOnce();
+    expect(terminate.mock.calls[0]![0].exitCode).toBe(0);
+    expect(test.pids()).toHaveLength(3);
+  } finally {test.dispose();}
+});
+
 it.skipIf(!WINDOWS)('reports the already-exited-root limitation instead of claiming tree cleanup', TEST, async()=>{
   const test=prepare('root-gone');
   try {
     const result=await runHost({bundlePath:'unused',timeoutMs:3000,quiet:true}).catch(error=>error);
-    expect(result).toMatchObject({code:'TIMEOUT',details:{cleanupIncomplete:true,cleanupReason:'root-exited'}});
+    expect(result).toMatchObject({code:'HOST_CRASHED',details:{exitCode:0,cleanupIncomplete:true,cleanupReason:'root-exited'}});
     expect(test.pids()).toHaveLength(3);
   } finally {test.dispose();}
 });

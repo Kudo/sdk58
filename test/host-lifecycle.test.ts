@@ -72,6 +72,16 @@ beforeAll(() => {
       };
       pump();
     }
+    if (mode.startsWith('natural-failure-')) {
+      const worker = require('node:child_process').spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], {stdio:'ignore'});
+      worker.once('spawn', () => {
+        if (mode === 'natural-failure-js') {
+          console.log(JSON.stringify({type:'rn-a11y-tree-result',rnA11yTree:{done:true}}));
+          console.log(JSON.stringify({type:'rn-a11y-tree-error',error:{message:'fixture failure'}}));
+        }
+        process.stdout.write(JSON.stringify({type:'console-log',level:'info',message:'worker:'+worker.pid})+'\\n', () => process.exit(mode === 'natural-failure-nonzero' ? 7 : 0));
+      });
+    }
     if (mode === 'runner' || mode === 'escaped') {
       const {spawn} = require('node:child_process');
       const worker = spawn(process.execPath, ['-e', "process.on('SIGTERM',()=>{}); setInterval(()=>{},1000)"], {stdio: 'inherit', detached: mode === 'escaped'});
@@ -209,6 +219,17 @@ it.each(['flood-stdout', 'flood-stderr', 'flood-console'])('terminates %s before
   expect(performance.now() - started).toBeLessThan(7000);
   expect(logs.length).toBeLessThan(5000);
   expect(() => process.kill(Number(logs[0].message), 0)).toThrow();
+});
+
+it.skipIf(process.platform === 'win32').each(['missing-result','nonzero','js'])('kills same-group descendants with ignored pipes after natural failure: %s', TEST_OPTIONS, async mode => {
+  const logs: Logs = [];
+  try {
+    const error = await runHost(options(`natural-failure-${mode}`, {logs})).catch(error => error);
+    expect(error).toMatchObject({code:mode === 'js' ? 'APP_THREW' : 'HOST_CRASHED'});
+    const pid = workerPid(logs);
+    expect(pid).toBeDefined();
+    await vi.waitFor(() => expect(hasExited(pid!)).toBe(true), {timeout:1500, interval:25});
+  } finally {await cleanUpWorker(logs);}
 });
 
 it('preserves a final unterminated result and UTF-8 split across chunks', TEST_OPTIONS, async () => {
