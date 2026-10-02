@@ -333,5 +333,8 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: E2E tests with the host in ${{ matrix.image }}
-        run: RN_A11Y_E2E_STRICT=1 bun run test:e2e
+      # The selected host is a Docker shell wrapper, not a distributable ELF.
+      # Packaging is verified by the native Linux test job; clearing the wrapper
+      # in the package test would test the runner's libc, not this container's.
+      - name: Runtime E2E tests with the host in ${{ matrix.image }}
+        run: RN_A11Y_E2E_STRICT=1 bun run test:e2e --exclude e2e/package.test.ts
