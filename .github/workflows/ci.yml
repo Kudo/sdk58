@@ -107,7 +107,7 @@ jobs:
         run: bun run test
 
       - name: E2E tests (e2e/*.test.ts)
-        run: bun run test:e2e
+        run: RN_A11Y_E2E_STRICT=1 bun run test:e2e
 
       # Diagnostics when a step fails: the expo-ui example with host stderr,
       # the macOS crash reports of the host, and the host binary (to run it
@@ -287,7 +287,7 @@ jobs:
           export RN_A11Y_HOST_STDERR_LOG="$RUNNER_TEMP/host-stderr.log"
           : > "$RN_A11Y_HOST_STDERR_LOG"
           status=0
-          bun run test:e2e \
+          RN_A11Y_E2E_STRICT=1 bun run test:e2e \
             e2e/expo-ui.test.ts e2e/navigation-stack.test.ts e2e/gestures.test.ts \
             e2e/reanimated.test.ts e2e/scrolling.test.ts || status=$?
           echo "host stderr log: $(wc -l < "$RN_A11Y_HOST_STDERR_LOG") lines"

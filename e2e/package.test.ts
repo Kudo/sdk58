@@ -6,6 +6,7 @@ import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
 import {DEFAULT_HOST_BIN} from '../packages/react-native-a11y-tree/src/host.ts';
+import {skipUnsupported} from './helpers.ts';
 import {hasNpm, npmTool} from '../test/fixtures/npm.ts';
 
 /**
@@ -24,7 +25,7 @@ const skip = !hasNpm
     : false;
 
 function run(cmd: string, args: string[], cwd: string, env: Record<string, string> = {}) {
-  const options = {cwd, env: {...process.env, ...env}, maxBuffer: 64 * 1024 * 1024};
+  const options = {cwd, env: {...process.env, ...env}, maxBuffer: 64 * 1024 * 1024, timeout: 120_000, killSignal: 'SIGKILL' as const};
   const proc =
     cmd === 'npm' || cmd === 'npx' ? npmTool(cmd, args, options) : spawnSync(cmd, args, {...options, encoding: 'utf8'});
   expect(proc.status, `${cmd} ${args.join(' ')}\n${proc.stdout}\n${proc.stderr}`).toBe(0);
@@ -33,7 +34,7 @@ function run(cmd: string, args: string[], cwd: string, env: Record<string, strin
 
 describe('package', () => {
   it('npm pack CLI and matching runtime, install into a scratch Expo project, npx rn-a11y-tree render', {timeout: 900_000}, t => {
-    if (skip) t.skip(skip);
+    if (skip) skipUnsupported(t, skip);
     const work = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-pkgtest-')));
     try {
       const packagesDir = path.join(work, 'packages');
@@ -71,6 +72,8 @@ describe('package', () => {
       const session = npmTool('npx', ['rn-a11y-tree', 'session', 'App.tsx', '--preset', 'android-phone'], {
         cwd: project,
         input: '{"id":1,"quit":true}\n',
+        timeout: 120_000,
+        killSignal: 'SIGKILL',
         env: {...process.env, ...env},
       });
       const ready = JSON.parse(session.stdout.split('\n')[0]);

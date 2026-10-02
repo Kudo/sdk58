@@ -90,7 +90,7 @@ jobs:
         run: |
           bun run typecheck
           bun run test
-          bun run test:e2e
+          RN_A11Y_E2E_STRICT=1 bun run test:e2e
 
       - uses: actions/upload-artifact@v7
         with:

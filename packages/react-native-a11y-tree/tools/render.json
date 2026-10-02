@@ -21,6 +21,10 @@
         "type": "string",
         "description": "Native fixture module loaded before the app."
       },
+      "timeout": {
+        "type": "number",
+        "description": "Host execution deadline in milliseconds after bundling (default 30000); session applies it per request."
+      },
       "preset": {
         "type": "string",
         "enum": [

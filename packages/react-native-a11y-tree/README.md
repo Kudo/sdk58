@@ -33,6 +33,17 @@ macOS arm64 only (the host is built by `bun run build:host`).
 | react-native-reanimated | Reanimated + worklets C++ in the host; UI frames from `wait` (`produceFramesForDuration` per 16.333 ms); mounted-view values for layout animations | `e2e/reanimated.test.ts` | |
 | `@expo/ui` (Expo module views) | expo-modules-core Fabric descriptors in the host; Expo's JS `globalThis.expo` polyfill + view configs + module stubs (`runtime/expo/`); direct events and modifier callbacks | `e2e/expo-ui.test.ts` | Frames come from the host's SwiftUI and Compose layout engines (emulations of the frameworks, checked against reference harnesses in `native/tools/`); see [Expo support](docs/expo-support.md) for other packages |
 
+## Execution deadlines
+
+`render`, `run`, and `check` terminate a hung host after 30 seconds by default.
+Use `--timeout <ms>` to choose a positive integer deadline. It starts when the
+host launches, after Metro bundling, and reports `TIMEOUT` with exit code 5.
+The deadline is shared across bytecode fallback attempts. Shutdown allows a
+bounded grace period (up to 1.25 seconds). A timeout does not retry the app with
+JavaScript after a bytecode attempt.
+On POSIX, SIGINT/SIGTERM during host execution cancel that run and terminate its host process group.
+Session mode continues to apply `--timeout` separately to each request.
+
 ## Dependency checks and application fixtures
 
 See [production adoption and remaining validation](docs/production-readiness.md)

@@ -16,6 +16,8 @@ export type CommonInput = {
   file: string;
   /** Native fixture module loaded before the app. */
   setup?: string;
+  /** Host execution deadline in milliseconds after bundling (default 30000); session applies it per request. */
+  timeout?: number;
   /** Device preset: platform, viewport, safe area insets, header height. */
   preset?: 'android-phone' | 'ios-phone' | 'android-tablet' | 'ios-tablet';
   /** Metro platform (`android`, `ios`, `a11ytree`, ...). Required unless a preset or a11y-tree.json sets it. */
@@ -96,8 +98,6 @@ export type CheckInput = CommonInput & {
 
 export type SessionInput = CommonInput & {
   tapMode?: 'touch' | 'click' | 'both';
-  /** Per-request timeout in ms. */
-  timeout?: number;
 };
 
 export type DoctorInput = {file: string; strict?: boolean; format?: 'json' | 'text'};

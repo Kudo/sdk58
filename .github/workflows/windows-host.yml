@@ -216,7 +216,7 @@ jobs:
           RN_A11Y_HOST_STDERR_LOG: ${{ runner.temp }}/host-stderr.log
         run: |
           : > "$RN_A11Y_HOST_STDERR_LOG"
-          bun run test:e2e --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/e2e-report.json"
+          RN_A11Y_E2E_STRICT=1 bun run test:e2e --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/e2e-report.json"
 
       - name: Upload the e2e report and the host stderr
         if: always()

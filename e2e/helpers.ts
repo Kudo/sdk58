@@ -3,6 +3,8 @@
  *
  * RN_A11Y_E2E_PRESETS (default `android-phone,ios-phone`) selects the
  * presets every suite runs under; each test name starts with `[<preset>]`.
+ * RN_A11Y_E2E_STRICT=1 makes missing host/features fail in CI. Preset
+ * exclusions remain deliberate skips, independent of capability checks.
  */
 
 import {spawnSync, type SpawnSyncReturns} from 'node:child_process';
@@ -23,14 +25,30 @@ export const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cl
 const DIST_BIN = DEFAULT_HOST_BIN;
 export const hostBin = process.env.RN_A11Y_HOST_BIN || (fs.existsSync(DIST_BIN) ? DIST_BIN : undefined);
 
-/** `skip` option for tests that need the real host. */
+export const STRICT_E2E = process.env.RN_A11Y_E2E_STRICT === '1';
+
+/** For partial assertions: local old hosts remain usable, CI must exercise them. */
+export function requireInStrictMode(available: boolean, reason: string): void {
+  if (STRICT_E2E && !available) throw new Error(`strict E2E: ${reason}`);
+}
+
+/** Unsupported features may skip locally, but must fail the native CI gate. */
+export function skipUnsupported(t: Pick<TestContext, 'skip'>, reason: string): void {
+  requireInStrictMode(false, reason);
+  t.skip(reason);
+}
+
+requireInStrictMode(Boolean(hostBin && fs.existsSync(hostBin)),
+  `host binary missing: ${hostBin ?? DIST_BIN}; build the host or set RN_A11Y_HOST_BIN`);
+
+/** `skip` option for tests that need the real host (strict mode fails above). */
 export const hostSkip: string | false = hostBin
   ? false
   : `no host binary: run \`bun run build:host\` (creates ${path.relative(ROOT, DIST_BIN)}) or set RN_A11Y_HOST_BIN`;
 
 export type Preset = {name: PresetName} & (typeof PRESETS)[PresetName];
 
-export const E2E_PRESETS: Preset[] = (process.env.RN_A11Y_E2E_PRESETS || 'android-phone,ios-phone')
+export const E2E_PRESETS: Preset[] = (process.env.RN_A11Y_E2E_PRESETS ?? 'android-phone,ios-phone')
   .split(',')
   .map((s: string) => s.trim())
   .filter(Boolean)
@@ -39,6 +57,8 @@ export const E2E_PRESETS: Preset[] = (process.env.RN_A11Y_E2E_PRESETS || 'androi
     if (preset == null) throw new Error(`RN_A11Y_E2E_PRESETS: unknown preset "${name}"`);
     return {name: name as PresetName, ...preset};
   });
+
+if (E2E_PRESETS.length === 0) throw new Error('RN_A11Y_E2E_PRESETS must select at least one preset');
 
 /** The E2E preset `name` for a test written for one preset; skips the test when RN_A11Y_E2E_PRESETS leaves it out. */
 export function e2ePreset(t: TestContext, name: PresetName): Preset {
@@ -53,13 +73,19 @@ export function isIOS(preset: Preset): boolean {
 
 /** Runs the CLI with `--preset <preset>` (after the command and file). */
 export function cli(args: string[], preset: Preset, input?: string): SpawnSyncReturns<string> {
-  return spawnSync('node', [CLI, ...args, '--preset', preset.name], {
+  const proc = spawnSync('node', [CLI, ...args, '--preset', preset.name], {
     cwd: ROOT,
     encoding: 'utf8',
     input,
     env: {...process.env, RN_A11Y_HOST_BIN: hostBin},
     maxBuffer: 256 * 1024 * 1024,
+    // A blocking spawn cannot be interrupted by Vitest's test timeout. Force
+    // termination instead of waiting forever for a CLI that ignores SIGTERM.
+    timeout: 120_000,
+    killSignal: 'SIGKILL',
   });
+  if (proc.error) throw new Error(`E2E CLI subprocess failed: ${proc.error.message}\n${proc.stderr ?? ''}`);
+  return proc;
 }
 
 export function cliJson<T>(args: string[], preset: Preset, expectedStatus = 0): T {

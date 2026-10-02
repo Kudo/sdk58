@@ -8,6 +8,9 @@ share one version.
 
 ### Added
 
+- One-shot host deadlines and cancellation, with no bytecode retry after timeout.
+- Strict native E2E capability checks in CI, with bounded CLI subprocess execution.
+
 - Dependency doctor with app-resolved versions, local host metadata and strict tested-version checks; reject known React Native host mismatches before bundling.
 - Explicit application Expo/TurboModule fixtures with lazy diagnostics, cache invalidation and project-level strict policy.
 - Real AsyncStorage JS integration example and headless action coverage on both presets.

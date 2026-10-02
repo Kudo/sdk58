@@ -47,6 +47,9 @@ export type HostOptions = {
   quiet?: boolean;
   /** Time zone of the host process (`TZ`); default DEFAULT_TZ. */
   tz?: string;
+  /** Whole subprocess lifetime, including shutdown after a result. Default 30 seconds. */
+  timeoutMs?: number;
+  signal?: AbortSignal;
 };
 
 /** The host runs in UTC unless `--tz` says otherwise, so date strings do not depend on the machine. */
@@ -61,18 +64,20 @@ export type HostTiming = {spawn?: number; result?: number; exit?: number};
 
 /** Host or app failure; `code` is APP_THREW, HOST_MISSING or HOST_CRASHED. */
 export class HostError extends CliError {
-  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null};
+  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean};
 
   constructor(
     code: ErrorCode,
     message: string,
-    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null},
+    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean},
     hint?: string,
   ) {
     const details: Record<string, unknown> = {};
     if (hostDetails?.stack) details.stack = hostDetails.stack;
     if (hostDetails?.exitCode != null) details.exitCode = hostDetails.exitCode;
     if (hostDetails?.stderr) details.stderrTail = hostDetails.stderr.trimEnd().split('\n').slice(-20).join('\n');
+    if (hostDetails?.cancelled) details.cancelled = true;
+    if (hostDetails?.cleanupTimedOut) details.cleanupTimedOut = true;
     super(code, message, {hint, details});
     this.hostDetails = hostDetails;
     this.name = 'HostError';
@@ -365,18 +370,49 @@ type HostLine =
  * `{"type":"rn-a11y-tree-result","rnA11yTree":{...}}`); glog goes to stderr.
  */
 export async function runHost<T = HostPayload>(options: HostOptions): Promise<T> {
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647) {
+    throw new CliError('USAGE', 'Host timeoutMs must be an integer from 1 through 2147483647.');
+  }
+  if (options.signal?.aborted) {
+    throw new HostError('HOST_CRASHED', 'Host execution cancelled', {cancelled: true});
+  }
   const bin = getHostBin();
   if (options.timing) options.timing.spawn = performance.now();
   const child = spawnHost(bin, hostArgs(options), {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: hostEnv(options.tz),
+    // Include a runner's descendants in termination on POSIX. Windows can only
+    // terminate the immediate process here; detached descendants on any OS are
+    // outside our control. The hard cutoff still bounds waiting on their pipes.
+    detached: process.platform !== 'win32',
   });
 
-  const stderrChunks: Buffer[] = [];
-  child.stderr!.on('data', (chunk: Buffer) => {
-    stderrChunks.push(chunk);
+  let stderrTail = Buffer.alloc(0);
+  let stderrLog: number | undefined;
+  const closeStderrLog = () => {
+    if (stderrLog === undefined) return;
+    try { fs.closeSync(stderrLog); } catch {} // Diagnostic logging is best effort.
+    stderrLog = undefined;
+  };
+  const logFile = process.env.RN_A11Y_HOST_STDERR_LOG;
+  if (logFile) {
+    try {
+      stderrLog = fs.openSync(logFile, 'a');
+      fs.writeSync(stderrLog, `--- ${bin} (pid ${process.pid}) ---\n`);
+    } catch { closeStderrLog(); }
+  }
+  const onStderr = (chunk: Buffer) => {
+    // Bound retained diagnostics even if the subprocess floods stderr.
+    const tail = chunk.subarray(-65536);
+    stderrTail = Buffer.concat([stderrTail.subarray(-Math.max(0, 65536 - tail.length)), tail]).subarray(-65536);
+    // Preserve the full sanitizer log without adding headers between chunks.
+    if (stderrLog !== undefined) {
+      try { fs.writeSync(stderrLog, chunk); } catch { closeStderrLog(); }
+    }
     if (options.verbose) process.stderr.write(chunk);
-  });
+  };
+  child.stderr!.on('data', onStderr);
 
   let result: T | undefined;
   let jsError: {message: string; stack?: string} | undefined;
@@ -411,18 +447,76 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     }
   });
 
-  const [exitCode, signal] = await new Promise<[number | null, NodeJS.Signals | null]>(
-    (resolve, reject) => {
-      child.on('error', reject);
-      child.on('close', (code, sig) => {
-        if (options.timing) options.timing.exit = performance.now();
-        resolve([code, sig]);
-      });
-    },
-  );
-  const stderr = Buffer.concat(stderrChunks).toString('utf8');
-  appendHostStderr(bin, stderr);
+  let stopped: 'timeout' | 'cancelled' | 'error' | undefined;
+  let spawnError: Error | undefined;
+  let cleanupTimedOut = false;
+  const [exitCode, signal] = await new Promise<[number | null, NodeJS.Signals | null]>(resolve => {
+    let settled = false;
+    let escalation: ReturnType<typeof setTimeout> | undefined;
+    let cutoff: ReturnType<typeof setTimeout> | undefined;
+    const kill = (signal: NodeJS.Signals) => {
+      try {
+        if (process.platform !== 'win32' && child.pid != null) process.kill(-child.pid, signal);
+        else child.kill(signal);
+      } catch {
+        // ESRCH means the group has exited. Other kill failures still reach
+        // the bounded cutoff rather than leaving this request pending forever.
+        try { child.kill(signal); } catch {}
+      }
+    };
+    const finish = (code: number | null, signal: NodeJS.Signals | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      if (escalation !== undefined) clearTimeout(escalation);
+      if (cutoff !== undefined) clearTimeout(cutoff);
+      options.signal?.removeEventListener('abort', onAbort);
+      if (stopped) kill('SIGKILL'); // Also clean up runner descendants after leader exit.
+      child.removeListener('error', onError);
+      child.removeListener('close', finish);
+      rl.removeAllListeners('line');
+      rl.close();
+      child.stderr!.removeListener('data', onStderr);
+      child.stdout!.destroy();
+      child.stderr!.destroy();
+      if (stderrLog !== undefined) {
+        try { fs.writeSync(stderrLog, '\n'); } catch {}
+        closeStderrLog();
+      }
+      child.unref();
+      if (options.timing) options.timing.exit = performance.now();
+      resolve([code, signal]);
+    };
+    const stop = (reason: typeof stopped) => {
+      if (settled || stopped) return;
+      stopped = reason;
+      kill('SIGTERM');
+      escalation = setTimeout(() => kill('SIGKILL'), 250);
+      cutoff = setTimeout(() => {
+        cleanupTimedOut = true;
+        finish(child.exitCode, child.signalCode);
+      }, 1250);
+    };
+    const onAbort = () => stop('cancelled');
+    const onError = (error: Error) => {
+      spawnError = error;
+      stop('error');
+    };
+    const deadline = setTimeout(() => stop('timeout'), timeoutMs);
+    child.on('error', onError);
+    child.once('close', finish);
+    options.signal?.addEventListener('abort', onAbort, {once: true});
+    // Cover cancellation between the pre-spawn check and listener registration.
+    if (options.signal?.aborted) onAbort();
+  });
+  const stderr = stderrTail.toString('utf8');
 
+  if (stopped) {
+    throw new HostError(stopped === 'timeout' ? 'TIMEOUT' : 'HOST_CRASHED',
+      stopped === 'timeout' ? `Host execution timed out after ${timeoutMs} ms` :
+        stopped === 'cancelled' ? 'Host execution cancelled' : `Host failed: ${spawnError?.message}`,
+      {stderr, exitCode, cancelled: stopped === 'cancelled', cleanupTimedOut});
+  }
   if (jsError) {
     throw new HostError('APP_THREW', `Render failed in JS: ${jsError.message}`, {
       stack: jsError.stack,

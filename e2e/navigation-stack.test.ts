@@ -2,7 +2,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
 import type {RunResult, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
-import {cliJson, E2E_PRESETS, findAll, hostSkip, ROOT} from './helpers.ts';
+import {cliJson, E2E_PRESETS, findAll, hostSkip, skipUnsupported, ROOT} from './helpers.ts';
 
 const APP = path.join(ROOT, 'examples', 'navigation-stack', 'App.tsx');
 const SCRIPT = path.join(ROOT, 'examples', 'navigation-stack', 'actions.json');
@@ -23,10 +23,10 @@ describe('navigation-stack', () => {
     // fallback descriptor: no header title and no header height.
     const firstScreen = byType(home, 'RNSScreen')[0];
     if (firstScreen == null || firstScreen.box.width === 0) {
-      t.skip('host lacks react-native-screens support (RNSScreen has no size)');
+      skipUnsupported(t, 'host lacks react-native-screens support (RNSScreen has no size)');
     }
     if (!byType(home, 'RNSScreenStackHeaderConfig').some(h => h.style.title === 'Home')) {
-      t.skip('host lacks react-native-screens support (RNSScreenStackHeaderConfig has no title)');
+      skipUnsupported(t, 'host lacks react-native-screens support (RNSScreenStackHeaderConfig has no title)');
     }
 
     // details: two screens in the stack; the top one fills the stack.

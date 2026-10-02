@@ -84,6 +84,7 @@ type RenderOptions = FidelityOptions & HostConfigOptions & OutputOptions & {
   cache?: boolean;
   bytecode?: string;
   setup?: string;
+  timeout?: number;
   width: number;
   height: number;
   platform?: string;
@@ -108,7 +109,7 @@ function write(text: string, out: string | undefined) {
 const PLATFORM_REQUIRED_MESSAGE = `--platform <name> is required (or --preset, or "platform"/"preset" in a11y-tree.json). Known values: android, ios, a11ytree. Any Metro platform name is accepted.
 Note: React Native core components branch on Platform.OS (e.g. TextInput, Switch), so use android or ios for them to render.`;
 
-type RunOptions = RenderOptions & {script?: string; tapMode: string; timeout?: number; diff?: boolean};
+type RunOptions = RenderOptions & {script?: string; tapMode: string; diff?: boolean};
 
 const TAP_MODES: TapMode[] = ['touch', 'click', 'both'];
 
@@ -299,8 +300,14 @@ async function execute<T>(
     return undefined;
   }
 
+  const cancellation = new AbortController();
+  const cancel = () => cancellation.abort();
+  process.on('SIGINT', cancel);
+  process.on('SIGTERM', cancel);
+  const hostDeadline = performance.now() + (options.timeout ?? 30_000);
   const hostTiming: HostTiming = {};
   const hostOptions = {
+    signal: cancellation.signal,
     windowWidth: options.width,
     windowHeight: options.height,
     verbose: options.verbose,
@@ -309,19 +316,24 @@ async function execute<T>(
     quiet: isQuiet(options),
     tz: options.tz,
   };
+  const attempt = (bundlePath: string) => {
+    const remaining = Math.ceil(hostDeadline - performance.now());
+    if (remaining <= 0) throw new CliError('TIMEOUT', 'Host execution deadline exceeded before retry.');
+    return runHost<T>({...hostOptions, bundlePath, timeoutMs: remaining});
+  };
   try {
     let payload: T;
     try {
-      payload = await runHost<T>({...hostOptions, bundlePath: result.bundlePath});
+      payload = await attempt(result.bundlePath);
     } catch (error) {
       // A bytecode file the host cannot load (e.g. a Hermes bytecode version
       // mismatch) makes the host fail before any JS runs: drop it and use JS.
-      const jsError = error instanceof CliError && error.code === 'APP_THREW';
-      if (!result.bytecode || jsError || result.cacheDir == null) throw error;
+      const noRetry = cancellation.signal.aborted || (error instanceof CliError && (error.code === 'APP_THREW' || error.code === 'TIMEOUT'));
+      if (!result.bytecode || noRetry || result.cacheDir == null) throw error;
       discardBytecode(result.cacheDir);
       process.stderr.write('rn-a11y-tree: warning: the host could not load the bytecode bundle; using JS\n');
       if (timing) timing.bytecode = false;
-      payload = await runHost<T>({...hostOptions, bundlePath: result.jsBundlePath});
+      payload = await attempt(result.jsBundlePath);
     }
     checkHostInfo((payload as {hostInfo?: HostRuntimeInfo | null}).hostInfo, {verbose: options.verbose});
     if (timing && hostTiming.spawn != null) {
@@ -341,6 +353,8 @@ async function execute<T>(
     }
     return payload;
   } finally {
+    process.off('SIGINT', cancel);
+    process.off('SIGTERM', cancel);
     cleanUp();
   }
 }
@@ -635,6 +649,7 @@ function addCommonOptions(command: Command): Command {
     .option('--out <file>', 'write JSON to a file instead of stdout')
     .option('--keep-bundle', 'keep the Metro bundle and print its path', false)
     .option('--bundle-only', 'only build the bundle, do not run the host', false)
+    .option('--timeout <ms>', 'host execution deadline after bundling; timeout exits 5 (default 30000)', timeoutNumber, 30_000)
     .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
     .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')
     .option('--no-fail-on-fallback', 'disable the configured fallback policy')
@@ -669,6 +684,12 @@ function timeZone(value: string): string {
     throw new InvalidArgumentError(`"${value}" is not a time zone name (e.g. UTC, America/Los_Angeles)`);
   }
   return value;
+}
+
+function timeoutNumber(value: string): number {
+  const n = positiveNumber(value);
+  if (!Number.isInteger(n) || n > 2_147_483_647) throw new InvalidArgumentError('Timeout must be an integer between 1 and 2147483647 milliseconds.');
+  return n;
 }
 
 function collect(value: string, previous: string[] = []): string[] {
@@ -738,7 +759,7 @@ addOutputOptions(program.command('session'))
   .option(
     '--timeout <ms>',
     'per-request timeout; on timeout the host is killed and the exit code is 1',
-    positiveNumber,
+    timeoutNumber,
     DEFAULT_TIMEOUT_MS,
   )
   .option('--keep-bundle', 'keep the Metro bundle and print its path', false)

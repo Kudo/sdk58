@@ -44,9 +44,11 @@ which avoids maintaining an open-ended library of invented native behavior here.
   and results across navigation, data loading, failure handling and app state.
 - Device/reference comparisons for any claimed platform behavior; measured
   mismatches and explicit exclusions.
-- Release gates that fail when required host capabilities or native suites are
-  skipped, plus supported-platform CI on the exact candidate commit.
-- Bounded execution and cancellation tests for hung apps and native hosts.
+- Successful strict capability gates on every supported platform for the exact
+  release candidate, including the actual packaged binary/architecture slices.
+- Further stress coverage for excessive app output and Windows runner descendants.
+  One-shot host deadlines cover native execution after bundling; they do not bound
+  Metro startup or compilation.
 - Dependency-upgrade exercises and a published support matrix based on those
   runs, including unsupported combinations.
 

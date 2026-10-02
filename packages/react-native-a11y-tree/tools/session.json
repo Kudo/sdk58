@@ -13,10 +13,6 @@
           "both"
         ]
       },
-      "timeout": {
-        "type": "number",
-        "description": "Per-request timeout in ms."
-      },
       "file": {
         "type": "string",
         "description": "Component file (default export or `App` named export)."
@@ -24,6 +20,10 @@
       "setup": {
         "type": "string",
         "description": "Native fixture module loaded before the app."
+      },
+      "timeout": {
+        "type": "number",
+        "description": "Host execution deadline in milliseconds after bundling (default 30000); session applies it per request."
       },
       "preset": {
         "type": "string",

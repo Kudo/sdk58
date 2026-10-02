@@ -2,7 +2,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 
 import type {RunResult, TreeNode} from '../packages/react-native-a11y-tree/src/schema.ts';
-import {cliJson, e2ePreset, findAll, hostSkip, type Preset, ROOT} from './helpers.ts';
+import {cliJson, e2ePreset, findAll, hostSkip, skipUnsupported, requireInStrictMode, type Preset, ROOT} from './helpers.ts';
 
 const EXAMPLE = path.join(ROOT, 'examples', 'expo-ui');
 const SCRIPT = path.join(EXAMPLE, 'actions.json');
@@ -36,9 +36,11 @@ describe('expo-ui', () => {
     if (hostSkip) t.skip(hostSkip);
     const result = run('App.tsx', e2ePreset(t, 'android-phone'));
     const caps = new Set(result.capabilities);
-    if (!caps.has('expoUI')) t.skip('host has no expoUI capability');
+    if (!caps.has('expoUI')) skipUnsupported(t, 'host has no expoUI capability');
     const modifierEvents = caps.has('expoModifierEvents');
     const realLayout = modifierEvents && caps.has('expoUI.composeLayout');
+    requireInStrictMode(modifierEvents, 'host lacks expoModifierEvents');
+    requireInStrictMode(realLayout, 'host lacks expoUI.composeLayout');
     if (!modifierEvents) t.annotate('host without expoModifierEvents (step 1): modifier callbacks and frames not checked');
     else if (!realLayout) t.annotate('no expoUI.composeLayout: box assertions skipped');
 
@@ -106,9 +108,11 @@ describe('expo-ui', () => {
     if (hostSkip) t.skip(hostSkip);
     const result = run(file, e2ePreset(t, preset));
     const caps = new Set(result.capabilities);
-    if (!caps.has('expoUI')) t.skip('host has no expoUI capability');
+    if (!caps.has('expoUI')) skipUnsupported(t, 'host has no expoUI capability');
     const modifierEvents = caps.has('expoModifierEvents');
     const realLayout = modifierEvents && caps.has('expoUI.swiftUILayout');
+    requireInStrictMode(modifierEvents, 'host lacks expoModifierEvents');
+    requireInStrictMode(realLayout, 'host lacks expoUI.swiftUILayout');
     if (!modifierEvents) t.annotate('host without expoModifierEvents (step 1): modifier callbacks and frames not checked');
     else if (!realLayout) t.annotate('no expoUI.swiftUILayout: box assertions skipped');
 

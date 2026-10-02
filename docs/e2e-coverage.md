@@ -2,6 +2,9 @@
 
 Each e2e test runs the CLI against the real host (`native/dist/<arch>/rn-a11y-host`
 or `RN_A11Y_HOST_BIN`) and skips with a reason when there is no host binary.
+Native CI sets `RN_A11Y_E2E_STRICT=1`: missing hosts and required capabilities
+fail instead of silently reducing coverage. Explicit preset exclusions remain
+skips. CLI subprocesses have a separate 120-second backstop.
 The suites run once per preset in `RN_A11Y_E2E_PRESETS` (default
 `android-phone,ios-phone`; `e2e/helpers.ts`), and every test name starts with
 `[<preset>]`. Expectations that legitimately differ between the platforms
