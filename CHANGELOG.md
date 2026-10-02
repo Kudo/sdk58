@@ -8,7 +8,7 @@ share one version.
 
 ### Added
 
-- `--no-stderr` suppresses CLI stderr while preserving structured stdout diagnostics and exit codes; explicit NDJSON errors are emitted on stdout.
+- `--no-stderr` (also `noStderr` in agent tool inputs) suppresses CLI stderr while preserving structured stdout diagnostics and exit codes; explicit NDJSON errors are emitted on stdout.
 
 - Bound combined one-shot host output to 32 MiB before protocol parsing; terminate output floods and do not retry their bytecode.
 

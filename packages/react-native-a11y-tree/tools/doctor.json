@@ -16,6 +16,10 @@
           "json",
           "text"
         ]
+      },
+      "noStderr": {
+        "type": "boolean",
+        "description": "Suppress all stderr output, including warnings, errors, verbose logs and timings."
       }
     },
     "required": [

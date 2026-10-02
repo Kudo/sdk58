@@ -2,7 +2,7 @@
 
 ## Fresh-process agent loop (2026-10-02)
 
-Measured with `scripts/agent-loop.ts`, the current CLI changes, and the upstream
+Measured with `scripts/agent-loop.ts`, the initial CLI hardening changes, and the upstream
 `9f0348c` macOS host from CI run 36971306501. Apple M4, Node 26.5.0, macOS arm64;
 Android phone preset, default automatic bytecode. Every sample starts a fresh
 CLI/host process. Each app starts with a separate empty cache. A disposable
@@ -21,6 +21,26 @@ Background bytecode compilation can contend with later invocations. Edits change
 only the wrapper, so this measures a small source edit, not dependency installation
 or a large refactor. Output is filtered; the full screen still mounts and is
 traversed. No simulator, emulator, Metro server, or daemon is used.
+
+## Router/cache hardening recheck (2026-10-02)
+
+Revision `efb3b23`, the same M4/Node/native-host setup, fresh CLI processes and
+separate empty caches. Samples run sequentially, on the same shared machine;
+other test work may contend for resources. This is additional coverage, not a
+controlled speedup comparison with the earlier samples.
+
+| Screen / preset | Cold (one sample) | Unchanged median (range) | Source-edit median (range) |
+| --- | --- | --- | --- |
+| Medium / Android phone | 6,414 ms | 571 ms (295–695), n=5 | 1,809 ms (1,520–2,455), n=5 |
+| SDK 58 full Router root / iOS phone | 7,736 ms | 644 ms (582–730), n=3 | 2,438 ms (2,105–3,057), n=3 |
+
+Raw samples: [medium](perf/agent-loop-medium-efb3b23.json),
+[Router root](perf/agent-loop-router-efb3b23.json). App paths are normalized to
+repository-relative paths; timings are unmodified. Each source edit changes the
+benchmark wrapper and verifies its revision label in the output. Router root
+resolution runs before finished-cache lookup. Native-tab diagnostics still
+apply: these timings do not establish native selected-tab visibility or drawing.
+No Metro daemon, simulator or emulator is involved.
 
 ## Historical measurements (2026-09-29)
 

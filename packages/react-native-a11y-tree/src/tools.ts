@@ -22,6 +22,8 @@ export type CommonInput = {
   metroConfig?: string;
   /** Host execution deadline in milliseconds after bundling (default 30000); session applies it per request. */
   timeout?: number;
+  /** Suppress all stderr output, including warnings, errors, verbose logs and timings. */
+  noStderr?: boolean;
   /** Device preset: platform, viewport, safe area insets, header height. */
   preset?: 'android-phone' | 'ios-phone' | 'android-tablet' | 'ios-tablet';
   /** Metro platform (`android`, `ios`, `a11ytree`, ...). Required unless a preset or a11y-tree.json sets it. */
@@ -104,7 +106,13 @@ export type SessionInput = CommonInput & {
   tapMode?: 'touch' | 'click' | 'both';
 };
 
-export type DoctorInput = {file: string; strict?: boolean; format?: 'json' | 'text'};
+export type DoctorInput = {
+  file: string;
+  strict?: boolean;
+  format?: 'json' | 'text';
+  /** Suppress all stderr output, including warnings, errors, verbose logs and timings. */
+  noStderr?: boolean;
+};
 
 export type ToolName = 'doctor' | 'render' | 'query' | 'act' | 'diff' | 'check' | 'session';
 

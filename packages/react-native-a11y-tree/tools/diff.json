@@ -48,6 +48,10 @@
         "type": "number",
         "description": "Host execution deadline in milliseconds after bundling (default 30000); session applies it per request."
       },
+      "noStderr": {
+        "type": "boolean",
+        "description": "Suppress all stderr output, including warnings, errors, verbose logs and timings."
+      },
       "preset": {
         "type": "string",
         "enum": [

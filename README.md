@@ -426,7 +426,8 @@ adds a violation with `rule: "step"` and `key: "step:<index>"`.
   `render`, `query`, `act` (`run`), `diff` (`run --diff`), `check` and
   `session` (with `x-protocol` for the stdin/stdout lines). Input types are
   in `src/tools.ts`; `toolArgv(name, input)` maps an input to CLI arguments
-  (`actions` and `rules` are passed inline as JSON). Example:
+  (`actions` and `rules` are passed inline as JSON). Every tool accepts
+  `noStderr: true` to suppress CLI stderr while retaining structured output. Example:
 
   ```sh
   rn-a11y-tree run examples/basic/App.tsx --platform android \

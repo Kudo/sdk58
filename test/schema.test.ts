@@ -155,3 +155,17 @@ it('agent tools expose exact fallback allowances as repeated CLI arguments', () 
     'render', 'App.tsx', '--fail-on-fallback', '--allow-fallback', 'ExpoImage', '--allow-fallback', 'RNSVGPath',
   ]);
 });
+
+it.each(TOOLS)('$name tool accepts boolean noStderr and emits the flag only when true', tool => {
+  const input = validator(`tools/${tool.name}.json`, d => d.inputSchema);
+  for (const noStderr of [true, false]) {
+    expect(input({...tool.example, noStderr}), ajv.errorsText(input.errors)).toBe(true);
+  }
+  expect(input({...tool.example, noStderr: 'true'})).toBe(false);
+  const ordinary = toolArgv(tool.name, tool.example);
+  const silent = toolArgv(tool.name, {...tool.example, noStderr: true});
+  expect(silent.filter(arg => arg === '--no-stderr')).toHaveLength(1);
+  expect(silent.filter(arg => arg !== '--no-stderr')).toEqual(ordinary);
+  expect(toolArgv(tool.name, {...tool.example, noStderr: false})).toEqual(ordinary);
+  expect(toolArgv(tool.name, {...tool.example, noStderr: undefined})).toEqual(ordinary);
+});
