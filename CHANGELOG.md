@@ -6,6 +6,8 @@ share one version.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-02
+
 ### Added
 
 - Bounded Windows process-tree cleanup using the system taskkill command, with explicit incomplete-cleanup metadata and Windows-only descendant lifecycle tests.
@@ -216,3 +218,5 @@ First release. macOS arm64 host only.
 [0.1.2]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Kudo/react-native-a11y-tree/releases/tag/v0.1.0
+
+[0.1.4]: https://github.com/Kudo/sdk58/releases/tag/v0.1.4

@@ -1,6 +1,6 @@
 {
   "name": "react-native-a11y-tree",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Render a React Native component headlessly (real Metro + Fabric/Hermes) and print its accessibility and layout tree; interact with it and check a11y/design rules. For agents and CI.",
   "keywords": [
     "react-native",
@@ -53,9 +53,9 @@
     "react-native": ">=0.88.0-rc.2"
   },
   "optionalDependencies": {
-    "@react-native-a11y-tree/runtime-darwin-universal": "0.1.3",
-    "@react-native-a11y-tree/runtime-linux-x64-gnu": "0.1.3",
-    "@react-native-a11y-tree/runtime-win32-x64-msvc": "0.1.3"
+    "@react-native-a11y-tree/runtime-darwin-universal": "0.1.4",
+    "@react-native-a11y-tree/runtime-linux-x64-gnu": "0.1.4",
+    "@react-native-a11y-tree/runtime-win32-x64-msvc": "0.1.4"
   },
   "scripts": {
     "build": "bun ../../scripts/build.ts",
