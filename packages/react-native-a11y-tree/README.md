@@ -1011,7 +1011,12 @@ host lacks but libraries require at import time: `StatusBarManager` (RNGH
 imports `DrawerLayoutAndroid`, which imports `StatusBar`), and for
 `--platform ios` `KeyboardObserver` (`Keyboard` creates a
 `NativeEventEmitter` with it) and `LinkingManager` (`Linking`; React
-Navigation imports it).
+Navigation imports it). The Linking stand-in returns no initial URL and emits no
+native URL events. `openURL`, `openSettings`, and `canOpenURL` reject with
+`NATIVE_API_UNSUPPORTED`: this host neither launches native screens nor knows
+which URL handlers a device has installed. An app may provide an explicit
+`LinkingManager` fixture for those branches. Caught unsupported calls still fail
+`--fail-on-fallback`, even when the import fallback is allowed.
 
 ## Session mode
 

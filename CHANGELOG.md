@@ -35,6 +35,8 @@ share one version.
 
 ### Fixed
 
+- Core iOS Linking fallback rejects unsupported URL launches, settings launches and handler queries instead of reporting invented native results; caught errors remain visible to strict policy.
+
 - Keep fresh JavaScript usable when a locked or unwritable finished-bundle cache cannot be published; never select stale bytecode after publication failure.
 - Correct Windows Metro fixture path handling and isolate the bounded npm-install test from concurrent Metro suites.
 - Match Expo Router `app`, `src/app` and custom-root discovery and invalidate route caches after config-helper changes.

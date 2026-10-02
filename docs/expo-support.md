@@ -33,7 +33,7 @@ are inferred from source paths; a conditional call may have a narrower platform.
 | `expo-live-photo` | 1 | Unverified: loading and playback are not tested. |
 | `expo-maps` | 3 | Unverified: Apple/Google Maps and Street View need module and interaction support. |
 | `expo-mesh-gradient` | 1 | Unverified: props/layout have no dedicated test; no pixel rendering. |
-| `expo-router` | 8 | Unverified: native link previews, transitions and toolbars. The existing React Navigation stack tests do not cover these. |
+| `expo-router` | 8 | Full-root JS pathname/navigation and route discovery have E2E coverage. Native tab selection/visibility, link previews, transitions and toolbars remain unverified or unsimulated; see [production limitations](production-readiness.md). |
 | `expo-symbols` | 1 | Starter-screen coverage: iOS symbol props and frames; Android retains its unloaded-font placeholder. No glyph rendering, animation or custom-font loading. |
 | `expo-video` | 4 | Unverified: video surfaces, shared player objects, playback and AirPlay are not simulated. |
 
