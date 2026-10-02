@@ -86,7 +86,11 @@ ARM64 execution does not replace the Intel runner result.
   mismatches and explicit exclusions.
 - Successful strict capability gates on every supported platform for the exact
   release candidate, including the actual packaged binary/architecture slices.
-- Windows runner-descendant termination still needs further coverage. Session
+- Windows now requests bounded `taskkill` tree cleanup before killing a live
+  runner, preserving failure details when cleanup is incomplete. The new real
+  descendant-death tests must pass on Windows CI before this candidate is
+  considered verified there. A runner that exits before cleanup remains a
+  limitation; this is not Job Object ownership. Session
   client input now uses backpressure with a 32 MiB buffer ceiling, and response
   writes have a deadline. Tests exercise pipelining, oversized lines, stalled
   or closed consumers, cancellation and listener cleanup. Host stdout/stderr is bounded to

@@ -167,8 +167,8 @@ export async function runSession(options: FidelityOptions & {
   windowWidth: number;
   windowHeight: number;
   verbose?: boolean;
-  /** Deadline per host frame and client-output write in ms; timeout cleans up
-   * the host and exits 5. Waiting for an idle client has no deadline. */
+  /** Deadline per host frame, client-output write, and graceful shutdown in ms;
+   * expiry cleans up the host and exits 5. An idle client has no deadline. */
   timeoutMs?: number;
   /** Print startup timings and per-request latency as JSON on stderr. */
   timing?: boolean;
@@ -560,7 +560,7 @@ export async function runSession(options: FidelityOptions & {
     shutdownRequested = true;
     if (!exited && !terminalError) {
       child.stdin!.end();
-      shutdownTimer ??= setTimeout(() => stop({code: 'HOST_CRASHED', message: 'Host did not exit after session shutdown'}), 250);
+      shutdownTimer ??= setTimeout(() => stop({code: 'HOST_CRASHED', message: `Host did not exit within ${timeoutMs} ms after session shutdown`}), timeoutMs);
     }
     const code = await exitPromise;
     // stdout is drained before exitPromise settles. Cleanup can log after the

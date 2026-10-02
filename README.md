@@ -104,7 +104,13 @@ request ID, and startup failures use `ready: false`. Late shutdown logs or
 diagnostics may produce an additional `id: null` record. Rejected late evidence
 remains an error and causes exit 6 in strict mode. SIGINT/SIGTERM cancel the
 session with `HOST_CRASHED`, `details.cancelled: true`, and exit 5. POSIX host
-process groups are terminated; Windows still has the immediate-child limitation.
+process groups are terminated. Windows requests bounded process-tree termination
+through the system `taskkill.exe` before killing the runner itself. A failed or
+unavailable tree cleanup is reported through `details.cleanupIncomplete` and
+`details.cleanupReason`, preserving the original timeout/cancellation error.
+Windows cannot guarantee descendant cleanup after the runner has already exited;
+the pipe cutoff still bounds the CLI wait. This is best-effort cleanup, not a
+Windows Job Object ownership guarantee.
 
 ## Dependency checks and application fixtures
 
@@ -287,7 +293,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--tap-mode <mode>` | `run`, `session`, `check` | `touch` | Events for taps: `touch` (responder touches), `click`, or `both` |
 | `--rules <json>` | `check` | `rules` in `a11y-tree.json` | Rules file `{"rules": {...}}`, or that JSON itself (a value that starts with `{`) (see [Check](#check)) |
 | `--diff` | `run` | off | Add `diff: {added, removed, changed}` (by `key`) to each step |
-| `--timeout <ms>` | `session` | `30000` | Host-frame and output-write timeout; on timeout the host is killed and the exit code is 5 |
+| `--timeout <ms>` | `session` | `30000` | Host-frame, output-write and graceful-shutdown timeout; on timeout the host is killed and the exit code is 5 |
 
 ## Presets and a11y-tree.json
 
@@ -592,7 +598,15 @@ subdirectories. Adding, renaming, or deleting a matching route invalidates the
 finished bundle; ordinary apps without context imports do not scan directory trees.
 If publishing a finished cache entry fails (for example, a Windows file lock),
 the invocation uses its fresh temporary JavaScript bundle without cached bytecode.
-Verbose output reports the skipped publication.
+Verbose output reports the skipped publication. Before execution, cached JS and
+any selected bytecode are copied into a private temporary snapshot. The cache
+generation and inputs are rechecked after copying; a racing replacement becomes
+a miss. Later cache replacement or eviction cannot change that invocation's
+artifacts. A failed bytecode load attempts to discard only its selected generation; a
+locked cache file does not prevent the JS retry. Snapshots
+are removed after the invocation unless `--keep-bundle` or `--bundle-only` retains
+them. These snapshots do not make concurrent edits to the application's sources
+an atomic transaction.
 
 Measure cold startup, unchanged invocations, and actual source edits separately:
 
@@ -1058,8 +1072,10 @@ order, one at a time.
 - App console output goes to stderr as `[app] ...` lines. `--quiet` suppresses
   ordinary app logging; `--no-stderr` also suppresses warning prose. Structured
   logs and diagnostics remain in stdout responses.
-- `--timeout <ms>` (default 30000) limits each host frame and each response
-  write. Host timeouts emit a structured `TIMEOUT` error and exit 5. A blocked
+- `--timeout <ms>` (default 30000) limits each host frame, each response
+  write, and graceful host shutdown separately. Host-frame timeouts emit a
+  structured `TIMEOUT` error and exit 5. Shutdown that exceeds this budget emits
+  `HOST_CRASHED` and exits 5. A blocked
   or closed output consumer also stops the host and exits 5; an unavailable
   output stream cannot carry a final JSON error. Waiting for the next client
   request has no idle deadline.

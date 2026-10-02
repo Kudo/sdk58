@@ -776,7 +776,7 @@ addOutputOptions(program.command('session'))
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option(
     '--timeout <ms>',
-    'host-frame and output-write timeout; on timeout the host is killed and the exit code is 5',
+    'host-frame, output-write and graceful-shutdown timeout; on timeout the host is killed and the exit code is 5',
     timeoutNumber,
     DEFAULT_TIMEOUT_MS,
   )

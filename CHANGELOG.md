@@ -8,6 +8,8 @@ share one version.
 
 ### Added
 
+- Bounded Windows process-tree cleanup using the system taskkill command, with explicit incomplete-cleanup metadata and Windows-only descendant lifecycle tests.
+
 - Backpressure and a 32 MiB input buffer ceiling for sessions, bounded response writes, and cleanup when a client closes or stops reading output.
 - Reproducible MMKV 4.3.1/4.3.2 fixture-contract exercise on both presets, with artifact integrity checks and explicit unsupported-boxing results.
 
@@ -38,6 +40,9 @@ share one version.
 
 ### Fixed
 
+- Keep per-invocation JS/bytecode snapshots independent of shared-cache replacement and eviction; discard only the bytecode generation that failed and recover from malformed cache metadata.
+
+- Allow graceful session shutdown to use the configured timeout instead of a fixed 250 ms, while retaining bounded forced cleanup.
 - Preserve session cleanup logs on implicit EOF shutdown and interrupt blocked final responses after the host has already exited. Correct session timeout/error exit-code documentation.
 
 - Core iOS Linking fallback rejects unsupported URL launches, settings launches and handler queries instead of reporting invented native results; caught errors remain visible to strict policy.

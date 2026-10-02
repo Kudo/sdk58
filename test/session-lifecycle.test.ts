@@ -132,7 +132,11 @@ beforeAll(() => {
     });
     process.stdin.on('end', () => {
       if (mode === 'quit-hang' || mode === 'forced') setInterval(()=>{},1000);
-      else chain.then(() => {
+      else chain.then(async () => {
+        if (mode === 'delayed-exit') {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          emit({type:'console-log',level:'info',message:'delayed cleanup completed'});
+        }
         if (mode === 'late-diagnostic' || mode === 'early-and-late-diagnostic') emit({type:'console-log',level:'warn',message:'[NATIVE_MODULE_FALLBACK] LateDemo: cleanup fixture'});
         if (mode === 'different-late-diagnostic') emit({type:'console-log',level:'warn',message:'[NATIVE_API_UNSUPPORTED] DifferentLate: cleanup unsupported'});
         if (mode === 'late-log') emit({type:'console-log',level:'info',message:'late cleanup log'});
@@ -221,10 +225,21 @@ it('ends idle output overflow with client input still open despite unsolicited c
   expect(result.lines.at(-1)).toMatchObject({id: null, ok: false, error: {code: 'HOST_CRASHED', details: {outputLimit: true}}});
 });
 
+it.each([false, true])('allows legitimate 500ms cleanup within the configured 1500ms shutdown budget, EOF=%s', TEST_OPTIONS, async eof => {
+  const result = await run('delayed-exit', {eof});
+  expect(result.watchdogFired).toBe(false);
+  expect(result.code).toBe(0);
+  expect(result.lines.some(line => line.error)).toBe(false);
+  expect(result.lines.at(-1)).toMatchObject({id: null, ok: true, logs: ['delayed cleanup completed']});
+  expect(result.reapedBeforeCleanup).toBe(true);
+});
+
 it.each(['quit-hang', 'forced'])('bounds %s shutdown after a completed quit response', TEST_OPTIONS, async mode => {
   const result = await run(mode);
   expect(result.watchdogFired).toBe(false);
   expect(result.code).toBe(5);
+  expect(result.lines.at(-1)).toMatchObject({id: null, ok: false,
+    error: {code: 'HOST_CRASHED', message: 'Host did not exit within 1500 ms after session shutdown'}});
   expect(result.reapedBeforeCleanup).toBe(true);
 });
 
@@ -320,6 +335,8 @@ it('bounds EOF shutdown as well as explicit quit', TEST_OPTIONS, async () => {
   const result = await run('quit-hang', {eof: true});
   expect(result.watchdogFired).toBe(false);
   expect(result.code).toBe(5);
+  expect(result.lines.at(-1)).toMatchObject({id: null, ok: false,
+    error: {code: 'HOST_CRASHED', message: 'Host did not exit within 1500 ms after session shutdown'}});
   expect(result.reapedBeforeCleanup).toBe(true);
 });
 
