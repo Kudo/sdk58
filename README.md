@@ -83,6 +83,14 @@ JavaScript after a bytecode attempt.
 On POSIX, SIGINT/SIGTERM during host execution cancel that run and terminate its host process group.
 Session mode continues to apply `--timeout` separately to each request.
 
+One-shot host execution accepts at most 32 MiB of combined stdout and stderr,
+including the result and application logs. Exceeding this limit terminates the
+host with `HOST_CRASHED` (exit 5), `error.details.outputLimit: true`, and no
+bytecode retry. Reduce console output or render a smaller screen. This bounds
+protocol buffering even when a line has no newline. Diagnostic stderr files
+contain only output accepted before the limit; interactive sessions have a
+separate lifetime and are not covered by this one-shot budget.
+
 ## Dependency checks and application fixtures
 
 See [production adoption and remaining validation](docs/production-readiness.md)

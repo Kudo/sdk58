@@ -91,3 +91,32 @@ it('shares one deadline across a delayed bytecode failure and its JS retry', {ti
     expect(Number(/after (\d+) ms/.exec(error.message)?.[1])).toBeLessThan(1200);
   } finally {fs.rmSync(dir, {recursive: true, force: true});}
 });
+
+it('does not retry bytecode after a host exceeds its output limit', {timeout: 120_000}, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a11y-cli-output-'));
+  try {
+    const host = path.join(dir, 'flood.cjs');
+    const count = path.join(dir, 'starts');
+    fs.writeFileSync(host, `
+      require('node:fs').appendFileSync(process.env.TEST_HOST_STARTS, process.argv.join(' ') + '\\n');
+      const chunk = 'x'.repeat(65536);
+      let sent = 0;
+      const pump = () => {while (sent < 40 * 1024 * 1024) {
+        sent += chunk.length;
+        if (!process.stdout.write(chunk)) {process.stdout.once('drain', pump); return;}
+      }};
+      pump();
+      setInterval(() => {}, 1000);
+    `);
+    const proc = spawnSync(process.execPath, [CLI, 'render', APP, '--preset', 'android-phone', '--format', 'json', '--bytecode', 'on'], {
+      cwd: ROOT, encoding: 'utf8', timeout: 90_000,
+      env: {...process.env, RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_STARTS: count},
+    });
+    expect(proc.status, proc.stdout + proc.stderr).toBe(5);
+    expect(JSON.parse(proc.stdout).error).toMatchObject({code: 'HOST_CRASHED', details: {outputLimit: true}});
+    expect(proc.stderr).not.toContain('using JS');
+    const starts = fs.readFileSync(count, 'utf8').trim().split('\n');
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toContain('.hbc');
+  } finally {fs.rmSync(dir, {recursive: true, force: true});}
+});

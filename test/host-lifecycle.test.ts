@@ -52,6 +52,26 @@ beforeAll(() => {
     if (mode === 'stderr') process.stderr.write('EARLY_SANITIZER_MARKER\\n' + 'x'.repeat(200000) + '\\nTAIL\\n');
     if (mode === 'result' || mode === 'success') console.log(JSON.stringify({type: 'rn-a11y-tree-result', rnA11yTree: {done: true}}));
     if (mode === 'success') process.exit(0);
+    if (mode === 'final-line') {
+      const bytes = Buffer.from(JSON.stringify({type: 'rn-a11y-tree-result', rnA11yTree: {text: 'café🧪'}}));
+      const split = bytes.indexOf(Buffer.from('🧪')) + 1;
+      process.stdout.write(bytes.subarray(0, split));
+      setImmediate(() => process.stdout.write(bytes.subarray(split), () => process.exit(0)));
+    }
+    if (mode.startsWith('flood-')) {
+      const chunk = mode === 'flood-console'
+        ? JSON.stringify({type: 'console-log', level: 'info', message: 'x'.repeat(8192)}) + '\\n'
+        : 'x'.repeat(65536);
+      const output = mode === 'flood-stderr' ? process.stderr : process.stdout;
+      let sent = 0;
+      const pump = () => {
+        while (sent < 40 * 1024 * 1024) {
+          sent += chunk.length;
+          if (!output.write(chunk)) { output.once('drain', pump); return; }
+        }
+      };
+      pump();
+    }
     if (mode === 'runner' || mode === 'escaped') {
       const {spawn} = require('node:child_process');
       const worker = spawn(process.execPath, ['-e', "process.on('SIGTERM',()=>{}); setInterval(()=>{},1000)"], {stdio: 'inherit', detached: mode === 'escaped'});
@@ -177,4 +197,20 @@ it.skipIf(process.platform === 'win32')('bounds inherited pipes held by a descen
   } finally {
     await cleanUpWorker(logs);
   }
+});
+
+
+it.each(['flood-stdout', 'flood-stderr', 'flood-console'])('terminates %s before unbounded protocol/log accumulation', TEST_OPTIONS, async mode => {
+  const logs: Logs = [];
+  const started = performance.now();
+  const error = await runHost(options(mode, {logs, timeoutMs: 8000})).catch(error => error);
+  expect(error).toMatchObject({code: 'HOST_CRASHED', details: {outputLimit: true}});
+  expect(error.message).toContain('output limit');
+  expect(performance.now() - started).toBeLessThan(7000);
+  expect(logs.length).toBeLessThan(5000);
+  expect(() => process.kill(Number(logs[0].message), 0)).toThrow();
+});
+
+it('preserves a final unterminated result and UTF-8 split across chunks', TEST_OPTIONS, async () => {
+  expect(await runHost(options('final-line'))).toEqual({text: 'café🧪'});
 });

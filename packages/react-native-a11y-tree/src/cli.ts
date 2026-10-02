@@ -336,7 +336,7 @@ async function execute<T>(
     } catch (error) {
       // A bytecode file the host cannot load (e.g. a Hermes bytecode version
       // mismatch) makes the host fail before any JS runs: drop it and use JS.
-      const noRetry = cancellation.signal.aborted || (error instanceof CliError && (error.code === 'APP_THREW' || error.code === 'TIMEOUT'));
+      const noRetry = cancellation.signal.aborted || (error instanceof CliError && (error.code === 'APP_THREW' || error.code === 'TIMEOUT' || error.details?.outputLimit === true));
       if (!result.bytecode || noRetry || result.cacheDir == null) throw error;
       discardBytecode(result.cacheDir);
       process.stderr.write('rn-a11y-tree: warning: the host could not load the bytecode bundle; using JS\n');

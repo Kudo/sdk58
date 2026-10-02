@@ -8,6 +8,8 @@ share one version.
 
 ### Added
 
+- Bound combined one-shot host output to 32 MiB before protocol parsing; terminate output floods and do not retry their bytecode.
+
 - Explicit Nitro HybridObject fixture factories and E2E coverage of real MMKV JS and Nitro Image view registration, with native limitations exposed in diagnostics.
 
 - Release gates exercise the npm-packed universal macOS host on ARM64 and Intel; package E2E respects the selected host.

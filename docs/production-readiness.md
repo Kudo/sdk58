@@ -65,7 +65,9 @@ ARM64 execution does not replace the Intel runner result.
   mismatches and explicit exclusions.
 - Successful strict capability gates on every supported platform for the exact
   release candidate, including the actual packaged binary/architecture slices.
-- Further stress coverage for excessive app output and Windows runner descendants.
+- Further stress coverage for interactive-session output and Windows runner descendants.
+  One-shot stdout/stderr has a tested 32 MiB combined budget, including
+  unterminated lines and console floods.
   One-shot host deadlines cover native execution after bundling; they do not bound
   Metro startup or compilation.
 - Dependency-upgrade exercises and a published support matrix based on those

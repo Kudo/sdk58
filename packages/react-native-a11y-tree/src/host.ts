@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
+import {PassThrough} from 'node:stream';
 import {fileURLToPath} from 'node:url';
 import {getHostPath, getHostVersionPath} from './runtimePackage.ts';
 
@@ -64,18 +65,19 @@ export type HostTiming = {spawn?: number; result?: number; exit?: number};
 
 /** Host or app failure; `code` is APP_THREW, HOST_MISSING or HOST_CRASHED. */
 export class HostError extends CliError {
-  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean};
+  readonly hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean; outputLimit?: boolean};
 
   constructor(
     code: ErrorCode,
     message: string,
-    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean},
+    hostDetails?: {stack?: string; stderr?: string; exitCode?: number | null; cancelled?: boolean; cleanupTimedOut?: boolean; outputLimit?: boolean},
     hint?: string,
   ) {
     const details: Record<string, unknown> = {};
     if (hostDetails?.stack) details.stack = hostDetails.stack;
     if (hostDetails?.exitCode != null) details.exitCode = hostDetails.exitCode;
     if (hostDetails?.stderr) details.stderrTail = hostDetails.stderr.trimEnd().split('\n').slice(-20).join('\n');
+    if (hostDetails?.outputLimit) details.outputLimit = true;
     if (hostDetails?.cancelled) details.cancelled = true;
     if (hostDetails?.cleanupTimedOut) details.cleanupTimedOut = true;
     super(code, message, {hint, details});
@@ -388,6 +390,20 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     detached: process.platform !== 'win32',
   });
 
+  // Bound raw bytes before readline can accumulate an unterminated line or
+  // console records can grow the retained logs indefinitely. Includes results.
+  const outputLimitBytes = 32 * 1024 * 1024;
+  let outputBytes = 0;
+  let outputLimit = false;
+  let stopForOutput = () => {};
+  const acceptOutput = (chunk: Buffer): boolean => {
+    if (outputLimit) return false;
+    outputBytes += chunk.length;
+    if (outputBytes <= outputLimitBytes) return true;
+    outputLimit = true;
+    stopForOutput();
+    return false;
+  };
   let stderrTail = Buffer.alloc(0);
   let stderrLog: number | undefined;
   const closeStderrLog = () => {
@@ -403,10 +419,11 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     } catch { closeStderrLog(); }
   }
   const onStderr = (chunk: Buffer) => {
+    if (!acceptOutput(chunk)) return;
     // Bound retained diagnostics even if the subprocess floods stderr.
     const tail = chunk.subarray(-65536);
     stderrTail = Buffer.concat([stderrTail.subarray(-Math.max(0, 65536 - tail.length)), tail]).subarray(-65536);
-    // Preserve the full sanitizer log without adding headers between chunks.
+    // Preserve accepted sanitizer output without adding headers between chunks.
     if (stderrLog !== undefined) {
       try { fs.writeSync(stderrLog, chunk); } catch { closeStderrLog(); }
     }
@@ -417,7 +434,14 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   let result: T | undefined;
   let jsError: {message: string; stack?: string} | undefined;
 
-  const rl = readline.createInterface({input: child.stdout!});
+  const boundedStdout = new PassThrough();
+  const onStdout = (chunk: Buffer) => {
+    if (acceptOutput(chunk)) boundedStdout.write(chunk);
+  };
+  const onStdoutEnd = () => boundedStdout.end();
+  const rl = readline.createInterface({input: boundedStdout});
+  child.stdout!.on('data', onStdout);
+  child.stdout!.once('end', onStdoutEnd);
   rl.on('line', rawLine => {
     const line = rawLine.trim();
     if (!line) return;
@@ -447,7 +471,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
     }
   });
 
-  let stopped: 'timeout' | 'cancelled' | 'error' | undefined;
+  let stopped: 'timeout' | 'cancelled' | 'error' | 'output-limit' | undefined;
   let spawnError: Error | undefined;
   let cleanupTimedOut = false;
   const [exitCode, signal] = await new Promise<[number | null, NodeJS.Signals | null]>(resolve => {
@@ -476,6 +500,9 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
       child.removeListener('close', finish);
       rl.removeAllListeners('line');
       rl.close();
+      boundedStdout.destroy();
+      child.stdout!.removeListener('data', onStdout);
+      child.stdout!.removeListener('end', onStdoutEnd);
       child.stderr!.removeListener('data', onStderr);
       child.stdout!.destroy();
       child.stderr!.destroy();
@@ -497,6 +524,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
         finish(child.exitCode, child.signalCode);
       }, 1250);
     };
+    stopForOutput = () => stop('output-limit');
     const onAbort = () => stop('cancelled');
     const onError = (error: Error) => {
       spawnError = error;
@@ -514,8 +542,9 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   if (stopped) {
     throw new HostError(stopped === 'timeout' ? 'TIMEOUT' : 'HOST_CRASHED',
       stopped === 'timeout' ? `Host execution timed out after ${timeoutMs} ms` :
-        stopped === 'cancelled' ? 'Host execution cancelled' : `Host failed: ${spawnError?.message}`,
-      {stderr, exitCode, cancelled: stopped === 'cancelled', cleanupTimedOut});
+        stopped === 'cancelled' ? 'Host execution cancelled' :
+        stopped === 'output-limit' ? `Host exceeded the ${outputLimitBytes}-byte combined stdout/stderr output limit` : `Host failed: ${spawnError?.message}`,
+      {stderr, exitCode, cancelled: stopped === 'cancelled', cleanupTimedOut, outputLimit});
   }
   if (jsError) {
     throw new HostError('APP_THREW', `Render failed in JS: ${jsError.message}`, {
