@@ -8,6 +8,8 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const CLI = path.join(ROOT, 'packages/react-native-a11y-tree/src/cli.ts');
 const APP = path.join(ROOT, 'examples/basic/App.tsx');
 
+// These tests require HBC on the first launch. Other CLI tests can discard or
+// replace shared cache bytecode, so each lifecycle case owns its cache too.
 it('render/run/check deadlines report TIMEOUT and never retry timed-out bytecode', {timeout: 120_000}, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a11y-cli-timeout-'));
   try {
@@ -19,14 +21,14 @@ it('render/run/check deadlines report TIMEOUT and never retry timed-out bytecode
       const proc = spawnSync(process.execPath, [CLI, command, APP, '--preset', 'android-phone', '--format', 'json', '--bytecode', 'on', '--timeout', '1500',
         ...(command === 'run' ? ['--script', '[]'] : command === 'check' ? ['--rules', '{"rules":{}}'] : [])], {
         cwd: ROOT, encoding: 'utf8', timeout: 90_000,
-        env: {...process.env, RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_STARTS: count},
+        env: {...process.env, RN_A11Y_TREE_CACHE_DIR: path.join(dir, 'cache'), RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_STARTS: count},
       });
       expect(proc.status, `${command}: ${proc.stdout} ${proc.stderr}`).toBe(5);
       expect(JSON.parse(proc.stdout).error.code).toBe('TIMEOUT');
       expect(proc.stderr).not.toContain('using JS');
       const starts = fs.readFileSync(count, 'utf8').trim().split('\n');
       expect(starts).toHaveLength(1);
-      expect(starts[0]).toContain('.hbc');
+      expect(starts[0], `${command}: ${proc.stdout} ${proc.stderr}`).toContain('.hbc');
     }
   } finally {fs.rmSync(dir, {recursive: true, force: true});}
 });
@@ -45,7 +47,7 @@ it.skipIf(process.platform === 'win32')('repeated SIGTERM cancels a resistant ho
   const host = path.join(dir, 'hang.cjs');
   fs.writeFileSync(host, "require('node:fs').writeFileSync(process.env.TEST_HOST_PID, String(process.pid)); process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);");
   const child = spawn(process.execPath, [CLI, 'render', APP, '--preset', 'android-phone', '--format', 'json', '--bytecode', 'on'], {
-    cwd: ROOT, env: {...process.env, RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_PID: marker}, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: ROOT, env: {...process.env, RN_A11Y_TREE_CACHE_DIR: path.join(dir, 'cache'), RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_PID: marker}, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let stdout = '', stderr = '';
   child.stdout.on('data', data => {stdout += data;});
@@ -81,13 +83,16 @@ it('shares one deadline across a delayed bytecode failure and its JS retry', {ti
     fs.writeFileSync(host, "require('node:fs').appendFileSync(process.env.TEST_HOST_STARTS, process.argv.join(' ') + '\\n'); if (process.argv.some(arg => arg.endsWith('.hbc'))) setTimeout(() => process.exit(2), 1000); else setInterval(() => {}, 1000);");
     const proc = spawnSync(process.execPath, [CLI, 'render', APP, '--preset', 'android-phone', '--format', 'json', '--bytecode', 'on', '--timeout', '2000'], {
       cwd: ROOT, encoding: 'utf8', timeout: 90_000,
-      env: {...process.env, RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_STARTS: starts},
+      env: {...process.env, RN_A11Y_TREE_CACHE_DIR: path.join(dir, 'cache'), RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_STARTS: starts},
     });
     expect(proc.status, proc.stdout + proc.stderr).toBe(5);
     const error = JSON.parse(proc.stdout).error;
     expect(error.code).toBe('TIMEOUT');
     expect(proc.stderr).toContain('using JS');
-    expect(fs.readFileSync(starts, 'utf8').trim().split('\n')).toHaveLength(2);
+    const launches = fs.readFileSync(starts, 'utf8').trim().split('\n');
+    expect(launches).toHaveLength(2);
+    expect(launches[0]).toContain('.hbc');
+    expect(launches[1]).toContain('index.bundle.js');
     expect(Number(/after (\d+) ms/.exec(error.message)?.[1])).toBeLessThan(1200);
   } finally {fs.rmSync(dir, {recursive: true, force: true});}
 });
@@ -110,7 +115,7 @@ it('does not retry bytecode after a host exceeds its output limit', {timeout: 12
     `);
     const proc = spawnSync(process.execPath, [CLI, 'render', APP, '--preset', 'android-phone', '--format', 'json', '--bytecode', 'on'], {
       cwd: ROOT, encoding: 'utf8', timeout: 90_000,
-      env: {...process.env, RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_STARTS: count},
+      env: {...process.env, RN_A11Y_TREE_CACHE_DIR: path.join(dir, 'cache'), RN_A11Y_HOST_BIN: host, RN_A11Y_HOST_RUNNER: process.execPath, TEST_HOST_STARTS: count},
     });
     expect(proc.status, proc.stdout + proc.stderr).toBe(5);
     expect(JSON.parse(proc.stdout).error).toMatchObject({code: 'HOST_CRASHED', details: {outputLimit: true}});
