@@ -24,7 +24,7 @@ cp "$ROOT/examples/basic/App.tsx" .
 unset RN_A11Y_HOST_BIN RN_A11Y_HOST_SKIP_PACKAGE RN_A11Y_HOST_BASE_URL RN_A11Y_HOST_MANIFEST
 
 npx rn-a11y-tree render App.tsx --preset android-phone --format text -v | tee render.txt
-grep -q '^    submit View #submit role=button "Submit" {24,' render.txt
+grep -Fq '#submit button "Submit" {24,' render.txt
 
 printf '{"id":1,"quit":true}\n' | npx rn-a11y-tree session App.tsx --preset android-phone > session.jsonl
 node -e '
