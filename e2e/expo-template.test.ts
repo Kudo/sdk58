@@ -5,7 +5,7 @@ import {cli, E2E_PRESETS, findAll, hostSkip, ROOT} from './helpers.ts';
 
 for (const preset of E2E_PRESETS) {
   for (const screen of ['explore', 'index']) {
-    it(`[${preset.name}] unchanged SDK 58 starter ${screen} screen renders`, {timeout: 180_000}, t => {
+    it(`[${preset.name}] unchanged SDK 58 starter ${screen} screen renders`, {timeout: 300_000}, t => {
       if (hostSkip) t.skip(hostSkip);
       const result = cli(['render', path.join(ROOT, `examples/sdk58-default/src/app/${screen}.tsx`)], preset);
       expect(result.status, result.stderr).toBe(0);

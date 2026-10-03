@@ -5,7 +5,8 @@ import {cli, E2E_PRESETS, hostSkip, ROOT} from './helpers.ts';
 import type {Diagnostic} from '../packages/react-native-a11y-tree/src/diagnostics.ts';
 
 for (const preset of E2E_PRESETS) {
-  it(`[${preset.name}] explicit Expo/TurboModule fixtures support imports, actions, config and fresh edits`, {timeout: 180_000}, t => {
+  // Ten CLI runs per preset take longer on Windows under the full E2E worker load.
+  it(`[${preset.name}] explicit Expo/TurboModule fixtures support imports, actions, config and fresh edits`, {timeout: 360_000}, t => {
     if (hostSkip) t.skip(hostSkip);
     const project = fs.mkdtempSync(path.join(ROOT, 'examples', '.native-fixtures-'));
     const external = fs.mkdtempSync(path.join(ROOT, 'examples', '.fixture-defs-'));

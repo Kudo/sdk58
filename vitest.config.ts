@@ -12,9 +12,9 @@ export default defineConfig({
       },
       {
         // Each test runs the real CLI + host synchronously and sets its own timeout.
-        // Metro bundles and native hosts are resource intensive. Unbounded
-        // file parallelism can starve subprocesses until their deadline.
-        test: {name: 'e2e', include: ['e2e/*.test.ts'], maxWorkers: 4},
+        // Metro bundles and native hosts are resource intensive. macOS CI
+        // needs two workers to keep cold Expo bundles within the CLI deadline.
+        test: {name: 'e2e', include: ['e2e/*.test.ts'], maxWorkers: process.platform === 'darwin' ? 2 : 4},
       },
     ],
   },
