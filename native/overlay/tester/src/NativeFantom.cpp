@@ -325,7 +325,7 @@ jsi::Value setExpoUIPlatformHostFunction(
 // The host protocol: bumped when a NativeFantom method signature or the
 // getA11yTree node shape changes incompatibly (native/README.md). The CLI
 // checks it against host-version.json / SUPPORTED_PROTOCOL in src/host.ts.
-constexpr int kHostProtocolVersion = 1;
+constexpr int kHostProtocolVersion = 2;
 
 // getHostInfo(): string (JSON {protocolVersion, rnVersion, buildType,
 // sanitize, engines: {swiftui, compose}, fonts: {roboto}, textLayout:

@@ -73,7 +73,8 @@ export function isIOS(preset: Preset): boolean {
 
 /** Runs the CLI with `--preset <preset>` (after the command and file). */
 export function cli(args: string[], preset: Preset, input?: string): SpawnSyncReturns<string> {
-  const proc = spawnSync('node', [CLI, ...args, '--preset', preset.name], {
+  const jsonByDefault = (args[0] === 'render' || args[0] === 'run') && !args.includes('--format');
+  const proc = spawnSync('node', [CLI, ...args, ...(jsonByDefault ? ['--format', 'json'] : []), '--preset', preset.name], {
     cwd: ROOT,
     encoding: 'utf8',
     input,

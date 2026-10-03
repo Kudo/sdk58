@@ -507,6 +507,8 @@
         "APP_THREW",
         "TARGET_NOT_FOUND",
         "TARGET_COVERED",
+        "TARGET_ZERO_SIZE",
+        "EXPECT_FAILED",
         "TIMEOUT",
         "HOST_MISSING",
         "HOST_UNAVAILABLE",
@@ -667,6 +669,41 @@
         "diff": {
           "$ref": "#/definitions/TreeDiff",
           "description": "With `run --diff` / session `diff: true`: changes made by this step."
+        },
+        "assertion": {
+          "type": "object",
+          "properties": {
+            "target": {
+              "type": "string"
+            },
+            "field": {
+              "type": "string",
+              "enum": [
+                "text",
+                "exists"
+              ]
+            },
+            "expected": {
+              "type": [
+                "string",
+                "boolean"
+              ]
+            },
+            "actual": {
+              "type": [
+                "string",
+                "boolean"
+              ]
+            }
+          },
+          "required": [
+            "target",
+            "field",
+            "expected",
+            "actual"
+          ],
+          "additionalProperties": false,
+          "description": "Result of a script expectation."
         }
       },
       "required": [

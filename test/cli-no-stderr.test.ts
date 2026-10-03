@@ -65,6 +65,13 @@ it('preserves APP_THREW and suppresses verbose/timing output', () => {
   }
 });
 
+it('prints text-mode failures on stdout when stderr is suppressed', () => {
+  const result = cli(['render', APP, '--platform', 'android', '--format', 'text', '--no-stderr'], '', {FAKE_HOST_MODE: 'js-error'});
+  expect(result.status).toBe(4);
+  expect(result.stderr).toBe('');
+  expect(result.stdout).toMatch(/^error APP_THREW: .*boom.* \(exit 4\)\n$/);
+});
+
 it('preserves session fallback diagnostics and error responses with no stderr', () => {
   const input = [{id: 1, action: {tap: {testID: 'FALLBACK'}}}, {id: 2, action: {tap: {testID: 'boom'}}}, {id: 3, quit: true}].map(x => JSON.stringify(x)).join('\n') + '\n';
   const args = ['session', APP, '--platform', 'android', '--no-quiet', '--verbose', '--timing'];

@@ -119,7 +119,7 @@ describe('host-download', () => {
       RN_A11Y_HOST_MANIFEST: release.manifestFile,
       RN_A11Y_HOST_CACHE_DIR: release.cache,
     };
-    const proc = spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--no-quiet'], {
+    const proc = spawnSync('node', [CLI, 'render', APP, '--platform', 'android', '--format', 'json', '--no-quiet'], {
       cwd: ROOT,
       encoding: 'utf8',
       env,
@@ -141,9 +141,7 @@ describe('host-download', () => {
       expect(failed.stderr).toMatch(/warning: prebuilt host download failed \(.*ENOENT.*\); using .*native[\\/]dist/);
     } else {
       expect(failed.status).toBe(5);
-      const {error} = JSON.parse(failed.stderr.trim().split('\n').pop()!);
-      expect(error.code).toBe('HOST_MISSING');
-      expect(error.message).toMatch(/Prebuilt host download failed/);
+      expect(failed.stdout).toMatch(/^error HOST_MISSING: .*Prebuilt host download failed/);
     }
     fs.rmSync(release.dir, {recursive: true, force: true});
   });

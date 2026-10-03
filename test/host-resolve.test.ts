@@ -209,7 +209,7 @@ describe('host-resolve', () => {
 
   it('runtime protocol check (getHostInfo) and hostInfo in the output (fake host)', {timeout: 180_000}, () => {
     const app = path.join(ROOT, 'examples/basic/App.tsx');
-    const ok = cliRun(['render', app, '--platform', 'android', '-v'], {FAKE_HOST_MODE: 'shadow-tree'});
+    const ok = cliRun(['render', app, '--platform', 'android', '--format', 'json', '-v'], {FAKE_HOST_MODE: 'shadow-tree'});
     expect(ok.status, ok.stderr).toBe(0);
     const result = JSON.parse(ok.stdout);
     expect(result.hostInfo).toStrictEqual({
@@ -223,7 +223,7 @@ describe('host-resolve', () => {
     expect(ok.stderr).toMatch(/rn-a11y-tree: host: env .*fake-host\.ts/);
     expect(ok.stderr).toMatch(/rn-a11y-tree: host info: \{"protocolVersion":1/);
 
-    const run = cliRun(['run', app, '--platform', 'android', '--script', 'examples/basic/actions.json'], {FAKE_HOST_MODE: 'run'});
+    const run = cliRun(['run', app, '--platform', 'android', '--format', 'json', '--script', 'examples/basic/actions.json'], {FAKE_HOST_MODE: 'run'});
     expect(JSON.parse(run.stdout).hostInfo.protocolVersion).toBe(1);
 
     // RN_A11Y_HOST_BIN is checked too (no manifest): the running host decides.
@@ -234,7 +234,7 @@ describe('host-resolve', () => {
     expect(error.message).toMatch(/speaks protocol 99; this CLI supports 1/);
 
     // Hosts without getHostInfo: no check, no hostInfo.
-    const old = cliRun(['render', app, '--platform', 'android'], {FAKE_HOST_MODE: 'shadow-tree', FAKE_HOST_PROTOCOL: 'none'});
+    const old = cliRun(['render', app, '--platform', 'android', '--format', 'json'], {FAKE_HOST_MODE: 'shadow-tree', FAKE_HOST_PROTOCOL: 'none'});
     expect(old.status, old.stderr).toBe(0);
     expect(JSON.parse(old.stdout).hostInfo).toBe(undefined);
 

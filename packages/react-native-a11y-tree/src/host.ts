@@ -9,6 +9,7 @@ import {getHostPath, getHostVersionPath} from './runtimePackage.ts';
 import {terminateWindowsTree, type ProcessCleanupResult} from './processCleanup.ts';
 
 import {CliError, type ErrorCode, type LogEntry, logEntry, nativeModuleHint} from './errors.ts';
+import {createNetworkBridge, type NetworkMode, type NetworkRequest} from './network.ts';
 import {BASE_URL_ENV, downloadHost, hostFileName, readManifest} from './hostDownload.ts';
 
 export {hostFileName};
@@ -52,6 +53,7 @@ export type HostOptions = {
   /** Whole subprocess lifetime, including shutdown after a result. Default 30 seconds. */
   timeoutMs?: number;
   signal?: AbortSignal;
+  network?: {mode: NetworkMode; file: string};
 };
 
 /** The host runs in UTC unless `--tz` says otherwise, so date strings do not depend on the machine. */
@@ -112,7 +114,7 @@ export const DEFAULT_HOST_BIN = path.join(
  * protocol) that this CLI supports. `host-version.json` records the host's
  * `protocolVersion` (scripts/release-host.ts HOST_PROTOCOL_VERSION).
  */
-export const SUPPORTED_PROTOCOL = {min: 1, max: 1};
+export const SUPPORTED_PROTOCOL = {min: 1, max: 2};
 
 export type HostSource = 'env' | 'package' | 'download' | 'dist';
 
@@ -388,7 +390,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   const bin = getHostBin();
   if (options.timing) options.timing.spawn = performance.now();
   const child = spawnHost(bin, hostArgs(options), {
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['pipe', 'pipe', 'pipe'],
     env: hostEnv(options.tz),
     // POSIX uses a process group; Windows uses bounded taskkill tree cleanup.
     // A root that already exited (Windows), or escaped descendants (POSIX),
@@ -446,6 +448,7 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
   };
   const onStdoutEnd = () => boundedStdout.end();
   const rl = readline.createInterface({input: boundedStdout});
+  const network = options.network ? createNetworkBridge(options.network) : undefined;
   child.stdout!.on('data', onStdout);
   child.stdout!.once('end', onStdoutEnd);
   rl.on('line', rawLine => {
@@ -463,6 +466,12 @@ export async function runHost<T = HostPayload>(options: HostOptions): Promise<T>
       result = parsed.rnA11yTree as T;
     } else if (parsed?.type === ERROR_TYPE && 'error' in parsed) {
       jsError = parsed.error as {message: string; stack?: string};
+    } else if (parsed?.type === 'rn-a11y-tree-fetch' && network) {
+      void network.request(parsed.request as NetworkRequest).then(response => {
+        if (!child.stdin?.destroyed) child.stdin?.write(JSON.stringify(response) + '\n');
+      }).catch(error => {
+        if (!child.stdin?.destroyed) child.stdin?.write(JSON.stringify({error: `NETWORK_ERROR: ${String(error)}`}) + '\n');
+      });
     } else if (parsed?.type === 'console-log') {
       const {level, message} = parsed as {level: string; message: string};
       const entry = logEntry(level, message);

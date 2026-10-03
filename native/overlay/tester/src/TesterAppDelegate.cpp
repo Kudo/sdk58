@@ -236,6 +236,32 @@ void TesterAppDelegate::loadScriptAndRunTests(
     const std::string& sourcePath) {
   loadScript(bundlePath, sourcePath);
 
+  // One-shot bundles can ask the CLI process to perform network requests.
+  // The host blocks on stdin for a single response while the CLI fetches.
+  // Session mode uses stdin for REPL frames and does not install this bridge.
+  auto networkRequest = jsi::Function::createFromHostFunction(
+      *runtime_,
+      jsi::PropNameID::forAscii(*runtime_, "__rnA11yNetworkRequest"),
+      1,
+      [](jsi::Runtime& runtime,
+         const jsi::Value&,
+         const jsi::Value* args,
+         size_t count) -> jsi::Value {
+        if (count != 1 || !args[0].isString()) {
+          throw jsi::JSError(runtime, "network request must be JSON text");
+        }
+        const auto request = args[0].asString(runtime).utf8(runtime);
+        std::cout << "{\"type\":\"rn-a11y-tree-fetch\",\"request\":"
+                  << request << "}" << std::endl;
+        std::string response;
+        if (!std::getline(std::cin, response)) {
+          throw jsi::JSError(runtime, "NETWORK_BRIDGE_CLOSED: CLI stdin closed");
+        }
+        return jsi::String::createFromUtf8(runtime, response);
+      });
+  runtime_->global().setProperty(
+      *runtime_, "__rnA11yNetworkRequest", std::move(networkRequest));
+
   // Invoke the test function directly, so it happens outside of the runloop
   auto func = runtime_->global()
                   .getProperty(*runtime_, "$$RunTests$$")

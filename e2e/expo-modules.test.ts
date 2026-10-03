@@ -24,7 +24,8 @@ for (const preset of E2E_PRESETS) {
     const {error} = JSON.parse(result.stdout);
     expect(error.code).toBe('APP_THREW');
     expect(error.message).toContain('ExampleUnavailableRequiredModule');
-    expect(error.hint).toContain('explicit runtime adapter');
+    expect(error.hint).toContain('expoModules.ExampleUnavailableRequiredModule');
+    expect(error.hint).toContain('--setup');
   });
 }
 

@@ -34,6 +34,7 @@
     "runtime/",
     "!runtime/tsconfig.json",
     "schema/",
+    "skill/",
     "tools/",
     "README.md",
     "LICENSE",

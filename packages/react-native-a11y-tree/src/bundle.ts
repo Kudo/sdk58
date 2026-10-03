@@ -116,6 +116,7 @@ export type BundleOptions = {
   metroConfigPath?: string;
   /** Path to the user's component file. */
   appPath: string;
+  routerRoute?: string;
   /** Explicit native fixtures loaded after environment setup and before the app. */
   setupPath?: string;
   viewportWidth: number;
@@ -180,6 +181,7 @@ export function findProjectRoot(file: string): string {
 export function renderEntry(options: {
   projectRoot?: string;
   appPath: string;
+  routerRoute?: string;
   /** Explicit native fixtures loaded after environment setup and before the app. */
   setupPath?: string;
   viewportWidth: number;
@@ -218,6 +220,17 @@ export function renderEntry(options: {
   return template
     .replaceAll('__RUNTIME_DIR__', quote(RUNTIME_DIR))
     .replaceAll('__APP_PATH__', quote(path.resolve(options.appPath)))
+    .replaceAll('/* __APP_ENTRY__ */', () => options.routerRoute == null ? `
+      const appModule = require('${quote(path.resolve(options.appPath))}') as {default?: unknown; App?: unknown};
+      App = appModule.default ?? appModule.App;
+      if (typeof App !== 'function' && (typeof App !== 'object' || App == null)) {
+        throw new Error('rn-a11y-tree: component file must export a React component');
+      }
+    ` : `
+      const {ExpoRoot} = require('expo-router');
+      const {ctx} = require('expo-router/_ctx');
+      App = function RouterApp() { return React.createElement(ExpoRoot, {context: ctx, location: ${JSON.stringify(options.routerRoute)}}); };
+    `)
     .replaceAll('__VIEWPORT_WIDTH__', String(options.viewportWidth))
     .replaceAll('__VIEWPORT_HEIGHT__', String(options.viewportHeight))
     .replaceAll(
@@ -414,6 +427,9 @@ export function createMetroConfig(options: {
         /\/RendererProxy\.fb\.js$/,
       ],
       resolveRequest: (context, moduleName, requestPlatform) => {
+        if (moduleName === 'expo/fetch') {
+          return {type: 'sourceFile', filePath: path.join(RUNTIME_DIR, 'expoFetch.ts')};
+        }
         // Bare imports from our runtime or the generated entry (react,
         // react-native, flow-enums-runtime, ...) resolve from the user's
         // project first so there is a single copy of react / react-native.
@@ -515,6 +531,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   // Evaluate before cache lookup: a config helper or environment change can
   // select a different route tree without changing any bundled module.
   const routerRoot = projectRouterRoot(projectRoot);
+  if (options.routerRoute != null && routerRoot == null) throw usage(`--router: no Expo Router routes found in ${projectRoot}`);
   const dev = options.dev ?? false;
   const minify = options.minify ?? false;
   const bytecodeMode = options.bytecode ?? 'auto';
@@ -522,6 +539,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
 
   const entry = renderEntry({
     appPath,
+    routerRoute: options.routerRoute,
     projectRoot,
     setupPath: options.setupPath,
     viewportWidth: options.viewportWidth,

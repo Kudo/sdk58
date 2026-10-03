@@ -283,12 +283,23 @@ export function findEntry(entries: IndexEntry[], target: TargetSpec): IndexEntry
     return entries.find(e => e.ref === target.ref) ?? null;
   }
   if (target.testID != null) {
-    return entries.find(e => e.testID === target.testID) ?? null;
+    const matches = entries.filter(e => e.testID === target.testID);
+    return matches.find(isOnTopStackScreen) ?? matches[0] ?? null;
   }
   if (target.tag != null) {
     return entries.find(e => e.tag === target.tag) ?? null;
   }
   return null;
+}
+
+function isOnTopStackScreen(entry: IndexEntry): boolean {
+  for (let node: IndexEntry | null = entry; node?.parent != null; node = node.parent) {
+    if (node.type === 'RNSScreen' && node.parent.type === 'RNSScreenStack') {
+      const screens = node.parent.children.filter(child => child.type === 'RNSScreen');
+      return screens.at(-1) === node;
+    }
+  }
+  return true;
 }
 
 /** Edit distance (Levenshtein) of two short strings. */

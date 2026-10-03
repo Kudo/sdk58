@@ -21,6 +21,8 @@ export type ErrorCode =
   | 'APP_THREW'
   | 'TARGET_NOT_FOUND'
   | 'TARGET_COVERED'
+  | 'TARGET_ZERO_SIZE'
+  | 'EXPECT_FAILED'
   | 'TIMEOUT'
   | 'HOST_MISSING'
   | 'HOST_UNAVAILABLE'
@@ -35,6 +37,8 @@ export const EXIT_CODES: Record<ErrorCode, number> = {
   APP_THREW: 4,
   TARGET_NOT_FOUND: 4,
   TARGET_COVERED: 4,
+  TARGET_ZERO_SIZE: 4,
+  EXPECT_FAILED: 2,
   TIMEOUT: 5,
   HOST_MISSING: 5,
   HOST_UNAVAILABLE: 5,
@@ -76,6 +80,8 @@ export function usage(message: string, hint?: string): CliError {
 
 /** Classifies a step error string from the runtime. */
 export function stepErrorCode(message: string): ErrorCode {
+  if (message.startsWith('TARGET_ZERO_SIZE:')) return 'TARGET_ZERO_SIZE';
+  if (message.startsWith('EXPECT_FAILED:')) return 'EXPECT_FAILED';
   if (/Target not found|No element with tag|no view with tag/i.test(message)) return 'TARGET_NOT_FOUND';
   if (/Nothing is hittable|covered/i.test(message)) return 'TARGET_COVERED';
   if (/timeout/i.test(message)) return 'TIMEOUT';
@@ -103,5 +109,5 @@ export function logEntry(level: string, message: string): LogEntry {
 /** Missing Expo modules fail before the native-view fallback can run. */
 export function nativeModuleHint(message: string): string | undefined {
   const name = /Cannot find native module ['"]([^'"]+)['"]/.exec(message)?.[1];
-  return name ? `The headless runtime has no adapter for ${name}. Native-view fallback cannot replace module APIs. Use an application-level mock or add an explicit runtime adapter; see docs/expo-support.md.` : undefined;
+  return name ? `The headless runtime has no adapter for ${name}. Add \`expoModules.${name}\` (Expo) or \`turboModules.${name}\` (React Native) to a fixture file passed with --setup; see docs/expo-support.md.` : undefined;
 }

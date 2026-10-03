@@ -17,6 +17,15 @@ function flatten(node: TreeNode): TreeNode[] {
 }
 
 describe('tree-index', () => {
+  it('prefers the top stack screen for duplicate testIDs', () => {
+    const box = {x: 0, y: 0, width: 390, height: 844};
+    const stacked: ShadowNodeJSON = {type: 'RNSScreenStack', frame: box, children: [
+      {type: 'RNSScreen', frame: box, children: [{type: 'View', frame: box, testID: 'save', children: []}]},
+      {type: 'RNSScreen', frame: box, children: [{type: 'View', frame: box, testID: 'save', children: []}]},
+    ]};
+    const entries = indexTree(stacked);
+    expect(findEntry(entries, {testID: 'save'})?.ref).toBe(entries.filter(e => e.testID === 'save')[1].ref);
+  });
   it('runtime/tree-index.ts refs and boxes match src/tree.ts', () => {
     const entries = indexTree(tree);
     const nodes = flatten(convertShadowTree(tree));

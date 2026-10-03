@@ -121,6 +121,9 @@
                     "submit": {
                       "type": "boolean"
                     },
+                    "append": {
+                      "type": "boolean"
+                    },
                     "testID": {
                       "type": "string"
                     }
@@ -138,6 +141,9 @@
                       "type": "string"
                     },
                     "submit": {
+                      "type": "boolean"
+                    },
+                    "append": {
                       "type": "boolean"
                     },
                     "ref": {
@@ -159,6 +165,9 @@
                     "submit": {
                       "type": "boolean"
                     },
+                    "append": {
+                      "type": "boolean"
+                    },
                     "key": {
                       "type": "string"
                     }
@@ -176,6 +185,9 @@
                       "type": "string"
                     },
                     "submit": {
+                      "type": "boolean"
+                    },
+                    "append": {
                       "type": "boolean"
                     },
                     "sel": {
@@ -539,6 +551,91 @@
           },
           "required": [
             "snapshot"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "expect": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "exists": {
+                      "type": "boolean"
+                    },
+                    "testID": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "testID"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "exists": {
+                      "type": "boolean"
+                    },
+                    "ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ref"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "exists": {
+                      "type": "boolean"
+                    },
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "exists": {
+                      "type": "boolean"
+                    },
+                    "sel": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "sel"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "expect"
           ],
           "additionalProperties": false
         }

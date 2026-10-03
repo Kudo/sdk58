@@ -203,6 +203,9 @@
                       "submit": {
                         "type": "boolean"
                       },
+                      "append": {
+                        "type": "boolean"
+                      },
                       "testID": {
                         "type": "string"
                       }
@@ -220,6 +223,9 @@
                         "type": "string"
                       },
                       "submit": {
+                        "type": "boolean"
+                      },
+                      "append": {
                         "type": "boolean"
                       },
                       "ref": {
@@ -241,6 +247,9 @@
                       "submit": {
                         "type": "boolean"
                       },
+                      "append": {
+                        "type": "boolean"
+                      },
                       "key": {
                         "type": "string"
                       }
@@ -258,6 +267,9 @@
                         "type": "string"
                       },
                       "submit": {
+                        "type": "boolean"
+                      },
+                      "append": {
                         "type": "boolean"
                       },
                       "sel": {
@@ -623,6 +635,91 @@
               "snapshot"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "expect": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "exists": {
+                        "type": "boolean"
+                      },
+                      "testID": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "testID"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "exists": {
+                        "type": "boolean"
+                      },
+                      "ref": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "exists": {
+                        "type": "boolean"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "exists": {
+                        "type": "boolean"
+                      },
+                      "sel": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sel"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "expect"
+            ],
+            "additionalProperties": false
           }
         ]
       },
@@ -745,6 +842,10 @@
       },
       "final": {
         "$ref": "#/definitions/TreeNode"
+      },
+      "finalDiff": {
+        "$ref": "#/definitions/TreeDiff",
+        "description": "Changes from the first render to the final tree, when step trees were requested."
       },
       "fallbacks": {
         "type": "array",
@@ -882,6 +983,41 @@
           "diff": {
             "$ref": "#/definitions/TreeDiff",
             "description": "With `run --diff` / session `diff: true`: changes made by this step."
+          },
+          "assertion": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string",
+                "enum": [
+                  "text",
+                  "exists"
+                ]
+              },
+              "expected": {
+                "type": [
+                  "string",
+                  "boolean"
+                ]
+              },
+              "actual": {
+                "type": [
+                  "string",
+                  "boolean"
+                ]
+              }
+            },
+            "required": [
+              "target",
+              "field",
+              "expected",
+              "actual"
+            ],
+            "additionalProperties": false,
+            "description": "Result of a script expectation."
           }
         },
         "required": [
@@ -1407,13 +1543,13 @@
     "outputSchemaFiles": [
       "schema/run-result.json"
     ],
-    "note": "Output matches outputSchema with format \"json\" (the default). Errors: schema/error-output.json.",
+    "note": "Output matches outputSchema with explicit --format json. Piped render/run output defaults to text. Errors: schema/error-output.json.",
     "exitCodes": {
       "0": "ok",
       "1": "USAGE",
-      "2": "CHECK_FAILED",
+      "2": "CHECK_FAILED, EXPECT_FAILED",
       "3": "BUNDLE_FAILED",
-      "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED",
+      "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED, TARGET_ZERO_SIZE",
       "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_INCOMPATIBLE, HOST_CRASHED",
       "6": "UNSUPPORTED_NATIVE"
     }

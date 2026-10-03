@@ -89,7 +89,7 @@ export function generate(): Map<string, string> {
       'x-cli': {
         command: tool.command,
         outputSchemaFiles: tool.output.map(name => `schema/${name}.json`),
-        note: 'Output matches outputSchema with format "json" (the default). Errors: schema/error-output.json.',
+        note: 'Output matches outputSchema with explicit --format json. Piped render/run output defaults to text. Errors: schema/error-output.json.',
         exitCodes: {
           0: 'ok',
           ...Object.fromEntries(
@@ -125,6 +125,19 @@ export function generate(): Map<string, string> {
 
 function main() {
   const check = process.argv.includes('--check');
+  if (check) {
+    const skill = fs.readFileSync(path.join(ROOT, 'skill', 'SKILL.md'), 'utf8');
+    const cli = fs.readFileSync(path.join(ROOT, 'src', 'cli.ts'), 'utf8');
+    const commands = new Set([...cli.matchAll(/\.command\('([^']+)'\)/g)].map(match => match[1]));
+    const flags = new Set([...cli.matchAll(/\.option\(\s*'[^']*?(--[a-z-]+)/g)].map(match => match[1]));
+    const mentionedCommands = new Set([...skill.matchAll(/\brn-a11y-tree\s+(\w+)/g)].map(match => match[1]));
+    const mentionedFlags = new Set(skill.match(/--[a-z][a-z-]+/g) ?? []);
+    const unknown = [...[...mentionedCommands].filter(name => !commands.has(name)), ...[...mentionedFlags].filter(flag => !flags.has(flag))];
+    if (unknown.length > 0) {
+      process.stderr.write(`skill/SKILL.md names unknown CLI commands or flags: ${unknown.join(', ')}\n`);
+      process.exitCode = 1;
+    }
+  }
   const files = generate();
   const stale: string[] = [];
   for (const [file, content] of files) {

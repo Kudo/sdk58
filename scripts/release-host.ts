@@ -99,7 +99,7 @@ export function nativeLibVersions(): Record<string, string | null> {
  * stdout protocol). Bump it with a change the CLI cannot use with older
  * hosts, and update SUPPORTED_PROTOCOL in src/host.ts.
  */
-export const HOST_PROTOCOL_VERSION = 1;
+export const HOST_PROTOCOL_VERSION = 2;
 
 /** What the host was built from (the manifest without `assets`). */
 function buildInfo(bin: string) {

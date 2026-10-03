@@ -7,6 +7,18 @@
     "$schema": {
       "type": "string"
     },
+    "network": {
+      "type": "string",
+      "enum": [
+        "live",
+        "off",
+        "record",
+        "replay"
+      ]
+    },
+    "networkFile": {
+      "type": "string"
+    },
     "preset": {
       "$ref": "#/definitions/PresetName"
     },

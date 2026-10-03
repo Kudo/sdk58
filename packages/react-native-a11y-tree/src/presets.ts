@@ -96,11 +96,15 @@ const CONFIG_KEYS = [
   'fontScale',
   'tapMode',
   'format',
+  'network',
+  'networkFile',
   'rules',
 ];
 
 /** `rules` are the default rules for `check` (same shape as a rules file's `rules`). */
 export type ProjectConfig = Settings & {
+  network?: 'live' | 'off' | 'record' | 'replay';
+  networkFile?: string;
   preset?: PresetName;
   rules?: Rules;
   /** Native fixture module, resolved relative to a11y-tree.json. */
@@ -160,10 +164,13 @@ export function loadProjectConfig(projectRoot: string): ProjectConfig | null {
   for (const key of ['platform', 'tapMode', 'format']) {
     if (key in config && typeof config[key] !== 'string') throw usage(`${file}: "${key}" must be a string`);
   }
-  for (const key of ['$schema', 'setup', 'metroConfig']) {
+  for (const key of ['$schema', 'setup', 'metroConfig', 'networkFile']) {
     if (key in config && (typeof config[key] !== 'string' || !(config[key] as string).trim())) {
       throw usage(`${file}: "${key}" must be a non-empty string`);
     }
+  }
+  if ('network' in config && !['live', 'off', 'record', 'replay'].includes(config.network as string)) {
+    throw usage(`${file}: "network" must be live, off, record or replay`);
   }
   if ('failOnFallback' in config && typeof config.failOnFallback !== 'boolean') {
     throw usage(`${file}: "failOnFallback" must be a boolean`);

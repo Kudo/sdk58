@@ -46,6 +46,8 @@
         "APP_THREW",
         "TARGET_NOT_FOUND",
         "TARGET_COVERED",
+        "TARGET_ZERO_SIZE",
+        "EXPECT_FAILED",
         "TIMEOUT",
         "HOST_MISSING",
         "HOST_UNAVAILABLE",

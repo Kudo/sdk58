@@ -49,7 +49,7 @@ describe('render', () => {
     // Agent formats on the real host.
     const text = cli(['render', APP, '--format', 'text', '--select', 'role=button'], preset);
     expect(text.status, text.stderr).toBe(0);
-    expect(text.stdout.trim()).toMatch(new RegExp(`^submit View #submit role=button "Submit" \\{24,[\\d.]+,${width - 48}x48\\}$`));
+    expect(text.stdout.trim()).toMatch(new RegExp(`^#submit button "Submit" \\{24,\\d+,${width - 48}x48\\}$`));
   });
 
   // A preset outside the matrix (tablet): the platform and viewport come from it.
@@ -57,6 +57,6 @@ describe('render', () => {
     if (hostSkip) t.skip(hostSkip);
     const tablet = cli(['render', APP, '--format', 'text', '--select', 'role=button'], {name: 'android-tablet'} as never);
     expect(tablet.status, tablet.stderr).toBe(0);
-    expect(tablet.stdout.trim()).toMatch(/^submit View #submit role=button "Submit" \{24,[\d.]+,752x48\}$/);
+    expect(tablet.stdout.trim()).toMatch(/^#submit button "Submit" \{24,\d+,752x48\}$/);
   });
 });
