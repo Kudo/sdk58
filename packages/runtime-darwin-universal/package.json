@@ -1,6 +1,6 @@
 {
   "name": "@react-native-a11y-tree/runtime-darwin-universal",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Prebuilt React Native host for darwin (arm64, x64).",
   "license": "MIT",
   "repository": {

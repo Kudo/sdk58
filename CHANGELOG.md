@@ -6,6 +6,24 @@ share one version.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-03
+
+### Added
+
+- Compact text output for agent runs, with shorter selectors, collapsed wrappers, final diffs and snapshots, and clearer native fallback diagnostics.
+- Script assertions, text replacement when typing, and an explicit error for zero-size modal targets.
+- Direct Expo Router screen entry, a bundled agent skill, and `--rules default` for accessibility checks.
+- Live, record, replay and offline network modes for `fetch`, `expo/fetch` and `XMLHttpRequest` in one-shot runs.
+- Opt-in in-memory AsyncStorage and labeled WebView/map fixtures with `--fixtures expo`.
+
+### Changed
+
+- Host protocol 2 carries network requests through the CLI; the CLI continues to accept protocol 1 hosts.
+
+### Fixed
+
+- Keep E2E subprocesses bounded while giving cold Expo bundles enough time under CI load.
+
 ## [0.1.4] - 2026-10-02
 
 ### Added
@@ -220,3 +238,4 @@ First release. macOS arm64 host only.
 [0.1.0]: https://github.com/Kudo/react-native-a11y-tree/releases/tag/v0.1.0
 
 [0.1.4]: https://github.com/Kudo/sdk58/releases/tag/v0.1.4
+[0.1.5]: https://github.com/Kudo/sdk58/compare/v0.1.4...v0.1.5

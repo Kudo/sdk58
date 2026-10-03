@@ -1,6 +1,6 @@
 {
   "name": "@react-native-a11y-tree/runtime-linux-x64-gnu",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Prebuilt React Native host for linux (x64).",
   "license": "MIT",
   "repository": {
