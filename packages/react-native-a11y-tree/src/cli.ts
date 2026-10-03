@@ -2,6 +2,7 @@ import {inspectCompatibility} from './compatibility.ts';
 import {inspectDoctor} from './doctor.ts';
 import {collectDiagnostics, fidelityError, type FidelityOptions} from './diagnostics.ts';
 import fs from 'node:fs';
+import {createRequire} from 'node:module';
 import path from 'node:path';
 
 import {Command, CommanderError, InvalidArgumentError} from 'commander';
@@ -15,6 +16,7 @@ import {CliError, EXIT_CODES, type LogEntry, usage} from './errors.ts';
 import {checkHostInfo, ensureHost, type HostTiming, runHost} from './host.ts';
 import type {HostPayload, HostRunPayload, HostRuntimeInfo, SessionTreeOptions, Step} from './schema.ts';
 import {ScriptError, scriptHelp, validateScript} from './script.ts';
+import type {NetworkMode} from './network.ts';
 import {DEFAULT_TIMEOUT_MS, runSession, validateRequest} from './session.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
 
@@ -48,6 +50,11 @@ type OutputOptions = {
   depth?: number;
   subtree?: string;
   style?: boolean;
+  raw?: boolean;
+  final?: boolean;
+  diagnostics?: boolean;
+  allScreens?: boolean;
+  diff?: boolean;
 };
 
 function formatOptions(options: OutputOptions): FormatOptions {
@@ -61,6 +68,11 @@ function formatOptions(options: OutputOptions): FormatOptions {
     depth: options.depth,
     subtree: options.subtree,
     style: options.style,
+    raw: options.raw,
+    final: options.final,
+    diagnostics: options.diagnostics,
+    allScreens: options.allScreens,
+    stepDiff: options.diff,
   };
 }
 
@@ -77,6 +89,11 @@ function warnTimeZone(options: {tz?: string; quiet?: boolean}): void {
 }
 
 type RenderOptions = FidelityOptions & HostConfigOptions & OutputOptions & {
+  router?: boolean;
+  route?: string;
+  network?: string;
+  networkFile?: string;
+  fixtures?: string;
   quiet?: boolean;
   timing?: boolean;
   resetCache?: boolean;
@@ -274,7 +291,9 @@ async function execute<T>(
   const metroStart = performance.now();
   const result = await bundleOrFail({
     appPath: file,
+    routerRoute: options.router ? (options.route ?? '/') : undefined,
     setupPath: options.setup,
+    fixtures: options.fixtures,
     projectRoot: options.projectRoot,
     metroConfigPath: options.metroConfig,
     viewportWidth: options.width,
@@ -323,6 +342,12 @@ async function execute<T>(
     logs,
     quiet: isQuiet(options),
     tz: options.tz,
+    network: (() => {
+      const file = path.resolve(options.projectRoot ?? process.cwd(), options.networkFile ?? 'a11y-tree.network.json');
+      const mode = (options.network ?? (fs.existsSync(file) ? 'replay' : 'live')) as NetworkMode;
+      if (!['live', 'off', 'record', 'replay'].includes(mode)) throw usage('--network must be live, off, record or replay');
+      return {mode, file};
+    })(),
   };
   const attempt = (bundlePath: string) => {
     const remaining = Math.ceil(hostDeadline - performance.now());
@@ -377,6 +402,8 @@ function applySettings(file: string, options: RenderOptions & {tapMode?: string;
   options.projectRoot = projectRoot;
   options.metroConfig = options.metroConfig ? path.resolve(options.metroConfig) : undefined;
   const config = loadProjectConfig(projectRoot);
+  options.network ??= config?.network;
+  options.networkFile ??= config?.networkFile;
   options.metroConfig ??= config?.metroConfig ? path.resolve(projectRoot, config.metroConfig) : undefined;
   applyConfig(options, config);
   options.setup = options.setup != null ? path.resolve(options.setup) :
@@ -411,12 +438,30 @@ function applyConfig(
   options.scale = resolved.scale;
   options.fontScale = resolved.fontScale;
   options.tapMode = resolved.tapMode ?? 'touch';
-  options.format = resolved.format ?? 'json';
+  options.format = resolved.format ?? (process.stdout.isTTY ? 'json' : 'text');
   options.failOnFallback ??= config?.failOnFallback;
   options.allowFallback ??= config?.allowFallback;
 }
 
-async function render(file: string, options: RenderOptions) {
+function resolveAppFile(file: string | undefined, options: RenderOptions): string {
+  if (!options.router) {
+    if (options.route) throw usage('--route requires --router');
+    if (!file) throw usage('component file is required unless --router is set');
+    return file;
+  }
+  if (file) throw usage('--router does not take a component file');
+  if (options.route && !options.route.startsWith('/')) throw usage('--route must start with /');
+  const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
+  options.projectRoot = projectRoot;
+  try {
+    return createRequire(path.join(projectRoot, 'package.json')).resolve('expo-router/build/qualified-entry');
+  } catch {
+    throw usage(`--router requires expo-router in ${projectRoot}`);
+  }
+}
+
+async function render(file: string | undefined, options: RenderOptions) {
+  file = resolveAppFile(file, options);
   applySettings(file, options);
   const output = formatOptions(options);
   const timing: Timing | undefined = options.timing ? {} : undefined;
@@ -439,7 +484,8 @@ async function render(file: string, options: RenderOptions) {
   if (timing) printTiming(timing);
 }
 
-async function run(file: string, options: RunOptions) {
+async function run(file: string | undefined, options: RunOptions) {
+  file = resolveAppFile(file, options);
   applySettings(file, options);
   requirePlatform(options.platform);
   if (!TAP_MODES.includes(options.tapMode as TapMode)) {
@@ -453,7 +499,7 @@ async function run(file: string, options: RunOptions) {
   const payload = await execute<HostRunPayload>(
     file,
     options,
-    {script, tapMode: options.tapMode as TapMode, runOptions: options.diff ? {diff: true} : undefined},
+    {script, tapMode: options.tapMode as TapMode, runOptions: options.diff || (output.format === 'text' && !script.some(action => 'snapshot' in action)) ? {diff: true} : undefined},
     timing,
     logs,
   );
@@ -478,6 +524,9 @@ async function run(file: string, options: RunOptions) {
       timing.outputBytes = Buffer.byteLength(text);
     }
     write(text, options.out);
+    if (result.steps.some(step => typeof step.error === 'object' && step.error?.code === 'EXPECT_FAILED')) {
+      process.exitCode = EXIT_CODES.EXPECT_FAILED;
+    }
   }
   if (timing) printTiming(timing);
 }
@@ -573,7 +622,8 @@ type CheckOptions = RunOptions & {rules?: string};
 
 const CHECK_FORMATS = ['json', 'text'];
 
-async function check(file: string, options: CheckOptions) {
+async function check(file: string | undefined, options: CheckOptions) {
+  file = resolveAppFile(file, options);
   // `format` in a11y-tree.json is for render/run output; check has its own.
   const format = options.format ?? 'json';
   const config = applySettings(file, options);
@@ -585,7 +635,9 @@ async function check(file: string, options: CheckOptions) {
     throw usage(`--tap-mode must be one of: ${TAP_MODES.join(', ')}`);
   }
   let rules: Rules;
-  if (options.rules != null) {
+  if (options.rules === 'default') {
+    rules = {names: true, touchTarget: {min: 44}, hiddenFocusable: true};
+  } else if (options.rules != null) {
     rules = readRulesFile(options.rules);
   } else if (config?.rules != null) {
     rules = config.rules;
@@ -654,7 +706,9 @@ const program = new Command()
 
 function addCommonOptions(command: Command): Command {
   return command
-    .argument('<file>', 'component file (default export or `App` named export)')
+    .argument('[file]', 'component file (default export or `App` named export; omit with --router)')
+    .option('--router', 'render the Expo Router app in --project-root or the current directory', false)
+    .option('--route <path>', 'initial Expo Router location (default /; requires --router)')
     .option('--width <dp>', 'viewport width (default 390)', positiveNumber)
     .option('--height <dp>', 'viewport height (default 844)', positiveNumber)
     .option('--preset <name>', `device preset: ${PRESET_NAMES.join(', ')} (platform, viewport, insets, header height)`)
@@ -669,6 +723,9 @@ function addCommonOptions(command: Command): Command {
     .option('--project-root <directory>', 'resolve dependencies and project settings from this app directory')
     .option('--metro-config <file>', 'opt in to supported custom Metro configuration; disables persistent caches')
     .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
+    .option('--fixtures <set>', 'opt-in built-in fixtures: expo')
+    .option('--network <mode>', 'live, off, record or replay (default replay when recording exists, else live)')
+    .option('--network-file <file>', 'network recording file (default a11y-tree.network.json in the project)')
     .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')
     .option('--no-fail-on-fallback', 'disable the configured fallback policy')
     .option('--allow-fallback <name>', 'allow an exact component/module/runtime fallback name (repeatable)', collect)
@@ -722,7 +779,7 @@ function nonNegativeInt(value: string): number {
 
 function addOutputOptions(command: Command): Command {
   return command
-    .option('--format <format>', 'json (default), compact (no defaults/empties/style), text (one line per node), ndjson')
+    .option('--format <format>', 'text (default when piped), json (default in a terminal), compact, ndjson')
     .option(
       '--select <selector>',
       'only nodes matching field=value or field~text (testID, role, name, type, key, ref, sel, text); repeat to AND',
@@ -731,7 +788,10 @@ function addOutputOptions(command: Command): Command {
     )
     .option('--depth <n>', 'levels of children to keep below each output root', nonNegativeInt)
     .option('--subtree <selector>', 'start the output at the first node matching the selector')
-    .option('--style', 'keep style props in compact/ndjson output', false);
+    .option('--style', 'keep style props in compact/ndjson output', false)
+    .option('--raw', 'show layout wrappers in text output', false)
+    .option('--all-screens', 'show covered stack screens in text output', false)
+    .option('--diagnostics', 'include diagnostic details in text output', false);
 }
 
 addCommonOptions(addOutputOptions(program.command('render')))
@@ -748,12 +808,13 @@ addCommonOptions(addOutputOptions(program.command('run')))
   .option('--script <json>', 'script file or inline JSON: {"actions": [...]} or [...] (required; see below)')
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option('--diff', 'add to each step the changes it made ({added, removed, changed} by key)', false)
+  .option('--final', 'print the final tree even when the script has snapshots', false)
   .addHelpText('after', `\n${scriptHelp()}`)
   .action(run);
 
 addCommonOptions(program.command('check'))
   .description('render (or run a script), then evaluate accessibility and design-token rules; exit 2 on violations')
-  .option('--rules <json>', 'rules file {"rules": {...}}, or that JSON itself (default: "rules" in a11y-tree.json)')
+  .option('--rules <json>', 'default, rules file {"rules": {...}}, or that JSON itself (default: "rules" in a11y-tree.json)')
   .option('--script <json>', 'run these actions first (file or inline JSON, see below) and check the final tree')
   .option('--tap-mode <mode>', 'events for taps: touch (default), click or both')
   .option('--format <format>', 'json (default) or text (one line per violation)')
@@ -842,6 +903,39 @@ program
   .argument('[name]', 'schema name, e.g. script')
   .action(printSchema);
 
+program
+  .command('skill')
+  .description('print, install, or check the agent skill bundled with this CLI version')
+  .option('--path', 'print the bundled SKILL.md path')
+  .option('--install [dir]', 'install into dir/react-native-a11y-tree/SKILL.md (default ./.claude/skills)')
+  .option('--check [dir]', 'exit 1 if the installed skill differs from this version')
+  .action((options: {path?: boolean; install?: boolean | string; check?: boolean | string}) => {
+    const selected = [options.path, options.install !== undefined, options.check !== undefined].filter(Boolean).length;
+    if (selected > 1) throw usage('skill: choose only one of --path, --install, or --check');
+    const bundled = path.join(PACKAGE_ROOT, 'skill', 'SKILL.md');
+    const content = fs.readFileSync(bundled, 'utf8');
+    if (options.path) {
+      process.stdout.write(bundled + '\n');
+      return;
+    }
+    if (options.install !== undefined || options.check !== undefined) {
+      const dir = options.install || options.check;
+      const base = typeof dir === 'string' ? dir : path.join(process.cwd(), '.claude', 'skills');
+      const installed = path.resolve(base, 'react-native-a11y-tree', 'SKILL.md');
+      if (options.check !== undefined) {
+        if (!fs.existsSync(installed) || fs.readFileSync(installed, 'utf8') !== content) {
+          throw usage(`installed skill differs from ${bundled}: ${installed}`);
+        }
+      } else {
+        fs.mkdirSync(path.dirname(installed), {recursive: true});
+        fs.writeFileSync(installed, content);
+      }
+      process.stdout.write(installed + '\n');
+      return;
+    }
+    process.stdout.write(content);
+  });
+
 // Register locally as well as globally so every subcommand's help exposes the
 // flag. Positional options keep global parsing from stealing a subcommand's
 // required value (for example, --subtree --no-stderr).
@@ -907,6 +1001,8 @@ function reportError(error: unknown) {
   const {format, quiet} = outputFlags;
   if (format === 'json' || format === 'ndjson') {
     process.stdout.write(JSON.stringify({error: info}, null, format === 'ndjson' ? undefined : 2) + '\n');
+  } else if (format === 'text' || outputFlags.stderr === false) {
+    process.stdout.write(`error ${info.code}: ${info.message} (exit ${EXIT_CODES[info.code]})\n`);
   } else if (quiet || !process.stderr.isTTY) {
     process.stderr.write(JSON.stringify({error: info}) + '\n');
   } else {

@@ -10,12 +10,13 @@ export type Point = {x: number; y: number};
 export type Action =
   | {tap: Target | Point}
   | {longPress: Target | Point}
-  | {type: Target & {text: string; submit?: boolean}}
+  | {type: Target & {text: string; submit?: boolean; append?: boolean}}
   | {scroll: Target & {x?: number; y?: number}}
   | {pan: (Target | Point) & {dx?: number; dy?: number; steps?: number; durationMs?: number}}
   | {pinch: Target & {scale: number; steps?: number; durationMs?: number}}
   | {wait: number}
-  | {snapshot: string};
+  | {snapshot: string}
+  | {expect: Target & {text?: string; exists?: boolean}};
 
 export const ACTION_NAMES = [
   'tap',
@@ -26,18 +27,20 @@ export const ACTION_NAMES = [
   'pinch',
   'wait',
   'snapshot',
+  'expect',
 ] as const;
 
 /** One line per action for `--help` (keep in sync with validateScript). TARGET is one of testID/ref/key/sel. */
 export const ACTION_SYNTAX: ReadonlyArray<readonly [(typeof ACTION_NAMES)[number], string]> = [
   ['tap', '{"tap": TARGET} or {"tap": {"x": 10, "y": 20}}'],
   ['longPress', '{"longPress": TARGET} or {"longPress": {"x": 10, "y": 20}}'],
-  ['type', '{"type": {TARGET, "text": "a@b.c", "submit"?: true}}'],
+  ['type', '{"type": {TARGET, "text": "a@b.c", "submit"?: true, "append"?: true}} (replaces by default)'],
   ['scroll', '{"scroll": {TARGET, "x"?: 0, "y"?: 600}}'],
   ['pan', '{"pan": {TARGET or "x", "y", "dx"?: 100, "dy"?: 0, "steps"?: 10, "durationMs"?: 300}} (dx and/or dy)'],
   ['pinch', '{"pinch": {TARGET, "scale": 2, "steps"?: 10, "durationMs"?: 300}}'],
   ['wait', '{"wait": 300} (milliseconds)'],
   ['snapshot', '{"snapshot": "after-submit"} (unique name)'],
+  ['expect', '{"expect": {TARGET, "text"?: "Done", "exists"?: false}}'],
 ];
 
 /** `--help` text: the script file forms and every action. */
@@ -150,12 +153,26 @@ export function validateScript(input: unknown): Action[] {
       case 'type': {
         if (!isObject(spec)) failIn('must be an object');
         const s = spec as Record<string, unknown>;
-        checkKeys(s, [...TARGET_KEYS, 'text', 'submit'], failIn);
+        checkKeys(s, [...TARGET_KEYS, 'text', 'submit', 'append'], failIn);
         checkTarget(s, failIn);
         if (typeof s.text !== 'string') failIn('"text" must be a string');
         if ('submit' in s && typeof s.submit !== 'boolean') {
           failIn('"submit" must be a boolean');
         }
+        if ('append' in s && typeof s.append !== 'boolean') {
+          failIn('"append" must be a boolean');
+        }
+        break;
+      }
+      case 'expect': {
+        if (!isObject(spec)) failIn('must be an object');
+        const s = spec as Record<string, unknown>;
+        checkKeys(s, [...TARGET_KEYS, 'text', 'exists'], failIn);
+        checkTarget(s, failIn);
+        if (!('text' in s) && !('exists' in s)) failIn('needs "text" or "exists"');
+        if ('text' in s && typeof s.text !== 'string') failIn('"text" must be a string');
+        if ('exists' in s && typeof s.exists !== 'boolean') failIn('"exists" must be a boolean');
+        if (s.exists === false && 'text' in s) failIn('cannot combine "exists": false with "text"');
         break;
       }
       case 'scroll': {

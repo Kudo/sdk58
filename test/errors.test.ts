@@ -5,7 +5,7 @@ import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {fileURLToPath} from 'node:url';
 
-import {CliError, EXIT_CODES, logEntry, stepErrorCode} from '../packages/react-native-a11y-tree/src/errors.ts';
+import {CliError, EXIT_CODES, logEntry, nativeModuleHint, stepErrorCode} from '../packages/react-native-a11y-tree/src/errors.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(ROOT, 'packages/react-native-a11y-tree', 'src', 'cli.ts');
@@ -32,6 +32,8 @@ describe('errors', () => {
   it('step error codes and known console noise', () => {
     expect(stepErrorCode('Target not found: {"testID":"x"}')).toBe('TARGET_NOT_FOUND');
     expect(stepErrorCode('Nothing is hittable at (1, 2)')).toBe('TARGET_COVERED');
+    expect(stepErrorCode('TARGET_ZERO_SIZE: Modal content has no layout')).toBe('TARGET_ZERO_SIZE');
+    expect(nativeModuleHint("Cannot find native module 'ExpoFetchModule'")).toContain('expoModules.ExpoFetchModule');
     expect(stepErrorCode('Exception in HostFunction: enqueueScrollEvent() can only be called on <ScrollView />')).toBe('APP_THREW');
     expect(logEntry('error', "[ReactNative Architecture][JS] 'getViewManagerConfig('RNCMaskedView')' is not available").known).toBe(true);
     expect(logEntry('warn', 'DrawerLayoutAndroid is deprecated and will be removed in a future release.').known).toBe(true);
@@ -72,7 +74,7 @@ describe('errors', () => {
   it('CLI: app console output goes into logs; quiet by default when piped', {timeout: 120_000}, () => {
     const proc = cli(['render', APP, '--platform', 'android'], {FAKE_HOST_MODE: 'shadow-tree'});
     expect(proc.status, proc.stderr).toBe(0);
-    const plain = cli(['render', APP, '--platform', 'android']);
+    const plain = cli(['render', APP, '--platform', 'android', '--format', 'json']);
     expect(plain.status, plain.stderr).toBe(0);
     const result = JSON.parse(plain.stdout);
     expect(result.logs).toStrictEqual([{level: 'info', message: 'hello from JS'}]);

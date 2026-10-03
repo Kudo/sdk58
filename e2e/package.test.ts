@@ -95,8 +95,8 @@ describe('package', () => {
       fs.copyFileSync(path.join(ROOT, 'examples', 'basic', 'App.tsx'), path.join(project, 'App.tsx'));
       const env = {RN_A11Y_HOST_BIN: '', RN_A11Y_TREE_CACHE_DIR: '', RN_A11Y_HOST_SKIP_PACKAGE: '', RN_A11Y_HOST_BASE_URL: '', RN_A11Y_HOST_MANIFEST: ''};
       const render = run('npx', ['rn-a11y-tree', 'render', 'App.tsx', '--preset', 'android-phone', '--format', 'text', '-v'], project, {env});
-      expect(render.stdout).toMatch(/^RootView RootView \{0,0,412x915\}$/m);
-      expect(render.stdout).toMatch(/^ {4}submit View #submit role=button "Submit" \{24,[\d.]+,364x48\}$/m);
+      expect(render.stdout).toMatch(/^n\d+ View \{0,0,412x915\}$/m);
+      expect(render.stdout).toMatch(/^ #submit button "Submit" \{24,253,364x48\}$/m);
 
       // The host came directly from the optional runtime package, with its protocol version.
       const session = run('npx', ['rn-a11y-tree', 'session', 'App.tsx', '--preset', 'android-phone'], project, {
@@ -106,7 +106,7 @@ describe('package', () => {
       const ready = JSON.parse(session.stdout.split('\n')[0]);
       expect(ready.ready).toBe(true);
       expect(ready.host.source).toBe('package');
-      expect(ready.host.protocolVersion).toBe(1);
+      expect(ready.host.protocolVersion).toBe(2);
       expect(render.stderr).toContain(`runtime-${platformName}`);
       expect(fs.existsSync(path.join(project, 'node_modules/rn-a11y-host'))).toBe(false);
     } finally {

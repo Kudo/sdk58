@@ -21,6 +21,13 @@ export type FormatOptions = QueryOptions & {
   format: Format;
   /** Keep `style` in compact/ndjson output. */
   style?: boolean;
+  /** Print every host node in text output, including layout wrappers. */
+  raw?: boolean;
+  /** Print the final tree in run text output after named snapshots. */
+  final?: boolean;
+  diagnostics?: boolean;
+  allScreens?: boolean;
+  stepDiff?: boolean;
 };
 
 // --- selectors -------------------------------------------------------------------
@@ -123,7 +130,7 @@ export function compactNode(node: TreeNode, keepStyle = false): Record<string, u
 // --- text ------------------------------------------------------------------------------
 
 function fmtNum(n: number): string {
-  return String(Math.round(n * 10) / 10);
+  return String(Math.round(n));
 }
 
 function fmtBox(b: Box): string {
@@ -134,11 +141,11 @@ function nodeKey(node: TreeNode): string {
   return (node as TreeNode & {key?: string}).key ?? node.ref;
 }
 
-/** `<key> <type> [#testID] [role=…] ["name"] {x,y,wxh} [flags]` */
+/** `#testID|ref [role|type] ["name"] {x,y,wxh} [flags]` */
 export function textLine(node: TreeNode): string {
-  const parts = [nodeKey(node), node.type];
-  if (node.testID) parts.push(`#${node.testID}`);
-  if (node.role) parts.push(`role=${node.role}`);
+  const parts = [node.testID ? `#${node.testID}` : node.ref];
+  if (node.role && node.role !== 'text') parts.push(node.role);
+  else if (!node.role) parts.push(node.type);
   if (node.name != null) parts.push(JSON.stringify(node.name));
   else if (node.text) parts.push(JSON.stringify(node.text));
   parts.push(fmtBox(node.box));
@@ -155,12 +162,34 @@ export function textLine(node: TreeNode): string {
   return parts.join(' ');
 }
 
-export function textTree(roots: TreeNode[]): string {
+function isWrapper(node: TreeNode): boolean {
+  return node.children.length === 1 && !node.testID && !node.role && !node.name && !node.text &&
+    !node.a11y.hidden && !node.a11y.state?.disabled && !node.a11y.state?.checked && !node.a11y.state?.selected &&
+    !node.virtual && node.effectiveOpacity == null && node.visualBox == null &&
+    ['RootView', 'View', 'RNCSafeAreaProvider', 'RNSScreenContentWrapper'].includes(node.type);
+}
+
+export function textTree(roots: TreeNode[], options: Pick<FormatOptions, 'raw'> = {}): string {
   const lines: string[] = [];
-  for (const root of roots) {
-    walk(root, (n, depth) => lines.push('  '.repeat(depth) + textLine(n)));
-  }
+  const visit = (node: TreeNode, depth: number, parent?: TreeNode) => {
+    if (!options.raw && isWrapper(node)) {
+      visit(node.children[0], depth, parent);
+      return;
+    }
+    if (!options.raw && node.role === 'text' && !node.testID && parent?.name != null && node.name === parent.name) return;
+    lines.push(' '.repeat(depth) + textLine(node));
+    for (const child of node.children) visit(child, depth + 1, node);
+  };
+  for (const root of roots) visit(root, 0);
   return lines.join('\n') + '\n';
+}
+
+/** Only affects presentation. Keep the original tree for JSON and selectors/actions. */
+function topStackScreens(node: TreeNode): TreeNode {
+  const children = node.type === 'RNSScreenStack'
+    ? node.children.filter(child => child.type !== 'RNSScreen' || child === node.children.filter(c => c.type === 'RNSScreen').at(-1))
+    : node.children;
+  return {...node, children: children.map(topStackScreens)};
 }
 
 // --- ndjson --------------------------------------------------------------------------
@@ -200,13 +229,17 @@ export function formatRender(result: RenderResult, options: FormatOptions): stri
       return JSON.stringify(body) + '\n';
     }
     case 'text':
-      return diagnosticText(result) + textTree(roots);
+      return diagnosticText(result, options) + textTree(queryTree(options.allScreens ? result.root : topStackScreens(result.root), options), options);
     case 'ndjson':
       return [...diagnosticLines(result), ...ndjsonNodes(roots, keepStyle)].join('\n') + '\n';
   }
 }
 
 function stepLine(step: RunResult['steps'][number]): string {
+  if (step.assertion) {
+    const {target, field, expected, actual} = step.assertion;
+    return `${step.error ? '✗' : '✓'} ${target} ${field} ${JSON.stringify(actual)}${step.error ? ` expected ${JSON.stringify(expected)}` : ''}`;
+  }
   const target = step.target?.testID ? `#${step.target.testID}` : (step.target?.ref ?? '');
   const hit = step.hit ? ` hit=${step.hit.type}${step.hit.testID ? '#' + step.hit.testID : ''}` : '';
   const status = step.error ? ` ERROR ${typeof step.error === 'string' ? step.error : JSON.stringify(step.error)}` : '';
@@ -238,12 +271,17 @@ export function formatRun(result: RunResult, options: FormatOptions): string {
       );
     }
     case 'text': {
-      const out = result.steps.flatMap(step => [stepLine(step), ...diffLines(step.diff)]);
+      const textQuery = (tree: TreeNode) => q(options.allScreens ? tree : topStackScreens(tree));
+      const out = result.steps.flatMap(step => [stepLine(step), ...(options.stepDiff ? diffLines(step.diff) : [])]);
       for (const [name, tree] of Object.entries(result.snapshots)) {
-        out.push(`snapshot ${name}:`, textTree(q(tree)).trimEnd());
+        out.push(`snapshot ${name}:`, textTree(textQuery(tree), options).trimEnd());
       }
-      out.push('final:', textTree(q(result.final)).trimEnd());
-      return diagnosticText(result) + out.join('\n') + '\n';
+      if (Object.keys(result.snapshots).length === 0 && result.finalDiff && !options.final) {
+        out.push('final changes:', ...diffLines(result.finalDiff));
+      } else if (options.final || Object.keys(result.snapshots).length === 0) {
+        out.push('final:', textTree(textQuery(result.final), options).trimEnd());
+      }
+      return diagnosticText(result, options) + out.join('\n') + '\n';
     }
     case 'ndjson': {
       const lines = [...diagnosticLines(result), ...result.steps.map(s => JSON.stringify({step: compactStep(s)}))];
@@ -287,6 +325,9 @@ function diagnosticLines(result: Pick<RenderResult, 'diagnostics'>): string[] {
   return result.diagnostics?.length ? [JSON.stringify({diagnostics: result.diagnostics})] : [];
 }
 
-function diagnosticText(result: Pick<RenderResult, 'diagnostics'>): string {
-  return (result.diagnostics ?? []).map(d => `warning ${d.code} ${d.target}: ${d.message}\n`).join('');
+function diagnosticText(result: Pick<RenderResult, 'diagnostics'>, options: Pick<FormatOptions, 'diagnostics'>): string {
+  const count = result.diagnostics?.length ?? 0;
+  if (!count) return '';
+  if (options.diagnostics) return result.diagnostics!.map(d => `warning ${d.code} ${d.target}: ${d.message}\n`).join('');
+  return `diagnostics: ${count} (run with --diagnostics to show)\n`;
 }

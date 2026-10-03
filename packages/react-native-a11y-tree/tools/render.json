@@ -542,13 +542,13 @@
     "outputSchemaFiles": [
       "schema/render-result.json"
     ],
-    "note": "Output matches outputSchema with format \"json\" (the default). Errors: schema/error-output.json.",
+    "note": "Output matches outputSchema with explicit --format json. Piped render/run output defaults to text. Errors: schema/error-output.json.",
     "exitCodes": {
       "0": "ok",
       "1": "USAGE",
-      "2": "CHECK_FAILED",
+      "2": "CHECK_FAILED, EXPECT_FAILED",
       "3": "BUNDLE_FAILED",
-      "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED",
+      "4": "APP_THREW, TARGET_NOT_FOUND, TARGET_COVERED, TARGET_ZERO_SIZE",
       "5": "TIMEOUT, HOST_MISSING, HOST_UNAVAILABLE, HOST_INCOMPATIBLE, HOST_CRASHED",
       "6": "UNSUPPORTED_NATIVE"
     }

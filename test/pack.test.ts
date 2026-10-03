@@ -27,7 +27,7 @@ describe('pack', () => {
     expect(root.private).toBe(true);
     expect(root.bin).toBeUndefined();
   });
-  it('npm pack of the CLI: exactly the whitelisted 54 files, no release archives', {timeout: 300_000}, t => {
+  it('npm pack of the CLI: only whitelisted files, no release archives', {timeout: 300_000}, t => {
     if (!hasNpm) t.skip('npm is not available');
     // Release archives next to the package must never be packed (v0.1.0 shipped
     // dist/release/*.tar.gz inside the CLI tarball).
@@ -53,11 +53,12 @@ describe('pack', () => {
         'README.md': 1,
         dist: 1,
         'package.json': 1,
-        runtime: 32,
+        runtime: 37,
         schema: 11,
+        skill: 1,
         tools: 7,
       });
-      expect(files.length).toBe(54);
+      expect(files.length).toBe(60);
       expect(files).toContain('runtime/nitroFixtures.ts');
       expect(files).toContain('dist/rn-a11y-tree.js');
       if (process.platform !== 'win32') expect(fs.statSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'dist/rn-a11y-tree.js')).mode & 0o111).toBeTruthy();
@@ -171,7 +172,7 @@ describe('pack', () => {
       expect(resolved.status, resolved.stderr).toBe(0);
       const host = JSON.parse(resolved.stdout);
       expect(host.bin).toContain(`runtime-${suffix}` + path.sep);
-      expect(host.protocolVersion).toBe(1);
+      expect(host.protocolVersion).toBe(2);
       expect(host.source).toBe('package');
       const omitted = install(true);
       expect(omitted.status, omitted.stderr).toBe(0);

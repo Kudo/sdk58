@@ -51,7 +51,7 @@ describe('cli', () => {
   });
 
   it('bundles with Metro and parses host stdout (fake host)', {timeout: 120_000}, () => {
-    const proc = run(['render', APP, '--platform', 'android'], {RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun'});
+    const proc = run(['render', APP, '--platform', 'android', '--format', 'json'], {RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun'});
     expect(proc.status, proc.stderr).toBe(0);
     const result = JSON.parse(proc.stdout) as RenderResult;
     expect(result.root.box.width).toBe(390);
@@ -60,7 +60,7 @@ describe('cli', () => {
   });
 
   it('parses a shadowTree payload (fake host)', {timeout: 120_000}, () => {
-    const proc = run(['render', APP, '--platform', 'android', '--debug-props'], {
+    const proc = run(['render', APP, '--platform', 'android', '--debug-props', '--format', 'json'], {
       RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun',
       FAKE_HOST_MODE: 'shadow-tree',
     });
@@ -131,7 +131,7 @@ describe('cli', () => {
 
   it('run: reports steps, snapshots and the final tree (fake host)', {timeout: 120_000}, () => {
     const file = writeScript([{tap: {testID: 'submit'}}, {tap: {testID: 'missing'}}, {snapshot: 'after'}]);
-    const proc = run(['run', APP, '--platform', 'android', '--script', file, '--no-quiet'], {
+    const proc = run(['run', APP, '--platform', 'android', '--script', file, '--no-quiet', '--format', 'json'], {
       RN_A11Y_HOST_BIN: FAKE_HOST, RN_A11Y_HOST_RUNNER: 'bun',
       FAKE_HOST_MODE: 'run',
     });

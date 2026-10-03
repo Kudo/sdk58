@@ -17,6 +17,14 @@ function cli(...args: Parameters<typeof runCLI>) {
 }
 
 for (const preset of E2E_PRESETS) {
+  it(`[${preset.name}] --router renders a route without a wrapper file`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
+    const project = path.join(ROOT, 'examples/sdk58-default');
+    const setup = preset.platform === 'android' ? ['--setup', path.join(project, 'router-fixtures.ts')] : [];
+    const result = cli(['render', '--router', '--route', '/explore', '--project-root', project, '--format', 'json', ...setup], preset);
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(findAll(JSON.parse(result.stdout).root, n => n.text === 'Explore')).not.toHaveLength(0);
+  });
   it(`[${preset.name}] ignores unrelated app config despite a resolvable hoisted Router`, {timeout: 120_000}, t => {
     if (hostSkip) t.skip(hostSkip);
     const dir = fs.mkdtempSync(path.join(ROOT, 'examples/.not-router-'));

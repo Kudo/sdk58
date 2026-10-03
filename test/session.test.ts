@@ -82,7 +82,7 @@ describe('session', () => {
     expect(out[4].ok).toBe(false);
     expect(out[4].error.code).toBe('USAGE');
     expect(out[4].error.message).toMatch(/invalid JSON/);
-    expect(out[5]).toStrictEqual({id: 4, ok: false, error: {code: 'USAGE', message: 'unknown action "swipe" (one of: tap, longPress, type, scroll, pan, pinch, wait, snapshot)'}});
+    expect(out[5]).toStrictEqual({id: 4, ok: false, error: {code: 'USAGE', message: 'unknown action "swipe" (one of: tap, longPress, type, scroll, pan, pinch, wait, snapshot, expect)'}});
     expect({id: out[6].id, ok: out[6].ok}).toStrictEqual({id: 5, ok: true});
     // App console output is in each response's `logs`; not on stderr (quiet
     // is the default when stdout is not a terminal).
@@ -136,7 +136,7 @@ describe('session', () => {
     ]);
     expect(proc.status, proc.stderr).toBe(0);
     const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
-    expect(out[1].tree).toMatch(/^submit View #submit role=button "Submit"/);
+    expect(out[1].tree).toMatch(/^#submit button "Submit"/);
     expect(out[2].tree.length).toBe(1);
     expect(out[2].tree[0].children.length).toBe(1);
     expect(out[3].error.message).toMatch(/"format" must be one of/);
@@ -168,7 +168,7 @@ describe('session', () => {
     expect(proc.status, proc.stderr).toBe(0);
     const out = proc.stdout.trim().split('\n').map(l => JSON.parse(l));
     expect(typeof out[0].tree).toBe('string');
-    expect(out[0].tree).toMatch(/^submit View #submit role=button "Submit"/);
+    expect(out[0].tree).toMatch(/^#submit button "Submit"/);
     expect(out[1].tree).toBe(out[0].tree);
     // The request's format wins; --select still applies.
     expect(Array.isArray(out[2].tree)).toBeTruthy();

@@ -270,6 +270,9 @@ describe('check', () => {
   }
 
   it('CLI check: exit 2 with violations, 0 when clean, usage errors exit 1 (fake host)', {timeout: 180_000}, () => {
+    const defaults = cli(['check', APP, '--platform', 'android', '--rules', 'default']);
+    expect(defaults.status, defaults.stderr).toBe(2);
+    expect((JSON.parse(defaults.stdout) as CheckResult).violations.some(v => v.rule === 'touchTarget')).toBe(true);
     const fail = cli(['check', APP, '--platform', 'android', '--rules', path.join(ROOT, 'examples/basic/rules-fail.json')]);
     expect(fail.status, fail.stderr).toBe(2);
     const result = JSON.parse(fail.stdout) as CheckResult;

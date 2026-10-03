@@ -66,16 +66,16 @@ describe('schema', () => {
   });
 
   it('CLI output validates against the schemas (fake host)', {timeout: 300_000}, () => {
-    const render = cli(['render', APP, '--platform', 'android']);
+    const render = cli(['render', APP, '--platform', 'android', '--format', 'json']);
     expect(render.status, render.stderr).toBe(0);
     assertValid('schema/render-result.json', JSON.parse(render.stdout));
 
-    const shadow = cli(['render', APP, '--platform', 'android', '--debug-props'], {FAKE_HOST_MODE: 'shadow-tree'});
+    const shadow = cli(['render', APP, '--platform', 'android', '--debug-props', '--format', 'json'], {FAKE_HOST_MODE: 'shadow-tree'});
     assertValid('schema/render-result.json', JSON.parse(shadow.stdout));
-    const query = cli(['render', APP, '--platform', 'android', '--select', 'role=button'], {FAKE_HOST_MODE: 'shadow-tree'});
+    const query = cli(['render', APP, '--platform', 'android', '--select', 'role=button', '--format', 'json'], {FAKE_HOST_MODE: 'shadow-tree'});
     assertValid('schema/query-result.json', JSON.parse(query.stdout));
 
-    const run = cli(['run', APP, '--platform', 'android', '--script', 'examples/basic/actions.json'], {FAKE_HOST_MODE: 'run'});
+    const run = cli(['run', APP, '--platform', 'android', '--script', 'examples/basic/actions.json', '--format', 'json'], {FAKE_HOST_MODE: 'run'});
     expect(run.status, run.stderr).toBe(0);
     assertValid('schema/run-result.json', JSON.parse(run.stdout));
 

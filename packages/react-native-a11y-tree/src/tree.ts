@@ -57,6 +57,7 @@ export function toRunResult(payload: HostRunPayload): RunResult {
     steps,
     snapshots,
     final: convertShadowTree(payload.final),
+    ...(payload.stepTrees?.length ? {finalDiff: diffTrees(convertShadowTree(payload.stepTrees[0]), convertShadowTree(payload.final))} : {}),
     fallbacks: payload.fallbacks ?? [],
     capabilities: payload.capabilities ?? [],
     ...(payload.hostInfo != null ? {hostInfo: payload.hostInfo} : {}),

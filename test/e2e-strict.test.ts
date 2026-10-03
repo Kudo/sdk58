@@ -47,7 +47,7 @@ describe('strict native E2E gate', () => {
     const {cli, E2E_PRESETS} = await helpers();
     cli(['render', 'app.tsx'], E2E_PRESETS[0]);
     const options = (spawnSync.mock.calls[0] as unknown as [string, string[], {timeout: number; killSignal: string}])[2];
-    expect({timeout: options.timeout, killSignal: options.killSignal}).toEqual({timeout: 120_000, killSignal: 'SIGKILL'});
+    expect({timeout: options.timeout, killSignal: options.killSignal}).toEqual({timeout: 180_000, killSignal: 'SIGKILL'});
     spawnSync.mockReturnValueOnce({status: null, stdout: '', stderr: '', error: new Error('ETIMEDOUT')} as never);
     expect(() => cli(['render', 'app.tsx'], E2E_PRESETS[0])).toThrow(/ETIMEDOUT/);
   });

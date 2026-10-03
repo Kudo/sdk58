@@ -45,12 +45,13 @@ type PointerSpec = TargetSpec & {x?: number; y?: number};
 type ActionSpecs = {
   tap: PointerSpec;
   longPress: PointerSpec;
-  type: TargetSpec & {text: string; submit?: boolean};
+  type: TargetSpec & {text: string; submit?: boolean; append?: boolean};
   scroll: TargetSpec & {x?: number; y?: number};
   pan: PointerSpec & {dx?: number; dy?: number; steps?: number; durationMs?: number};
   pinch: PointerSpec & {scale: number; steps?: number; durationMs?: number};
   wait: number;
   snapshot: string;
+  expect: TargetSpec & {text?: string; exists?: boolean};
 };
 
 /** One `run --script` action: `{<name>: spec}`. */
@@ -92,6 +93,7 @@ export type Step = EventLog & {
   warnings?: string[];
   error?: string;
   via?: {hitTest: Via | null; events: Via | null};
+  assertion?: {target: string; field: 'text' | 'exists'; expected: string | boolean; actual: string | boolean};
 };
 
 /** [type, payload, category?] of one native event. */
@@ -281,6 +283,9 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
       target = findEntry(entries, spec);
       if (target == null) {
         throw new Error(targetNotFoundMessage(entries, spec));
+      }
+      if (target.box != null && (target.box.width <= 0 || target.box.height <= 0)) {
+        throw new Error(`TARGET_ZERO_SIZE: ${target.type} ${target.testID ?? target.ref ?? ''} has no layout; check this interaction on a simulator`);
       }
       // Aim at where the target is drawn (transforms move it; the host
       // hit test honors transforms). An index entry has both boxes.
@@ -510,7 +515,7 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
     const warnings: string[] = [];
 
     if (isExpo(target)) {
-      let value = expoText(target);
+      let value = spec.append ? expoText(target) : '';
       if (expoTypeEvents(target, value, findElementByTagOrNull) == null) {
         throw new Error(`${target.type} is not a text field`);
       }
@@ -522,8 +527,12 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
     }
 
     dispatch(tag, [['focus', {target: tag}]], step.events);
-    let text = typeof target.node.text === 'string' ? target.node.text : '';
+    let text = spec.append && typeof target.node.text === 'string' ? target.node.text : '';
     let eventCount = 0;
+    if (!spec.append && spec.text === '') {
+      if (has('setTextInputTextByTag')) NativeFantom.setTextInputTextByTag!(surfaceId, tag, '');
+      dispatch(tag, [['change', {text: '', eventCount: ++eventCount, target: tag}]], step.events);
+    }
     for (const key of Array.from(spec.text)) {
       text += key;
       eventCount++;
@@ -617,6 +626,27 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
 
   // --- steps ---------------------------------------------------------------
 
+  function expectNode(spec: ActionSpecs['expect'], step: Step): void {
+    const entry = findEntry(indexTree(readTree()), spec);
+    step.target = describe(entry);
+    const target = spec.testID ? `#${spec.testID}` : (spec.ref ?? spec.key ?? spec.sel ?? '?');
+    if (spec.exists === false) {
+      step.assertion = {target, field: 'exists', expected: false, actual: entry != null};
+      if (entry != null) throw new Error(`EXPECT_FAILED: target ${entry.testID ?? entry.ref} still exists`);
+      return;
+    }
+    if (spec.text !== undefined) {
+      const actual = entry == null ? '' : String(entry.node.text ?? entry.node.expo?.text ?? '');
+      step.assertion = {target, field: 'text', expected: spec.text, actual};
+      if (entry == null || actual !== spec.text) {
+        throw new Error(`EXPECT_FAILED: expected text ${JSON.stringify(spec.text)}, got ${entry == null ? 'missing target' : JSON.stringify(actual)}`);
+      }
+      return;
+    }
+    step.assertion = {target, field: 'exists', expected: true, actual: entry != null};
+    if (entry == null) throw new Error('EXPECT_FAILED: target does not exist');
+  }
+
   function runStep(action: Action, index: number): {step: Step; snapshot: A11yNode | undefined} {
     const name = Object.keys(action)[0];
     const spec = (action as Record<string, unknown>)[name];
@@ -650,6 +680,9 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
           break;
         case 'snapshot':
           snapshot = readTree();
+          break;
+        case 'expect':
+          expectNode(spec as ActionSpecs['expect'], step);
           break;
         default:
           throw new Error(`Unknown action: ${name}`);

@@ -326,6 +326,8 @@ export type Step = {
   error?: string | StepError;
   /** With `run --diff` / session `diff: true`: changes made by this step. */
   diff?: TreeDiff;
+  /** Result of a script expectation. */
+  assertion?: {target: string; field: 'text' | 'exists'; expected: string | boolean; actual: string | boolean};
 };
 
 export type RunResult = {
@@ -334,6 +336,8 @@ export type RunResult = {
   steps: Step[];
   snapshots: Record<string, TreeNode>;
   final: TreeNode;
+  /** Changes from the first render to the final tree, when step trees were requested. */
+  finalDiff?: TreeDiff;
   /** JS fallbacks used because the host lacks native methods (empty when none). */
   fallbacks: string[];
   /** Optional host features found (NativeFantom methods and getCapabilities()). */

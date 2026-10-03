@@ -73,7 +73,8 @@ export function isIOS(preset: Preset): boolean {
 
 /** Runs the CLI with `--preset <preset>` (after the command and file). */
 export function cli(args: string[], preset: Preset, input?: string): SpawnSyncReturns<string> {
-  const proc = spawnSync('node', [CLI, ...args, '--preset', preset.name], {
+  const jsonByDefault = (args[0] === 'render' || args[0] === 'run') && !args.includes('--format');
+  const proc = spawnSync('node', [CLI, ...args, ...(jsonByDefault ? ['--format', 'json'] : []), '--preset', preset.name], {
     cwd: ROOT,
     encoding: 'utf8',
     input,
@@ -81,7 +82,7 @@ export function cli(args: string[], preset: Preset, input?: string): SpawnSyncRe
     maxBuffer: 256 * 1024 * 1024,
     // A blocking spawn cannot be interrupted by Vitest's test timeout. Force
     // termination instead of waiting forever for a CLI that ignores SIGTERM.
-    timeout: 120_000,
+    timeout: 180_000,
     killSignal: 'SIGKILL',
   });
   if (proc.error) throw new Error(`E2E CLI subprocess failed: ${proc.error.message}\n${proc.stderr ?? ''}`);

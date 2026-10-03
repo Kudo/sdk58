@@ -44,6 +44,7 @@ registerRender(() => {
   // `globalThis.expo`, Expo view configs and module stubs, before anything
   // imports expo, expo-modules-core or @expo/ui.
   /* __EXPO_PRELUDE__ */
+  (require('__RUNTIME_DIR__/network') as typeof import('__RUNTIME_DIR__/network')).installNetwork();
 
   // Host settings applied before the first render (runtime/hostConfig.ts).
   const hostConfig = __HOST_CONFIG__;
@@ -52,13 +53,8 @@ registerRender(() => {
 
   /* __APP_SETUP__ */
 
-  const appModule = require('__APP_PATH__') as {default?: unknown; App?: unknown};
-  let App = appModule.default ?? appModule.App;
-  if (typeof App !== 'function' && (typeof App !== 'object' || App == null)) {
-    throw new Error(
-      'rn-a11y-tree: "__APP_PATH__" must have a default export or an `App` named export that is a React component',
-    );
-  }
+  let App: unknown;
+  /* __APP_ENTRY__ */
 
   /* __APP_PROVIDERS__ */
 
