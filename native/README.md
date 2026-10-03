@@ -94,11 +94,11 @@ enqueue: call `NativeFantom.flushEventQueue()` and then `Fantom.runWorkLoop()`
 ## Host protocol and host info
 
 `getCapabilities()` contains `"protocolVersion:<n>"` (currently
-`"protocolVersion:1"`), and `NativeFantom.getHostInfo()` returns a JSON
+`"protocolVersion:2"`), and `NativeFantom.getHostInfo()` returns a JSON
 string:
 
 ```json
-{"protocolVersion": 1, "rnVersion": "0.88.0-rc.3", "buildType": "Release",
+{"protocolVersion": 2, "rnVersion": "0.88.0-rc.3", "buildType": "Release",
  "sanitize": false, "engines": {"swiftui": true, "compose": true},
  "fonts": {"roboto": true}, "textLayout": "macos"}
 ```
