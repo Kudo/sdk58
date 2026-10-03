@@ -282,10 +282,16 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `-q, --quiet` / `--no-quiet` | all | quiet when stdout is not a terminal | Suppress ordinary app console output and CLI warnings; native fallback warnings still print |
 | `--no-stderr` | all | off | Suppress all CLI stderr output, including fallback warnings, errors, verbose logs and timings; preserve stdout diagnostics and exit codes |
 | `--out <file>` | `render`, `run` | stdout | Write the output to a file |
-| `--format <f>` | `render`, `run` | `json` | `json`, `compact` (no defaults/empties, no `style`), `text` (one line per node), `ndjson` (one node per line) |
+| `--format <f>` | `render`, `run` | `text` when piped, else `json` | `json`, `compact` (no defaults/empties, no `style`), `text` (one line per node), `ndjson` (one node per line) |
+| `--router --route <path>` | `render`, `run`, `check` | off, `/` | Load an Expo Router app directly from the project root |
+| `--network <mode>` | `render`, `run`, `check` | replay if a recording exists, else live | `live`, `off`, `record`, or `replay` for `fetch`, `expo/fetch`, and `XMLHttpRequest` in one-shot runs |
+| `--network-file <file>` | `render`, `run`, `check` | `a11y-tree.network.json` | Record or replay network responses from this file |
+| `--fixtures expo` | `render`, `run`, `check`, `session` | off | In-memory AsyncStorage and labeled WebView/map placeholders, with fallback diagnostics |
 | `--select <sel>` | `render`, `run` | all | Only nodes matching `field=value` or `field~text` (fields: `testID`, `role`, `name`, `type`, `key`, `ref`, `sel`, `text`); repeat to AND. Matches only, unless `--depth` |
 | `--depth <n>` | `render`, `run` | all | Levels of children below each output root (0 = node only) |
 | `--subtree <sel>` | `render`, `run` | root | Start the output at the first node matching the selector |
+| `--raw`, `--all-screens`, `--diagnostics` | `render`, `run` | off | Show layout wrappers, covered stack screens, or detailed diagnostics in text output |
+| `--final` | `run` | off | Print the final tree even when the script contains snapshots |
 | `--style` | `render`, `run` | off | Keep `style` in `compact`/`ndjson` |
 | `--bundle-only` | `render`, `run` | off | Build the bundle and stop (no host needed) |
 | `--debug-props` | `render` | off | Add raw host debug props to each node (`debugProps`) |

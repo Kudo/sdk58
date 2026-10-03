@@ -84,6 +84,11 @@ export const PACKAGE_ROOT = fs.realpathSync(
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'),
 );
 export const RUNTIME_DIR = path.join(PACKAGE_ROOT, 'runtime');
+const EXPO_FIXTURE_ALIASES: Record<string, string> = {
+  '@react-native-async-storage/async-storage': 'asyncStorage.ts',
+  'react-native-webview': 'webView.tsx',
+  'react-native-maps': 'maps.tsx',
+};
 // Includes hoisted dependencies when running from a workspace checkout.
 const toolNodeModules = (require.resolve.paths('react') ?? []).filter(dir => fs.existsSync(dir));
 
@@ -119,6 +124,7 @@ export type BundleOptions = {
   routerRoute?: string;
   /** Explicit native fixtures loaded after environment setup and before the app. */
   setupPath?: string;
+  fixtures?: string;
   viewportWidth: number;
   viewportHeight: number;
   /** Ask the host for raw debug props on each node (`getA11yTree` only). */
@@ -347,6 +353,7 @@ export function createMetroConfig(options: {
   platform: string;
   projectPaths?: ProjectPaths;
   setupPath?: string;
+  fixtures?: string;
 }): ConfigT {
   const {projectRoot, workDir, platform} = options;
   const projectPaths = options.projectPaths ?? loadProjectPaths(projectRoot);
@@ -427,6 +434,10 @@ export function createMetroConfig(options: {
         /\/RendererProxy\.fb\.js$/,
       ],
       resolveRequest: (context, moduleName, requestPlatform) => {
+        if (options.fixtures === 'expo') {
+          const fixture = EXPO_FIXTURE_ALIASES[moduleName];
+          if (fixture) return {type: 'sourceFile', filePath: path.join(RUNTIME_DIR, 'fixtures', fixture)};
+        }
         if (moduleName === 'expo/fetch') {
           return {type: 'sourceFile', filePath: path.join(RUNTIME_DIR, 'expoFetch.ts')};
         }
@@ -527,6 +538,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   if (options.setupPath && (!fs.existsSync(options.setupPath) || !fs.statSync(options.setupPath).isFile())) {
     throw usage(`Setup file not found: ${path.resolve(options.setupPath)}`);
   }
+  if (options.fixtures != null && options.fixtures !== 'expo') throw usage('--fixtures must be expo');
   const projectRoot = options.projectRoot ? fs.realpathSync(path.resolve(options.projectRoot)) : findProjectRoot(appPath);
   // Evaluate before cache lookup: a config helper or environment change can
   // select a different route tree without changing any bundled module.
@@ -555,7 +567,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
   const root = cacheRoot(projectRoot);
   const projectPaths = loadProjectPaths(projectRoot);
   const key = bundleKey({entry, platform, dev, minify, projectRoot,
-    resolutionConfig: JSON.stringify({paths: projectPaths.key, routerRoot})});
+    resolutionConfig: JSON.stringify({paths: projectPaths.key, routerRoot, fixtures: options.fixtures})});
   const dir = entryDir(root, key);
 
   const result = (cache: BundleResult['cache'], jsPath: string, workDir: string | null, selectedPath = jsPath): BundleResult => ({
@@ -606,7 +618,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     try { await applyProjectMetroConfig(base, projectRoot, options.metroConfigPath); }
     catch (error) {fs.rmSync(outDir, {recursive: true, force: true}); throw error;}
   }
-  const config = createMetroConfig({base, appPath, projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths, setupPath: options.setupPath});
+  const config = createMetroConfig({base, appPath, projectRoot, workDir: fs.realpathSync(workDir), platform, projectPaths, setupPath: options.setupPath, fixtures: options.fixtures});
   // A bundle miss must also invalidate transformed modules when build inputs change.
   Object.assign(config, {cacheVersion: `${config.cacheVersion}:${buildFingerprint(projectRoot)}`});
   // Persistent Metro caches (transforms, file map) next to the bundle cache.

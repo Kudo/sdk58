@@ -93,6 +93,7 @@ type RenderOptions = FidelityOptions & HostConfigOptions & OutputOptions & {
   route?: string;
   network?: string;
   networkFile?: string;
+  fixtures?: string;
   quiet?: boolean;
   timing?: boolean;
   resetCache?: boolean;
@@ -292,6 +293,7 @@ async function execute<T>(
     appPath: file,
     routerRoute: options.router ? (options.route ?? '/') : undefined,
     setupPath: options.setup,
+    fixtures: options.fixtures,
     projectRoot: options.projectRoot,
     metroConfigPath: options.metroConfig,
     viewportWidth: options.width,
@@ -721,6 +723,7 @@ function addCommonOptions(command: Command): Command {
     .option('--project-root <directory>', 'resolve dependencies and project settings from this app directory')
     .option('--metro-config <file>', 'opt in to supported custom Metro configuration; disables persistent caches')
     .option('--setup <file>', 'native fixture module loaded before the app (relative to cwd)')
+    .option('--fixtures <set>', 'opt-in built-in fixtures: expo')
     .option('--network <mode>', 'live, off, record or replay (default replay when recording exists, else live)')
     .option('--network-file <file>', 'network recording file (default a11y-tree.network.json in the project)')
     .option('--fail-on-fallback', 'exit 6 for unapproved native/runtime fallbacks or unsupported API calls')

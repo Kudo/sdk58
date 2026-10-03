@@ -53,12 +53,12 @@ describe('pack', () => {
         'README.md': 1,
         dist: 1,
         'package.json': 1,
-        runtime: 34,
+        runtime: 37,
         schema: 11,
         skill: 1,
         tools: 7,
       });
-      expect(files.length).toBe(57);
+      expect(files.length).toBe(60);
       expect(files).toContain('runtime/nitroFixtures.ts');
       expect(files).toContain('dist/rn-a11y-tree.js');
       if (process.platform !== 'win32') expect(fs.statSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'dist/rn-a11y-tree.js')).mode & 0o111).toBeTruthy();

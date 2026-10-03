@@ -33,6 +33,8 @@ Actions take a `testID`, `ref`, `key`, or `sel` target. Prefer `testID`; refs ch
 
 For Expo Router, use `--router --route /path`; the CLI discovers `app` or `src/app` and loads the route without an app wrapper. For a standalone component, give its file path instead. Keep fixture files inside the project and pass `--setup`; files outside the project cannot be bundled. If a required native module has no fixture, verify that screen on a simulator instead of modifying the shipped UI.
 
+`--fixtures expo` opts into in-memory AsyncStorage and visible WebView/map placeholders. These emit fallback diagnostics. The storage fixture starts empty on each CLI invocation; check native content and gestures on a simulator.
+
 Network calls through `fetch`, `expo/fetch`, or `XMLHttpRequest` use the CLI host bridge. Use `--network record --network-file a11y-tree.network.json` to capture responses for a screen, then `--network replay` to repeat it without contacting the server. `--network off` makes accidental requests fail clearly. When the recording file exists, replay is the default; otherwise live requests are used. Keep recordings with the project only if they contain no sensitive data.
 
 ## Simulator coverage
