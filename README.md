@@ -204,8 +204,9 @@ The CLI and its optional native runtimes:
   --check`); in a repo checkout, `bun run rn-a11y-tree` runs `node
   packages/react-native-a11y-tree/src/cli.ts` (Node strips the types). Files: `dist/`,
   `runtime/`, `schema/`, `tools/`, `README.md`, `LICENSE`. Commander and
-  runtime selection are bundled into the CLI, so it has no required npm
-  JavaScript dependencies. Peer dependencies: `expo` (>= 58),
+  runtime selection are bundled into the CLI. The package installs its tested
+  Vitest runner and Vite automatically for `rn-a11y-tree test`.
+  Supported Node versions: 22.x from 22.12, 24.x, and 26+. Peer dependencies: `expo` (>= 58),
   `react-native`, `react`. Metro, `metro-config`, `expo/metro-config` and
   `hermes-compiler` are loaded from the project (the copies that Expo and
   React Native install), so the bundle uses the project's Metro.
@@ -244,6 +245,70 @@ Windows). Set `RN_A11Y_HOST_BIN` to use another host binary, or
 host as `<program> <host> <args>` (the unit tests run the script fake host
 with `bun`, also on Windows).
 
+## Vitest flow tests
+
+Write flows with Vitest and Testing Library-style queries. Tests drive the
+headless Fabric host; no test runner configuration is required.
+
+```sh
+npm install --save-dev react-native-a11y-tree
+npx rn-a11y-tree test
+npx rn-a11y-tree test -t 'should create a note'
+npx rn-a11y-tree test --reporter=json --outputFile=flow-results.json
+```
+
+```ts
+// a11y/notes.a11y.test.ts
+import {test, expect, renderRoute, screen, user} from 'react-native-a11y-tree/test';
+
+test('should create a note', async () => {
+  await renderRoute('/', {fixtures: 'expo'});
+  await user.press(screen.getByRole('button', {name: 'New Note'}));
+  await user.type(await screen.findByTestId('note-body-input'), 'Groceries');
+  await user.back();
+  expect(await screen.findAllByTestId(/^note-row-/)).toHaveLength(1);
+  expect(screen.getByTestId('note-row-0')).toHaveTextContent('Groceries');
+});
+```
+
+For a standalone component, use `await render('src/App.tsx')`. Metro loads the
+component file in Hermes. Both render functions accept existing project options
+such as `projectRoot`, `preset`, `platform`, `setup`, `network`, `networkFile`,
+`failOnFallback`, and `allowFallback`. Device settings come from `a11y-tree.json`;
+without configured device settings the test API uses `android-phone`.
+
+- Queries: `getBy*`, `queryBy*`, `findBy*`, and their `*All*` variants for `TestId`,
+  `Role` (including `{name}`), `Text`, and `LabelText`. Singular queries reject
+  duplicate matches. Hidden accessibility elements and inactive stack screens
+  are excluded unless `includeHiddenElements: true` is supplied.
+- Actions: awaited `user.press`, `longPress`, `type`, `clear`, `scroll`, `swipe`,
+  and `back`. `type` replaces the input value; `scroll` accepts `{x, y}` and
+  `swipe` accepts the existing pan fields `{dx, dy, steps, durationMs}`. `back`
+  uses Expo Router and rejects attempts to pop its root. Covered presses fail
+  before dispatching to the covering view.
+- Matchers register automatically: `toHaveTextContent`, `toHaveAccessibleName`,
+  `toBeVisible`, `toBeDisabled`, `toBeChecked`, `toBeSelected`, and
+  `toHaveTouchTarget(44)` (dimensions in dp). Text content and accessible names
+  are checked separately. Visibility checks accessibility hiding, display, and
+  opacity; press actions check native hit-testing.
+- `findBy*` advances host timers and refreshes the tree while waiting. Its default
+  timeout is 2 seconds; the third argument accepts `{timeout, interval}`.
+  `screen.debug()` prints the compact tree on demand.
+
+Tests run sequentially within each file. Each render starts a fresh host,
+resetting app modules, router state, timers, and in-memory storage; bundles use
+the existing cache. Vitest mocks affect Node test code; use `setup` for fixtures
+loaded into Hermes. Queries return host tree nodes rather than React TestInstances.
+
+The command discovers `*.a11y.test.ts`, `.tsx`, `.js`, and `.jsx`, runs once,
+forwards Vitest flags, and preserves its exit status. Run these tests with
+`rn-a11y-tree test`; the package supplies the tested runner and configuration.
+Import Vitest's `test`, `it`, `describe`, `expect`, and setup/teardown hooks from
+`react-native-a11y-tree/test` alongside the host helpers. No separate Vitest install
+or configuration is needed. Use the simulator for native-only behavior
+and visual appearance. Passing tests establish behavior supported by the host
+and selected fixtures.
+
 ## CLI reference
 
 The file must have a default export or an `App` named export that is a React
@@ -257,6 +322,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `render <file>` | Render once and print the tree | `{viewport, source, root}` ([schema](#output-schema)) |
 | `run <file> --script <json>` | Render, run the actions, print steps and trees | `{viewport, source, steps, snapshots, final, fallbacks, capabilities}` ([Interactions](#interactions)) |
 | `session <file>` | Render, then serve JSON-line requests on stdin | one JSON object per line ([Session mode](#session-mode)) |
+| `test [files]` | Run flow tests with Vitest and the headless host | Vitest reporter output and exit status |
 | `check <file> --rules <json>` | Render (or run `--script`), then evaluate accessibility and design-token rules; exit 2 on violations | `{ok, summary, nodes, violations}` ([Check](#check)) |
 | `schema [name]` | Print `schema/<name>.json` (e.g. `script`, `rules-file`, `session-request`); no name: list the schemas | JSON Schema, or `name<TAB>description` lines ([Schemas](#schemas-and-tool-descriptors)) |
 
@@ -284,8 +350,8 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `--out <file>` | `render`, `run` | stdout | Write the output to a file |
 | `--format <f>` | `render`, `run` | `text` when piped, else `json` | `json`, `compact` (no defaults/empties, no `style`), `text` (one line per node), `ndjson` (one node per line) |
 | `--router --route <path>` | `render`, `run`, `check` | off, `/` | Load an Expo Router app directly from the project root |
-| `--network <mode>` | `render`, `run`, `check` | replay if a recording exists, else live | `live`, `off`, `record`, or `replay` for `fetch`, `expo/fetch`, and `XMLHttpRequest` in one-shot runs |
-| `--network-file <file>` | `render`, `run`, `check` | `a11y-tree.network.json` | Record or replay network responses from this file |
+| `--network <mode>` | `render`, `run`, `check`, `session` | replay if a recording exists, else live | `live`, `off`, `record`, or `replay` for `fetch`, `expo/fetch`, and `XMLHttpRequest` |
+| `--network-file <file>` | `render`, `run`, `check`, `session` | `a11y-tree.network.json` | Record or replay network responses from this file |
 | `--fixtures expo` | `render`, `run`, `check`, `session` | off | In-memory AsyncStorage and labeled WebView/map placeholders, with fallback diagnostics |
 | `--select <sel>` | `render`, `run` | all | Only nodes matching `field=value` or `field~text` (fields: `testID`, `role`, `name`, `type`, `key`, `ref`, `sel`, `text`); repeat to AND. Matches only, unless `--depth` |
 | `--depth <n>` | `render`, `run` | all | Levels of children below each output root (0 = node only) |
@@ -652,7 +718,8 @@ rn-a11y-tree render App.tsx --platform android --format compact --subtree testID
   one line per step first, then nodes tagged with `tree` (snapshot name or
   `final`).
 - `run --format text`: one line per step, then each snapshot and the final
-  tree.
+  changes. Passing scripts with assertions and no snapshots print one summary
+  line; `--final` prints the final tree and `--diff` prints step changes.
 - Session `tree` and `snapshot` requests take the same `format`, `select`
   (string or list), `depth`, `subtree`, `style` fields; `text`/`ndjson` trees
   are returned as a string.
@@ -1412,6 +1479,14 @@ Vitest 5 (`describe` / `it` / `expect`; `vitest.config.ts` has two
 projects: `unit` = `test/*.test.ts` with the fake host, `e2e` =
 `e2e/*.test.ts` with the real host). They spawn the CLI with `node` and
 scripts with `bun`.
+
+`e2e/testing.test.ts` exercises the public Vitest API on both device presets:
+queries and matchers, presses and gestures, scrolling, Router navigation,
+fixture/config precedence, fresh state, and session networking and failures.
+`e2e/package.test.ts` checks the published test entry, declarations, automatic
+cleanup, worker isolation, concurrent-test rejection, reporters, and exit status.
+These suites run in the existing native CI gate; no separate test runner is needed.
+
 The React Native submodule keeps its own Yarn 1 (`build-host.sh`,
 `yarn fantom`).
 

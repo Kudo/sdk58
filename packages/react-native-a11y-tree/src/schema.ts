@@ -426,12 +426,13 @@ export type SessionTreeOptions = {
   style?: boolean;
 };
 
-export type SessionActionRequest = SessionTreeOptions & {id: RequestId; action: Action; diff?: boolean};
-export type SessionTreeRequest = SessionTreeOptions & {id: RequestId; tree: true};
+export type SessionActionRequest = SessionTreeOptions & {id: RequestId; action: Action; diff?: boolean; strict?: boolean};
+export type SessionTreeRequest = SessionTreeOptions & {id: RequestId; tree: true; identities?: boolean};
 export type SessionQuitRequest = {id: RequestId; quit: true};
+export type SessionBackRequest = {id: RequestId; back: true};
 
 /** One line on the session's stdin. */
-export type SessionRequest = SessionActionRequest | SessionTreeRequest | SessionQuitRequest;
+export type SessionRequest = SessionActionRequest | SessionTreeRequest | SessionQuitRequest | SessionBackRequest;
 
 /** A tree in session output: a TreeNode (`json`), matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`). */
 export type SessionTree = TreeNode | TreeNode[] | Record<string, unknown> | Array<Record<string, unknown>> | string;
@@ -463,6 +464,8 @@ export type SessionResponse = {
    * matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`).
    */
   tree?: SessionTree;
+  /** Native identities by ref, when requested by the test client. */
+  nodeTags?: Record<string, number>;
   /** Action requests with `diff: true`. */
   diff?: TreeDiff;
   fallbacks?: string[];

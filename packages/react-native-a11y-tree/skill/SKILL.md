@@ -9,7 +9,20 @@ Use `rn-a11y-tree` to inspect a screen and run scripted interactions in the head
 
 ## Safe verification loop
 
-After finishing a screen, run one script for each important flow, snapshot the states you need to inspect, and run `check` for labels and touch targets. Give interactive or checked elements unique `testID`s and accessible names. Then check visuals and native behavior on a simulator.
+For each important flow, write a Vitest test in `a11y/*.a11y.test.ts` and run `rn-a11y-tree test` after changes until it passes. Run `check --rules default` once per screen for labels and touch targets. Give interactive or checked elements unique `testID`s and accessible names. Use the simulator for launch, visuals, and native-only behavior; a passing headless test covers the simulated flow.
+
+```ts
+import {test, expect, renderRoute, screen, user} from 'react-native-a11y-tree/test';
+
+test('should submit a note', async () => {
+  await renderRoute('/notes', {fixtures: 'expo'});
+  await user.type(screen.getByTestId('title-input'), 'Hello');
+  await user.press(screen.getByRole('button', {name: 'Save'}));
+  expect(await screen.findByText('Hello')).toHaveTextContent('Hello');
+});
+```
+
+Install `react-native-a11y-tree` and run flows with `rn-a11y-tree test`. The package includes its tested Vitest runner and config. Import `test`, `expect`, and setup/teardown hooks from `react-native-a11y-tree/test` alongside the host helpers. Familiar flags such as `-t 'should submit a note'` and `--reporter=json --outputFile=results.json` pass through. Matchers register automatically. Use `render('src/App.tsx')` for a component file, `screen.debug()` to inspect the compact tree, and `findBy*` for delayed or network-backed UI. `user.type` replaces text; `user.clear` empties it. Each render starts with fresh app and fixture state. Tests within a file are sequential.
 
 **Never change production UI to make the headless tool work.** In particular, do not replace a Modal, WebView, map, native tab bar, or other native UI to satisfy this tool. A `TARGET_ZERO_SIZE` step means the target has no host layout; check that interaction on a simulator.
 

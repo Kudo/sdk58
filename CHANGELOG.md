@@ -6,6 +6,22 @@ share one version.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-04
+
+### Added
+
+- `rn-a11y-tree test` runs flow tests with the package's tested Vitest runner and automatic setup. The `react-native-a11y-tree/test` entry exports Vitest's test functions alongside route/component-file rendering, familiar queries and user actions, and typed matchers. No separate Vitest installation or configuration is needed.
+- Session mode supports Expo Router entry points, back navigation, built-in fixtures, and asynchronous live/record/replay networking with existing host binaries.
+
+### Changed
+
+- Passing JSON scripts containing assertions print a compact summary in text mode; `--final`, `--diff`, and named snapshots retain detailed output.
+- Node.js support follows the bundled Vitest runner: Node 22.12+, Node 24, or Node 26+.
+
+### Fixed
+
+- JSON text assertions inspect descendant text and report received content on failure; failed assertions retry while advancing the host clock for up to two seconds.
+
 ## [0.1.5] - 2026-10-03
 
 ### Added
@@ -239,3 +255,4 @@ First release. macOS arm64 host only.
 
 [0.1.4]: https://github.com/Kudo/sdk58/releases/tag/v0.1.4
 [0.1.5]: https://github.com/Kudo/sdk58/compare/v0.1.4...v0.1.5
+[0.1.6]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.5...v0.1.6

@@ -1,6 +1,6 @@
 {
   "name": "react-native-a11y-tree",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Render a React Native component headlessly (real Metro + Fabric/Hermes) and print its accessibility and layout tree; interact with it and check a11y/design rules. For agents and CI.",
   "keywords": [
     "react-native",
@@ -29,8 +29,15 @@
   "bin": {
     "rn-a11y-tree": "./dist/rn-a11y-tree.js"
   },
+  "exports": {
+    "./test": {"types": "./dist/types/testing.d.ts", "import": "./dist/test.js"},
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist/rn-a11y-tree.js",
+    "dist/test.js",
+    "dist/test-config.js",
+    "dist/types/",
     "runtime/",
     "!runtime/tsconfig.json",
     "schema/",
@@ -43,7 +50,7 @@
     "!**/*.tar.gz"
   ],
   "engines": {
-    "node": ">=22"
+    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
   },
   "publishConfig": {
     "access": "public"
@@ -53,10 +60,14 @@
     "react": "*",
     "react-native": ">=0.88.0-rc.2"
   },
+  "dependencies": {
+    "vite": "8.3.1",
+    "vitest": "5.0.3"
+  },
   "optionalDependencies": {
-    "@react-native-a11y-tree/runtime-darwin-universal": "0.1.5",
-    "@react-native-a11y-tree/runtime-linux-x64-gnu": "0.1.5",
-    "@react-native-a11y-tree/runtime-win32-x64-msvc": "0.1.5"
+    "@react-native-a11y-tree/runtime-darwin-universal": "0.1.6",
+    "@react-native-a11y-tree/runtime-linux-x64-gnu": "0.1.6",
+    "@react-native-a11y-tree/runtime-win32-x64-msvc": "0.1.6"
   },
   "scripts": {
     "build": "bun ../../scripts/build.ts",

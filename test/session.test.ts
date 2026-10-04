@@ -15,6 +15,11 @@ describe('session', () => {
     expect(validateRequest({id: 1, action: {tap: {testID: 'submit'}}})).toBe(null);
     expect(validateRequest({id: 'a', tree: true})).toBe(null);
     expect(validateRequest({id: 2, quit: true})).toBe(null);
+    expect(validateRequest({id: 3, back: true})).toBe(null);
+    expect(validateRequest({id: 4, tree: true, identities: true})).toBe(null);
+    expect(validateRequest({id: 5, action: {tap: {testID: 'submit'}}, strict: true})).toBe(null);
+    expect(validateRequest({id: 6, quit: true, identities: true})).toMatch(/on tree requests/);
+    expect(validateRequest({id: 7, tree: true, networkResponse: {}})).toMatch(/reserved/);
     expect(validateRequest([]) ?? '').toMatch(/must be a JSON object/);
     expect(validateRequest({tree: true}) ?? '').toMatch(/needs an "id"/);
     expect(validateRequest({id: 1}) ?? '').toMatch(/exactly one of/);

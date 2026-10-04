@@ -29,6 +29,7 @@ import {applyHostConfig} from './hostConfig';
 import type {HostConfig} from './hostConfig';
 import {settle} from './settle';
 import {mark, summarize} from './timings';
+import {completeNetworkRequest} from './network';
 
 const Fantom = require('./fantom/index') as typeof import('./fantom/index');
 const NativeFantom = (require('./fantom/specs/NativeFantom') as typeof import('./fantom/specs/NativeFantom'))
@@ -42,8 +43,11 @@ type SessionRequest = {
   start?: boolean;
   action?: Action | null;
   diff?: boolean;
+  strict?: boolean;
   tree?: boolean;
   quit?: boolean;
+  back?: boolean;
+  networkResponse?: {requestId: number; response: unknown};
 };
 
 type Response = {id: unknown; ok: boolean; [key: string]: unknown};
@@ -54,12 +58,14 @@ export function installSession({
   viewport,
   tapMode,
   hostConfig,
+  goBack,
 }: {
   React: typeof ReactTypes;
   App: ReactTypes.ComponentType;
   viewport: {width: number; height: number};
   tapMode: TapMode;
   hostConfig: HostConfig | null | undefined;
+  goBack?: () => void;
 }): void {
   let root: Root | null = null;
   let runner: ReturnType<typeof createRunner> | null = null;
@@ -106,14 +112,27 @@ export function installSession({
     } else if (request.action != null) {
       requireStarted();
       const before: A11yNode | undefined = request.diff === true ? runner!.readTree() : undefined;
-      const {step, snapshot} = runner!.runStep(request.action, nextIndex++);
+      const {step, snapshot} = runner!.runStep(request.action, nextIndex++, request.strict === true);
       const response: Response = {id, ok: step.error == null, step};
       if (before !== undefined) response.diffTrees = [before, runner!.readTree()];
       if (step.error != null) response.error = step.error;
       if (snapshot !== undefined) response.tree = snapshot;
       report(response);
+    } else if (request.networkResponse) {
+      Fantom.runTask(() => {
+        completeNetworkRequest(request.networkResponse!.requestId, request.networkResponse!.response);
+      });
+      if (root) settle(root.getRootTag());
+      report({id, ok: true});
+    } else if (request.back) {
+      requireStarted();
+      if (!goBack) throw new Error('back requires renderRoute() or session --router');
+      Fantom.runTask(goBack);
+      settle(root!.getRootTag());
+      report({id, ok: true, tree: runner!.readTree()});
     } else if (request.tree) {
       requireStarted();
+      settle(root!.getRootTag());
       report({id, ok: true, tree: runner!.readTree()});
     } else if (request.quit) {
       if (runner != null) {

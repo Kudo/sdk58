@@ -104,10 +104,11 @@ export class BridgeResponse {
 export async function bridgeFetch(input: string | BridgeRequest, init: Init = {}): Promise<BridgeResponse> {
   const request = new BridgeRequest(input, init);
   if (request.signal?.aborted) throw new Error('AbortError: request aborted');
-  const send = (globalThis as any).__rnA11yNetworkRequest as ((json: string) => string) | undefined;
+  const send = (globalThis as any).__rnA11yNetworkRequest as ((json: string) => string | Promise<string>) | undefined;
   if (!send) throw new Error('NETWORK_BRIDGE_UNAVAILABLE: use a one-shot render/run or check on a simulator');
   const body = request.body == null ? null : encode64(typeof request.body === 'string' ? utf8(request.body) : request.body);
-  const raw = send(JSON.stringify({url: request.url, method: request.method, headers: [...request.headers], body}));
+  const sent = send(JSON.stringify({url: request.url, method: request.method, headers: [...request.headers], body}));
+  const raw = typeof sent === 'string' ? sent : await sent;
   const result = JSON.parse(raw) as {status?: number; headers?: [string, string][]; body?: string; error?: string};
   if (result.error) throw new Error(result.error);
   if (request.signal?.aborted) throw new Error('AbortError: request aborted');
@@ -141,7 +142,26 @@ class BridgeXMLHttpRequest {
   abort() { this.readyState = 0; }
 }
 
-export function installNetwork() {
+const pendingRequests = new Map<number, (response: string) => void>();
+let nextRequestId = 0;
+
+export function completeNetworkRequest(requestId: number, response: unknown) {
+  const resolve = pendingRequests.get(requestId);
+  pendingRequests.delete(requestId);
+  resolve?.(JSON.stringify(response));
+}
+
+export function installNetwork(session = false) {
+  if (session) {
+    (globalThis as any).__rnA11yNetworkRequest = (json: string) => new Promise<string>(resolve => {
+      const requestId = nextRequestId++;
+      pendingRequests.set(requestId, resolve);
+      const NativeFantom = (require('./fantom/specs/NativeFantom') as typeof import('./fantom/specs/NativeFantom')).default;
+      NativeFantom.reportTestSuiteResultsJSON(JSON.stringify({
+        type: 'rn-a11y-tree-fetch', requestId, request: JSON.parse(json),
+      }));
+    });
+  }
   (globalThis as any).Headers = BridgeHeaders;
   (globalThis as any).Request = BridgeRequest;
   (globalThis as any).Response = BridgeResponse;

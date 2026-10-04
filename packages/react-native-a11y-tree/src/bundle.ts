@@ -235,6 +235,11 @@ export function renderEntry(options: {
     ` : `
       const {ExpoRoot} = require('expo-router');
       const {ctx} = require('expo-router/_ctx');
+      goBack = () => {
+        const {router} = require('expo-router');
+        if (!router.canGoBack()) throw new Error('Cannot go back: the router is at its root');
+        router.back();
+      };
       App = function RouterApp() { return React.createElement(ExpoRoot, {context: ctx, location: ${JSON.stringify(options.routerRoute)}}); };
     `)
     .replaceAll('__VIEWPORT_WIDTH__', String(options.viewportWidth))

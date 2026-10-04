@@ -658,6 +658,13 @@
             "$ref": "#/definitions/SessionTree",
             "description": "`tree` requests and `snapshot` actions: a TreeNode (`json`), a list of matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`)."
           },
+          "nodeTags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Native identities by ref, when requested by the test client."
+          },
           "diff": {
             "$ref": "#/definitions/TreeDiff",
             "description": "Action requests with `diff: true`."
@@ -1031,6 +1038,9 @@
         },
         {
           "$ref": "#/definitions/SessionQuitRequest"
+        },
+        {
+          "$ref": "#/definitions/SessionBackRequest"
         }
       ],
       "description": "One line on the session's stdin.",
@@ -1046,6 +1056,9 @@
               "$ref": "#/definitions/Action"
             },
             "diff": {
+              "type": "boolean"
+            },
+            "strict": {
               "type": "boolean"
             },
             "format": {
@@ -1751,6 +1764,9 @@
               "type": "boolean",
               "const": true
             },
+            "identities": {
+              "type": "boolean"
+            },
             "format": {
               "$ref": "#/definitions/Format"
             },
@@ -1796,6 +1812,23 @@
           "required": [
             "id",
             "quit"
+          ],
+          "additionalProperties": false
+        },
+        "SessionBackRequest": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/RequestId"
+            },
+            "back": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "id",
+            "back"
           ],
           "additionalProperties": false
         }

@@ -3,7 +3,18 @@ import {expect, it} from 'vitest';
 import {cli, E2E_PRESETS, hostSkip, ROOT} from './helpers.ts';
 
 for (const preset of E2E_PRESETS) {
-  it(`[${preset.name}] type replaces text and expect controls exit status`, {timeout: 180_000}, t => {
+  it(`should match descendant Pressable text on ${preset.name} with compact success output`, {timeout: 180_000}, t => {
+    if (hostSkip) t.skip(hostSkip);
+    const passing = cli(['run', path.join(ROOT, 'examples/basic/App.tsx'), '--format', 'text', '--script', '[{"expect":{"testID":"submit","text":"Submit"}}]'], preset);
+    expect(passing.status, passing.stderr).toBe(0);
+    expect(passing.stdout).toMatch(/(?:^|\n)✓ 1 steps passed\n$/);
+    expect(passing.stdout).not.toContain('final:');
+    expect(passing.stdout.length).toBeLessThan(200);
+    const failing = cli(['run', path.join(ROOT, 'examples/basic/App.tsx'), '--format', 'text', '--script', '[{"expect":{"testID":"submit","text":"wrong"}}]'], preset);
+    expect(failing.status).toBe(2);
+    expect(failing.stdout).toContain('"Submit"');
+  });
+  it(`should replace text and control assertion exit status on ${preset.name}`, {timeout: 180_000}, t => {
     if (hostSkip) t.skip(hostSkip);
     const app = path.join(ROOT, 'examples/basic/App.tsx');
     const passing = cli(['run', app, '--format', 'json', '--script', JSON.stringify([

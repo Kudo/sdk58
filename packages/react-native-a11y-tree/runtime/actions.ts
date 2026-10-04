@@ -122,6 +122,7 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
   let timestamp = 1;
 
   const fallbacks = new Set<string>();
+  let strictActions = false;
 
   /**
    * Reads the typed tree. ScrollView scroll positions live in the
@@ -397,6 +398,9 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
     step.target = describe(target);
     step.hit = describe(hit);
     if (warnings.length > 0) step.warnings = warnings;
+    if (strictActions && !isExpo(target) && warnings.some(warning => warning.startsWith('Target is covered'))) {
+      throw new Error(warnings[0]);
+    }
     if (tapExpo(target, hit, warnings, step, longPress)) return;
     if (hit == null) {
       throw new Error(warnings[0]);
@@ -636,7 +640,11 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
       return;
     }
     if (spec.text !== undefined) {
-      const actual = entry == null ? '' : String(entry.node.text ?? entry.node.expo?.text ?? '');
+      const content = (node: A11yNode): string => {
+        const own = node.text ?? node.expo?.text;
+        return own == null ? (node.children ?? []).map(content).filter(Boolean).join(' ') : String(own);
+      };
+      const actual = entry == null ? '' : content(entry.node) || entry.node.accessibilityLabel || '';
       step.assertion = {target, field: 'text', expected: spec.text, actual};
       if (entry == null || actual !== spec.text) {
         throw new Error(`EXPECT_FAILED: expected text ${JSON.stringify(spec.text)}, got ${entry == null ? 'missing target' : JSON.stringify(actual)}`);
@@ -647,7 +655,8 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
     if (entry == null) throw new Error('EXPECT_FAILED: target does not exist');
   }
 
-  function runStep(action: Action, index: number): {step: Step; snapshot: A11yNode | undefined} {
+  function runStep(action: Action, index: number, strict = false): {step: Step; snapshot: A11yNode | undefined} {
+    strictActions = strict;
     const name = Object.keys(action)[0];
     const spec = (action as Record<string, unknown>)[name];
     const step: Step = {index, action: name, target: null, hit: null, events: []};
@@ -682,7 +691,10 @@ export function createRunner({root, tapMode}: {root: Root; tapMode: TapMode}) {
           snapshot = readTree();
           break;
         case 'expect':
-          expectNode(spec as ActionSpecs['expect'], step);
+          for (let elapsed = 0; ; elapsed += 50) {
+            try { expectNode(spec as ActionSpecs['expect'], step); break; }
+            catch (error) { if (elapsed >= 2000) throw error; advance(50); }
+          }
           break;
         default:
           throw new Error(`Unknown action: ${name}`);

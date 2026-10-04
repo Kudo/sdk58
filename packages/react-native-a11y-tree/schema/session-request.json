@@ -10,6 +10,9 @@
     },
     {
       "$ref": "#/definitions/SessionQuitRequest"
+    },
+    {
+      "$ref": "#/definitions/SessionBackRequest"
     }
   ],
   "description": "One line on the session's stdin.",
@@ -25,6 +28,9 @@
           "$ref": "#/definitions/Action"
         },
         "diff": {
+          "type": "boolean"
+        },
+        "strict": {
           "type": "boolean"
         },
         "format": {
@@ -730,6 +736,9 @@
           "type": "boolean",
           "const": true
         },
+        "identities": {
+          "type": "boolean"
+        },
         "format": {
           "$ref": "#/definitions/Format"
         },
@@ -775,6 +784,23 @@
       "required": [
         "id",
         "quit"
+      ],
+      "additionalProperties": false
+    },
+    "SessionBackRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "back": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "id",
+        "back"
       ],
       "additionalProperties": false
     }

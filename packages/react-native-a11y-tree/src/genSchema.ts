@@ -130,8 +130,10 @@ function main() {
     const cli = fs.readFileSync(path.join(ROOT, 'src', 'cli.ts'), 'utf8');
     const commands = new Set([...cli.matchAll(/\.command\('([^']+)'\)/g)].map(match => match[1]));
     const flags = new Set([...cli.matchAll(/\.option\(\s*'[^']*?(--[a-z-]+)/g)].map(match => match[1]));
+    // The test command delegates these documented flags to Vitest.
+    for (const flag of ['--reporter', '--outputFile']) flags.add(flag);
     const mentionedCommands = new Set([...skill.matchAll(/\brn-a11y-tree\s+(\w+)/g)].map(match => match[1]));
-    const mentionedFlags = new Set(skill.match(/--[a-z][a-z-]+/g) ?? []);
+    const mentionedFlags = new Set(skill.match(/--[a-z][a-zA-Z-]+/g) ?? []);
     const unknown = [...[...mentionedCommands].filter(name => !commands.has(name)), ...[...mentionedFlags].filter(flag => !flags.has(flag))];
     if (unknown.length > 0) {
       process.stderr.write(`skill/SKILL.md names unknown CLI commands or flags: ${unknown.join(', ')}\n`);

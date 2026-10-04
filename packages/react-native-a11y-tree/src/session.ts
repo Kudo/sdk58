@@ -29,6 +29,8 @@ import {CliError, type ErrorInfo, type ErrorCode, EXIT_CODES, type LogEntry, log
 import {type Format, FORMATS, formatRender, parseSelector} from './format.ts';
 import type {TreeNode} from './schema.ts';
 import {convertShadowTree, convertStep} from './tree.ts';
+import {createNetworkBridge, type NetworkMode, type NetworkRequest} from './network.ts';
+import {indexTree} from '../runtime/tree-index.ts';
 
 const RESPONSE_TYPE = 'rn-a11y-tree-response';
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -181,6 +183,7 @@ export async function runSession(options: FidelityOptions & {
   treeDefaults?: SessionTreeOptions;
   /** Time zone of the host (`TZ`); default UTC. */
   tz?: string;
+  network?: {mode: NetworkMode; file: string};
   io: SessionIO;
 }): Promise<number> {
   const treeDefaults: Record<string, unknown> = {...options.treeDefaults};
@@ -190,6 +193,9 @@ export async function runSession(options: FidelityOptions & {
   }
   const LIMIT = 32 * 1024 * 1024;
   const {io} = options;
+  const networkCancellation = new AbortController();
+  const network = createNetworkBridge({mode: 'off', file: '', ...options.network, signal: networkCancellation.signal});
+  let sendQueue: Promise<unknown> = Promise.resolve();
   let policyFailed = false;
   let diagnosticVersion = 0;
   let reportedDiagnosticVersion = 0;
@@ -350,6 +356,14 @@ export async function runSession(options: FidelityOptions & {
       case RESPONSE_TYPE:
         if (current) current.response = message as unknown as HostResponse;
         break;
+      case 'rn-a11y-tree-fetch':
+        if (!shutdownRequested) {
+          void network.request(message.request as NetworkRequest).then(response => {
+            if (shutdownRequested || terminalError || exited) return;
+            return send({id: null, networkResponse: {requestId: message.requestId, response}});
+          }).catch(error => stop({code: 'HOST_CRASHED', message: `Session network failed: ${String(error)}`}));
+        }
+        break;
       case 'repl-error':
         if (current) current.replError = {message: String(message.message), stack: message.stack as string | undefined};
         break;
@@ -432,11 +446,21 @@ export async function runSession(options: FidelityOptions & {
 
   /** Sends one request; fatal failures resolve only after bounded cleanup. */
   function send(request: Record<string, unknown>): Promise<HostResponse> {
+    const result = sendQueue.then(() => sendFrame(request));
+    sendQueue = result.catch(() => {});
+    return result;
+  }
+
+  function sendFrame(request: Record<string, unknown>): Promise<HostResponse> {
+    if (request.networkResponse && shutdownRequested) return Promise.resolve({id: request.id, ok: true});
     if (terminalError || exited) {
       return exitPromise.then(() => ({id: request.id, ok: false,
         error: terminalError?.message ?? 'host has exited', hostError: terminalError ?? undefined}));
     }
-    if (request.quit === true) shutdownRequested = true;
+    if (request.quit === true) {
+      shutdownRequested = true;
+      networkCancellation.abort();
+    }
     return new Promise(resolve => {
       let settled = false;
       const timer = setTimeout(() => stop({code: 'TIMEOUT', message: 'timeout'}), timeoutMs);
@@ -535,6 +559,7 @@ export async function runSession(options: FidelityOptions & {
     if (step != null) out.step = step;
     if (response.tree != null) {
       out.tree = formatSessionTree(convertShadowTree(response.tree), {...treeDefaults, ...pickOutputKeys(request)});
+      if (request.identities === true) out.nodeTags = Object.fromEntries(indexTree(response.tree).filter(entry => entry.tag !== null).map(entry => [entry.ref, entry.tag]));
     }
     if (response.diffTrees != null) {
       const [before, after] = response.diffTrees.map(convertShadowTree);
@@ -713,6 +738,7 @@ export async function runSession(options: FidelityOptions & {
     }
     return await finish();
   } finally {
+    networkCancellation.abort();
     if (!exited) {
       stop({code: 'HOST_CRASHED', message: 'Session stopped before host shutdown'});
       await exitPromise;
@@ -792,14 +818,17 @@ export function validateRequest(request: unknown): string | null {
     return 'request must be a JSON object';
   }
   const r = request as Record<string, unknown>;
+  if ('networkResponse' in r) return '"networkResponse" is reserved for the host network bridge';
   if (!('id' in r)) return 'request needs an "id"';
-  const kinds = ['action', 'tree', 'quit'].filter(k => k in r);
+  const kinds = ['action', 'tree', 'quit', 'back'].filter(k => k in r);
   if (kinds.length !== 1) {
-    return 'request needs exactly one of "action", "tree" or "quit"';
+    return 'request needs exactly one of "action", "tree", "quit" or "back"';
   }
   if ('diff' in r && (kinds[0] !== 'action' || typeof r.diff !== 'boolean')) {
     return '"diff" must be true or false, on action requests';
   }
+  if ('strict' in r && (kinds[0] !== 'action' || typeof r.strict !== 'boolean')) return '"strict" must be true or false, on action requests';
+  if ('identities' in r && (kinds[0] !== 'tree' || typeof r.identities !== 'boolean')) return '"identities" must be true or false, on tree requests';
   if ('format' in r && !FORMATS.includes(r.format as Format)) {
     return `"format" must be one of: ${FORMATS.join(', ')}`;
   }

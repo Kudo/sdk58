@@ -27,7 +27,7 @@ describe('pack', () => {
     expect(root.private).toBe(true);
     expect(root.bin).toBeUndefined();
   });
-  it('npm pack of the CLI: only whitelisted files, no release archives', {timeout: 300_000}, t => {
+  it('should pack the CLI and typed test API without source or release archives', {timeout: 300_000}, t => {
     if (!hasNpm) t.skip('npm is not available');
     // Release archives next to the package must never be packed (v0.1.0 shipped
     // dist/release/*.tar.gz inside the CLI tarball).
@@ -51,19 +51,26 @@ describe('pack', () => {
       expect(Object.fromEntries([...top].sort())).toStrictEqual({
         LICENSE: 1,
         'README.md': 1,
-        dist: 1,
+        dist: expect.any(Number),
         'package.json': 1,
         runtime: 37,
         schema: 11,
         skill: 1,
         tools: 7,
       });
-      expect(files.length).toBe(60);
+      expect(files.filter(file => file.startsWith('dist/') && !file.startsWith('dist/types/')).sort()).toEqual([
+        'dist/rn-a11y-tree.js', 'dist/test-config.js', 'dist/test.js',
+      ]);
+      expect(files).toContain('dist/types/testing.d.ts');
+      expect(files.filter(file => file.startsWith('dist/types/')).every(file => file.endsWith('.d.ts'))).toBe(true);
       expect(files).toContain('runtime/nitroFixtures.ts');
       expect(files).toContain('dist/rn-a11y-tree.js');
       if (process.platform !== 'win32') expect(fs.statSync(path.join(ROOT, 'packages/react-native-a11y-tree', 'dist/rn-a11y-tree.js')).mode & 0o111).toBeTruthy();
       const manifest = JSON.parse(fs.readFileSync(path.join(CLI_ROOT, 'package.json'), 'utf8'));
       expect(manifest.bin).toEqual({'rn-a11y-tree': './dist/rn-a11y-tree.js'});
+      expect(manifest.exports['./test']).toEqual({types: './dist/types/testing.d.ts', import: './dist/test.js'});
+      expect(manifest.peerDependencies.vitest).toBeUndefined();
+      expect(manifest.dependencies).toEqual({vite: '8.3.1', vitest: '5.0.3'});
       const help = spawnSync('node', [path.join(ROOT, 'packages/react-native-a11y-tree', 'dist/rn-a11y-tree.js'), '--help'], {encoding: 'utf8'});
       expect(help.status, help.stderr).toBe(0);
       expect(help.stdout).toContain('render');
@@ -87,7 +94,7 @@ describe('pack', () => {
     }
   });
 
-  it('CLI directly installs only its matching optional runtime package', {timeout: 120_000}, t => {
+  it('should install its test runner and only the matching optional runtime package', {timeout: 120_000}, t => {
     if (!hasNpm) t.skip('npm is not available');
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-runtime-pack-'));
     try {
@@ -100,7 +107,7 @@ describe('pack', () => {
       ], {encoding: 'utf8'});
       expect(packed.status, packed.stderr).toBe(0);
       const cli = JSON.parse(fs.readFileSync(path.join(CLI_ROOT, 'package.json'), 'utf8'));
-      expect(cli.dependencies ?? {}).toEqual({});
+      expect(cli.dependencies).toEqual({vite: '8.3.1', vitest: '5.0.3'});
       expect(Object.keys(cli.optionalDependencies).sort()).toEqual([
         '@react-native-a11y-tree/runtime-darwin-universal',
         '@react-native-a11y-tree/runtime-linux-x64-gnu',
@@ -157,7 +164,10 @@ describe('pack', () => {
       }
       expect(fs.existsSync(path.join(app, 'node_modules/rn-a11y-host'))).toBe(false);
       const installedCli = path.join(app, 'node_modules/react-native-a11y-tree');
-      expect(fs.readdirSync(path.join(installedCli, 'dist'))).toEqual(['rn-a11y-tree.js']);
+      expect(fs.readdirSync(path.join(installedCli, 'dist')).sort()).toEqual(['rn-a11y-tree.js', 'test-config.js', 'test.js', 'types']);
+      const testHelp = spawnSync('node', [path.join(installedCli, 'dist/rn-a11y-tree.js'), 'test', '--help'], {cwd: app, encoding: 'utf8'});
+      expect(testHelp.status, testHelp.stderr).toBe(0);
+      expect(testHelp.stdout).toContain('--reporter');
       // Bundle the actual host-resolution code next to the installed CLI to
       // inspect its selected path/protocol without executing the fake binary.
       const probe = path.join(installedCli, 'dist/probe.js');

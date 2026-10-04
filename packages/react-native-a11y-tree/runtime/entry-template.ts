@@ -44,7 +44,7 @@ registerRender(() => {
   // `globalThis.expo`, Expo view configs and module stubs, before anything
   // imports expo, expo-modules-core or @expo/ui.
   /* __EXPO_PRELUDE__ */
-  (require('__RUNTIME_DIR__/network') as typeof import('__RUNTIME_DIR__/network')).installNetwork();
+  (require('__RUNTIME_DIR__/network') as typeof import('__RUNTIME_DIR__/network')).installNetwork(__SESSION__);
 
   // Host settings applied before the first render (runtime/hostConfig.ts).
   const hostConfig = __HOST_CONFIG__;
@@ -54,6 +54,7 @@ registerRender(() => {
   /* __APP_SETUP__ */
 
   let App: unknown;
+  let goBack: (() => void) | undefined;
   /* __APP_ENTRY__ */
 
   /* __APP_PROVIDERS__ */
@@ -79,6 +80,7 @@ registerRender(() => {
       viewport: {width: viewportWidth, height: viewportHeight},
       tapMode,
       hostConfig,
+      goBack,
     });
     return () => {
       throw new Error('rn-a11y-tree: session bundles are driven by globalThis.__rnA11y');

@@ -536,6 +536,13 @@
           "$ref": "#/definitions/SessionTree",
           "description": "`tree` requests and `snapshot` actions: a TreeNode (`json`), a list of matches (`select`), compact nodes (`compact`), or a string (`text`, `ndjson`)."
         },
+        "nodeTags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Native identities by ref, when requested by the test client."
+        },
         "diff": {
           "$ref": "#/definitions/TreeDiff",
           "description": "Action requests with `diff: true`."

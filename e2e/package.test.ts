@@ -1,4 +1,5 @@
-import {spawnSync} from 'node:child_process';
+import {execFile, execFileSync, spawnSync} from 'node:child_process';
+import {promisify} from 'node:util';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +15,7 @@ import {hasNpm, npmTool} from '../test/fixtures/npm.ts';
  * installed into a scratch Expo project with npm; `npx rn-a11y-tree render`.
  */
 
+const exec = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Package the selected host, including a release tarball's extracted binary.
 const skip = !hasNpm
@@ -47,6 +49,78 @@ function createRunner(budgetMs = 840_000) {
 }
 
 describe('package', () => {
+  it('should run the packed test command and API without a project Vitest installation', {timeout: 180_000}, async t => {
+    if (!(hostBin && fs.existsSync(hostBin))) skipUnsupported(t, 'no selected host for the test API');
+    if (!hasNpm) t.skip('npm is not available');
+    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rn-a11y-vitest-')));
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({name: 'vitest-package', private: true}));
+    try {
+      const packed = npmTool('npm', ['pack', '--json', '--pack-destination', root], {cwd: path.join(ROOT, 'packages/react-native-a11y-tree'), maxBuffer: 4 * 1024 * 1024});
+      expect(packed.status, packed.stderr).toBe(0);
+      const filename = JSON.parse(packed.stdout.slice(packed.stdout.indexOf('[')))[0].filename;
+      const installed = path.join(root, 'node_modules/react-native-a11y-tree');
+      fs.mkdirSync(installed, {recursive: true});
+      execFileSync('tar', ['-xzf', filename, '--strip-components=1', '-C', installed], {cwd: root});
+      // Keep runner dependencies private to the package, as with an isolated linker.
+      fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(installed, 'node_modules'), 'junction');
+      expect(fs.existsSync(path.join(root, 'node_modules/vitest'))).toBe(false);
+      expect(JSON.parse(fs.readFileSync(path.join(installed, 'package.json'), 'utf8')).dependencies.vitest).toBe('5.0.3');
+      fs.writeFileSync(path.join(root, 'public.a11y.test.ts'), `
+        import {test,expect,render,screen,user} from 'react-native-a11y-tree/test';
+        const options={projectRoot:${JSON.stringify(ROOT)}};const app=${JSON.stringify(path.join(ROOT,'examples/basic/App.tsx'))};
+        test('should submit through the packaged API',async()=>{
+          await render(app,options);await user.type(screen.getByTestId('email'),'first worker');
+          await user.press(screen.getByRole('button',{name:'Submit'}));
+          expect(await screen.findByText('Submitted')).toHaveTextContent('Submitted');
+          expect(screen.getByTestId('email')).toHaveTextContent('first worker');
+        });
+        test('should clean up the previous test and reset state',async()=>{
+          expect(()=>screen.queryByText('Submitted')).toThrow(/Render an app/);
+          await render(app,options);expect(screen.queryByText('Submitted')).toBeNull();
+          expect(screen.getByTestId('email')).toHaveTextContent('');
+        });`);
+      fs.writeFileSync(path.join(root, 'isolated.a11y.test.ts'), `
+        import {test,expect,render,screen,user} from 'react-native-a11y-tree/test';
+        test('should keep screen and app state isolated in another worker',async()=>{
+          await render(${JSON.stringify(path.join(ROOT,'examples/basic/App.tsx'))},{projectRoot:${JSON.stringify(ROOT)}});
+          await user.type(screen.getByTestId('email'),'second worker');
+          expect(await screen.findByTestId('email')).toHaveTextContent('second worker');
+          expect(screen.queryByText('Submitted')).toBeNull();
+        });`);
+      fs.writeFileSync(path.join(root, 'tsconfig.json'), JSON.stringify({compilerOptions: {target: 'ES2023', module: 'NodeNext', moduleResolution: 'NodeNext', noEmit: true, strict: true, skipLibCheck: true}, include: ['public.a11y.test.ts']}));
+      const checked = await exec(process.execPath, [path.join(ROOT, 'node_modules/typescript/bin/tsc'), '-p', path.join(root,'tsconfig.json')], {cwd: root});
+      expect(checked.stdout).toBe('');
+      const result = await exec(process.execPath, [path.join(installed, 'dist/rn-a11y-tree.js'), 'test'], {cwd: root, env: {...process.env, RN_A11Y_HOST_BIN: hostBin}, timeout: 120_000});
+      expect(result.stdout).toContain('3 passed');
+      const otherRunner = path.join(root, 'node_modules/vitest');
+      fs.mkdirSync(otherRunner);
+      fs.writeFileSync(path.join(otherRunner, 'package.json'), JSON.stringify({name: 'vitest', version: '0.0.0'}));
+      fs.writeFileSync(path.join(otherRunner, 'vitest.mjs'), `throw new Error('project runner unexpectedly selected')`);
+      fs.writeFileSync(path.join(root, 'failed.a11y.test.ts'), `
+        import {test,expect,render,screen} from 'react-native-a11y-tree/test';
+        test('should report a failed expectation',async()=>{
+          await render(${JSON.stringify(path.join(ROOT,'examples/basic/App.tsx'))},{projectRoot:${JSON.stringify(ROOT)}});
+          expect(screen.getByRole('button',{name:'Submit'})).toHaveTextContent('Wrong');
+        });
+        test.concurrent('should reject concurrent screen access',()=>{throw new Error('concurrent body unexpectedly executed')});`);
+      const reportFile = path.join(root, 'failures.json');
+      let exitCode: unknown;
+      try {
+        await exec(process.execPath, [path.join(installed, 'dist/rn-a11y-tree.js'), 'test', 'failed', '--reporter=json', `--outputFile=${reportFile}`], {cwd: root, env: {...process.env, RN_A11Y_HOST_BIN: hostBin}, timeout: 120_000});
+      } catch (error) {exitCode = (error as {code: unknown}).code;}
+      expect(exitCode).toBe(1);
+      const report = JSON.parse(fs.readFileSync(reportFile, 'utf8'));
+      expect(report.numFailedTests).toBe(2);
+      const assertions = report.testResults[0].assertionResults;
+      const failure = assertions.find((result: {fullName: string}) => result.fullName === 'should report a failed expectation');
+      expect(failure.failureMessages.join('\n')).toContain('Received: "Submit"');
+      expect(failure.failureMessages.join('\n')).toContain('Wrong');
+      const concurrent = assertions.find((result: {fullName: string}) => result.fullName === 'should reject concurrent screen access');
+      expect(concurrent.failureMessages.join('\n')).toContain('use sequential tests');
+      expect(concurrent.failureMessages.join('\n')).not.toContain('concurrent body unexpectedly executed');
+    } finally {fs.rmSync(root, {recursive: true, force: true});}
+  });
+
   it('reports timed-out children and clips an install-sized budget to the remaining overall deadline', () => {
     const run = createRunner(150);
     const started = performance.now();

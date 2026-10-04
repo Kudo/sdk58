@@ -205,14 +205,18 @@
     },
     "packages/react-native-a11y-tree": {
       "name": "react-native-a11y-tree",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "bin": {
         "rn-a11y-tree": "./dist/rn-a11y-tree.js",
       },
+      "dependencies": {
+        "vite": "8.3.1",
+        "vitest": "5.0.3",
+      },
       "optionalDependencies": {
-        "@react-native-a11y-tree/runtime-darwin-universal": "0.1.5",
-        "@react-native-a11y-tree/runtime-linux-x64-gnu": "0.1.5",
-        "@react-native-a11y-tree/runtime-win32-x64-msvc": "0.1.5",
+        "@react-native-a11y-tree/runtime-darwin-universal": "0.1.6",
+        "@react-native-a11y-tree/runtime-linux-x64-gnu": "0.1.6",
+        "@react-native-a11y-tree/runtime-win32-x64-msvc": "0.1.6",
       },
       "peerDependencies": {
         "expo": ">=58.0.0",
@@ -222,15 +226,15 @@
     },
     "packages/runtime-darwin-universal": {
       "name": "@react-native-a11y-tree/runtime-darwin-universal",
-      "version": "0.1.5",
+      "version": "0.1.6",
     },
     "packages/runtime-linux-x64-gnu": {
       "name": "@react-native-a11y-tree/runtime-linux-x64-gnu",
-      "version": "0.1.5",
+      "version": "0.1.6",
     },
     "packages/runtime-win32-x64-msvc": {
       "name": "@react-native-a11y-tree/runtime-win32-x64-msvc",
-      "version": "0.1.5",
+      "version": "0.1.6",
     },
   },
   "packages": {

@@ -7,7 +7,7 @@ export type NetworkRequest = {url: string; method: string; headers: [string, str
 export type NetworkResponse = {status?: number; headers?: [string, string][]; body?: string; error?: string};
 type Recording = {version: 1; entries: Record<string, NetworkResponse>};
 
-export function createNetworkBridge({mode, file}: {mode: NetworkMode; file: string}) {
+export function createNetworkBridge({mode, file, signal}: {mode: NetworkMode; file: string; signal?: AbortSignal}) {
   let recording: Recording = {version: 1, entries: {}};
   if ((mode === 'record' || mode === 'replay') && fs.existsSync(file)) {
     const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as Recording;
@@ -23,7 +23,7 @@ export function createNetworkBridge({mode, file}: {mode: NetworkMode; file: stri
         method: input.method,
         headers: input.headers,
         body: input.body == null ? undefined : Buffer.from(input.body, 'base64'),
-        signal: AbortSignal.timeout(20_000),
+        signal: (signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000)) as NonNullable<Parameters<typeof globalThis.fetch>[1]>['signal'],
       });
       const bytes = Buffer.from(await response.arrayBuffer());
       if (bytes.length > 8 * 1024 * 1024) return {error: `NETWORK_RESPONSE_TOO_LARGE: ${bytes.length} bytes`};

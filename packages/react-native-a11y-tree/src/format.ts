@@ -272,6 +272,10 @@ export function formatRun(result: RunResult, options: FormatOptions): string {
     }
     case 'text': {
       const textQuery = (tree: TreeNode) => q(options.allScreens ? tree : topStackScreens(tree));
+      if (result.steps.some(step => step.action === 'expect') && result.steps.every(step => step.error == null)
+        && Object.keys(result.snapshots).length === 0 && !options.final && !options.stepDiff) {
+        return diagnosticText(result, options) + `✓ ${result.steps.length} steps passed\n`;
+      }
       const out = result.steps.flatMap(step => [stepLine(step), ...(options.stepDiff ? diffLines(step.diff) : [])]);
       for (const [name, tree] of Object.entries(result.snapshots)) {
         out.push(`snapshot ${name}:`, textTree(textQuery(tree), options).trimEnd());

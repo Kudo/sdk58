@@ -19,6 +19,7 @@ import {ScriptError, scriptHelp, validateScript} from './script.ts';
 import type {NetworkMode} from './network.ts';
 import {DEFAULT_TIMEOUT_MS, runSession, validateRequest} from './session.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
+import {runTests} from './testingCommand.ts';
 
 // stdout is reserved for the JSON result. Metro and @expo/metro-config log
 // with console.log/info (e.g. "Could not resolve react-native!"), so send
@@ -79,6 +80,13 @@ function formatOptions(options: OutputOptions): FormatOptions {
 /** --quiet is the default when stdout is not a terminal (agents, pipes). */
 function isQuiet(options: {quiet?: boolean}): boolean {
   return options.quiet ?? !process.stdout.isTTY;
+}
+
+function networkOptions(options: {projectRoot?: string; networkFile?: string; network?: string}) {
+  const file = path.resolve(options.projectRoot ?? process.cwd(), options.networkFile ?? 'a11y-tree.network.json');
+  const mode = (options.network ?? (fs.existsSync(file) ? 'replay' : 'live')) as NetworkMode;
+  if (!['live', 'off', 'record', 'replay'].includes(mode)) throw usage('--network must be live, off, record or replay');
+  return {mode, file};
 }
 
 /** The MSVC runtime of the Windows host reads only POSIX TZ values (`UTC`, `JST-9`, `PST8PDT`), not IANA names. */
@@ -342,12 +350,7 @@ async function execute<T>(
     logs,
     quiet: isQuiet(options),
     tz: options.tz,
-    network: (() => {
-      const file = path.resolve(options.projectRoot ?? process.cwd(), options.networkFile ?? 'a11y-tree.network.json');
-      const mode = (options.network ?? (fs.existsSync(file) ? 'replay' : 'live')) as NetworkMode;
-      if (!['live', 'off', 'record', 'replay'].includes(mode)) throw usage('--network must be live, off, record or replay');
-      return {mode, file};
-    })(),
+    network: networkOptions(options),
   };
   const attempt = (bundlePath: string) => {
     const remaining = Math.ceil(hostDeadline - performance.now());
@@ -551,7 +554,8 @@ function printSchema(name: string | undefined) {
   process.stdout.write(fs.readFileSync(path.join(SCHEMA_DIR, `${name}.json`), 'utf8'));
 }
 
-async function session(file: string, options: RunOptions) {
+async function session(file: string | undefined, options: RunOptions) {
+  file = resolveAppFile(file, options);
   // Only the command line sets the session's tree output (not `format` in a11y-tree.json).
   const treeDefaults: SessionTreeOptions = {
     ...(options.format != null ? {format: options.format as Format} : {}),
@@ -572,6 +576,7 @@ async function session(file: string, options: RunOptions) {
   const initialLogs = dependencyDiagnostics(file, options, host);
   const result = await bundleOrFail({
     appPath: file,
+    routerRoute: options.router ? (options.route ?? '/') : undefined,
     setupPath: options.setup,
     projectRoot: options.projectRoot,
     metroConfigPath: options.metroConfig,
@@ -583,6 +588,7 @@ async function session(file: string, options: RunOptions) {
     tapMode: options.tapMode as TapMode,
     session: true,
     hostConfig: hostConfigFor(platform, options),
+    fixtures: options.fixtures,
     resetCache: options.resetCache,
     cache: options.cache,
     bytecode: bytecodeMode(options.bytecode),
@@ -605,6 +611,7 @@ async function session(file: string, options: RunOptions) {
       host,
       treeDefaults,
       tz: options.tz,
+      network: networkOptions(options),
       io: {
         input: process.stdin,
         output: process.stdout,
@@ -812,6 +819,11 @@ addCommonOptions(addOutputOptions(program.command('run')))
   .addHelpText('after', `\n${scriptHelp()}`)
   .action(run);
 
+program.command('test')
+  .description('run *.a11y.test.ts(x) with Vitest and the headless host; Vitest flags pass through')
+  .argument('[files...]', 'test file filters')
+  .allowUnknownOption();
+
 addCommonOptions(program.command('check'))
   .description('render (or run a script), then evaluate accessibility and design-token rules; exit 2 on violations')
   .option('--rules <json>', 'default, rules file {"rules": {...}}, or that JSON itself (default: "rules" in a11y-tree.json)')
@@ -826,7 +838,12 @@ addOutputOptions(program.command('session'))
   .description(
     'render the component and serve JSON-line requests on stdin (actions, tree, quit)',
   )
-  .argument('<file>', 'component file (default export or `App` named export)')
+  .argument('[file]', 'component file (omit with --router)')
+  .option('--router', 'render the Expo Router app in the project', false)
+  .option('--route <path>', 'initial Expo Router location (default /)')
+  .option('--fixtures <set>', 'opt-in native fixtures: expo')
+  .option('--network <mode>', 'live, off, record or replay')
+  .option('--network-file <file>', 'network recording file')
   .option('--width <dp>', 'viewport width (default 390)', positiveNumber)
   .option('--height <dp>', 'viewport height (default 844)', positiveNumber)
   .option('--preset <name>', `device preset: ${PRESET_NAMES.join(', ')} (platform, viewport, insets, header height)`)
@@ -967,7 +984,8 @@ if (outputFlags.stderr === false) {
 }
 
 try {
-  await program.parseAsync(process.argv);
+  if (process.argv[2] === 'test') await runTests(process.argv.slice(3));
+  else await program.parseAsync(process.argv);
 } catch (error) {
   reportError(error);
 }

@@ -24,6 +24,17 @@ const tree = convertShadowTree(shadow);
 const render = {viewport: {width: 390, height: 844}, source: 'shadowTree' as const, root: tree};
 
 describe('format', () => {
+  it('should summarize passing assertions and preserve explicit tree output', () => {
+    const result: RunResult = {viewport: render.viewport, source: 'shadowTree', steps: [
+      {index: 0, action: 'expect', target: null, hit: null, events: [], assertion: {target: '#submit', field: 'exists', expected: true, actual: true}},
+    ], snapshots: {}, final: tree, fallbacks: [], capabilities: []};
+    expect(formatRun(result, {format: 'text'})).toBe('✓ 1 steps passed\n');
+    expect(formatRun(result, {format: 'text', final: true})).toContain('final:');
+    expect(formatRun(result, {format: 'text', stepDiff: true})).toContain('final:');
+    result.steps[0].error = 'EXPECT_FAILED: target does not exist';
+    expect(formatRun(result, {format: 'text'})).toContain('✗');
+    expect(formatRun(result, {format: 'json'})).toContain('"final"');
+  });
   it('selectors: =, ~ (case-insensitive), unknown field', () => {
     const submit = queryTree(tree, {select: ['testID=submit']});
     expect(submit.length).toBe(1);
