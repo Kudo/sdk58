@@ -6,6 +6,19 @@ share one version.
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-05
+
+### Changed
+
+- `rn-a11y-tree test --help`, `test -h`, and `help test` print concise command guidance without starting Vitest.
+- The bundled agent skill recommends explicit test files, filtered repair runs, and one final affected-file run, with separate guidance for inspection and native/visual verification.
+- `rn-a11y-tree skill` prints the bundled Markdown to stdout; the `--install`, `--check`, and `--path` options have been removed.
+
+### Fixed
+
+- Leading `--no-stderr` correctly dispatches the test command and suppresses runner stderr while preserving results and exit codes.
+- Help-like test-name filter values reach Vitest as literal option values.
+
 ## [0.1.6] - 2026-10-04
 
 ### Added
@@ -257,3 +270,4 @@ First release. macOS arm64 host only.
 [0.1.4]: https://github.com/Kudo/sdk58/releases/tag/v0.1.4
 [0.1.5]: https://github.com/Kudo/sdk58/compare/v0.1.4...v0.1.5
 [0.1.6]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.5...v0.1.6
+[0.1.7]: https://github.com/Kudo/sdk58/compare/v0.1.6...v0.1.7

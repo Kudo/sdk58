@@ -1,0 +1,24 @@
+{
+  "base_commit": "0a1f28d9cd813f4a3c29184ec424225f8ac57ab2",
+  "candidate_is_working_tree": true,
+  "artifacts": {
+    "candidate": {
+      "path": "/tmp/rn-a11y-tree-token-candidate/react-native-a11y-tree-0.1.6.tgz",
+      "sha256": "6ad3790c75d4b8b7ec55761ac7fd0a2b4cebeec1bbe705a11cb3613dff00cc8f",
+      "skill_sha256": "4b53158a124f1848d739c9e4e7a09e5b3266ca917765d1d46004278270e7d81f",
+      "skill_bytes": 2999
+    },
+    "control": {
+      "path": "/Users/kudo/01_Work/Repos/expo/react-native-a11y-tree/release-0.1.6/react-native-a11y-tree-0.1.6.tgz",
+      "sha256": "e000bcfff8ce631da82fab33fd915be2dd78adb0900bfbd640b2b3cbfce2ce83",
+      "skill_sha256": "1033792b31a699ddb913e54dd401f5378258b337e52a2090b0249b7d3bbc8d03",
+      "skill_bytes": 4943
+    }
+  },
+  "source_hashes": {
+    "packages/react-native-a11y-tree/src/cli.ts": "79f4b9737b35eebd02769596000bc8b0fdf73aec90734b93b5f23aa39a3839d3",
+    "packages/react-native-a11y-tree/src/testingCommand.ts": "bf1b73bd960ca0411e5d4c2ad8430f99320ce69b9cfde6aefb4840f0bac5fedf",
+    "packages/react-native-a11y-tree/skill/SKILL.md": "4b53158a124f1848d739c9e4e7a09e5b3266ca917765d1d46004278270e7d81f",
+    "README.md": "3891b955d1fd0f765ed428da7280b471b14328c17939bd9babd4a2e4bbde7cdf"
+  }
+}

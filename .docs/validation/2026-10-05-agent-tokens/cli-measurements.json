@@ -1,0 +1,135 @@
+{
+  "node": "v26.5.1",
+  "vitest": "5.0.3",
+  "method": "Local command output bytes, not model tokens. Before-help executes the exact forwarded Vitest command used by the old wrapper. Runner cases use the revised CLI; filenames, durations, and stack line numbers can change between runs.",
+  "records": [
+    {
+      "name": "help-before",
+      "exit_code": 0,
+      "signal": null,
+      "stdout_bytes": 10356,
+      "stderr_bytes": 0,
+      "stdout_lines": 77
+    },
+    {
+      "name": "help-after",
+      "exit_code": 0,
+      "signal": null,
+      "stdout_bytes": 643,
+      "stderr_bytes": 0,
+      "stdout_lines": 12
+    },
+    {
+      "name": "passing-default",
+      "exit_code": 0,
+      "signal": null,
+      "stdout_bytes": 297,
+      "stderr_bytes": 0,
+      "stdout_lines": 9
+    },
+    {
+      "name": "passing-dot",
+      "exit_code": 0,
+      "signal": null,
+      "stdout_bytes": 261,
+      "stderr_bytes": 0,
+      "stdout_lines": 9
+    },
+    {
+      "name": "assertion-failure-default",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 350,
+      "stderr_bytes": 551,
+      "stdout_lines": 10
+    },
+    {
+      "name": "assertion-failure-dot",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 260,
+      "stderr_bytes": 551,
+      "stdout_lines": 9
+    },
+    {
+      "name": "missing-query-default",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 348,
+      "stderr_bytes": 717,
+      "stdout_lines": 10
+    },
+    {
+      "name": "missing-query-dot",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 260,
+      "stderr_bytes": 717,
+      "stdout_lines": 9
+    },
+    {
+      "name": "bundle-failure-default",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 327,
+      "stderr_bytes": 1735,
+      "stdout_lines": 10
+    },
+    {
+      "name": "bundle-failure-dot",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 237,
+      "stderr_bytes": 1735,
+      "stdout_lines": 9
+    },
+    {
+      "name": "unavailable-host-default",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 360,
+      "stderr_bytes": 1200,
+      "stdout_lines": 10
+    },
+    {
+      "name": "unavailable-host-dot",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 260,
+      "stderr_bytes": 1200,
+      "stdout_lines": 9
+    },
+    {
+      "name": "no-file-match",
+      "exit_code": 1,
+      "signal": null,
+      "stdout_bytes": 104,
+      "stderr_bytes": 157,
+      "stdout_lines": 2
+    },
+    {
+      "name": "no-name-match",
+      "exit_code": 0,
+      "signal": null,
+      "stdout_bytes": 297,
+      "stderr_bytes": 0,
+      "stdout_lines": 9
+    },
+    {
+      "name": "passing-leading-global",
+      "exit_code": 0,
+      "signal": null,
+      "stdout_bytes": 297,
+      "stderr_bytes": 0,
+      "stdout_lines": 9
+    },
+    {
+      "name": "literal-help-name",
+      "exit_code": 0,
+      "signal": null,
+      "stdout_bytes": 297,
+      "stderr_bytes": 0,
+      "stdout_lines": 9
+    }
+  ]
+}

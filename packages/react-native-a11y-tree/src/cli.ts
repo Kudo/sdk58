@@ -19,7 +19,7 @@ import {ScriptError, scriptHelp, validateScript} from './script.ts';
 import type {NetworkMode} from './network.ts';
 import {DEFAULT_TIMEOUT_MS, runSession, validateRequest} from './session.ts';
 import {toRenderResult, toRunResult} from './tree.ts';
-import {runTests} from './testingCommand.ts';
+import {runTests, testArguments, TEST_HELP} from './testingCommand.ts';
 
 // stdout is reserved for the JSON result. Metro and @expo/metro-config log
 // with console.log/info (e.g. "Could not resolve react-native!"), so send
@@ -819,10 +819,11 @@ addCommonOptions(addOutputOptions(program.command('run')))
   .addHelpText('after', `\n${scriptHelp()}`)
   .action(run);
 
-program.command('test')
+const testCommand = program.command('test')
   .description('run *.a11y.test.ts(x) with Vitest and the headless host; Vitest flags pass through')
   .argument('[files...]', 'test file filters')
   .allowUnknownOption();
+testCommand.helpInformation = () => TEST_HELP;
 
 addCommonOptions(program.command('check'))
   .description('render (or run a script), then evaluate accessibility and design-token rules; exit 2 on violations')
@@ -922,35 +923,10 @@ program
 
 program
   .command('skill')
-  .description('print, install, or check the agent skill bundled with this CLI version')
-  .option('--path', 'print the bundled SKILL.md path')
-  .option('--install [dir]', 'install into dir/react-native-a11y-tree/SKILL.md (default ./.claude/skills)')
-  .option('--check [dir]', 'exit 1 if the installed skill differs from this version')
-  .action((options: {path?: boolean; install?: boolean | string; check?: boolean | string}) => {
-    const selected = [options.path, options.install !== undefined, options.check !== undefined].filter(Boolean).length;
-    if (selected > 1) throw usage('skill: choose only one of --path, --install, or --check');
+  .description('print the bundled agent guidance to stdout')
+  .action(() => {
     const bundled = path.join(PACKAGE_ROOT, 'skill', 'SKILL.md');
-    const content = fs.readFileSync(bundled, 'utf8');
-    if (options.path) {
-      process.stdout.write(bundled + '\n');
-      return;
-    }
-    if (options.install !== undefined || options.check !== undefined) {
-      const dir = options.install || options.check;
-      const base = typeof dir === 'string' ? dir : path.join(process.cwd(), '.claude', 'skills');
-      const installed = path.resolve(base, 'react-native-a11y-tree', 'SKILL.md');
-      if (options.check !== undefined) {
-        if (!fs.existsSync(installed) || fs.readFileSync(installed, 'utf8') !== content) {
-          throw usage(`installed skill differs from ${bundled}: ${installed}`);
-        }
-      } else {
-        fs.mkdirSync(path.dirname(installed), {recursive: true});
-        fs.writeFileSync(installed, content);
-      }
-      process.stdout.write(installed + '\n');
-      return;
-    }
-    process.stdout.write(content);
+    process.stdout.write(fs.readFileSync(bundled, 'utf8'));
   });
 
 // Register locally as well as globally so every subcommand's help exposes the
@@ -973,6 +949,9 @@ for (const command of commands) {
 }
 try { outputProbe.parseOptions(process.argv.slice(2)); } catch { /* Real parsing reports missing values below. */ }
 const outputFlags = outputProbe.opts<{stderr?: boolean; format?: string; quiet?: boolean}>();
+const commandLine = program.parseOptions(process.argv.slice(2));
+const isTest = commandLine.operands[0] === 'test';
+if (isTest) outputFlags.stderr = program.opts().stderr !== false && testArguments(commandLine.unknown).stderr;
 if (outputFlags.stderr === false) {
   // One sink covers Commander, Metro, forwarded host/session output, console
   // methods, and our error/timing reporters without discarding diagnostics.
@@ -984,7 +963,7 @@ if (outputFlags.stderr === false) {
 }
 
 try {
-  if (process.argv[2] === 'test') await runTests(process.argv.slice(3));
+  if (isTest) await runTests(commandLine.unknown, program.opts().stderr !== false);
   else await program.parseAsync(process.argv);
 } catch (error) {
   reportError(error);

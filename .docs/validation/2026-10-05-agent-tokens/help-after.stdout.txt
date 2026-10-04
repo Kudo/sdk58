@@ -1,0 +1,12 @@
+Usage: rn-a11y-tree test [files] [options]
+
+Run matching *.a11y.test.{ts,tsx,js,jsx} files once; no file runs the suite.
+  rn-a11y-tree test a11y/notes.a11y.test.ts
+  rn-a11y-tree test a11y/notes.a11y.test.ts -t 'should submit a note'
+
+  -t, --testNamePattern <pattern>  Filter test names (regular expression).
+  -h, --help                     Print this help.
+  --no-stderr                    Suppress runner stderr; keep stdout/results.
+Other Vitest flags pass through, including --reporter and --outputFile.
+Exit: 0 success, 1 tests/runner/usage failed, 130 interrupted by SIGINT.
+Check executed counts: skipped tests do not verify a flow.

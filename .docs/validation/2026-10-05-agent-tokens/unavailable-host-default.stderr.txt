@@ -1,0 +1,17 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  unavailable-host.a11y.test.ts > should expose a missing host
+Error: a11y-tree session exited (5)
+{"error":{"code":"HOST_MISSING","message":"RN_A11Y_HOST_BIN points to a missing file: /Users/kudo/01_Work/Repos/expo/react-native-a11y-tree/examples/.agent-token-probe-4cPYks/absent-host","hint":"Reinstall with optional dependencies enabled (`npm install --include=optional`), run `bun run build:host`, set RN_A11Y_HOST_BIN to the path of a host binary, or set RN_A11Y_HOST_BASE_URL to download a prebuilt host."}}
+
+ ❯ ChildProcess.<anonymous> ../../packages/react-native-a11y-tree/src/testingClient.ts:91:50
+     89|     this.exit = new Promise(resolve => this.child.on('close', code => {
+     90|       clearTimeout(timer); lines.close();
+     91|       if (!this.closing || code !== 0) this.fail(new Error(`a11y-tree …
+       |                                                  ^
+     92|       readyReject(this.failure ?? new Error(`Session closed before rea…
+     93|       for (const pending of this.pending.values()) {clearTimeout(pendi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

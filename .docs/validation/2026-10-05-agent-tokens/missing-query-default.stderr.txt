@@ -1,0 +1,19 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  missing-query.a11y.test.ts > should locate a missing target
+Error: Expected one element by TestId absent-target, found 0
+n1 View {0,0,412x915}
+ n2 header "Sign in" {24,24,364x33}
+ n3 image "Company logo" {24,73,64x64}
+ #email textbox {24,153,364x36}
+ #remember switch "Remember me" {24,206,51x31} [checked]
+ #submit button "Submit" {24,253,364x48}
+
+ ❯ query ../../packages/react-native-a11y-tree/src/testing.ts:72:11
+
+ ❯ Object.queries.<computed> [as getByTestId] ../../packages/react-native-a11y-tree/src/testing.ts:117:70
+ ❯ missing-query.a11y.test.ts:2:250
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -1,0 +1,17 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  bundle-failure.a11y.test.ts > should expose a bundle fault
+Error: a11y-tree session exited (3)
+{"error":{"code":"BUNDLE_FAILED","message":"Unable to resolve module absent-agent-token-dependency from /Users/kudo/01_Work/Repos/expo/react-native-a11y-tree/examples/.agent-token-probe-4cPYks/BrokenApp.tsx: absent-agent-token-dependency could not be found within the project or in these directories:\n  examples/.agent-token-probe-4cPYks/node_modules\n  node_modules\n  node_modules\n\u001b[0m\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 1 |\u001b[39m \u001b[36mimport\u001b[39m \u001b[32m'absent-agent-token-dependency'\u001b[39m\u001b[33m;\u001b[39m \u001b[36mexport\u001b[39m \u001b[36mdefault\u001b[39m \u001b[36mfunction\u001b[39m \u001b[33mApp\u001b[39m(){\u001b[36mreturn\u001b[39m \u001b[36mnull\u001b[39m\u001b[33m;\u001b[39m}\n \u001b[90m   |\u001b[39m         \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 2 |\u001b[39m\u001b[0m","hint":"Fix the error in the app code or its imports; see the message for the file and line."}}
+
+ ❯ ChildProcess.<anonymous> ../../packages/react-native-a11y-tree/src/testingClient.ts:91:50
+     89|     this.exit = new Promise(resolve => this.child.on('close', code => {
+     90|       clearTimeout(timer); lines.close();
+     91|       if (!this.closing || code !== 0) this.fail(new Error(`a11y-tree …
+       |                                                  ^
+     92|       readyReject(this.failure ?? new Error(`Session closed before rea…
+     93|       for (const pending of this.pending.values()) {clearTimeout(pendi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

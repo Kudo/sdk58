@@ -1,0 +1,393 @@
+{
+  "method": "Sum incremental usage events once; never add end.usage again. Reasoning is reported separately, not added to provided total. Tool bytes are the largest output update for each call, not a token attribution or the cumulative transcript. No raw tool text is copied.",
+  "runs": [
+    {
+      "run": "notes-a-hard-r6-1",
+      "trace_sha256": "2b888da6bfc3af707a860b9af1a1f0b92f750b932a0514eba38101484c3e9b61",
+      "model": "grok-4.5",
+      "skill_sha256": "1033792b31a699ddb913e54dd401f5378258b337e52a2090b0249b7d3bbc8d03",
+      "done": true,
+      "wall_s": 3056.1,
+      "outside_build_s": 722.0,
+      "model_calls": 160,
+      "input_tokens": 540210,
+      "output_tokens": 68467,
+      "cache_read_input_tokens": 19635584,
+      "cache_creation_input_tokens": 0,
+      "reasoning_tokens": 7701,
+      "total_tokens": 20244261,
+      "cache_read_fraction": 0.9699333554334238,
+      "cost_usd": 2.7043022,
+      "simulator_commands": 17,
+      "image_reads": 0,
+      "test_command_calls": 6,
+      "test_help_calls": 1,
+      "test_execution_calls": 5,
+      "filtered_test_execution_calls": 2,
+      "tool_outputs": [
+        {
+          "command": "test",
+          "help": true,
+          "name_filter": false,
+          "largest_output_update_bytes": 14597,
+          "output_sha256": "0e8e2577351b3d26e2ec0c036ccce54ad90df69636faa78ec1d7dd64ed226188",
+          "passed_summary": false,
+          "failed_summary": false
+        },
+        {
+          "command": "render",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 1257,
+          "output_sha256": "fdc8124ddbdac088be3ed4ea12d737a256219d89f90f8c06dd40235f15e59c33",
+          "passed_summary": false,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 5348,
+          "output_sha256": "fa833004917f302b7ddbc41a9e3cdd88290ba2d63f9fd663dc43e132f3e1e4c0",
+          "passed_summary": false,
+          "failed_summary": true
+        },
+        {
+          "command": "render",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 1257,
+          "output_sha256": "3aad18be4bf2cdf3e02e30064433b5f0c56997abac8e633ad93e5a74c83d0aea",
+          "passed_summary": false,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 986,
+          "output_sha256": "1d5ed3f3af36a8efeb9c355ce6ec6fd814d76da4838560529084fba570aa9bbe",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "check",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 2094,
+          "output_sha256": "04b18e8d0279c3b954e6dae6815f91ca9487e299cff18fe0c3a62ead67ee1e98",
+          "passed_summary": false,
+          "failed_summary": false
+        },
+        {
+          "command": "run",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 81,
+          "output_sha256": "4300dd563dd1729e9742186855fbe2ac16e332189447df5240d72155aa2fb0ad",
+          "passed_summary": false,
+          "failed_summary": false
+        },
+        {
+          "command": "schema",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 2624,
+          "output_sha256": "2279a643a5a93606537b17f1b56eebd070d1585b8535a12c1e460d8b55413ced",
+          "passed_summary": false,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": true,
+          "largest_output_update_bytes": 39,
+          "output_sha256": "b315d1c69704081eb657d074e7525f1145a89657cb59b8884a445cd871e063c1",
+          "passed_summary": false,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 1440,
+          "output_sha256": "e69faeab7faae5b78b2d43bc1bd621985bbf4e125905fa7d6f639590818667d8",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": true,
+          "largest_output_update_bytes": 566,
+          "output_sha256": "ed313bb047c3c7ccfc28741dea6cbc9d3132b7c207bb494b6e811e5cdbf9c47f",
+          "passed_summary": true,
+          "failed_summary": false
+        }
+      ]
+    },
+    {
+      "run": "notes-a-hard-r6-2",
+      "trace_sha256": "456199d760890b20124b90f1d4dea7e7d3c5cc5347585bbdb717626c0a0bc091",
+      "model": "grok-4.5",
+      "skill_sha256": "1033792b31a699ddb913e54dd401f5378258b337e52a2090b0249b7d3bbc8d03",
+      "done": true,
+      "wall_s": 1436.4,
+      "outside_build_s": 1167.1,
+      "model_calls": 41,
+      "input_tokens": 123276,
+      "output_tokens": 28141,
+      "cache_read_input_tokens": 2880000,
+      "cache_creation_input_tokens": 0,
+      "reasoning_tokens": 7430,
+      "total_tokens": 3031417,
+      "cache_read_fraction": 0.9500507518431149,
+      "cost_usd": 0.43499532,
+      "simulator_commands": 8,
+      "image_reads": 0,
+      "test_command_calls": 5,
+      "test_help_calls": 0,
+      "test_execution_calls": 5,
+      "filtered_test_execution_calls": 1,
+      "tool_outputs": [
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 3412,
+          "output_sha256": "e99131f742617279cb174a0397196a66b4a68bc5d07ac1e4e591689df04e428c",
+          "passed_summary": false,
+          "failed_summary": true
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 3518,
+          "output_sha256": "b274375a8c27404e3b85c75301b2b2759bfd8786fd0d9796bc448051127f0176",
+          "passed_summary": false,
+          "failed_summary": true
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 942,
+          "output_sha256": "85a5863980da8db48c3d1b643073111de3ae5826b05f98df51cee61b58e762ce",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": true,
+          "largest_output_update_bytes": 1274,
+          "output_sha256": "e8e2dbf72ab6d0c0a3c80716903e99faeb1850157f2503a1511eed531aaf985b",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 781,
+          "output_sha256": "72f23b191d9412bf2d2a065cb11c27e2e4a457d4af033071af08265c66ed14ff",
+          "passed_summary": true,
+          "failed_summary": false
+        }
+      ]
+    },
+    {
+      "run": "notes-a-r6-1",
+      "trace_sha256": "da9c624c200c4209c4cfb8e555ca5a4496c7b3f48caf3719caf82935e0a35276",
+      "model": "grok-4.5",
+      "skill_sha256": "1033792b31a699ddb913e54dd401f5378258b337e52a2090b0249b7d3bbc8d03",
+      "done": false,
+      "wall_s": 5403.5,
+      "outside_build_s": 3652.8,
+      "model_calls": 121,
+      "input_tokens": 719421,
+      "output_tokens": 51423,
+      "cache_read_input_tokens": 15053568,
+      "cache_creation_input_tokens": 0,
+      "reasoning_tokens": 12408,
+      "total_tokens": 15824412,
+      "cache_read_fraction": 0.9512876686982114,
+      "cost_usd": 1.732770792,
+      "simulator_commands": 26,
+      "image_reads": 0,
+      "test_command_calls": 7,
+      "test_help_calls": 1,
+      "test_execution_calls": 6,
+      "filtered_test_execution_calls": 2,
+      "tool_outputs": [
+        {
+          "command": "test",
+          "help": true,
+          "name_filter": false,
+          "largest_output_update_bytes": 7520,
+          "output_sha256": "5c96566efd9d38c6278ecc43b57584465a807a59f3f321692bde09cb47fc74f9",
+          "passed_summary": false,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 2949,
+          "output_sha256": "3688e979501db568278ca467f497de5fc58b23140e7dd34087211a5e40f32087",
+          "passed_summary": false,
+          "failed_summary": true
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": true,
+          "largest_output_update_bytes": 612,
+          "output_sha256": "0718aadf45c658997bc09721285e3422d7d6d65233f4681d15f75f596c2dd66a",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 1265,
+          "output_sha256": "c69a249738a2c9c098719efffb94fd290855a5a5917d622c54ef598c72f6073a",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": true,
+          "largest_output_update_bytes": 575,
+          "output_sha256": "00bda33398c95d827e1c72611a87b6eca98c5e63873b5291902ec315bd473b5e",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 985,
+          "output_sha256": "4b5f7168fa3bbb777d1a36f73ecb84aa3e2acb8024ab5016f87c67af6898d0db",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 2088,
+          "output_sha256": "cbbaa6813bf0979e0db90b2afb1e2d2b995ca43224506f2c1717324d8669fa0b",
+          "passed_summary": true,
+          "failed_summary": false
+        }
+      ]
+    },
+    {
+      "run": "notes-a-r6-2",
+      "trace_sha256": "89f68bfee32117497466306a2becf810923edf5a36026c4b1ed5aeec141a5537",
+      "model": null,
+      "skill_sha256": null,
+      "done": null,
+      "wall_s": null,
+      "outside_build_s": null,
+      "model_calls": 47,
+      "input_tokens": 315973,
+      "output_tokens": 29326,
+      "cache_read_input_tokens": 3151104,
+      "cache_creation_input_tokens": 0,
+      "reasoning_tokens": 7209,
+      "total_tokens": 3496403,
+      "cache_read_fraction": 0.9012416474874321,
+      "cost_usd": null,
+      "simulator_commands": 9,
+      "image_reads": 0,
+      "test_command_calls": 3,
+      "test_help_calls": 0,
+      "test_execution_calls": 3,
+      "filtered_test_execution_calls": 0,
+      "tool_outputs": [
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 11472,
+          "output_sha256": "67ef6fc49d4492f583c8d054ea635fd5dd86123a6513e0ee99934279fd0e3809",
+          "passed_summary": false,
+          "failed_summary": true
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 1037,
+          "output_sha256": "6bb1c06d285f4fe2bd593ca4c0a7a2508a3f6c110c7b9378b918878eed7a5364",
+          "passed_summary": true,
+          "failed_summary": false
+        },
+        {
+          "command": "test",
+          "help": false,
+          "name_filter": false,
+          "largest_output_update_bytes": 1037,
+          "output_sha256": "90b3f388469bd3d4e5fb186371b3574176adfbc6270303ec5a2734a41eb03198",
+          "passed_summary": true,
+          "failed_summary": false
+        }
+      ]
+    },
+    {
+      "run": "notes-b-r6-1",
+      "trace_sha256": "e0c8b372a1431fe8d6b00c7dd9c05e7a74c677ed446c18e634fadc71906f7239",
+      "model": "grok-4.5",
+      "skill_sha256": null,
+      "done": false,
+      "wall_s": 5403.1,
+      "outside_build_s": 3649.5,
+      "model_calls": 116,
+      "input_tokens": 720564,
+      "output_tokens": 46156,
+      "cache_read_input_tokens": 12628096,
+      "cache_creation_input_tokens": 0,
+      "reasoning_tokens": 10637,
+      "total_tokens": 13394816,
+      "cache_read_fraction": 0.9427599453400479,
+      "cost_usd": 1.337554016,
+      "simulator_commands": 30,
+      "image_reads": 0,
+      "test_command_calls": 0,
+      "test_help_calls": 0,
+      "test_execution_calls": 0,
+      "filtered_test_execution_calls": 0,
+      "tool_outputs": []
+    },
+    {
+      "run": "notes-b-r6-2",
+      "trace_sha256": "2bcf00ba9f783c1057bfa38a57b7a959550b018ed7d64d5066bb4700f77f9ca7",
+      "model": "grok-4.5",
+      "skill_sha256": null,
+      "done": true,
+      "wall_s": 3580.3,
+      "outside_build_s": 1685.6,
+      "model_calls": 108,
+      "input_tokens": 600557,
+      "output_tokens": 33742,
+      "cache_read_input_tokens": 10620672,
+      "cache_creation_input_tokens": 0,
+      "reasoning_tokens": 8855,
+      "total_tokens": 11254971,
+      "cache_read_fraction": 0.9436427690484498,
+      "cost_usd": 0.662926424,
+      "simulator_commands": 49,
+      "image_reads": 0,
+      "test_command_calls": 0,
+      "test_help_calls": 0,
+      "test_execution_calls": 0,
+      "filtered_test_execution_calls": 0,
+      "tool_outputs": []
+    }
+  ]
+}

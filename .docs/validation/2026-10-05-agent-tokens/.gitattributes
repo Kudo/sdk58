@@ -1,0 +1,3 @@
+# Preserve captured command output exactly for byte-count comparisons.
+*.stdout.txt -text -whitespace
+*.stderr.txt -text -whitespace

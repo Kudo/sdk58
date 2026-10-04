@@ -1,0 +1,20 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  assertion-failure.a11y.test.ts > should expose a fault
+AssertionError: expected 1 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ assertion-failure.a11y.test.ts:2:47
+      1| import {test, expect, render, screen} from 'react-native-a11y-tree/tes…
+      2| test('should expose a fault', () => expect(1).toBe(2));
+       |                                               ^
+      3|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

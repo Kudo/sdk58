@@ -1,0 +1,6 @@
+No test files found, exiting with code 1
+
+filter: absent-test.a11y.test.ts
+include: **/*.a11y.test.{ts,tsx,js,jsx}
+exclude:  **/node_modules/**, **/.git/**
+

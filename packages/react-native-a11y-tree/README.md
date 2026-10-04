@@ -252,10 +252,23 @@ headless Fabric host; no test runner configuration is required.
 
 ```sh
 npm install --save-dev react-native-a11y-tree
-npx rn-a11y-tree test
-npx rn-a11y-tree test -t 'should create a note'
+npx rn-a11y-tree skill
+npx rn-a11y-tree test a11y/notes.a11y.test.ts
+npx rn-a11y-tree test a11y/notes.a11y.test.ts -t 'should create a note'
 npx rn-a11y-tree test --reporter=json --outputFile=flow-results.json
 ```
+
+For behavior changes, write assertions and run the affected file once. After a
+repair, rerun the failing name with `-t`, then run the whole affected file after
+the last edit. An unchanged green run already satisfies the final check. Check
+executed counts: a name filter matching no tests can exit 0 with all tests skipped.
+Run `rn-a11y-tree test` without a file to discover the whole suite. `test --help`
+prints a short command reference; other Vitest flags pass through.
+
+Use `render` for one-time tree inspection, `run` for one-time interaction probes,
+and `check` for rule audits. A passing file covers its asserted host-supported
+flows; verify launch, requested visuals, and native-only behavior on a simulator.
+Read `rn-a11y-tree skill` once for the recommended agent workflow.
 
 ```ts
 // a11y/notes.a11y.test.ts
@@ -323,6 +336,7 @@ the result; see [Errors and exit codes](#errors-and-exit-codes) for failures.
 | `run <file> --script <json>` | Render, run the actions, print steps and trees | `{viewport, source, steps, snapshots, final, fallbacks, capabilities}` ([Interactions](#interactions)) |
 | `session <file>` | Render, then serve JSON-line requests on stdin | one JSON object per line ([Session mode](#session-mode)) |
 | `test [files]` | Run flow tests with Vitest and the headless host | Vitest reporter output and exit status |
+| `skill` | Print the bundled guidance for an agent to read once | Skill Markdown on stdout |
 | `check <file> --rules <json>` | Render (or run `--script`), then evaluate accessibility and design-token rules; exit 2 on violations | `{ok, summary, nodes, violations}` ([Check](#check)) |
 | `schema [name]` | Print `schema/<name>.json` (e.g. `script`, `rules-file`, `session-request`); no name: list the schemas | JSON Schema, or `name<TAB>description` lines ([Schemas](#schemas-and-tool-descriptors)) |
 

@@ -1,0 +1,10 @@
+
+ RUN  v5.0.3 /Users/kudo/01_Work/Repos/expo/react-native-a11y-tree/examples/.agent-token-probe-4cPYks
+
+x
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  02:19:11
+   Duration  143ms (transform 67%, setup 17%, tests 9%, worker 4%, import 3%)
+
