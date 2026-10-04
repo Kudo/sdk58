@@ -60,9 +60,14 @@ describe('package', () => {
       const filename = JSON.parse(packed.stdout.slice(packed.stdout.indexOf('[')))[0].filename;
       const installed = path.join(root, 'node_modules/react-native-a11y-tree');
       fs.mkdirSync(installed, {recursive: true});
-      execFileSync('tar', ['-xzf', filename, '--strip-components=1', '-C', installed], {cwd: root});
-      // Keep runner dependencies private to the package, as with an isolated linker.
-      fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(installed, 'node_modules'), 'junction');
+      execFileSync('tar', ['-xzf', filename, '--strip-components=1', '-C', 'node_modules/react-native-a11y-tree'], {cwd: root});
+      // Link individual runner packages to avoid overlapping Metro crawl roots
+      // for a node_modules directory and a symlink to that entire directory.
+      const dependencies = path.join(installed, 'node_modules');
+      fs.mkdirSync(dependencies);
+      for (const name of ['vite', 'vitest']) {
+        fs.symlinkSync(path.join(ROOT, 'node_modules', name), path.join(dependencies, name), process.platform === 'win32' ? 'junction' : 'dir');
+      }
       expect(fs.existsSync(path.join(root, 'node_modules/vitest'))).toBe(false);
       expect(JSON.parse(fs.readFileSync(path.join(installed, 'package.json'), 'utf8')).dependencies.vitest).toBe('5.0.3');
       fs.writeFileSync(path.join(root, 'public.a11y.test.ts'), `
@@ -118,7 +123,7 @@ describe('package', () => {
       const concurrent = assertions.find((result: {fullName: string}) => result.fullName === 'should reject concurrent screen access');
       expect(concurrent.failureMessages.join('\n')).toContain('use sequential tests');
       expect(concurrent.failureMessages.join('\n')).not.toContain('concurrent body unexpectedly executed');
-    } finally {fs.rmSync(root, {recursive: true, force: true});}
+    } finally {fs.rmSync(root, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});}
   });
 
   it('reports timed-out children and clips an install-sized budget to the remaining overall deadline', () => {
