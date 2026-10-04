@@ -21,6 +21,7 @@ share one version.
 ### Fixed
 
 - JSON text assertions inspect descendant text and report received content on failure; failed assertions retry while advancing the host clock for up to two seconds.
+- Background Hermes compilation no longer holds the calling project directory open on Windows after the command exits.
 
 ## [0.1.5] - 2026-10-03
 

@@ -11,7 +11,11 @@ const exec = promisify(execFile);
 const dirs: string[] = [];
 afterEach(async () => {
   try {await cleanup();}
-  finally {for (const dir of dirs.splice(0)) fs.rmSync(dir, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});}
+  finally {
+    // Async removal uses libuv's Windows permission recovery and lets watchers
+    // release directory handles while the bounded retries are pending.
+    for (const dir of dirs.splice(0)) await fs.promises.rm(dir, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+  }
 });
 
 function project() {

@@ -356,7 +356,8 @@ export function compileBytecodeInBackground(dir: string): boolean {
   const child = spawn(
     process.execPath,
     ['-e', BACKGROUND_COMPILE_SCRIPT, hermesc, tmp, out, JSON.stringify(hermescArgs(js, tmp))],
-    {detached: true, stdio: 'ignore', windowsHide: true},
+    // The worker outlives its caller; an inherited cwd locks that project on Windows.
+    {cwd: os.tmpdir(), detached: true, stdio: 'ignore', windowsHide: true},
   );
   child.unref();
   return true;
