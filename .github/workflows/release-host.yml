@@ -18,7 +18,9 @@ name: Release host
 # - publish: on a tag v*, the GitHub release with every asset. The CLI
 #   downloads with RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>
 #   and the host-version.json of that release.
-# On push to ci/release-all everything but publish runs.
+# - npm-publish: publish the verified runtime packages first, then the CLI,
+#   using npm trusted publishing for this workflow (no npm token).
+# On push to ci/release-all everything but publish and npm-publish runs.
 
 on:
   push:
@@ -161,7 +163,7 @@ jobs:
           fi
           cat release/host-version.json
 
-      # npm packages (not published yet): optional runtime binaries and
+      # npm packages: optional runtime binaries and
       # the CLI with its bun build in dist/.
       - name: npm pack
         run: |
@@ -318,29 +320,34 @@ jobs:
           fi
           gh release upload "$tag" release/* --clobber
 
-  # Later: publish platform packages first, then CLI to npm from the release tarballs. Needs the
-  # NPM_TOKEN secret (until then the user publishes manually from these tarballs).
-  # npm-publish:
-  #   needs: publish
-  #   runs-on: ubuntu-latest
-  #   if: startsWith(github.ref, 'refs/tags/')
-  #   permissions:
-  #     contents: read
-  #     id-token: write
-  #   steps:
-  #     - uses: actions/setup-node@v7
-  #       with:
-  #         node-version: '24'
-  #         registry-url: 'https://registry.npmjs.org'
-  #     - uses: actions/download-artifact@v7
-  #       with:
-  #         name: release
-  #         path: release
-  #     - name: npm publish
-  #       env:
-  #         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-  #       run: |
-  #         for pkg in release/react-native-a11y-tree-runtime-*.tgz; do
-  #           npm publish --provenance --access public "$pkg"
-  #         done
-  #         npm publish --provenance --access public release/react-native-a11y-tree-[0-9]*.tgz
+  npm-publish:
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: npm-publish-${{ github.ref_name }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install npm with trusted publishing support
+        run: npm install --global npm@11 --ignore-scripts
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: release
+          path: release
+
+      - name: Publish verified npm tarballs with OIDC
+        run: node scripts/publish-packages.ts release

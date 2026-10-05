@@ -1460,13 +1460,42 @@ The download adds about 200 ms to the first run (3.7 MB tarball from
 
 `.github/workflows/release-host.yml` runs on tags `v*`. It builds the host,
 runs the tests, packages the host, makes the npm tarballs (`--pack`,
-`bun run build`, `npm pack` of all packages; not published: a commented
-`publish` job needs the `NPM_TOKEN` secret), renders `examples/basic` with the
+`bun run build`, `npm pack` of all packages), renders `examples/basic` with the
 packaged host downloaded from `file://`, and uploads the files to the
 GitHub release of the tag. Use them with
 `RN_A11Y_HOST_BASE_URL=https://github.com/<owner>/<repo>/releases/download/<tag>`
 and that release's `host-version.json` (commit it to the repo root, or set
 `RN_A11Y_HOST_MANIFEST`).
+
+After all package verification gates and the GitHub release succeed, the
+`npm-publish` job publishes those same tarballs to npm using OIDC trusted
+publishing, with provenance. It publishes the three runtime packages before
+the CLI. No `NPM_TOKEN` secret is needed. Retrying a partial publish skips an
+existing version only when its registry integrity matches the verified
+tarball; a different archive or a registry error stops the job. Stable tags
+publish to `latest`; prerelease tags publish to `next`.
+
+Configure a GitHub Actions trusted publisher on npm for **each** package:
+`react-native-a11y-tree`, `@react-native-a11y-tree/runtime-darwin-universal`,
+`@react-native-a11y-tree/runtime-linux-x64-gnu`, and
+`@react-native-a11y-tree/runtime-win32-x64-msvc`. Use owner `Kudo`, repository
+`react-native-a11y-tree`, workflow filename `release-host.yml`, no environment
+name, and allow direct `npm publish`. With an npm maintainer login and 2FA,
+the equivalent CLI setup is:
+
+```sh
+for package in react-native-a11y-tree \
+  @react-native-a11y-tree/runtime-darwin-universal \
+  @react-native-a11y-tree/runtime-linux-x64-gnu \
+  @react-native-a11y-tree/runtime-win32-x64-msvc; do
+  npm trust github "$package" --repo Kudo/react-native-a11y-tree \
+    --file release-host.yml --allow-publish --yes
+done
+```
+
+The setup command needs npm 11.15+ and each package must already exist.
+Inspect existing connections with `npm trust list <package>` before adding
+one. See the [npm trusted publishing documentation](https://docs.npmjs.com/trusted-publishers/).
 
 `third_party/react-native` is React Native `0.88-stable` at `6007151`
 (a shallow submodule).

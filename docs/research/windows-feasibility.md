@@ -325,9 +325,9 @@ Third-party (upstream PRs, or shims in the overlay):
 - Path length: the tester build directory is `D:/t`. Deeper build
   directories were not tested (MAX_PATH 260).
 - Unicode paths and spaces in paths were not tested.
-- The repository on GitHub is now `Kudo/sdk58` (push of round 10: "This
+- The repository on GitHub is now `Kudo/react-native-a11y-tree` (push of round 10: "This
   repository moved"). Pushes to the old URL fail with the Tuft credentials;
-  round 10 and 11 were pushed to `https://github.com/Kudo/sdk58.git`.
+  round 10 and 11 were pushed to `https://github.com/Kudo/react-native-a11y-tree.git`.
 
 ## Estimate (judgment)
 

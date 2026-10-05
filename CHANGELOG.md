@@ -6,6 +6,10 @@ share one version.
 
 ## [Unreleased]
 
+### Added
+
+- Release host CI publishes verified runtime and CLI tarballs to npm using OIDC trusted publishing, with integrity checks when resuming a partial publish.
+
 ## [0.1.7] - 2026-10-05
 
 ### Changed
@@ -267,7 +271,7 @@ First release. macOS arm64 host only.
 [0.1.1]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Kudo/react-native-a11y-tree/releases/tag/v0.1.0
 
-[0.1.4]: https://github.com/Kudo/sdk58/releases/tag/v0.1.4
-[0.1.5]: https://github.com/Kudo/sdk58/compare/v0.1.4...v0.1.5
+[0.1.4]: https://github.com/Kudo/react-native-a11y-tree/releases/tag/v0.1.4
+[0.1.5]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.4...v0.1.5
 [0.1.6]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.5...v0.1.6
-[0.1.7]: https://github.com/Kudo/sdk58/compare/v0.1.6...v0.1.7
+[0.1.7]: https://github.com/Kudo/react-native-a11y-tree/compare/v0.1.6...v0.1.7

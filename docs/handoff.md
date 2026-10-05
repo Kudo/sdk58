@@ -91,10 +91,10 @@ Read `README.md` first (CLI reference, schema, how it works, build), then
   `publish`). Windows x64 host: `.github/workflows/windows-host.yml` (branch
   `ci/windows-host`, see `native/README.md` "Windows"). All three platforms
   are integrated on branch `ci/release-all` (not on `main` yet).
-- GitHub: the repository is temporarily public as `Kudo/sdk58` (for free
+- GitHub: the repository is temporarily public as `Kudo/react-native-a11y-tree` (for free
   Actions minutes; user decision 2026-10-01). Do not change `origin` or any
-  URL in the repo; push with `git push https://github.com/Kudo/sdk58.git
-  <branch>` and use `gh ... --repo Kudo/sdk58`. Do not commit secrets. macOS x86_64: built by cross-compile,
+  URL in the repo; push with `git push https://github.com/Kudo/react-native-a11y-tree.git
+  <branch>` and use `gh ... --repo Kudo/react-native-a11y-tree`. Do not commit secrets. macOS x86_64: built by cross-compile,
   never executed locally (no Rosetta on the dev Mac; verified only by the
   `intel-check` CI job once Actions runs).
 
