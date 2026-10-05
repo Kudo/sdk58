@@ -1,4 +1,5 @@
 import {EventEmitter} from 'node:events';
+import path from 'node:path';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const mocks = vi.hoisted(() => ({spawn: vi.fn(), resolve: vi.fn(), createRequire: vi.fn()}));
@@ -8,9 +9,10 @@ vi.mock('node:module', () => ({createRequire: mocks.createRequire}));
 import {runTests, testArguments, TEST_HELP} from '../packages/react-native-a11y-tree/src/testingCommand.ts';
 
 const originalExitCode = process.exitCode;
+const RUNNER_DIR = path.resolve('runner');
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.resolve.mockReturnValue('/runner/package.json');
+  mocks.resolve.mockReturnValue(path.join(RUNNER_DIR, 'package.json'));
   mocks.createRequire.mockReturnValue({resolve: mocks.resolve});
   process.exitCode = undefined;
 });
@@ -63,7 +65,7 @@ describe('Running flow tests', () => {
     mocks.spawn.mockImplementation(() => {queueMicrotask(() => child.emit('close', 0, null)); return child;});
     await runTests(args);
     expect(mocks.spawn).toHaveBeenCalledWith(process.execPath,
-      ['/runner/vitest.mjs', 'run', '--config', expect.stringMatching(/testingConfig\.ts$/), '--root', process.cwd(), ...args, '--watch=false'],
+      [path.join(RUNNER_DIR, 'vitest.mjs'), 'run', '--config', expect.stringMatching(/testingConfig\.ts$/), '--root', process.cwd(), ...args, '--watch=false'],
       {stdio: ['inherit', 'inherit', 'inherit']});
     expect(process.exitCode).toBe(0);
   });
